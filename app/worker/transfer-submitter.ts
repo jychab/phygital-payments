@@ -199,6 +199,7 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
         await this.finish(job, "confirmed", { signature });
       }
     } catch (error) {
+      console.log(error)
       const { transient, message } = classify(error);
 
       if (!transient && batch.length > 1) {

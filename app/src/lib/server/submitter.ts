@@ -25,13 +25,6 @@ export type SubmitterStub = {
   waitForJob(jobId: string, timeoutMs?: number): Promise<TransferJob | null>;
 };
 
-/** Minimal DO namespace surface we use (avoids depending on workers-types). */
-type SubmitterNamespace = {
-  idFromName(name: string): unknown;
-  get(id: unknown): SubmitterStub;
-};
-
-
 /** Resolve the single global TransferSubmitterDO stub. */
 export function getSubmitterStub(): SubmitterStub {
   const ns = getCloudflareContext().env.TRANSFER_SUBMITTER;
