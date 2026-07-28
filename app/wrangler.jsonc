@@ -16,7 +16,10 @@
   ],
   "durable_objects": {
     "bindings": [
-      { "name": "TRANSFER_SUBMITTER", "class_name": "TransferSubmitterDO" }
+      {
+        "name": "TRANSFER_SUBMITTER",
+        "class_name": "TransferSubmitterDO"
+      }
     ]
   },
   "migrations": [
@@ -25,10 +28,18 @@
       "new_sqlite_classes": ["TransferSubmitterDO"]
     }
   ],
+  "d1_databases": [
+    {
+      "binding": "phygital_payments",
+      "database_name": "phygital-payments",
+      "database_id": "af13f14e-e6e8-4652-8a08-e7780c06a0c7",
+      "migrations_dir": "d1/migrations"
+    }
+  ],
   "vars": {
     "NEXT_PUBLIC_PRIVY_APP_ID": "cmqt76oza019h0ck6296p44a8",
     "NEXT_PUBLIC_SOLANA_RPC_URL": "https://rpc.revibase.com",
     "NEXT_PUBLIC_SOLANA_CLUSTER": "mainnet",
-    "NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY": ""
+    "NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY": "2qLZosEYxN4Bp7dGySYgjWEmXR9jQ4za6hr2AFocUHxU"
   }
 }

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ContactRound, ShieldCheck } from "lucide-react";
+import { ContactRound, History, ShieldCheck } from "lucide-react";
 
 import { ConnectWallet } from "@/components/connect-wallet";
 import { FundPanel } from "@/components/fund-panel";
+import { HistoryPanel } from "@/components/history-panel";
 import { ReceivePanel } from "@/components/receive-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isMainnet } from "@/lib/solana/cluster";
@@ -28,6 +29,11 @@ const MODE_COPY = {
     subtitle:
       "Confirm the amount, tap a locked passkey, and USDC settles to the recipient.",
   },
+  history: {
+    title: "Your payment activity.",
+    subtitle:
+      "Payments settled to or from this wallet, indexed as they confirm on-chain.",
+  },
 } as const;
 
 export function PaymentsApp({
@@ -35,7 +41,7 @@ export function PaymentsApp({
 }: {
   paymentRequest: PaymentRequest;
 }) {
-  const [mode, setMode] = useState<"allow" | "receive">(
+  const [mode, setMode] = useState<"allow" | "receive" | "history">(
     paymentRequest.fromUrl ? "receive" : "allow",
   );
   const { isConnected } = useSolanaAddress();
@@ -83,11 +89,17 @@ export function PaymentsApp({
           <Tabs
             value={mode}
             onValueChange={(value) => {
-              if (value === "allow" || value === "receive") setMode(value);
+              if (
+                value === "allow" ||
+                value === "receive" ||
+                value === "history"
+              ) {
+                setMode(value);
+              }
             }}
             className="flex flex-1 flex-col gap-0"
           >
-            <TabsList className="grid h-11 w-full grid-cols-2 rounded-xl p-1">
+            <TabsList className="grid h-11 w-full grid-cols-3 rounded-xl p-1">
               <TabsTrigger
                 value="allow"
                 className="h-full gap-1.5 rounded-lg text-[0.8125rem]"
@@ -101,6 +113,13 @@ export function PaymentsApp({
               >
                 <ContactRound className="size-3.5 opacity-70" />
                 Get paid
+              </TabsTrigger>
+              <TabsTrigger
+                value="history"
+                className="h-full gap-1.5 rounded-lg text-[0.8125rem]"
+              >
+                <History className="size-3.5 opacity-70" />
+                Activity
               </TabsTrigger>
             </TabsList>
 
@@ -140,6 +159,12 @@ export function PaymentsApp({
                     className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
                   >
                     <ReceivePanel paymentRequest={paymentRequest} />
+                  </TabsContent>
+                  <TabsContent
+                    value="history"
+                    className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
+                  >
+                    <HistoryPanel />
                   </TabsContent>
                 </>
               )}
