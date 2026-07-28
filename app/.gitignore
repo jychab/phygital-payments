@@ -39,7 +39,8 @@ yarn-error.log*
 # cloudflare / opennext build artifacts
 .open-next/
 .wrangler/
-cloudflare-env.d.ts
+# NOTE: cloudflare-env.d.ts is committed on purpose — tsc/build depend on it as
+# the CloudflareEnv source of truth, and CI can't regenerate it (needs .dev.vars).
 
 # vercel
 .vercel

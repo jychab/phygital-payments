@@ -30,7 +30,7 @@ import {
 const QUEUE_KEY = "queue";
 const JOB_PREFIX = "job:";
 
-export class TransferSubmitterDO extends DurableObject<Env> {
+export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
   private flushing = false;
 
   // In-memory caches (survive while the DO is warm; rebuilt on eviction).

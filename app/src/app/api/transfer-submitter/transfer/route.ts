@@ -4,13 +4,13 @@ import type { SubmitTransferRequest } from "@/lib/payments/submitter-types";
 import {
   AuthError,
   getSubmitterStub,
-  getWorkerEnv,
   requirePrivySession,
 } from "@/lib/server/submitter";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await requirePrivySession(req, getWorkerEnv());
+    const session = await requirePrivySession(req, getCloudflareContext().env);
 
     const body = (await req.json()) as SubmitTransferRequest;
     if (!body?.secpEntry || !body?.transfer) {

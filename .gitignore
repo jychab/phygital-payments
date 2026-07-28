@@ -10,5 +10,4 @@ test-ledger
 .dev.vars
 .wrangler
 .open-next
-app/cloudflare-env.d.ts
 

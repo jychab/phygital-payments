@@ -47,22 +47,21 @@ export type SendContext = {
   latestBlockhash: BlockhashLifetime;
 };
 
-export function getRpc(env: Env) {
-  return createSolanaRpc(env.SOLANA_RPC_URL);
+export function getRpc(env: CloudflareEnv) {
+  return createSolanaRpc(env.NEXT_PUBLIC_SOLANA_RPC_URL);
 }
 
-function subscriptionsUrl(env: Env): string {
+function subscriptionsUrl(env: CloudflareEnv): string {
   return (
-    env.SOLANA_RPC_SUBSCRIPTIONS_URL?.trim() ||
-    env.SOLANA_RPC_URL.replace(/^http/, "ws")
+    env.NEXT_PUBLIC_SOLANA_RPC_URL.replace(/^http/, "ws")
   );
 }
 
-export function getRpcSubscriptions(env: Env) {
+export function getRpcSubscriptions(env: CloudflareEnv) {
   return createSolanaRpcSubscriptions(subscriptionsUrl(env));
 }
 
-export async function getFeePayerSigner(env: Env): Promise<TransactionSigner> {
+export async function getFeePayerSigner(env: CloudflareEnv): Promise<TransactionSigner> {
   const secret = env.FEE_PAYER_SECRET_KEY?.trim();
   if (!secret) {
     throw new Error("FEE_PAYER_SECRET_KEY is not configured");
@@ -70,10 +69,10 @@ export async function getFeePayerSigner(env: Env): Promise<TransactionSigner> {
   const bytes = decodeSecretKey(secret);
   const signer = await createKeyPairSignerFromBytes(bytes);
   if (
-    env.FEE_PAYER_PUBLIC_KEY &&
-    signer.address !== address(env.FEE_PAYER_PUBLIC_KEY)
+    env.NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY &&
+    signer.address !== address(env.NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY)
   ) {
-    throw new Error("FEE_PAYER_SECRET_KEY does not match FEE_PAYER_PUBLIC_KEY");
+    throw new Error("FEE_PAYER_SECRET_KEY does not match NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY");
   }
   return signer;
 }
@@ -88,7 +87,7 @@ function decodeSecretKey(secret: string): Uint8Array {
 }
 
 /** Fetch a fresh blockhash lifetime (the DO caches the result). */
-export async function fetchLatestBlockhash(env: Env): Promise<BlockhashLifetime> {
+export async function fetchLatestBlockhash(env: CloudflareEnv): Promise<BlockhashLifetime> {
   const { value } = await getRpc(env).getLatestBlockhash().send();
   return value;
 }
@@ -186,7 +185,7 @@ function buildCoreInstructions(jobs: TransferJob[]): Instruction[] {
  * Throws a permanent SubmitError if the program rejects the batch.
  */
 async function simulateBatch(
-  env: Env,
+  env: CloudflareEnv,
   core: Instruction[],
   feePayer: Address,
 ): Promise<number> {
@@ -270,7 +269,7 @@ async function buildAndSign(
  * await `confirmed`. Returns the confirmed signature.
  */
 export async function sendSponsoredBatch(
-  env: Env,
+  env: CloudflareEnv,
   jobs: TransferJob[],
   ctx: SendContext,
 ): Promise<string> {
@@ -317,7 +316,7 @@ export async function sendSponsoredBatch(
  * Await `confirmed` via WebSocket signature subscription (premium RPC), with a
  * getSignatureStatuses polling fallback if the subscription can't be opened.
  */
-async function confirmSignature(env: Env, signature: Signature): Promise<void> {
+async function confirmSignature(env: CloudflareEnv, signature: Signature): Promise<void> {
   try {
     await confirmViaSubscription(env, signature);
   } catch (error) {
@@ -327,7 +326,7 @@ async function confirmSignature(env: Env, signature: Signature): Promise<void> {
 }
 
 async function confirmViaSubscription(
-  env: Env,
+  env: CloudflareEnv,
   signature: Signature,
 ): Promise<void> {
   const abort = new AbortController();
@@ -352,7 +351,7 @@ async function confirmViaSubscription(
   }
 }
 
-async function confirmViaPolling(env: Env, signature: Signature): Promise<void> {
+async function confirmViaPolling(env: CloudflareEnv, signature: Signature): Promise<void> {
   const rpc = getRpc(env);
   const deadline = Date.now() + CONFIRM_TIMEOUT_MS;
   while (Date.now() < deadline) {
@@ -406,9 +405,9 @@ function isTransientRpcError(message: string): boolean {
   );
 }
 
-export function assertFeePayerConfigured(env: Env): Address {
-  if (!env.FEE_PAYER_PUBLIC_KEY?.trim()) {
-    throw new Error("FEE_PAYER_PUBLIC_KEY is not configured");
+export function assertFeePayerConfigured(env: CloudflareEnv): Address {
+  if (!env.NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY?.trim()) {
+    throw new Error("NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY is not configured");
   }
-  return address(env.FEE_PAYER_PUBLIC_KEY.trim());
+  return address(env.NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY.trim());
 }

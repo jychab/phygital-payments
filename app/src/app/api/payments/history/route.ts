@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 import {
   AuthError,
-  getWorkerEnv,
   requirePrivySession,
 } from "@/lib/server/submitter";
 import {
@@ -10,12 +9,13 @@ import {
   getPaymentsDb,
   getPaymentsForOwner,
 } from "@/lib/server/payments-db";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 export async function GET(req: NextRequest) {
   try {
-    await requirePrivySession(req, getWorkerEnv());
+    await requirePrivySession(req, getCloudflareContext().env);
 
     const address = req.nextUrl.searchParams.get("address")?.trim() ?? "";
     if (!BASE58_RE.test(address)) {

@@ -25,7 +25,7 @@ function getBearer(request: Request): string | null {
 
 /** Privy config subset needed to verify an access token. */
 export type PrivyAuthConfig = {
-  PRIVY_APP_ID: string;
+  NEXT_PUBLIC_PRIVY_APP_ID: string;
   PRIVY_VERIFICATION_KEY: string;
 };
 
@@ -38,7 +38,7 @@ export async function verifyPrivyAccessToken(
   token: string,
   env: PrivyAuthConfig,
 ): Promise<PrivySession> {
-  const appId = env.PRIVY_APP_ID?.trim();
+  const appId = env.NEXT_PUBLIC_PRIVY_APP_ID?.trim();
   const pem = env.PRIVY_VERIFICATION_KEY?.trim().replace(/\\n/g, "\n");
   if (!appId || !pem) {
     throw new AuthError("Privy auth is not configured");

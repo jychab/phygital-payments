@@ -3,16 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   AuthError,
   getSubmitterStub,
-  getWorkerEnv,
   requirePrivySession,
 } from "@/lib/server/submitter";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export async function GET(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await requirePrivySession(req, getWorkerEnv());
+    const session = await requirePrivySession(req, getCloudflareContext().env);
     const { id } = await ctx.params;
 
     const stub = getSubmitterStub();

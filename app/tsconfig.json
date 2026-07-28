@@ -34,7 +34,6 @@
     "node_modules",
     "worker",
     "custom-worker.ts",
-    ".open-next",
-    "cloudflare-env.d.ts"
+    ".open-next"
   ]
 }
