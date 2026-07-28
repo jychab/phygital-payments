@@ -11,6 +11,8 @@ export type PaymentRequestParams = {
 export type PaymentRequest = {
   amount: string | null;
   mint: Address;
+  /** Recipient wallet the payment settles to, when provided via `?recipient=`. */
+  recipient: Address | null;
   /** True when any payment-request param was present in the URL. */
   fromUrl: boolean;
 };
@@ -40,23 +42,25 @@ function normalizeAmount(value: string | undefined): string | null {
   return frac.length > 0 ? `${whole}.${frac}` : whole;
 }
 
-/** Parse `?amount=&mint=&recipient=` into a receive-flow payment request. */
+/** Parse `?amount=&recipient=` into a receive-flow payment request. */
 export function parsePaymentRequest(
   searchParams: Record<string, string | string[] | undefined> | PaymentRequestParams,
 ): PaymentRequest {
   const amountRaw = firstValue(searchParams.amount as string | string[] | undefined);
-  const mintRaw = firstValue(searchParams.mint as string | string[] | undefined);
-
-  const fromUrl = Boolean(
-    amountRaw?.trim() || mintRaw?.trim(),
+  const recipientRaw = firstValue(
+    searchParams.recipient as string | string[] | undefined,
   );
 
-  const mintFromUrl = tryAddress(mintRaw);
-  const mint = mintFromUrl ?? getUsdcMint();
+  const fromUrl = Boolean(
+    amountRaw?.trim() || recipientRaw?.trim(),
+  );
+
+  const mint = getUsdcMint();
 
   return {
     amount: normalizeAmount(amountRaw),
     mint,
+    recipient: tryAddress(recipientRaw),
     fromUrl,
   };
 }

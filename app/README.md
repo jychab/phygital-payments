@@ -9,7 +9,7 @@ From the repo root:
 ```bash
 pnpm install
 cp app/.env.example app/.env.local
-# set NEXT_PUBLIC_PRIVY_APP_ID (+ optional RPC URL)
+# set NEXT_PUBLIC_SOLANA_RPC_URL (optional; defaults to the Revibase RPC)
 pnpm --filter app dev
 ```
 

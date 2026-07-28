@@ -18,7 +18,7 @@ import {
   type UsdcDelegateStatus,
 } from "@/lib/payments/fund";
 import { getUsdcMint } from "@/lib/payments/usdc";
-import { useWalletKitSigner } from "@/lib/wallet/privy-signer";
+import { useWalletKitSigner } from "@/lib/wallet/bridge-signer";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
 

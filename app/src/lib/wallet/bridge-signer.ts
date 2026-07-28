@@ -10,29 +10,19 @@ import {
   type SignatureBytes,
   type TransactionPartialSigner,
 } from "@solana/kit";
-import {
-  useSignTransaction,
-  useWallets,
-  type ConnectedStandardSolanaWallet,
-} from "@privy-io/react-auth/solana";
 
-type SignTransactionFn = (input: {
-  transaction: Uint8Array;
-  wallet: ConnectedStandardSolanaWallet;
-}) => Promise<{ signedTransaction: Uint8Array }>;
+import { useParentWallet } from "@/lib/wallet/parent-bridge";
+
+/** Signs a single unsigned wire tx via the parent, returning the signed wire. */
+type SignWireFn = (wire: Uint8Array) => Promise<Uint8Array>;
 
 async function signWires(
-  signTransaction: SignTransactionFn,
-  wallet: ConnectedStandardSolanaWallet,
+  signWire: SignWireFn,
   wires: Uint8Array[],
 ): Promise<Uint8Array[]> {
   const signed: Uint8Array[] = [];
   for (const wire of wires) {
-    const { signedTransaction } = await signTransaction({
-      transaction: wire,
-      wallet,
-    });
-    signed.push(signedTransaction);
+    signed.push(await signWire(wire));
   }
   return signed;
 }
@@ -41,18 +31,23 @@ function isNonZero(sig: SignatureBytes): boolean {
   return sig.some((b) => b !== 0);
 }
 
-export function makeKitSigner(
-  signTransaction: SignTransactionFn,
-  wallet: ConnectedStandardSolanaWallet,
+/**
+ * A @solana/kit TransactionPartialSigner whose signing is proxied to the parent
+ * vault wallet over postMessage. It encodes kit transactions to wire bytes,
+ * asks the parent to sign, then decodes and extracts this signer's signature.
+ */
+export function makeBridgeSigner(
+  signWire: SignWireFn,
+  walletAddress: string,
 ): TransactionPartialSigner {
-  const signerAddress = address(wallet.address);
+  const signerAddress = address(walletAddress);
   return {
     address: signerAddress,
     async signTransactions(transactions) {
       const wires = transactions.map(
         (tx) => new Uint8Array(getTransactionEncoder().encode(tx)),
       );
-      const signed = await signWires(signTransaction, wallet, wires);
+      const signed = await signWires(signWire, wires);
       return signed.map((wire) => {
         const decoded = getTransactionDecoder().decode(wire);
         const signature = decoded.signatures[signerAddress];
@@ -68,12 +63,11 @@ export function makeKitSigner(
 }
 
 export function useWalletKitSigner(): TransactionPartialSigner | null {
-  const { wallets } = useWallets();
-  const { signTransaction } = useSignTransaction();
-  const wallet = wallets[0] ?? null;
+  const { address: walletAddress, signTransaction } = useParentWallet();
 
   return useMemo(
-    () => (wallet ? makeKitSigner(signTransaction, wallet) : null),
-    [wallet, signTransaction],
+    () =>
+      walletAddress ? makeBridgeSigner(signTransaction, walletAddress) : null,
+    [walletAddress, signTransaction],
   );
 }

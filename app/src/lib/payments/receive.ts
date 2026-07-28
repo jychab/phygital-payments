@@ -23,7 +23,6 @@ import {
 } from "phygital-payments-sdk";
 
 import { getSolanaRpc } from "@/lib/solana/rpc";
-import { sendTransaction } from "@/lib/solana/tx";
 import {
   findAta,
   getUsdcMint,
@@ -40,8 +39,6 @@ export type RecipientAtaStatus = {
   program: TokenProgram;
   exists: boolean;
 };
-
-export type ReceiveSubmitMode = "client" | "sponsored";
 
 export type BuiltReceiveTransfer = {
   instructions: Instruction[];
@@ -115,18 +112,18 @@ export async function buildCreateRecipientAtaInstructions(args: {
 }
 
 /**
- * NFC passkey + build Pattern B transfer (client ixs + sponsored payload).
- * Caller submits via wallet (client) or backend (sponsored).
+ * NFC passkey + build Pattern B transfer payload for a given recipient.
+ * The recipient is an explicit address (the vault wallet or a payment link),
+ * not a connected wallet — receive needs no wallet session.
  */
 export async function buildReceiveTransfer(args: {
-  signer: TransactionSigner;
+  recipient: Address;
   rawAmount: bigint;
   mint?: Address;
   context?: ReceiveTransferContext;
 }): Promise<BuiltReceiveTransfer> {
-  const { signer, rawAmount } = args;
+  const { recipient, rawAmount } = args;
   const rpc = getSolanaRpc();
-  const recipient = signer.address;
   const mint = args.mint ?? getUsdcMint();
   const program =
     args.context?.tokenProgram ?? (await resolveMintProgram(mint)).program;
@@ -217,17 +214,6 @@ export async function buildReceiveTransfer(args: {
   };
 }
 
-/** Pattern B transfer ixs — submit with connected wallet as fee payer. */
-export async function buildReceiveTransferInstructions(args: {
-  signer: TransactionSigner;
-  rawAmount: bigint;
-  mint?: Address;
-  recipient?: Address;
-}): Promise<Instruction[]> {
-  const { instructions } = await buildReceiveTransfer(args);
-  return instructions;
-}
-
 /**
  * Enqueue on the fee-payer DO; long-poll until confirmed/failed. The DO runs
  * an authoritative simulation of the batched transaction before submitting, so
@@ -247,46 +233,23 @@ export async function submitSponsoredTransfer(
   return { signature: job.signature };
 }
 
-/** Submit transfer immediately from the connected wallet (merchant fee payer). */
-export async function submitClientTransfer(args: {
-  signer: TransactionSigner;
-  instructions: Instruction[];
-}): Promise<{ signature: string }> {
-  return sendTransaction({
-    instructions: args.instructions,
-    feePayer: args.signer,
-  });
-}
-
 /**
- * Complete receive after passkey tap.
- * Default `mode: "sponsored"` — backend fee-payer submits (falls back to
- * "client" at the call site when no submitter is configured).
- * `mode: "client"` — connected wallet pays fees and sends now.
+ * Complete receive after passkey tap. The backend fee-payer submits the
+ * transfer (sponsored), so no connected wallet is required — the recipient is
+ * an explicit address.
  */
 export async function receiveTransfer(args: {
-  signer: TransactionSigner;
+  recipient: Address;
   rawAmount: bigint;
   mint?: Address;
   context?: ReceiveTransferContext;
-  mode?: ReceiveSubmitMode;
-}): Promise<{ signature: string; mode: ReceiveSubmitMode }> {
-  const mode = args.mode ?? "sponsored";
-  const { payload, instructions } = await buildReceiveTransfer(args);
-
-  if (mode === "sponsored") {
-    if (!isSponsoredSubmitAvailable()) {
-      throw new Error("Sponsored submit is not configured");
-    }
-    const { signature } = await submitSponsoredTransfer(payload);
-    return { signature, mode };
+}): Promise<{ signature: string }> {
+  if (!isSponsoredSubmitAvailable()) {
+    throw new Error("Sponsored submit is not configured");
   }
-
-  const { signature } = await submitClientTransfer({
-    signer: args.signer,
-    instructions,
-  });
-  return { signature, mode };
+  const { payload } = await buildReceiveTransfer(args);
+  const { signature } = await submitSponsoredTransfer(payload);
+  return { signature };
 }
 
 export type { Address };

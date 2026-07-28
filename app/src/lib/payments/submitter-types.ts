@@ -36,7 +36,6 @@ export type JobStatus = "queued" | "submitted" | "confirmed" | "failed";
 export type TransferJob = {
   id: string;
   createdAtMs: number;
-  userId: string;
   slotNumber: string;
   secpEntry: Secp256r1VerifyEntryWire;
   transfer: TransferAccountsWire;

@@ -1,42 +1,17 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
-import { useWallets } from "@privy-io/react-auth/solana";
+import { useParentWallet } from "@/lib/wallet/parent-bridge";
 
-type PrivyUserLike = {
-  linkedAccounts?: Array<{
-    type: string;
-    chainType?: string;
-    address?: string;
-  }>;
-};
-
-export function solanaAddressFromLinkedAccounts(
-  user: PrivyUserLike | null | undefined,
-): string | null {
-  for (const account of user?.linkedAccounts ?? []) {
-    if (
-      account.type === "wallet" &&
-      account.chainType === "solana" &&
-      typeof account.address === "string" &&
-      account.address.length > 0
-    ) {
-      return account.address;
-    }
-  }
-  return null;
-}
-
+/**
+ * The connected Solana address is owned by the parent vault wallet and arrives
+ * over the postMessage bridge. Same return shape as before so downstream
+ * components (payments-app, fund-panel, history-panel) are unchanged.
+ */
 export function useSolanaAddress(): {
   address: string | null;
   isConnected: boolean;
   ready: boolean;
 } {
-  const { ready, authenticated, user } = usePrivy();
-  const { wallets } = useWallets();
-
-  const address = wallets[0]?.address ?? solanaAddressFromLinkedAccounts(user);
-  const isConnected = authenticated && !!address;
-
+  const { address, isConnected, ready } = useParentWallet();
   return { address, isConnected, ready };
 }

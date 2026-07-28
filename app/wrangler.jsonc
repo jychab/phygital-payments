@@ -37,7 +37,6 @@
     }
   ],
   "vars": {
-    "NEXT_PUBLIC_PRIVY_APP_ID": "cmqt76oza019h0ck6296p44a8",
     "NEXT_PUBLIC_SOLANA_RPC_URL": "https://rpc.revibase.com",
     "NEXT_PUBLIC_SOLANA_CLUSTER": "mainnet",
     "NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY": "2qLZosEYxN4Bp7dGySYgjWEmXR9jQ4za6hr2AFocUHxU"

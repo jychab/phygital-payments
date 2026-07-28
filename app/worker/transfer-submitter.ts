@@ -40,10 +40,7 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
   // Long-poll waiters resolved the instant a job reaches a terminal status.
   private waiters = new Map<string, Array<() => void>>();
 
-  async enqueue(
-    body: SubmitTransferRequest,
-    userId: string,
-  ): Promise<{ jobId: string }> {
+  async enqueue(body: SubmitTransferRequest): Promise<{ jobId: string }> {
     validateTransferWire(body.transfer);
 
     const now = Date.now();
@@ -56,7 +53,6 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     const job: TransferJob = {
       id: jobId,
       createdAtMs,
-      userId,
       slotNumber: body.transfer.slotNumber,
       secpEntry: body.secpEntry,
       transfer: body.transfer,

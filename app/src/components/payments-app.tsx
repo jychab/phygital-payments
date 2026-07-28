@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ContactRound, History, ShieldCheck } from "lucide-react";
+import { ContactRound, History, LoaderCircle, ShieldCheck } from "lucide-react";
 
-import { ConnectWallet } from "@/components/connect-wallet";
 import { FundPanel } from "@/components/fund-panel";
 import { HistoryPanel } from "@/components/history-panel";
 import { ReceivePanel } from "@/components/receive-panel";
+import { WalletChip } from "@/components/wallet-chip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isMainnet } from "@/lib/solana/cluster";
 import type { PaymentRequest } from "@/lib/payments/payment-request";
@@ -44,11 +44,36 @@ export function PaymentsApp({
   const [mode, setMode] = useState<"allow" | "receive" | "history">(
     paymentRequest.fromUrl ? "receive" : "allow",
   );
-  const { isConnected } = useSolanaAddress();
+  const { isConnected, ready } = useSolanaAddress();
   const copy =
     mode === "receive" && paymentRequest.fromUrl
       ? MODE_COPY.receiveRequest
       : MODE_COPY[mode];
+
+  // Wallet-gated tabs (Allow / Activity) need the parent vault to report a
+  // connected wallet over the bridge. While the handshake is pending, show a
+  // spinner; if it never arrives (opened outside the vault), tell the user.
+  const connectPrompt = !ready ? (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 py-10 text-center">
+      <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">Connecting to your wallet…</p>
+    </div>
+  ) : (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 py-10 text-center">
+      <div className="flex size-12 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
+        <ShieldCheck className="size-5 text-primary" />
+      </div>
+      <div className="space-y-1.5">
+        <p className="font-[family-name:var(--font-display)] text-lg tracking-tight">
+          Open from your vault
+        </p>
+        <p className="mx-auto max-w-[16rem] text-sm text-muted-foreground">
+          Open Phygital Pay from your Revibase vault so it can use your wallet to
+          set an allowance or view payment activity.
+        </p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="relative flex min-h-full flex-1 flex-col">
@@ -69,7 +94,7 @@ export function PaymentsApp({
             {isMainnet() ? "Mainnet" : "Devnet"}
           </span>
         </div>
-        <ConnectWallet />
+        <WalletChip />
       </header>
 
       <main className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-12 pt-2 md:px-8 md:pt-6">
@@ -129,45 +154,26 @@ export function PaymentsApp({
                 "bg-card/80 p-5 shadow-[0_24px_80px_-48px_oklch(0_0_0/0.9)] backdrop-blur-xl md:p-6",
               )}
             >
-              {!isConnected ? (
-                <div className="flex flex-1 flex-col items-center justify-center gap-4 py-10 text-center">
-                  <div className="flex size-12 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
-                    <ShieldCheck className="size-5 text-primary" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <p className="font-[family-name:var(--font-display)] text-lg tracking-tight">
-                      Connect to continue
-                    </p>
-                    <p className="mx-auto max-w-[16rem] text-sm text-muted-foreground">
-                      {paymentRequest.fromUrl
-                        ? "Connect a wallet to confirm and complete this payment."
-                        : "Use the wallet you want to allow spending from — or the one that should receive payment."}
-                    </p>
-                  </div>
-                  <ConnectWallet />
-                </div>
-              ) : (
-                <>
-                  <TabsContent
-                    value="allow"
-                    className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
-                  >
-                    <FundPanel />
-                  </TabsContent>
-                  <TabsContent
-                    value="receive"
-                    className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
-                  >
-                    <ReceivePanel paymentRequest={paymentRequest} />
-                  </TabsContent>
-                  <TabsContent
-                    value="history"
-                    className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
-                  >
-                    <HistoryPanel />
-                  </TabsContent>
-                </>
-              )}
+              <TabsContent
+                value="allow"
+                className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
+              >
+                {isConnected ? <FundPanel /> : connectPrompt}
+              </TabsContent>
+              <TabsContent
+                value="receive"
+                className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
+              >
+                {/* Receive settles to an explicit recipient address and submits
+                    with sponsored fees — no connected wallet required. */}
+                <ReceivePanel paymentRequest={paymentRequest} />
+              </TabsContent>
+              <TabsContent
+                value="history"
+                className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
+              >
+                {isConnected ? <HistoryPanel /> : connectPrompt}
+              </TabsContent>
             </div>
           </Tabs>
         </div>

@@ -7,19 +7,13 @@ import type {
   TransferJob,
 } from "@/lib/payments/submitter-types";
 
-export { requirePrivySession, AuthError } from "../../../worker/auth";
-export type { PrivySession } from "../../../worker/auth";
-
 /**
  * RPC surface of the TransferSubmitterDO, declared locally so server routes
  * never import `cloudflare:workers` (that lives only in `app/worker/`).
  * Keep in sync with `app/worker/transfer-submitter.ts`.
  */
 export type SubmitterStub = {
-  enqueue(
-    body: SubmitTransferRequest,
-    userId: string,
-  ): Promise<{ jobId: string }>;
+  enqueue(body: SubmitTransferRequest): Promise<{ jobId: string }>;
   getJob(jobId: string): Promise<TransferJob | null>;
   /** Long-poll: resolves when the job reaches a terminal status or on timeout. */
   waitForJob(jobId: string, timeoutMs?: number): Promise<TransferJob | null>;

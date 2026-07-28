@@ -1,4 +1,8 @@
-/** Client for the payment-history API (same-origin, Privy-authenticated). */
+/**
+ * Client for the payment-history API. The permissionless wallet bridge forwards
+ * no auth token, so no Authorization header is sent (see the history route for
+ * how it is gated server-side).
+ */
 
 export type PaymentRecord = {
   signature: string;
@@ -19,16 +23,6 @@ type HistoryResponse = {
   error?: string;
 };
 
-async function authHeaders(): Promise<HeadersInit> {
-  try {
-    const { getAccessToken } = await import("@privy-io/react-auth");
-    const token = await getAccessToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch {
-    return {};
-  }
-}
-
 export async function fetchPaymentHistory(
   address: string,
   opts?: { limit?: number; beforeBlockTime?: number },
@@ -41,7 +35,6 @@ export async function fetchPaymentHistory(
 
   const res = await fetch(`/api/payments/history?${params.toString()}`, {
     credentials: "include",
-    headers: await authHeaders(),
   });
   const data = (await res.json()) as HistoryResponse;
   if (!res.ok) {

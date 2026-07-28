@@ -5,29 +5,16 @@ import type {
   TransferJob,
 } from "./submitter-types";
 
-/** Same-origin proxy path so HttpOnly `privy-token` is sent automatically. */
+/** Same-origin proxy path to the sponsored-transfer submitter. */
 const SUBMITTER_BASE = "/api/transfer-submitter";
-
-async function authHeaders(): Promise<HeadersInit> {
-  try {
-    const { getAccessToken } = await import("@privy-io/react-auth");
-    const token = await getAccessToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  } catch {
-    return {};
-  }
-}
 
 async function submitterFetch(
   path: string,
   init?: RequestInit,
 ): Promise<Response> {
-  const auth = await authHeaders();
   return fetch(`${SUBMITTER_BASE}${path}`, {
     ...init,
-    credentials: "include",
     headers: {
-      ...auth,
       ...(init?.headers ?? {}),
     },
   });

@@ -1,22 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
-  AuthError,
-  requirePrivySession,
-} from "@/lib/server/submitter";
-import {
   ensurePaymentsSchema,
   getPaymentsDb,
   getPaymentsForOwner,
 } from "@/lib/server/payments-db";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 const BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
+// Public, address-keyed lookup of indexed on-chain payments. The data is
+// already public on-chain, so no session is required.
 export async function GET(req: NextRequest) {
   try {
-    await requirePrivySession(req, getCloudflareContext().env);
-
     const address = req.nextUrl.searchParams.get("address")?.trim() ?? "";
     if (!BASE58_RE.test(address)) {
       return NextResponse.json(
@@ -41,9 +36,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ address, payments });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
-    }
     const message = error instanceof Error ? error.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
