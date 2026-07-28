@@ -159,6 +159,12 @@ export async function buildReceiveTransfer(args: {
     clientDataJson,
   } = await buildVerifyAssetArgs(session, response);
 
+  if (asset.owner === recipient) {
+    throw new Error(
+      "This pass belongs to the receiving wallet — you can’t collect a payment from yourself.",
+    );
+  }
+
   const secpEntry = buildVerifyInputFromWebAuthn({
     secp256r1PublicKey: parseSecp256r1Pubkey(response.id),
     response,
@@ -254,8 +260,9 @@ export async function submitClientTransfer(args: {
 
 /**
  * Complete receive after passkey tap.
- * Default `mode: "client"` — wallet pays fees and sends now.
- * `mode: "sponsored"` — optional backend fee-payer submitter.
+ * Default `mode: "sponsored"` — backend fee-payer submits (falls back to
+ * "client" at the call site when no submitter is configured).
+ * `mode: "client"` — connected wallet pays fees and sends now.
  */
 export async function receiveTransfer(args: {
   signer: TransactionSigner;
@@ -264,7 +271,7 @@ export async function receiveTransfer(args: {
   context?: ReceiveTransferContext;
   mode?: ReceiveSubmitMode;
 }): Promise<{ signature: string; mode: ReceiveSubmitMode }> {
-  const mode = args.mode ?? "client";
+  const mode = args.mode ?? "sponsored";
   const { payload, instructions } = await buildReceiveTransfer(args);
 
   if (mode === "sponsored") {

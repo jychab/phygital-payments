@@ -41,7 +41,9 @@ export function ReceivePanel({
   const { address: walletAddress, isConnected } = useSolanaAddress();
   const [amount, setAmount] = useState(paymentRequest.amount ?? "");
   const [phase, setPhase] = useState<Phase>("idle");
-  const [submitMode, setSubmitMode] = useState<ReceiveSubmitMode>("client");
+  const [submitMode, setSubmitMode] = useState<ReceiveSubmitMode>(
+    isSponsoredSubmitAvailable() ? "sponsored" : "client",
+  );
   const [confirmingMode, setConfirmingMode] =
     useState<ReceiveSubmitMode>("sponsored");
   const [recipientStatus, setRecipientStatus] = useState<
