@@ -56,8 +56,8 @@ export function PaymentsApp({
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute -left-28 -top-10 h-[22rem] w-[22rem] rounded-full bg-[radial-gradient(circle,oklch(0.82_0.18_130/0.16),transparent_68%)] blur-3xl motion-safe:animate-[wallet-breathe_10s_ease-in-out_infinite]" />
-        <div className="absolute -bottom-16 -right-10 h-[24rem] w-[24rem] rounded-full bg-[radial-gradient(circle,oklch(0.72_0.1_200/0.12),transparent_70%)] blur-3xl motion-safe:animate-[wallet-breathe_12s_ease-in-out_infinite_reverse]" />
+        <div className="absolute -left-28 -top-10 h-[22rem] w-[22rem] rounded-full bg-[radial-gradient(circle,oklch(0.82_0.18_130/0.16),transparent_68%)] blur-3xl transform-gpu motion-safe:animate-[wallet-breathe_10s_ease-in-out_infinite]" />
+        <div className="absolute -bottom-16 -right-10 h-[24rem] w-[24rem] rounded-full bg-[radial-gradient(circle,oklch(0.72_0.1_200/0.12),transparent_70%)] blur-3xl transform-gpu motion-safe:animate-[wallet-breathe_12s_ease-in-out_infinite_reverse]" />
       </div>
 
       <header className="relative z-10 flex items-center justify-between gap-4 px-5 py-4 md:px-8">

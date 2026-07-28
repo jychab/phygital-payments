@@ -116,15 +116,20 @@
   }
 }
 
+/*
+ * Opacity-only "breathing" glow. Deliberately does NOT animate transform:
+ * these gradients carry `blur-3xl`, and scaling a blurred layer forces the
+ * browser to re-rasterize the full Gaussian blur every frame — which, running
+ * infinitely behind Privy's login modal, made the modal feel laggy. Opacity
+ * stays on the compositor and doesn't trigger repaints of what's behind it.
+ */
 @keyframes wallet-breathe {
   0%,
   100% {
     opacity: 0.85;
-    transform: scale(1);
   }
   50% {
     opacity: 1;
-    transform: scale(1.06);
   }
 }
 
