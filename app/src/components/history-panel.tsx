@@ -102,9 +102,7 @@ export function HistoryPanel() {
           <div className="flex size-12 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
             <History className="size-5 text-muted-foreground" />
           </div>
-          <p className="text-sm text-muted-foreground">
-            No payments yet. Completed payments will appear here.
-          </p>
+          <p className="text-sm text-muted-foreground">No payments yet.</p>
         </div>
       ) : (
         <ul className="flex flex-col gap-2">

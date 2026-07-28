@@ -107,7 +107,7 @@ export function FundPanel() {
         <div className="relative flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/55">
-              Spending allowance
+              Allowance
             </p>
             {statusLoading ? (
               <p className="mt-3 flex items-center gap-2 text-sm text-white/60">
@@ -141,30 +141,20 @@ export function FundPanel() {
             )}
           </div>
         </div>
-        <p className="relative mt-4 text-xs leading-relaxed text-white/45">
-          {hasDelegate
-            ? "Your pass can authorize payments up to this amount. Tokens remain in your wallet until spent."
-            : "No active allowance. Set an amount below so a tap can settle USDC."}
-        </p>
         {status ? (
-          <p className="relative mt-3 text-[11px] tabular-nums text-white/35">
-            Wallet balance · {status.balanceUi} USDC
+          <p className="relative mt-4 text-[11px] tabular-nums text-white/40">
+            Balance · {status.balanceUi} USDC
           </p>
         ) : null}
       </section>
 
       <div className="flex flex-1 flex-col gap-5">
-        <div>
-          <p className="mb-1 text-center text-xs font-medium text-muted-foreground">
-            {hasDelegate ? "Update allowance" : "Set allowance"}
-          </p>
-          <AmountField
-            id="fund-amount"
-            value={amount}
-            onChange={setAmount}
-            disabled={busy}
-          />
-        </div>
+        <AmountField
+          id="fund-amount"
+          value={amount}
+          onChange={setAmount}
+          disabled={busy}
+        />
 
         <div className="mt-auto flex flex-col gap-2.5">
           <Button

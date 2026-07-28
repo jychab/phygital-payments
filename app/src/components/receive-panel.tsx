@@ -173,13 +173,11 @@ export function ReceivePanel({
         </div>
         <div className="space-y-1.5">
           <p className="font-[family-name:var(--font-display)] text-xl tracking-tight">
-            {phase === "confirming"
-              ? "Confirming…"
-              : "Hold your pass near the reader"}
+            {phase === "confirming" ? "Confirming…" : "Hold your pass close"}
           </p>
           <p className="text-sm text-muted-foreground">
             {phase === "confirming" ? (
-              "Submitting with sponsored fees…"
+              "Submitting…"
             ) : (
               <>
                 Collecting{" "}
@@ -197,27 +195,16 @@ export function ReceivePanel({
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <div className="space-y-2 rounded-xl bg-muted/35 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
-        <p>
-          Payment comes from the pass owner’s allowance into{" "}
-          {recipient ? (
-            <span className="font-mono text-[12px] text-foreground">
-              {shortAddress(recipient, 6)}
-            </span>
-          ) : (
-            <span className="text-foreground">the recipient</span>
-          )}
-          .
-        </p>
-        {recipient ? (
-          <p className="text-xs text-muted-foreground/80">
-            {recipientFromVault
-              ? "Paid into your vault wallet"
-              : "Recipient from payment link"}{" "}
-            · {mintLabel}
-          </p>
-        ) : null}
-      </div>
+      {recipient ? (
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/35 px-4 py-2.5 text-xs">
+          <span className="text-muted-foreground">
+            {recipientFromVault ? "Into your wallet" : "To recipient"}
+          </span>
+          <span className="font-mono text-foreground">
+            {shortAddress(recipient, 6)}
+          </span>
+        </div>
+      ) : null}
 
       {recipient ? (
         <div
@@ -249,24 +236,18 @@ export function ReceivePanel({
             )}
           </div>
           <div className="min-w-0 flex-1 space-y-2">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-foreground">
-                {ataLoading
-                  ? "Checking USDC account…"
-                  : readyToReceive
-                  ? "USDC account ready"
-                  : "No USDC account yet"}
+            <p className="text-sm font-medium text-foreground">
+              {ataLoading
+                ? "Checking…"
+                : readyToReceive
+                ? "Ready to receive"
+                : "No USDC account"}
+            </p>
+            {missingAta && !ataLoading && !signer ? (
+              <p className="text-xs text-muted-foreground">
+                Open from your vault to set one up.
               </p>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {readyToReceive
-                  ? "This wallet can receive payment."
-                  : ataLoading
-                  ? "Looking up the token account."
-                  : signer
-                  ? "Create the USDC account once — then you can receive."
-                  : "This wallet needs a USDC account before it can receive. Open from your vault to create it."}
-              </p>
-            </div>
+            ) : null}
             {missingAta && !ataLoading && signer ? (
               <Button
                 type="button"
@@ -296,11 +277,9 @@ export function ReceivePanel({
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <WalletCards className="size-4" />
           </div>
-          <div className="min-w-0 flex-1 space-y-1">
-            <p className="text-sm font-medium text-foreground">No recipient</p>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Open Phygital Pay from your Revibase vault to receive into your
-              wallet.
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-muted-foreground">
+              Open from your vault to receive.
             </p>
           </div>
         </div>
@@ -308,14 +287,11 @@ export function ReceivePanel({
 
       <div
         className={cn(
-          "flex flex-1 flex-col gap-5",
+          "flex flex-1 flex-col",
           !readyToReceive && "pointer-events-none opacity-45",
         )}
       >
-        <div>
-          <p className="mb-1 text-center text-xs font-medium text-muted-foreground">
-            Amount to collect
-          </p>
+        <div className="flex flex-1 items-start justify-center py-4">
           <AmountField
             id="receive-amount"
             value={amount}
@@ -324,14 +300,9 @@ export function ReceivePanel({
             disabled={amountLocked || !readyToReceive || busy}
             autoFocus={readyToReceive && !amountLocked}
           />
-          {amountLocked ? (
-            <p className="mt-1 text-center text-[11px] text-muted-foreground">
-              Amount set by payment link
-            </p>
-          ) : null}
         </div>
 
-        <div className="mt-auto flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
           <Button
             type="button"
             size="lg"
@@ -342,11 +313,11 @@ export function ReceivePanel({
             <Nfc className="size-4" />
             Tap to receive
           </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            {sponsoredAvailable
-              ? "Tap your pass, then the fee payer submits the transfer."
-              : "Sponsored submit isn’t configured for this deployment."}
-          </p>
+          {!sponsoredAvailable ? (
+            <p className="text-center text-xs text-muted-foreground">
+              Sponsored submit isn’t configured for this deployment.
+            </p>
+          ) : null}
         </div>
       </div>
     </div>
