@@ -147,46 +147,45 @@ export function ReceivePanel({
 
   if (phase === "awaiting-tap" || phase === "confirming") {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 py-8 text-center">
-        <div className="relative flex size-28 items-center justify-center">
-          <span
-            aria-hidden
-            className={cn(
-              "absolute inset-0 rounded-full border border-primary/25",
-              "motion-safe:animate-[wallet-pulse_2.2s_ease-out_infinite]",
-            )}
-          />
-          <span
-            aria-hidden
-            className={cn(
-              "absolute inset-3 rounded-full border border-primary/40",
-              "motion-safe:animate-[wallet-pulse_2.2s_ease-out_infinite_0.35s]",
-            )}
-          />
-          <div className="relative flex size-16 items-center justify-center rounded-full bg-primary/15 text-primary">
-            {phase === "confirming" ? (
-              <LoaderCircle className="size-7 animate-spin" />
-            ) : (
-              <Nfc className="size-7" />
-            )}
-          </div>
+      <div className="flex flex-1 flex-col py-6 text-center">
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+            Transferring
+          </p>
+          <p className="font-[family-name:var(--font-display)] text-[2.75rem] leading-none tracking-tight tabular-nums">
+            {amount || "0"}
+            <span className="ml-1.5 text-xl font-medium text-muted-foreground">
+              {mintLabel}
+            </span>
+          </p>
         </div>
-        <div className="space-y-1.5">
+
+        <div className="flex flex-1 flex-col items-center justify-center gap-6">
+          <div className="relative flex size-28 items-center justify-center">
+            <span
+              aria-hidden
+              className={cn(
+                "absolute inset-0 rounded-full border border-primary/25",
+                "motion-safe:animate-[wallet-pulse_2.2s_ease-out_infinite]",
+              )}
+            />
+            <span
+              aria-hidden
+              className={cn(
+                "absolute inset-3 rounded-full border border-primary/40",
+                "motion-safe:animate-[wallet-pulse_2.2s_ease-out_infinite_0.35s]",
+              )}
+            />
+            <div className="relative flex size-16 items-center justify-center rounded-full bg-primary/15 text-primary">
+              {phase === "confirming" ? (
+                <LoaderCircle className="size-7 animate-spin" />
+              ) : (
+                <Nfc className="size-7" />
+              )}
+            </div>
+          </div>
           <p className="font-[family-name:var(--font-display)] text-xl tracking-tight">
             {phase === "confirming" ? "Confirming…" : "Hold your pass close"}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {phase === "confirming" ? (
-              "Submitting…"
-            ) : (
-              <>
-                Collecting{" "}
-                <span className="tabular-nums text-foreground">
-                  {amount || "0"}
-                </span>{" "}
-                {mintLabel}
-              </>
-            )}
           </p>
         </div>
       </div>
