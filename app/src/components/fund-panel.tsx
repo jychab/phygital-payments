@@ -18,12 +18,12 @@ import {
   type UsdcDelegateStatus,
 } from "@/lib/payments/fund";
 import { getUsdcMint } from "@/lib/payments/usdc";
-import { useWalletKitSigner } from "@/lib/wallet/privy-signer";
+import { useWalletSigner } from "@/lib/wallet/wallet-context";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
 
 export function FundPanel() {
-  const signer = useWalletKitSigner();
+  const signer = useWalletSigner();
   const { address: walletAddress, isConnected } = useSolanaAddress();
   const [amount, setAmount] = useState("");
   const [status, setStatus] = useState<UsdcDelegateStatus | null>(null);
