@@ -43,7 +43,7 @@ export function ReceivePanel({
   const [phase, setPhase] = useState<Phase>("idle");
   const [submitMode, setSubmitMode] = useState<ReceiveSubmitMode>("client");
   const [confirmingMode, setConfirmingMode] =
-    useState<ReceiveSubmitMode>("client");
+    useState<ReceiveSubmitMode>("sponsored");
   const [recipientStatus, setRecipientStatus] = useState<
     (RecipientAtaStatus & { decimals: number }) | null
   >(null);
