@@ -26,7 +26,7 @@ const privyConfig: PrivyClientConfig = {
       "wallet_connect_qr_solana",
     ],
   },
-  loginMethods: ["passkey", "wallet"],
+  loginMethods: ["google", "wallet"],
   embeddedWallets: {
     solana: { createOnLogin: "users-without-wallets" },
   },
