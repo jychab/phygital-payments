@@ -1,0 +1,269 @@
+import {
+  address,
+  lamports,
+  unwrapOption,
+  type Address,
+  type Instruction,
+  type TransactionSigner,
+} from "@solana/kit";
+import { getTransferSolInstruction } from "@solana-program/system";
+import {
+  findAssociatedTokenPda as findTokenAta,
+  getApproveCheckedInstruction as approveCheckedToken,
+  getRevokeInstruction as revokeToken,
+  fetchMint as fetchTokenMint,
+  fetchMaybeToken as fetchMaybeTokenAccount,
+  TOKEN_PROGRAM_ADDRESS,
+} from "@solana-program/token";
+import {
+  findAssociatedTokenPda as findToken2022Ata,
+  getApproveCheckedInstruction as approveCheckedToken2022,
+  getRevokeInstruction as revokeToken2022,
+  fetchMint as fetchToken2022Mint,
+  fetchMaybeToken as fetchMaybeToken2022Account,
+  TOKEN_2022_PROGRAM_ADDRESS,
+} from "@solana-program/token-2022";
+import {
+  findProgramAuthorityPda,
+  PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
+} from "phygital-payments-sdk";
+
+import { getSolanaRpc } from "@/lib/solana/rpc";
+import { getUsdcMint, USDC_DECIMALS } from "@/lib/payments/usdc";
+
+export type TokenProgram =
+  | typeof TOKEN_PROGRAM_ADDRESS
+  | typeof TOKEN_2022_PROGRAM_ADDRESS;
+
+const RENT_EXEMPT_MIN = BigInt(890_880);
+
+export type UsdcDelegateStatus = {
+  programAuthority: Address;
+  ata: Address | null;
+  /** True when the ATA exists and its delegate is program_authority. */
+  isProgramAuthorityDelegate: boolean;
+  delegatedAmountRaw: bigint;
+  delegatedAmountUi: string;
+  balanceRaw: bigint;
+  balanceUi: string;
+};
+
+export function formatTokenAmount(raw: bigint, decimals: number): string {
+  if (raw === BigInt(0)) return "0";
+  const negative = raw < BigInt(0);
+  const abs = negative ? -raw : raw;
+  const base = 10n ** BigInt(decimals);
+  const whole = abs / base;
+  const frac = (abs % base)
+    .toString()
+    .padStart(decimals, "0")
+    .replace(/0+$/, "");
+  const formatted = frac.length > 0 ? `${whole}.${frac}` : whole.toString();
+  return negative ? `-${formatted}` : formatted;
+}
+
+export function requireUsdcMint(mint: Address): void {
+  if (mint !== getUsdcMint()) {
+    throw new Error("Only USDC is supported");
+  }
+}
+
+export async function resolveMintProgram(
+  mint: Address,
+): Promise<{ program: TokenProgram; decimals: number }> {
+  requireUsdcMint(mint);
+  const rpc = getSolanaRpc();
+  const { value } = await rpc
+    .getAccountInfo(mint, { encoding: "base64" })
+    .send();
+  if (!value) throw new Error("USDC mint account not found on this cluster");
+
+  const owner = String(value.owner);
+  if (owner === TOKEN_2022_PROGRAM_ADDRESS) {
+    const mintAccount = await fetchToken2022Mint(rpc, mint);
+    return {
+      program: TOKEN_2022_PROGRAM_ADDRESS,
+      decimals: mintAccount.data.decimals,
+    };
+  }
+  if (owner === TOKEN_PROGRAM_ADDRESS) {
+    const mintAccount = await fetchTokenMint(rpc, mint);
+    return {
+      program: TOKEN_PROGRAM_ADDRESS,
+      decimals: mintAccount.data.decimals,
+    };
+  }
+  throw new Error("Unsupported mint token program");
+}
+
+export function uiAmountToRaw(uiAmount: string, decimals: number): bigint {
+  const trimmed = uiAmount.trim();
+  if (!trimmed || Number(trimmed) <= 0) {
+    throw new Error("Enter a valid amount");
+  }
+  const [whole = "0", frac = ""] = trimmed.split(".");
+  if (frac.length > decimals) {
+    throw new Error(`Amount supports at most ${decimals} decimals`);
+  }
+  const padded = frac.padEnd(decimals, "0");
+  return BigInt(whole + padded);
+}
+
+export async function findAta(
+  mint: Address,
+  owner: Address,
+  program: TokenProgram,
+): Promise<Address> {
+  const find =
+    program === TOKEN_2022_PROGRAM_ADDRESS ? findToken2022Ata : findTokenAta;
+  const [ata] = await find({ mint, owner, tokenProgram: program });
+  return ata;
+}
+
+/** Read USDC ATA balance + program_authority delegated amount for `owner`. */
+export async function fetchUsdcDelegateStatus(
+  owner: Address,
+): Promise<UsdcDelegateStatus> {
+  const mint = getUsdcMint();
+  const programAuthority = await findProgramAuthorityPda(
+    owner,
+    PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
+  );
+
+  let program: TokenProgram = TOKEN_PROGRAM_ADDRESS;
+  let decimals = USDC_DECIMALS;
+  try {
+    const resolved = await resolveMintProgram(mint);
+    program = resolved.program;
+    decimals = resolved.decimals;
+  } catch {
+    return {
+      programAuthority,
+      ata: null,
+      isProgramAuthorityDelegate: false,
+      delegatedAmountRaw: BigInt(0),
+      delegatedAmountUi: "0",
+      balanceRaw: BigInt(0),
+      balanceUi: "0",
+    };
+  }
+
+  const ata = await findAta(mint, owner, program);
+  const rpc = getSolanaRpc();
+  const fetchMaybe =
+    program === TOKEN_2022_PROGRAM_ADDRESS
+      ? fetchMaybeToken2022Account
+      : fetchMaybeTokenAccount;
+  const account = await fetchMaybe(rpc, ata);
+
+  if (!account.exists) {
+    return {
+      programAuthority,
+      ata,
+      isProgramAuthorityDelegate: false,
+      delegatedAmountRaw: BigInt(0),
+      delegatedAmountUi: "0",
+      balanceRaw: BigInt(0),
+      balanceUi: "0",
+    };
+  }
+
+  const delegate = unwrapOption(account.data.delegate);
+  const isProgramAuthorityDelegate = delegate === programAuthority;
+  const delegatedAmountRaw = isProgramAuthorityDelegate
+    ? BigInt(account.data.delegatedAmount)
+    : BigInt(0);
+  const balanceRaw = BigInt(account.data.amount);
+
+  return {
+    programAuthority,
+    ata,
+    isProgramAuthorityDelegate,
+    delegatedAmountRaw,
+    delegatedAmountUi: formatTokenAmount(delegatedAmountRaw, decimals),
+    balanceRaw,
+    balanceUi: formatTokenAmount(balanceRaw, decimals),
+  };
+}
+
+/** Approve program_authority as SPL delegate for USDC `rawAmount` on the signer's ATA. */
+export async function buildDelegateInstructions(args: {
+  signer: TransactionSigner;
+  rawAmount: bigint;
+}): Promise<{ instructions: Instruction[]; programAuthority: Address }> {
+  const { signer, rawAmount } = args;
+  const mint = getUsdcMint();
+  const { program, decimals } = await resolveMintProgram(mint);
+  const programAuthority = await findProgramAuthorityPda(
+    signer.address,
+    PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
+  );
+
+  const is2022 = program === TOKEN_2022_PROGRAM_ADDRESS;
+  const approveChecked = is2022 ? approveCheckedToken2022 : approveCheckedToken;
+
+  const sourceAta = await findAta(mint, signer.address, program);
+  const instructions: Instruction[] = [];
+
+  const rpc = getSolanaRpc();
+  const authorityInfo = await rpc
+    .getAccountInfo(programAuthority, { encoding: "base64" })
+    .send();
+  if (!authorityInfo.value) {
+    instructions.push(
+      getTransferSolInstruction({
+        source: signer,
+        destination: programAuthority,
+        amount: lamports(RENT_EXEMPT_MIN),
+      }),
+    );
+  }
+
+  instructions.push(
+    approveChecked(
+      {
+        source: sourceAta,
+        mint,
+        delegate: programAuthority,
+        owner: signer,
+        amount: rawAmount,
+        decimals,
+      },
+      { programAddress: program },
+    ),
+  );
+
+  return { instructions, programAuthority };
+}
+
+/** Revoke any SPL delegate on the signer's USDC ATA. */
+export async function buildRevokeDelegateInstructions(args: {
+  signer: TransactionSigner;
+}): Promise<{ instructions: Instruction[]; programAuthority: Address }> {
+  const { signer } = args;
+  const mint = getUsdcMint();
+  const { program } = await resolveMintProgram(mint);
+  const programAuthority = await findProgramAuthorityPda(
+    signer.address,
+    PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
+  );
+
+  const is2022 = program === TOKEN_2022_PROGRAM_ADDRESS;
+  const revoke = is2022 ? revokeToken2022 : revokeToken;
+  const sourceAta = await findAta(mint, signer.address, program);
+
+  return {
+    instructions: [
+      revoke(
+        {
+          source: sourceAta,
+          owner: signer,
+        },
+        { programAddress: program },
+      ),
+    ],
+    programAuthority,
+  };
+}
+
+export { address, getUsdcMint };

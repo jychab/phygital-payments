@@ -1,0 +1,14 @@
+.anchor
+.DS_Store
+target
+**/*.rs.bk
+node_modules
+test-ledger
+.yarn
+.surfpool
+.pnpm-store
+.dev.vars
+.wrangler
+.open-next
+app/cloudflare-env.d.ts
+
