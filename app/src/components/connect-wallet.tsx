@@ -1,9 +1,10 @@
 "use client";
 
+import { usePrivy } from "@privy-io/react-auth";
 import { Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useWallet } from "@/lib/wallet/wallet-context";
+import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
 
 function shortAddress(value: string, length = 4): string {
@@ -11,7 +12,8 @@ function shortAddress(value: string, length = 4): string {
 }
 
 export function ConnectWallet({ className }: { className?: string }) {
-  const { ready, login, logout, address, isConnected } = useWallet();
+  const { ready, login, logout } = usePrivy();
+  const { address, isConnected } = useSolanaAddress();
 
   if (!ready) {
     return (

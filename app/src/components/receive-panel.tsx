@@ -22,7 +22,7 @@ import {
   type RecipientAtaStatus,
 } from "@/lib/payments/receive";
 import { getUsdcMint } from "@/lib/payments/usdc";
-import { useWalletSigner } from "@/lib/wallet/wallet-context";
+import { useWalletKitSigner } from "@/lib/wallet/privy-signer";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
 
@@ -37,7 +37,7 @@ export function ReceivePanel({
 }: {
   paymentRequest: PaymentRequest;
 }) {
-  const signer = useWalletSigner();
+  const signer = useWalletKitSigner();
   const { address: walletAddress, isConnected } = useSolanaAddress();
   const [amount, setAmount] = useState(paymentRequest.amount ?? "");
   const [phase, setPhase] = useState<Phase>("idle");
