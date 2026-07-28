@@ -28,6 +28,8 @@ anchor-lang = "1.0.2"
 anchor-spl = "1.0.2"
 phygital-token-client = { version = "0.5.0", features = ["anchor"] }
 solana-sdk-ids = "3"
+solana-instructions-sysvar = "3"
+solana-sha256-hasher = "3"
 
 [dev-dependencies]
 anchor-lang = "1.0.2"

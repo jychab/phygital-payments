@@ -59,6 +59,52 @@ fn transfer_succeeds_and_moves_tokens() {
 }
 
 #[test]
+fn transfer_rejects_wrong_rp_id() {
+    let mut ctx = TestContext::new();
+    let passkey = TestPasskey::generate();
+    let owner = Keypair::new();
+    let recipient = Keypair::new().pubkey();
+    let design_mint = Keypair::new().pubkey();
+    let asset = ctx.asset_pda(&passkey.compressed_pubkey);
+    let amount = 1_000_000u64;
+
+    ctx.write_locked_asset(
+        asset,
+        owner.pubkey(),
+        design_mint,
+        passkey.compressed_pubkey,
+        u64::MAX,
+    );
+    let (payment_mint, sender_token, recipient_token) =
+        setup_delegated_payment(&mut ctx, &owner, recipient, amount);
+
+    let err = ctx
+        .send_transfer_with_rp_id(
+            asset,
+            payment_mint,
+            recipient,
+            sender_token,
+            recipient_token,
+            owner.pubkey(),
+            amount,
+            &passkey,
+            true,
+            "evil.com",
+        )
+        .expect_err("non-whitelisted rpId should fail");
+
+    let err_str = format!("{err:?}");
+    assert!(
+        err_str.contains("InvalidRpId") || err_str.contains("6001"),
+        "unexpected error: {err:?}"
+    );
+
+    // Nothing moved.
+    assert_eq!(ctx.token_balance(sender_token), amount);
+    assert_eq!(ctx.token_balance(recipient_token), 0);
+}
+
+#[test]
 fn transfer_rejects_unlocked_asset() {
     let mut ctx = TestContext::new();
     let passkey = TestPasskey::generate();

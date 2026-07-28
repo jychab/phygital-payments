@@ -7,8 +7,8 @@ use phygital_token_client::Secp256r1VerifyArgs;
 use rand::rngs::OsRng;
 use sha2::{Digest, Sha256};
 
-pub const TEST_RP_ID: &str = "localhost";
-pub const TEST_ORIGIN: &str = "http://localhost:3000";
+pub const TEST_RP_ID: &str = "payments.revibase.com";
+pub const TEST_ORIGIN: &str = "https://payments.revibase.com";
 
 const COMPRESSED_PUBKEY_SERIALIZED_SIZE: usize = 33;
 const SIGNATURE_OFFSETS_SERIALIZED_SIZE: usize = 14;
@@ -47,11 +47,12 @@ impl TestPasskey {
         }
     }
 
-    pub fn verify_asset_secp256r1_instruction(
+    pub fn verify_asset_secp256r1_instruction_with_rp_id(
         &self,
         message: impl AsRef<[u8]>,
         slot_number: u64,
         slot_hash: [u8; 32],
+        rp_id: &str,
     ) -> (Instruction, Secp256r1VerifyArgs) {
         let message_hash: [u8; 32] = Sha256::digest(message.as_ref()).into();
 
@@ -72,7 +73,7 @@ impl TestPasskey {
         client_data_json.extend_from_slice(br#","crossOrigin":false}"#);
 
         let client_data_hash: [u8; 32] = Sha256::digest(&client_data_json).into();
-        let rp_id_hash: [u8; 32] = Sha256::digest(TEST_RP_ID.as_bytes()).into();
+        let rp_id_hash: [u8; 32] = Sha256::digest(rp_id.as_bytes()).into();
 
         let mut authenticator_data = Vec::with_capacity(37);
         authenticator_data.extend_from_slice(&rp_id_hash);

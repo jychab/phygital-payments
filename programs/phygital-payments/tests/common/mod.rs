@@ -326,11 +326,39 @@ impl TestContext {
         passkey: &TestPasskey,
         include_secp_ix: bool,
     ) -> litesvm::types::TransactionResult {
+        self.send_transfer_with_rp_id(
+            asset,
+            mint,
+            recipient,
+            sender_token_account,
+            recipient_token_account,
+            owner,
+            amount,
+            passkey,
+            include_secp_ix,
+            secp256r1::TEST_RP_ID,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn send_transfer_with_rp_id(
+        &mut self,
+        asset: Pubkey,
+        mint: Pubkey,
+        recipient: Pubkey,
+        sender_token_account: Pubkey,
+        recipient_token_account: Pubkey,
+        owner: Pubkey,
+        amount: u64,
+        passkey: &TestPasskey,
+        include_secp_ix: bool,
+        rp_id: &str,
+    ) -> litesvm::types::TransactionResult {
         let message =
             phygital_payments::instructions::transfer::build_transfer_message(&mint, &recipient, amount);
         let (slot_number, slot_hash) = current_slot_entry(&self.svm);
-        let (secp_ix, verify_args) =
-            passkey.verify_asset_secp256r1_instruction(&message, slot_number, slot_hash);
+        let (secp_ix, verify_args) = passkey
+            .verify_asset_secp256r1_instruction_with_rp_id(&message, slot_number, slot_hash, rp_id);
         let transfer_ix = self.transfer_ix(
             asset,
             mint,

@@ -6,9 +6,11 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use phygital_token_client::{Asset, AssetType, Secp256r1VerifyArgs, VerifyAssetCpiBuilder};
 use solana_sdk_ids::sysvar::instructions::ID as INSTRUCTIONS_SYSVAR_ID;
 use solana_sdk_ids::sysvar::slot_hashes::ID as SLOT_HASHES_SYSVAR_ID;
+use solana_sha256_hasher::hash as sha256_hash;
 
 use crate::error::PhygitalError;
-use crate::{PHYGITAL_TOKEN_PROGRAM_ID, PROGRAM_AUTHORITY_SEED};
+use crate::utils::secp256r1::extract_rp_id_hash;
+use crate::{PHYGITAL_TOKEN_PROGRAM_ID, PROGRAM_AUTHORITY_SEED, WHITELISTED_RPID};
 
 pub fn build_transfer_message(mint: &Pubkey, recipient: &Pubkey, amount: u64) -> Vec<u8> {
     let mut message = Vec::with_capacity(26 + 32 + 32 + 8);
@@ -97,6 +99,12 @@ pub fn handler(
     require!(
         ctx.accounts.asset.asset_type == AssetType::Lockable && ctx.accounts.asset.is_locked,
         PhygitalError::AssetIsCurrentlyUnLocked
+    );
+
+    let rp_id_hash = extract_rp_id_hash(&ctx.accounts.instructions_sysvar, &secp256r1_verify_args)?;
+    require!(
+        rp_id_hash == sha256_hash(WHITELISTED_RPID).to_bytes(),
+        PhygitalError::InvalidRpId,
     );
 
     let message = build_transfer_message(
