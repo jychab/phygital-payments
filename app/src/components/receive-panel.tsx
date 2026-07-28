@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { address, type Address } from "@solana/kit";
 import {
@@ -15,18 +15,17 @@ import {
 import { AmountField } from "@/components/amount-field";
 import { Button } from "@/components/ui/button";
 import { explorerTxUrl } from "@/lib/solana/cluster";
-import { sendTransaction } from "@/lib/solana/tx";
-import { resolveMintProgram, uiAmountToRaw } from "@/lib/payments/fund";
+import { uiAmountToRaw } from "@/lib/payments/fund";
 import type { PaymentRequest } from "@/lib/payments/payment-request";
 import {
-  buildCreateRecipientAtaInstructions,
-  fetchRecipientAtaStatus,
   isSponsoredSubmitAvailable,
-  receiveTransfer,
   type ReceiveTransferContext,
-  type RecipientAtaStatus,
 } from "@/lib/payments/receive";
 import { getUsdcMint } from "@/lib/payments/usdc";
+import { useMintProgram } from "@/hooks/use-mint-program";
+import { useRecipientAtaStatus } from "@/hooks/use-recipient-ata-status";
+import { useCreateAtaMutation } from "@/hooks/use-create-ata-mutation";
+import { useReceiveMutation } from "@/hooks/use-receive-mutation";
 import { useWalletKitSigner } from "@/lib/wallet/bridge-signer";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
@@ -56,14 +55,9 @@ export function ReceivePanel({
   const signer = useWalletKitSigner();
   const [amount, setAmount] = useState(paymentRequest.amount ?? "");
   const [phase, setPhase] = useState<Phase>("idle");
-  const [creating, setCreating] = useState(false);
-  const [recipientStatus, setRecipientStatus] = useState<
-    (RecipientAtaStatus & { decimals: number }) | null
-  >(null);
-  const [ataLoading, setAtaLoading] = useState(false);
+
   const sponsoredAvailable = isSponsoredSubmitAvailable();
   const mint = paymentRequest.mint;
-  const busy = phase !== "idle" || creating;
   const amountLocked = Boolean(paymentRequest.amount);
   const mintLabel = mint === getUsdcMint() ? "USDC" : shortAddress(mint, 6);
 
@@ -74,87 +68,23 @@ export function ReceivePanel({
     () => tryAddress(walletAddress ?? paymentRequest.recipient ?? ""),
     [walletAddress, paymentRequest.recipient],
   );
-  const readyToReceive = recipientStatus?.exists === true;
-  const missingAta = recipientStatus != null && !recipientStatus.exists;
 
-  const refreshAta = useCallback(async () => {
-    if (!recipient) {
-      setRecipientStatus(null);
-      return;
-    }
-    setAtaLoading(true);
-    try {
-      const { program, decimals } = await resolveMintProgram(mint);
-      const status = await fetchRecipientAtaStatus({
-        mint,
-        owner: recipient,
-        program,
-      });
-      setRecipientStatus({ ...status, decimals });
-    } catch (error) {
-      console.error(error);
-      setRecipientStatus(null);
-    } finally {
-      setAtaLoading(false);
-    }
-  }, [mint, recipient]);
+  const mintQuery = useMintProgram(mint);
+  const ataQuery = useRecipientAtaStatus(
+    recipient ?? null,
+    mint,
+    mintQuery.data?.program,
+  );
+  const ataStatus = ataQuery.data ?? null;
+  const ataLoading = Boolean(recipient) && ataQuery.isLoading;
+  const readyToReceive = ataStatus?.exists === true;
+  const missingAta = ataStatus != null && !ataStatus.exists;
 
-  useEffect(() => {
-    void refreshAta();
-  }, [refreshAta]);
-
-  async function onCreateAccount() {
-    if (!recipient || !signer) {
-      toast.error("Open from your vault to create a USDC account");
-      return;
-    }
-    setCreating(true);
-    try {
-      const { instructions } = await buildCreateRecipientAtaInstructions({
-        signer,
-        owner: recipient,
-      });
-      if (instructions.length > 0) {
-        await sendTransaction({ instructions, feePayer: signer });
-      }
-      toast.success("USDC account ready");
-      await refreshAta();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Couldn’t create USDC account",
-      );
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  async function onReceive() {
-    if (!recipient) {
-      toast.error("No recipient — open this from your vault");
-      return;
-    }
-    if (!sponsoredAvailable) {
-      toast.error("Sponsored submit is not configured");
-      return;
-    }
-    if (!readyToReceive || !recipientStatus) {
-      toast.error("The recipient needs a USDC account before receiving");
-      return;
-    }
-    setPhase("awaiting-tap");
-    try {
-      const rawAmount = uiAmountToRaw(amount, recipientStatus.decimals);
-      const transferContext: ReceiveTransferContext = {
-        tokenProgram: recipientStatus.program,
-        recipientAta: recipientStatus.ata,
-      };
-      setPhase("confirming");
-      const { signature } = await receiveTransfer({
-        recipient,
-        rawAmount,
-        mint,
-        context: transferContext,
-      });
+  const createAta = useCreateAtaMutation(mint, {
+    onSuccess: () => toast.success("USDC account ready"),
+  });
+  const receive = useReceiveMutation({
+    onSuccess: (signature) => {
       toast.success("Payment received", {
         description: (
           <a
@@ -168,6 +98,44 @@ export function ReceivePanel({
         ),
       });
       if (!amountLocked) setAmount("");
+    },
+  });
+
+  const busy = phase !== "idle" || createAta.isPending;
+
+  async function onCreateAccount() {
+    if (!recipient) return;
+    try {
+      await createAta.mutateAsync({ recipient });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Couldn’t create USDC account",
+      );
+    }
+  }
+
+  async function onReceive() {
+    if (!recipient) {
+      toast.error("No recipient — open this from your vault");
+      return;
+    }
+    if (!sponsoredAvailable) {
+      toast.error("Sponsored submit is not configured");
+      return;
+    }
+    if (!readyToReceive || !ataStatus || !mintQuery.data) {
+      toast.error("The recipient needs a USDC account before receiving");
+      return;
+    }
+    setPhase("awaiting-tap");
+    try {
+      const rawAmount = uiAmountToRaw(amount, mintQuery.data.decimals);
+      const context: ReceiveTransferContext = {
+        tokenProgram: ataStatus.program,
+        recipientAta: ataStatus.ata,
+      };
+      setPhase("confirming");
+      await receive.mutateAsync({ recipient, rawAmount, mint, context });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Payment didn’t go through",
@@ -308,7 +276,7 @@ export function ReceivePanel({
                 onClick={onCreateAccount}
                 disabled={busy}
               >
-                {creating ? (
+                {createAta.isPending ? (
                   <>
                     <LoaderCircle className="size-3.5 animate-spin" />
                     Creating…

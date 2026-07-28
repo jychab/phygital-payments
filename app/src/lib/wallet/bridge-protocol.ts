@@ -15,6 +15,8 @@ export const BRIDGE_MESSAGE = {
   ready: "revibase-pay:ready",
   /** parent → child: connected wallet (address/chain). */
   wallet: "revibase-pay:wallet",
+  /** parent → child: the vault's accent, so the iframe matches the vault. */
+  theme: "revibase-pay:theme",
   /** child → parent: sign these wire bytes. */
   signRequest: "revibase-pay:sign-request",
   /** parent → child: signed wire bytes (or an error). */
@@ -32,6 +34,15 @@ export type WalletMessage = {
   address: string | null;
   /** e.g. "solana:mainnet" — the parent's active chain. */
   chain: string | null;
+};
+
+export type ThemeMessage = {
+  type: typeof BRIDGE_MESSAGE.theme;
+  v: number;
+  /** CSS color for the vault accent (e.g. an oklch() string), or null to reset. */
+  accent: string | null;
+  /** A dimmer variant of the accent, or null. */
+  accentMuted: string | null;
 };
 
 export type SignRequestMessage = {
@@ -55,14 +66,21 @@ export type SignResponseMessage = {
 /** Messages the child sends to the parent. */
 export type ChildToParentMessage = ReadyMessage | SignRequestMessage;
 /** Messages the parent sends to the child. */
-export type ParentToChildMessage = WalletMessage | SignResponseMessage;
+export type ParentToChildMessage =
+  | WalletMessage
+  | ThemeMessage
+  | SignResponseMessage;
 
 export function isParentToChildMessage(
   data: unknown,
 ): data is ParentToChildMessage {
   if (typeof data !== "object" || data === null) return false;
   const type = (data as { type?: unknown }).type;
-  return type === BRIDGE_MESSAGE.wallet || type === BRIDGE_MESSAGE.signResponse;
+  return (
+    type === BRIDGE_MESSAGE.wallet ||
+    type === BRIDGE_MESSAGE.theme ||
+    type === BRIDGE_MESSAGE.signResponse
+  );
 }
 
 export function isChildToParentMessage(

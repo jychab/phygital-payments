@@ -11,7 +11,8 @@ export function useSolanaAddress(): {
   address: string | null;
   isConnected: boolean;
   ready: boolean;
+  isEmbedded: boolean;
 } {
-  const { address, isConnected, ready } = useParentWallet();
-  return { address, isConnected, ready };
+  const { address, isConnected, ready, isEmbedded } = useParentWallet();
+  return { address, isConnected, ready, isEmbedded };
 }

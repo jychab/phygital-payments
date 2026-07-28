@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import {
@@ -38,11 +39,32 @@ type BridgeState = {
 
 type BridgeContextValue = BridgeState & {
   isConnected: boolean;
+  /** True when running inside a host frame (the vault), vs. opened standalone. */
+  isEmbedded: boolean;
   /** Sign unsigned wire bytes via the parent wallet; resolves to signed wire. */
   signTransaction: (wire: Uint8Array) => Promise<Uint8Array>;
 };
 
 const BridgeContext = createContext<BridgeContextValue | null>(null);
+
+/**
+ * Adopt the vault's accent so the payment UI matches the accessory. We map it to
+ * `--primary`/`--ring` (buttons, rings, chips) and `--accent-glow` (ambient
+ * washes). Passing `null` restores the app's built-in accent for standalone use.
+ */
+function applyVaultAccent(accent: string | null): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  if (accent) {
+    root.style.setProperty("--primary", accent);
+    root.style.setProperty("--ring", accent);
+    root.style.setProperty("--accent-glow", accent);
+  } else {
+    root.style.removeProperty("--primary");
+    root.style.removeProperty("--ring");
+    root.style.removeProperty("--accent-glow");
+  }
+}
 
 /** True when running inside a frame (has a parent window to talk to). */
 function isFramed(): boolean {
@@ -51,6 +73,17 @@ function isFramed(): boolean {
   } catch {
     return true; // cross-origin access throws → we are framed
   }
+}
+
+// Client-only fact, read without a hydration mismatch (false on the server, the
+// real value after mount) and without setState-in-effect.
+const noopSubscribe = () => () => {};
+function useIsEmbedded(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => isFramed(),
+    () => false,
+  );
 }
 
 type PendingSign = {
@@ -69,6 +102,7 @@ export function ParentWalletProvider({
     chain: null,
     ready: false,
   });
+  const isEmbedded = useIsEmbedded();
   const pendingRef = useRef<Map<string, PendingSign>>(new Map());
 
   const postToParent = useCallback((message: unknown) => {
@@ -109,6 +143,11 @@ export function ParentWalletProvider({
           chain: message.chain,
           ready: true,
         });
+        return;
+      }
+
+      if (message.type === BRIDGE_MESSAGE.theme) {
+        applyVaultAccent(message.accent);
         return;
       }
 
@@ -175,9 +214,10 @@ export function ParentWalletProvider({
     () => ({
       ...state,
       isConnected: !!state.address,
+      isEmbedded,
       signTransaction,
     }),
-    [state, signTransaction],
+    [state, isEmbedded, signTransaction],
   );
 
   return (

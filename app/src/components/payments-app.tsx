@@ -44,15 +44,15 @@ export function PaymentsApp({
   const [mode, setMode] = useState<"allow" | "receive" | "history">(
     paymentRequest.fromUrl ? "receive" : "allow",
   );
-  const { isConnected, ready } = useSolanaAddress();
+  const { isConnected, ready, isEmbedded } = useSolanaAddress();
   const copy =
     mode === "receive" && paymentRequest.fromUrl
       ? MODE_COPY.receiveRequest
       : MODE_COPY[mode];
 
-  // Wallet-gated tabs (Allow / Activity) need the parent vault to report a
-  // connected wallet over the bridge. While the handshake is pending, show a
-  // spinner; if it never arrives (opened outside the vault), tell the user.
+  // Wallet-gated tabs (Allow / Activity) need the vault to report a connected
+  // wallet over the bridge. While the handshake is pending, show a spinner;
+  // then guide based on where the app is running.
   const connectPrompt = !ready ? (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 py-10 text-center">
       <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
@@ -65,11 +65,12 @@ export function PaymentsApp({
       </div>
       <div className="space-y-1.5">
         <p className="font-[family-name:var(--font-display)] text-lg tracking-tight">
-          Open from your vault
+          {isEmbedded ? "Wallet not connected" : "Open from your vault"}
         </p>
         <p className="mx-auto max-w-[16rem] text-sm text-muted-foreground">
-          Open Phygital Pay from your Revibase vault so it can use your wallet to
-          set an allowance or view payment activity.
+          {isEmbedded
+            ? "Connect a wallet in your Revibase vault to set an allowance or view payment activity."
+            : "Open Phygital Pay from your Revibase vault so it can use your wallet to set an allowance or view payment activity."}
         </p>
       </div>
     </div>
@@ -81,15 +82,19 @@ export function PaymentsApp({
         aria-hidden
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        <div className="absolute -left-28 -top-10 h-[22rem] w-[22rem] rounded-full bg-[radial-gradient(circle,oklch(0.82_0.18_130/0.16),transparent_68%)] blur-3xl transform-gpu motion-safe:animate-[wallet-breathe_10s_ease-in-out_infinite]" />
+        <div className="absolute -left-28 -top-10 h-[22rem] w-[22rem] rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--accent-glow)_16%,transparent),transparent_68%)] blur-3xl transform-gpu motion-safe:animate-[wallet-breathe_10s_ease-in-out_infinite]" />
         <div className="absolute -bottom-16 -right-10 h-[24rem] w-[24rem] rounded-full bg-[radial-gradient(circle,oklch(0.72_0.1_200/0.12),transparent_70%)] blur-3xl transform-gpu motion-safe:animate-[wallet-breathe_12s_ease-in-out_infinite_reverse]" />
       </div>
 
       <header className="relative z-10 flex items-center justify-between gap-4 px-5 py-4 md:px-8">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="font-[family-name:var(--font-display)] text-xl tracking-tight md:text-2xl">
-            Phygital Pay
-          </span>
+          {/* The vault's own sheet header already names the app when embedded,
+              so the wordmark only shows when running standalone. */}
+          {!isEmbedded ? (
+            <span className="font-[family-name:var(--font-display)] text-xl tracking-tight md:text-2xl">
+              Phygital Pay
+            </span>
+          ) : null}
           <span className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
             {isMainnet() ? "Mainnet" : "Devnet"}
           </span>

@@ -72,28 +72,10 @@ export async function resolveMintProgram(
   mint: Address,
 ): Promise<{ program: TokenProgram; decimals: number }> {
   requireUsdcMint(mint);
-  const rpc = getSolanaRpc();
-  const { value } = await rpc
-    .getAccountInfo(mint, { encoding: "base64" })
-    .send();
-  if (!value) throw new Error("USDC mint account not found on this cluster");
-
-  const owner = String(value.owner);
-  if (owner === TOKEN_2022_PROGRAM_ADDRESS) {
-    const mintAccount = await fetchToken2022Mint(rpc, mint);
-    return {
-      program: TOKEN_2022_PROGRAM_ADDRESS,
-      decimals: mintAccount.data.decimals,
-    };
-  }
-  if (owner === TOKEN_PROGRAM_ADDRESS) {
-    const mintAccount = await fetchTokenMint(rpc, mint);
-    return {
-      program: TOKEN_PROGRAM_ADDRESS,
-      decimals: mintAccount.data.decimals,
-    };
-  }
-  throw new Error("Unsupported mint token program");
+  return {
+    program: TOKEN_PROGRAM_ADDRESS,
+    decimals: USDC_DECIMALS,
+  };
 }
 
 export function uiAmountToRaw(uiAmount: string, decimals: number): bigint {

@@ -1,134 +1,94 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { address } from "@solana/kit";
 import { Check, LoaderCircle } from "lucide-react";
 
 import { AmountField } from "@/components/amount-field";
 import { Button } from "@/components/ui/button";
 import { explorerTxUrl } from "@/lib/solana/cluster";
-import { sendTransaction } from "@/lib/solana/tx";
-import {
-  buildDelegateInstructions,
-  buildRevokeDelegateInstructions,
-  fetchUsdcDelegateStatus,
-  resolveMintProgram,
-  uiAmountToRaw,
-  type UsdcDelegateStatus,
-} from "@/lib/payments/fund";
+import { uiAmountToRaw } from "@/lib/payments/fund";
 import { getUsdcMint } from "@/lib/payments/usdc";
-import { useWalletKitSigner } from "@/lib/wallet/bridge-signer";
+import { useDelegateStatus } from "@/hooks/use-delegate-status";
+import { useMintProgram } from "@/hooks/use-mint-program";
+import {
+  useRevokeAllowanceMutation,
+  useSetAllowanceMutation,
+} from "@/hooks/use-allowance-mutations";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
 
+function explorerToast(title: string, signature: string) {
+  toast.success(title, {
+    description: (
+      <a
+        className="underline"
+        href={explorerTxUrl(signature)}
+        target="_blank"
+        rel="noreferrer"
+      >
+        View on Explorer
+      </a>
+    ),
+  });
+}
+
 export function FundPanel() {
-  const signer = useWalletKitSigner();
   const { address: walletAddress, isConnected } = useSolanaAddress();
   const [amount, setAmount] = useState("");
-  const [status, setStatus] = useState<UsdcDelegateStatus | null>(null);
-  const [statusLoading, setStatusLoading] = useState(false);
-  const [pending, setPending] = useState<"approve" | "revoke" | null>(null);
 
   const usdcMint = getUsdcMint();
+  const statusQuery = useDelegateStatus(walletAddress);
+  const mintQuery = useMintProgram(usdcMint);
+  const status = statusQuery.data;
 
-  const refreshStatus = useCallback(async () => {
-    if (!walletAddress) {
-      setStatus(null);
-      return;
-    }
-    setStatusLoading(true);
-    try {
-      const next = await fetchUsdcDelegateStatus(address(walletAddress));
-      setStatus(next);
-    } catch (error) {
-      console.error(error);
-      setStatus(null);
-    } finally {
-      setStatusLoading(false);
-    }
-  }, [walletAddress]);
-
-  useEffect(() => {
-    void refreshStatus();
-  }, [refreshStatus]);
+  const setAllowance = useSetAllowanceMutation(walletAddress, {
+    onSuccess: (signature) => {
+      explorerToast("Allowance updated", signature);
+      setAmount("");
+    },
+  });
+  const revoke = useRevokeAllowanceMutation(walletAddress, {
+    onSuccess: (signature) => explorerToast("Allowance removed", signature),
+  });
 
   async function onDelegate() {
-    if (!signer || !isConnected) {
-      toast.error("Connect a wallet first");
+    if (!isConnected) {
+      toast.error("Open this from your vault first");
       return;
     }
-    setPending("approve");
+    if (!mintQuery.data) {
+      toast.error("Still loading — try again in a moment");
+      return;
+    }
     try {
-      const { decimals } = await resolveMintProgram(usdcMint);
-      const rawAmount = uiAmountToRaw(amount, decimals);
-      const { instructions } = await buildDelegateInstructions({
-        signer,
+      const rawAmount = uiAmountToRaw(amount, mintQuery.data.decimals);
+      await setAllowance.mutateAsync({
         rawAmount,
+        decimals: mintQuery.data.decimals,
       });
-      const { signature } = await sendTransaction({
-        instructions,
-        feePayer: signer,
-      });
-      toast.success("Allowance updated", {
-        description: (
-          <a
-            className="underline"
-            href={explorerTxUrl(signature)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            View on Explorer
-          </a>
-        ),
-      });
-      setAmount("");
-      await refreshStatus();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Couldn’t update allowance");
-    } finally {
-      setPending(null);
+      toast.error(
+        error instanceof Error ? error.message : "Couldn’t update allowance",
+      );
     }
   }
 
   async function onRevoke() {
-    if (!signer || !isConnected) {
-      toast.error("Connect a wallet first");
-      return;
-    }
-    setPending("revoke");
     try {
-      const { instructions } = await buildRevokeDelegateInstructions({
-        signer,
-      });
-      const { signature } = await sendTransaction({
-        instructions,
-        feePayer: signer,
-      });
-      toast.success("Allowance removed", {
-        description: (
-          <a
-            className="underline"
-            href={explorerTxUrl(signature)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            View on Explorer
-          </a>
-        ),
-      });
-      await refreshStatus();
+      await revoke.mutateAsync();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Couldn’t remove allowance");
-    } finally {
-      setPending(null);
+      toast.error(
+        error instanceof Error ? error.message : "Couldn’t remove allowance",
+      );
     }
   }
 
   const hasDelegate =
     !!status?.isProgramAuthorityDelegate && status.delegatedAmountRaw > BigInt(0);
   const allowanceLabel = hasDelegate ? status!.delegatedAmountUi : "0";
-  const busy = pending !== null;
+  const statusLoading = statusQuery.isLoading;
+  const busy = setAllowance.isPending || revoke.isPending;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -142,14 +102,14 @@ export function FundPanel() {
       >
         <div
           aria-hidden
-          className="pointer-events-none absolute -right-8 -top-10 size-36 rounded-full bg-[radial-gradient(circle,oklch(0.86_0.2_130/0.22),transparent_70%)]"
+          className="pointer-events-none absolute -right-8 -top-10 size-36 rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--accent-glow)_22%,transparent),transparent_70%)]"
         />
         <div className="relative flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/55">
               Spending allowance
             </p>
-            {statusLoading && !status ? (
+            {statusLoading ? (
               <p className="mt-3 flex items-center gap-2 text-sm text-white/60">
                 <LoaderCircle className="size-3.5 animate-spin" />
                 Checking…
@@ -214,7 +174,7 @@ export function FundPanel() {
             onClick={onDelegate}
             disabled={!isConnected || busy || !amount}
           >
-            {pending === "approve" ? (
+            {setAllowance.isPending ? (
               <>
                 <LoaderCircle className="size-4 animate-spin" />
                 Confirm in wallet…
@@ -233,7 +193,7 @@ export function FundPanel() {
             onClick={onRevoke}
             disabled={!isConnected || busy || !hasDelegate}
           >
-            {pending === "revoke" ? (
+            {revoke.isPending ? (
               <>
                 <LoaderCircle className="size-4 animate-spin" />
                 Removing…

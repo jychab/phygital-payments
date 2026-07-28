@@ -67,6 +67,9 @@
   --border: oklch(0.34 0.02 145);
   --input: oklch(0.28 0.02 145);
   --ring: oklch(0.86 0.2 130);
+  /* Ambient wash color; the vault bridge overrides this with the accessory
+     accent so glows match the vault. Defaults to the app's own accent. */
+  --accent-glow: var(--primary);
   --chart-1: oklch(0.86 0.2 130);
   --chart-2: oklch(0.7 0.12 200);
   --chart-3: oklch(0.75 0.1 90);

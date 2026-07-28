@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -13,10 +12,8 @@ import { Button } from "@/components/ui/button";
 import { explorerTxUrl } from "@/lib/solana/cluster";
 import { formatTokenAmount } from "@/lib/payments/fund";
 import { getUsdcMint, USDC_DECIMALS } from "@/lib/payments/usdc";
-import {
-  fetchPaymentHistory,
-  type PaymentRecord,
-} from "@/lib/payments/history-client";
+import type { PaymentRecord } from "@/lib/payments/history-client";
+import { usePaymentHistory } from "@/hooks/use-payment-history";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
 
@@ -55,52 +52,13 @@ function toRows(payments: PaymentRecord[], wallet: string): Row[] {
 
 export function HistoryPanel() {
   const { address } = useSolanaAddress();
-  const [payments, setPayments] = useState<PaymentRecord[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const query = usePaymentHistory(address);
   const usdcMint = getUsdcMint();
 
-  const load = useCallback(async () => {
-    if (!address) return;
-    try {
-      const items = await fetchPaymentHistory(address, { limit: 50 });
-      setPayments(items);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn’t load history");
-    }
-  }, [address]);
-
-  // setState only inside async callbacks (never synchronously in the effect).
-  useEffect(() => {
-    let ignore = false;
-    if (address) {
-      fetchPaymentHistory(address, { limit: 50 })
-        .then((items) => {
-          if (!ignore) {
-            setPayments(items);
-            setError(null);
-          }
-        })
-        .catch((e) => {
-          if (!ignore) {
-            setError(e instanceof Error ? e.message : "Couldn’t load history");
-          }
-        });
-    }
-    return () => {
-      ignore = true;
-    };
-  }, [address]);
-
-  async function onRefresh() {
-    setRefreshing(true);
-    await load();
-    setRefreshing(false);
-  }
-
-  const loading = payments === null && error === null && !!address;
-  const rows = payments && address ? toRows(payments, address) : [];
+  const loading = query.isLoading;
+  const error = query.error as Error | null;
+  const rows =
+    query.data && address ? toRows(query.data, address) : [];
 
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -111,10 +69,12 @@ export function HistoryPanel() {
           size="sm"
           variant="ghost"
           className="h-8 gap-1.5 px-2 text-xs"
-          onClick={onRefresh}
-          disabled={refreshing || !address}
+          onClick={() => query.refetch()}
+          disabled={query.isFetching || !address}
         >
-          <RefreshCw className={cn("size-3.5", refreshing && "animate-spin")} />
+          <RefreshCw
+            className={cn("size-3.5", query.isFetching && "animate-spin")}
+          />
           Refresh
         </Button>
       </div>
@@ -125,8 +85,15 @@ export function HistoryPanel() {
         </div>
       ) : error ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-12 text-center">
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <Button type="button" size="sm" variant="outline" onClick={onRefresh}>
+          <p className="text-sm text-muted-foreground">
+            {error.message || "Couldn’t load history"}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => query.refetch()}
+          >
             Try again
           </Button>
         </div>
