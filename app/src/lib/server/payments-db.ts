@@ -1,6 +1,6 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import "server-only";
 
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 // Minimal D1 surface we use (avoids pulling @cloudflare/workers-types into the
 // Next build, which conflicts with the DOM lib).
@@ -46,7 +46,7 @@ type PaymentRow = {
 };
 
 export function getPaymentsDb(): D1Database {
-  const db = (getCloudflareContext().env as unknown as { DB?: D1Database }).DB;
+  const db = getCloudflareContext().env.phygital_payments;
   if (!db) {
     throw new Error("D1 binding DB is not configured");
   }
