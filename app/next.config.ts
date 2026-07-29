@@ -14,7 +14,7 @@ const workspaceRoot = path.join(__dirname, "..");
 // Who may embed this app in an iframe. Standalone (top-level) use is unaffected
 // by frame-ancestors. Override FRAME_ANCESTORS for local embedding tests
 // (e.g. "http://localhost:3001"); production default is the Revibase vault.
-const frameAncestors = process.env.FRAME_ANCESTORS ?? "https://app.revibase.com";
+const frameAncestors = "*";
 
 const nextConfig: NextConfig = {
   transpilePackages: ["phygital-payments-sdk", "phygital-token-sdk"],
