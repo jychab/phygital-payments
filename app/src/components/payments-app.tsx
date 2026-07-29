@@ -25,6 +25,9 @@ export function PaymentsApp({
   const recipient = paymentRequest.recipient?.toString() ?? null;
   const canViewActivity = isConnected || Boolean(recipient);
 
+  const showAllowance = isEmbedded;
+  const effectiveMode = !showAllowance && mode === "allow" ? "receive" : mode;
+
   // Wallet-gated tabs (Allowance / Activity) need the vault to report a wallet
   // over the bridge. Show a quiet connecting state, then a one-line prompt.
   const connectPrompt = (
@@ -73,7 +76,7 @@ export function PaymentsApp({
         </div>
 
         <Tabs
-          value={mode}
+          value={effectiveMode}
           onValueChange={(value) => {
             if (value === "allow" || value === "receive" || value === "history") {
               setMode(value);
@@ -81,14 +84,21 @@ export function PaymentsApp({
           }}
           className="flex flex-1 flex-col gap-0"
         >
-          <TabsList className="grid h-11 w-full grid-cols-3 rounded-xl p-1">
-            <TabsTrigger
-              value="allow"
-              className="h-full gap-1.5 rounded-lg text-[0.8125rem]"
-            >
-              <ShieldCheck className="size-3.5 opacity-70" />
-              Allowance
-            </TabsTrigger>
+          <TabsList
+            className={cn(
+              "grid h-11 w-full rounded-xl p-1",
+              showAllowance ? "grid-cols-3" : "grid-cols-2",
+            )}
+          >
+            {showAllowance ? (
+              <TabsTrigger
+                value="allow"
+                className="h-full gap-1.5 rounded-lg text-[0.8125rem]"
+              >
+                <ShieldCheck className="size-3.5 opacity-70" />
+                Allowance
+              </TabsTrigger>
+            ) : null}
             <TabsTrigger
               value="receive"
               className="h-full gap-1.5 rounded-lg text-[0.8125rem]"
@@ -111,12 +121,14 @@ export function PaymentsApp({
               "bg-card/80 p-5 shadow-[0_24px_80px_-48px_oklch(0_0_0/0.9)] backdrop-blur-xl md:p-6",
             )}
           >
-            <TabsContent
-              value="allow"
-              className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
-            >
-              {isConnected ? <FundPanel /> : connectPrompt}
-            </TabsContent>
+            {showAllowance ? (
+              <TabsContent
+                value="allow"
+                className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
+              >
+                {isConnected ? <FundPanel /> : connectPrompt}
+              </TabsContent>
+            ) : null}
             <TabsContent
               value="receive"
               className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
