@@ -47,25 +47,6 @@ type BridgeContextValue = BridgeState & {
 
 const BridgeContext = createContext<BridgeContextValue | null>(null);
 
-/**
- * Adopt the vault's accent so the payment UI matches the accessory. We map it to
- * `--primary`/`--ring` (buttons, rings, chips) and `--accent-glow` (ambient
- * washes). Passing `null` restores the app's built-in accent for standalone use.
- */
-function applyVaultAccent(accent: string | null): void {
-  if (typeof document === "undefined") return;
-  const root = document.documentElement;
-  if (accent) {
-    root.style.setProperty("--primary", accent);
-    root.style.setProperty("--ring", accent);
-    root.style.setProperty("--accent-glow", accent);
-  } else {
-    root.style.removeProperty("--primary");
-    root.style.removeProperty("--ring");
-    root.style.removeProperty("--accent-glow");
-  }
-}
-
 /** True when running inside a frame (has a parent window to talk to). */
 function isFramed(): boolean {
   try {
@@ -143,11 +124,6 @@ export function ParentWalletProvider({
           chain: message.chain,
           ready: true,
         });
-        return;
-      }
-
-      if (message.type === BRIDGE_MESSAGE.theme) {
-        applyVaultAccent(message.accent);
         return;
       }
 
