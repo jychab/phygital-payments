@@ -22,6 +22,8 @@ export function PaymentsApp({
     paymentRequest.fromUrl ? "receive" : "allow",
   );
   const { isConnected, ready, isEmbedded } = useSolanaAddress();
+  const recipient = paymentRequest.recipient?.toString() ?? null;
+  const canViewActivity = isConnected || Boolean(recipient);
 
   // Wallet-gated tabs (Allowance / Activity) need the vault to report a wallet
   // over the bridge. Show a quiet connecting state, then a one-line prompt.
@@ -67,7 +69,7 @@ export function PaymentsApp({
           ) : (
             <span aria-hidden />
           )}
-          <WalletChip />
+          <WalletChip recipient={recipient} />
         </div>
 
         <Tabs
@@ -127,7 +129,11 @@ export function PaymentsApp({
               value="history"
               className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
             >
-              {isConnected ? <HistoryPanel /> : connectPrompt}
+              {canViewActivity ? (
+                <HistoryPanel recipient={recipient} />
+              ) : (
+                connectPrompt
+              )}
             </TabsContent>
           </div>
         </Tabs>

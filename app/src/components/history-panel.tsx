@@ -50,8 +50,14 @@ function toRows(payments: PaymentRecord[], wallet: string): Row[] {
   });
 }
 
-export function HistoryPanel() {
-  const { address } = useSolanaAddress();
+export function HistoryPanel({
+  recipient,
+}: {
+  /** Fallback address (from `?recipient=`) when no vault wallet is connected. */
+  recipient?: string | null;
+} = {}) {
+  const { address: connectedAddress } = useSolanaAddress();
+  const address = connectedAddress ?? recipient ?? null;
   const query = usePaymentHistory(address);
   const usdcMint = getUsdcMint();
 

@@ -12,11 +12,25 @@ function shortAddress(value: string, length = 4): string {
 /**
  * Read-only indicator of the wallet the parent vault reports over the bridge.
  * There is no connect/disconnect here — the vault owns the session.
+ *
+ * When a `recipient` is supplied (from `?recipient=`), it stands in for the
+ * connected wallet so the navbar shows who the payment settles to even without
+ * a vault session.
  */
-export function WalletChip({ className }: { className?: string }) {
+export function WalletChip({
+  className,
+  recipient,
+}: {
+  className?: string;
+  recipient?: string | null;
+}) {
   const { ready, address, isConnected } = useSolanaAddress();
 
-  if (!ready) {
+  // The connected vault wallet wins; otherwise fall back to the URL recipient,
+  // which is known immediately and doesn't need the bridge to be ready.
+  const display = isConnected && address ? address : recipient ?? null;
+
+  if (!ready && !recipient) {
     return (
       <span
         className={cn(
@@ -30,17 +44,17 @@ export function WalletChip({ className }: { className?: string }) {
     );
   }
 
-  if (isConnected && address) {
+  if (display) {
     return (
       <span
         className={cn(
           "inline-flex items-center gap-2 rounded-md border border-border/60 px-2.5 py-1.5 font-mono text-xs",
           className,
         )}
-        title={address}
+        title={display}
       >
         <span className="size-1.5 rounded-full bg-primary" aria-hidden />
-        {shortAddress(address)}
+        {shortAddress(display)}
       </span>
     );
   }
