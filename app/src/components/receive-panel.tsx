@@ -2,21 +2,27 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { address, type Address } from "@solana/kit";
 import {
   AlertCircle,
   Check,
   LoaderCircle,
   Nfc,
   Plus,
+  ShieldCheck,
   WalletCards,
 } from "lucide-react";
 
 import { AmountField } from "@/components/amount-field";
+import { CopyableAddress } from "@/components/copyable-address";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { explorerTxUrl } from "@/lib/solana/cluster";
 import { uiAmountToRaw } from "@/lib/payments/fund";
-import type { PaymentRequest } from "@/lib/payments/payment-request";
+import {
+  tryParseAddress,
+  type PaymentRequest,
+} from "@/lib/payments/payment-request";
 import {
   isSponsoredSubmitAvailable,
   type ReceiveTransferContext,
@@ -29,47 +35,51 @@ import { useCreateAtaMutation } from "@/hooks/use-create-ata-mutation";
 import { useReceiveMutation } from "@/hooks/use-receive-mutation";
 import { useSlotHashPrefetch } from "@/hooks/use-slot-hash-prefetch";
 import { useWalletKitSigner } from "@/lib/wallet/bridge-signer";
-import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
-import { cn } from "@/lib/utils";
+import { cn, shortAddress } from "@/lib/utils";
 
-type Phase = "idle" | "awaiting-tap" | "confirming";
-
-function shortAddress(value: string, length = 4): string {
-  return `${value.slice(0, length)}…${value.slice(-length)}`;
-}
-
-function tryAddress(value: string): Address | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  try {
-    return address(trimmed);
-  } catch {
-    return null;
-  }
-}
+type Phase = "idle" | "awaiting-tap" | "confirming" | "success";
 
 export function ReceivePanel({
   paymentRequest,
+  editableRecipient = false,
+  manualRecipient = "",
+  onManualRecipientChange,
+  fixedRecipient = null,
+  intoOwnWallet = false,
 }: {
   paymentRequest: PaymentRequest;
+  /** When true (standalone, no `?recipient=`), recipient is typed inline. */
+  editableRecipient?: boolean;
+  manualRecipient?: string;
+  onManualRecipientChange?: (value: string) => void;
+  /** The resolved recipient when not editable — connected wallet or `?recipient=`. */
+  fixedRecipient?: string | null;
+  /** True when settling into the connected wallet (embedded), for the label. */
+  intoOwnWallet?: boolean;
 }) {
-  const { address: walletAddress } = useSolanaAddress();
   const signer = useWalletKitSigner();
   const [amount, setAmount] = useState(paymentRequest.amount ?? "");
   const [phase, setPhase] = useState<Phase>("idle");
+  // Amount captured at submit time so the success screen keeps showing it even
+  // after the input resets.
+  const [settledAmount, setSettledAmount] = useState("");
 
   const sponsoredAvailable = isSponsoredSubmitAvailable();
   const mint = paymentRequest.mint;
   const amountLocked = Boolean(paymentRequest.amount);
   const mintLabel = mint === getUsdcMint() ? "USDC" : shortAddress(mint, 6);
 
-  // Recipient is derived, never typed: the parent vault wallet takes priority,
-  // then a recipient carried by a payment link.
-  const recipientFromVault = Boolean(walletAddress);
+  // Recipient the payment settles into: the typed address when editable,
+  // otherwise the resolved wallet / URL recipient passed from the parent.
   const recipient = useMemo(
-    () => tryAddress(walletAddress ?? paymentRequest.recipient ?? ""),
-    [walletAddress, paymentRequest.recipient],
+    () =>
+      editableRecipient
+        ? tryParseAddress(manualRecipient)
+        : tryParseAddress(fixedRecipient ?? ""),
+    [editableRecipient, manualRecipient, fixedRecipient],
   );
+  const manualInvalid =
+    editableRecipient && manualRecipient.trim().length > 0 && !recipient;
 
   const mintQuery = useMintProgram(mint);
   const ataQuery = useRecipientAtaStatus(
@@ -102,7 +112,6 @@ export function ReceivePanel({
           </a>
         ),
       });
-      if (!amountLocked) setAmount("");
     },
   });
 
@@ -132,6 +141,7 @@ export function ReceivePanel({
       toast.error("The recipient needs a USDC account before receiving");
       return;
     }
+    const paidAmount = amount;
     setPhase("awaiting-tap");
     // Warm the fee-payer DO now so it's hot by the time the payload posts
     // (~1s+ later, after the tap) — hides signer/blockhash cold-start.
@@ -145,13 +155,46 @@ export function ReceivePanel({
       const slotHash = getSlotHash();
       setPhase("confirming");
       await receive.mutateAsync({ recipient, rawAmount, mint, context, slotHash });
+      // A calm moment of closure before returning to idle — the equivalent of
+      // Apple Pay's "Done" checkmark.
+      setSettledAmount(paidAmount);
+      setPhase("success");
+      if (!amountLocked) setAmount("");
+      window.setTimeout(() => setPhase("idle"), 1800);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Payment didn’t go through",
       );
-    } finally {
       setPhase("idle");
     }
+  }
+
+  if (phase === "success") {
+    return (
+      <div
+        className="flex flex-1 flex-col items-center justify-center gap-6 py-6 text-center"
+        aria-live="assertive"
+      >
+        <div className="relative flex size-24 items-center justify-center">
+          <span
+            aria-hidden
+            className="absolute inset-0 rounded-full bg-success/15 motion-safe:animate-[wallet-pulse_1.4s_ease-out]"
+          />
+          <div className="relative flex size-16 items-center justify-center rounded-full bg-success text-success-foreground motion-safe:animate-[wallet-rise_0.4s_cubic-bezier(0.22,1,0.36,1)]">
+            <Check className="size-8" strokeWidth={2.75} />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <p className="text-xl font-semibold tracking-tight">Received</p>
+          <p className="font-[family-name:var(--font-display)] text-[2.5rem] leading-none tracking-tight tabular-nums">
+            {settledAmount || amount || "0"}
+            <span className="ml-1.5 text-lg font-medium text-muted-foreground">
+              {mintLabel}
+            </span>
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (phase === "awaiting-tap" || phase === "confirming") {
@@ -203,14 +246,35 @@ export function ReceivePanel({
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      {recipient ? (
+      {editableRecipient ? (
+        <div className="space-y-1.5">
+          <Label htmlFor="receive-recipient" className="text-xs text-muted-foreground">
+            Recipient
+          </Label>
+          <Input
+            id="receive-recipient"
+            value={manualRecipient}
+            onChange={(event) => onManualRecipientChange?.(event.target.value)}
+            placeholder="Solana wallet address"
+            spellCheck={false}
+            autoComplete="off"
+            aria-invalid={manualInvalid}
+            className="h-10 font-mono text-sm"
+          />
+          {manualInvalid ? (
+            <p className="text-xs text-destructive">Enter a valid Solana address.</p>
+          ) : null}
+        </div>
+      ) : recipient ? (
         <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/35 px-4 py-2.5 text-xs">
           <span className="text-muted-foreground">
-            {recipientFromVault ? "Into your wallet" : "To recipient"}
+            {intoOwnWallet ? "Into your wallet" : "To recipient"}
           </span>
-          <span className="font-mono text-foreground">
-            {shortAddress(recipient, 6)}
-          </span>
+          <CopyableAddress
+            address={recipient}
+            length={6}
+            label={intoOwnWallet ? "wallet address" : "recipient address"}
+          />
         </div>
       ) : null}
 
@@ -280,7 +344,7 @@ export function ReceivePanel({
             ) : null}
           </div>
         </div>
-      ) : (
+      ) : editableRecipient ? null : (
         <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-muted/20 px-4 py-3">
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <WalletCards className="size-4" />
@@ -321,11 +385,16 @@ export function ReceivePanel({
             <Nfc className="size-4" />
             Tap to receive
           </Button>
-          {!sponsoredAvailable ? (
-            <p className="text-center text-xs text-muted-foreground">
-              Sponsored submit isn’t configured for this deployment.
+          {sponsoredAvailable ? (
+            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+              <ShieldCheck className="size-3.5 text-primary/80" />
+              No network fee — settles directly on Solana
             </p>
-          ) : null}
+          ) : (
+            <p className="text-center text-xs text-muted-foreground">
+              Fee-free payments are unavailable right now.
+            </p>
+          )}
         </div>
       </div>
     </div>

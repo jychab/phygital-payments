@@ -2,12 +2,9 @@
 
 import { LoaderCircle, Wallet } from "lucide-react";
 
+import { CopyableAddress } from "@/components/copyable-address";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
-
-function shortAddress(value: string, length = 4): string {
-  return `${value.slice(0, length)}…${value.slice(-length)}`;
-}
 
 /**
  * Read-only indicator of the wallet the parent vault reports over the bridge.
@@ -26,20 +23,20 @@ export function WalletChip({
 }) {
   const { ready, address, isConnected } = useSolanaAddress();
 
-  // The connected vault wallet wins; otherwise fall back to the URL recipient,
-  // which is known immediately and doesn't need the bridge to be ready.
-  const display = isConnected && address ? address : recipient ?? null;
+  // An explicit recipient (URL or typed) wins and is known immediately without
+  // waiting on the bridge; otherwise fall back to the connected vault wallet.
+  const display = recipient ?? (isConnected && address ? address : null);
 
   if (!ready && !recipient) {
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-md border border-border/60 px-2.5 py-1.5 text-xs text-muted-foreground",
+          "inline-flex items-center gap-1.5 rounded-full border border-border/60 px-2.5 py-1.5 text-xs text-muted-foreground",
           className,
         )}
       >
         <LoaderCircle className="size-3.5 animate-spin" />
-        …
+        <span className="tracking-tight">Connecting…</span>
       </span>
     );
   }
@@ -48,13 +45,15 @@ export function WalletChip({
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-2 rounded-md border border-border/60 px-2.5 py-1.5 font-mono text-xs",
+          "inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-2.5 py-1.5 text-xs",
           className,
         )}
-        title={display}
       >
-        <span className="size-1.5 rounded-full bg-primary" aria-hidden />
-        {shortAddress(display)}
+        <span
+          className="size-1.5 rounded-full bg-primary shadow-[0_0_0_3px_color-mix(in_oklch,var(--primary)_18%,transparent)]"
+          aria-hidden
+        />
+        <CopyableAddress address={display} label="wallet address" />
       </span>
     );
   }
@@ -62,7 +61,7 @@ export function WalletChip({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border border-border/60 px-2.5 py-1.5 text-xs text-muted-foreground",
+        "inline-flex items-center gap-1.5 rounded-full border border-border/60 px-2.5 py-1.5 text-xs text-muted-foreground",
         className,
       )}
     >

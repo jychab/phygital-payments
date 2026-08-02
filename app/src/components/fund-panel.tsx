@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, LoaderCircle } from "lucide-react";
+import { Check, Lock, LoaderCircle, ShieldCheck } from "lucide-react";
 
 import { AmountField } from "@/components/amount-field";
 import { Button } from "@/components/ui/button";
@@ -96,13 +96,13 @@ export function FundPanel() {
         aria-live="polite"
         className={cn(
           "relative overflow-hidden rounded-[1.15rem] px-5 py-5",
-          "bg-[linear-gradient(145deg,oklch(0.28_0.04_145)_0%,oklch(0.22_0.03_160)_55%,oklch(0.2_0.02_200)_100%)]",
+          "bg-[linear-gradient(150deg,oklch(0.225_0.006_260)_0%,oklch(0.185_0.005_260)_60%,oklch(0.165_0.006_260)_100%)]",
           "ring-1 ring-white/8",
         )}
       >
         <div
           aria-hidden
-          className="pointer-events-none absolute -right-8 -top-10 size-36 rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--accent-glow)_22%,transparent),transparent_70%)]"
+          className="pointer-events-none absolute -right-8 -top-10 size-36 rounded-full bg-[radial-gradient(circle,color-mix(in_oklch,var(--accent-glow)_13%,transparent),transparent_72%)]"
         />
         <div className="relative flex items-start justify-between gap-3">
           <div>
@@ -148,6 +148,30 @@ export function FundPanel() {
         ) : null}
       </section>
 
+      {/* Plain-language explanation of what granting an allowance actually does.
+          This is the highest-stakes trust moment — say it calmly and clearly. */}
+      <div className="flex items-start gap-2.5 rounded-xl bg-muted/30 px-4 py-3">
+        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary/80" />
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          {hasDelegate ? (
+            <>
+              Can move up to{" "}
+              <span className="font-medium text-foreground">
+                {allowanceLabel} USDC
+              </span>{" "}
+              when you tap to pay. You stay in control — change or remove it
+              anytime.
+            </>
+          ) : (
+            <>
+              Set how much USDC can move when you tap to pay. Nothing
+              leaves your wallet until a tap, and you can change or remove this
+              anytime.
+            </>
+          )}
+        </p>
+      </div>
+
       <div className="flex flex-1 flex-col gap-5">
         <AmountField
           id="fund-amount"
@@ -192,6 +216,10 @@ export function FundPanel() {
               "Remove allowance"
             )}
           </Button>
+          <p className="flex items-center justify-center gap-1.5 pt-0.5 text-center text-[11px] text-muted-foreground/80">
+            <Lock className="size-3" strokeWidth={2.25} />
+            Signed in your Revibase vault
+          </p>
         </div>
       </div>
     </div>

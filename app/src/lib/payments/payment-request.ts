@@ -24,7 +24,8 @@ function firstValue(
   return value;
 }
 
-function tryAddress(value: string | undefined): Address | null {
+/** Validate a string as a Solana address; returns the parsed address or null. */
+export function tryParseAddress(value: string | null | undefined): Address | null {
   if (!value?.trim()) return null;
   try {
     return address(value.trim());
@@ -60,7 +61,7 @@ export function parsePaymentRequest(
   return {
     amount: normalizeAmount(amountRaw),
     mint,
-    recipient: tryAddress(recipientRaw),
+    recipient: tryParseAddress(recipientRaw),
     fromUrl,
   };
 }

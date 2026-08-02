@@ -35,6 +35,8 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-success-foreground: var(--success-foreground);
+  --color-success: var(--success);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -49,62 +51,80 @@
 }
 
 :root {
-  --background: oklch(0.16 0.015 140);
-  --foreground: oklch(0.96 0.01 100);
-  --card: oklch(0.2 0.015 140);
-  --card-foreground: oklch(0.96 0.01 100);
-  --popover: oklch(0.2 0.015 140);
-  --popover-foreground: oklch(0.96 0.01 100);
-  --primary: oklch(0.86 0.2 130);
-  --primary-foreground: oklch(0.18 0.03 140);
-  --secondary: oklch(0.26 0.02 150);
-  --secondary-foreground: oklch(0.95 0.01 100);
-  --muted: oklch(0.24 0.015 145);
-  --muted-foreground: oklch(0.72 0.02 140);
-  --accent: oklch(0.28 0.03 160);
-  --accent-foreground: oklch(0.95 0.01 100);
-  --destructive: oklch(0.65 0.2 25);
-  --border: oklch(0.34 0.02 145);
-  --input: oklch(0.28 0.02 145);
-  --ring: oklch(0.86 0.2 130);
+  /* Apple system type stack — SF Pro on Apple platforms, graceful elsewhere.
+     `@theme inline` maps --font-sans/--font-mono onto these, so every existing
+     font-sans / font-mono / var(--font-display) reference keeps working. */
+  --font-display:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", system-ui, sans-serif;
+  --font-geist-mono:
+    ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Monaco, monospace;
+
+  /* Minimalist graphite canvas — near-neutral surfaces (a whisper cool) so the
+     accent is the only color that carries meaning. */
+  --background: oklch(0.145 0.004 260);
+  --foreground: oklch(0.97 0.004 260);
+  --card: oklch(0.185 0.005 260);
+  --card-foreground: oklch(0.97 0.004 260);
+  --popover: oklch(0.185 0.005 260);
+  --popover-foreground: oklch(0.97 0.004 260);
+  /* Near-monochrome: the primary action is a calm off-white, so the interface
+     reads as graphite + light. Color is spent in exactly one place — success. */
+  --primary: oklch(0.95 0.004 260);
+  --primary-foreground: oklch(0.2 0.006 260);
+  /* Reserved for confirmation only — the "payment received" checkmark. */
+  --success: oklch(0.75 0.15 152);
+  --success-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.245 0.006 260);
+  --secondary-foreground: oklch(0.96 0.004 260);
+  --muted: oklch(0.225 0.006 260);
+  --muted-foreground: oklch(0.705 0.008 260);
+  --accent: oklch(0.255 0.007 260);
+  --accent-foreground: oklch(0.96 0.004 260);
+  --destructive: oklch(0.62 0.19 25);
+  --border: oklch(0.29 0.006 260);
+  --input: oklch(0.26 0.007 260);
+  --ring: oklch(0.7 0.006 260);
   /* Ambient wash color; the vault bridge overrides this with the accessory
-     accent so glows match the vault. Defaults to the app's own accent. */
-  --accent-glow: var(--primary);
-  --chart-1: oklch(0.86 0.2 130);
-  --chart-2: oklch(0.7 0.12 200);
-  --chart-3: oklch(0.75 0.1 90);
-  --chart-4: oklch(0.6 0.08 160);
-  --chart-5: oklch(0.5 0.05 140);
+     accent so glows match the vault. Defaults to a soft neutral light. */
+  --accent-glow: oklch(0.8 0.006 260);
+  --chart-1: oklch(0.8 0.006 260);
+  --chart-2: oklch(0.7 0.09 220);
+  --chart-3: oklch(0.75 0.08 90);
+  --chart-4: oklch(0.6 0.06 160);
+  --chart-5: oklch(0.5 0.03 260);
   --radius: 0.75rem;
-  --sidebar: oklch(0.18 0.015 140);
-  --sidebar-foreground: oklch(0.96 0.01 100);
-  --sidebar-primary: oklch(0.86 0.2 130);
-  --sidebar-primary-foreground: oklch(0.18 0.03 140);
-  --sidebar-accent: oklch(0.26 0.02 150);
-  --sidebar-accent-foreground: oklch(0.95 0.01 100);
-  --sidebar-border: oklch(0.34 0.02 145);
-  --sidebar-ring: oklch(0.86 0.2 130);
+  --sidebar: oklch(0.165 0.004 260);
+  --sidebar-foreground: oklch(0.97 0.004 260);
+  --sidebar-primary: oklch(0.95 0.004 260);
+  --sidebar-primary-foreground: oklch(0.2 0.006 260);
+  --sidebar-accent: oklch(0.245 0.006 260);
+  --sidebar-accent-foreground: oklch(0.96 0.004 260);
+  --sidebar-border: oklch(0.29 0.006 260);
+  --sidebar-ring: oklch(0.7 0.006 260);
 }
 
 .dark {
-  --background: oklch(0.16 0.015 140);
-  --foreground: oklch(0.96 0.01 100);
-  --card: oklch(0.2 0.015 140);
-  --card-foreground: oklch(0.96 0.01 100);
-  --popover: oklch(0.2 0.015 140);
-  --popover-foreground: oklch(0.96 0.01 100);
-  --primary: oklch(0.86 0.2 130);
-  --primary-foreground: oklch(0.18 0.03 140);
-  --secondary: oklch(0.26 0.02 150);
-  --secondary-foreground: oklch(0.95 0.01 100);
-  --muted: oklch(0.24 0.015 145);
-  --muted-foreground: oklch(0.72 0.02 140);
-  --accent: oklch(0.28 0.03 160);
-  --accent-foreground: oklch(0.95 0.01 100);
-  --destructive: oklch(0.65 0.2 25);
-  --border: oklch(0.34 0.02 145);
-  --input: oklch(0.28 0.02 145);
-  --ring: oklch(0.86 0.2 130);
+  --background: oklch(0.145 0.004 260);
+  --foreground: oklch(0.97 0.004 260);
+  --card: oklch(0.185 0.005 260);
+  --card-foreground: oklch(0.97 0.004 260);
+  --popover: oklch(0.185 0.005 260);
+  --popover-foreground: oklch(0.97 0.004 260);
+  --primary: oklch(0.95 0.004 260);
+  --primary-foreground: oklch(0.2 0.006 260);
+  --success: oklch(0.75 0.15 152);
+  --success-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.245 0.006 260);
+  --secondary-foreground: oklch(0.96 0.004 260);
+  --muted: oklch(0.225 0.006 260);
+  --muted-foreground: oklch(0.705 0.008 260);
+  --accent: oklch(0.255 0.007 260);
+  --accent-foreground: oklch(0.96 0.004 260);
+  --destructive: oklch(0.62 0.19 25);
+  --border: oklch(0.29 0.006 260);
+  --input: oklch(0.26 0.007 260);
+  --ring: oklch(0.7 0.006 260);
 }
 
 @layer base {
@@ -129,7 +149,7 @@
 @keyframes wallet-breathe {
   0%,
   100% {
-    opacity: 0.85;
+    opacity: 0.92;
   }
   50% {
     opacity: 1;

@@ -15,11 +15,7 @@ import { getUsdcMint, USDC_DECIMALS } from "@/lib/payments/usdc";
 import type { PaymentRecord } from "@/lib/payments/history-client";
 import { usePaymentHistory } from "@/hooks/use-payment-history";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
-import { cn } from "@/lib/utils";
-
-function shortAddress(value: string, length = 4): string {
-  return `${value.slice(0, length)}…${value.slice(-length)}`;
-}
+import { cn, shortAddress } from "@/lib/utils";
 
 function relativeTime(unixSeconds: number | null): string {
   if (!unixSeconds) return "";
@@ -57,7 +53,9 @@ export function HistoryPanel({
   recipient?: string | null;
 } = {}) {
   const { address: connectedAddress } = useSolanaAddress();
-  const address = connectedAddress ?? recipient ?? null;
+  // The explicit recipient (URL or typed) drives Activity; a connected vault
+  // wallet is only a last-resort fallback.
+  const address = recipient ?? connectedAddress ?? null;
   const query = usePaymentHistory(address);
   const usdcMint = getUsdcMint();
 
@@ -108,7 +106,9 @@ export function HistoryPanel({
           <div className="flex size-12 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
             <History className="size-5 text-muted-foreground" />
           </div>
-          <p className="text-sm text-muted-foreground">No payments yet.</p>
+          <p className="text-sm text-muted-foreground">
+            {address ? "No payments yet." : "Enter a recipient to view activity."}
+          </p>
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
