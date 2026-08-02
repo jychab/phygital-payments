@@ -47,8 +47,20 @@ export type SendContext = {
   latestBlockhash: BlockhashLifetime;
 };
 
+// Cache the RPC / subscriptions clients so a single flush (simulate → send →
+// confirm) doesn't rebuild a transport on every call. Keyed by URL so a config
+// change still produces a fresh client.
+let rpcCache: { url: string; rpc: ReturnType<typeof createSolanaRpc> } | undefined;
+let rpcSubscriptionsCache:
+  | { url: string; subs: ReturnType<typeof createSolanaRpcSubscriptions> }
+  | undefined;
+
 export function getRpc(env: CloudflareEnv) {
-  return createSolanaRpc(env.NEXT_PUBLIC_SOLANA_RPC_URL);
+  const url = env.NEXT_PUBLIC_SOLANA_RPC_URL;
+  if (rpcCache?.url !== url) {
+    rpcCache = { url, rpc: createSolanaRpc(url) };
+  }
+  return rpcCache.rpc;
 }
 
 function subscriptionsUrl(env: CloudflareEnv): string {
@@ -58,7 +70,11 @@ function subscriptionsUrl(env: CloudflareEnv): string {
 }
 
 export function getRpcSubscriptions(env: CloudflareEnv) {
-  return createSolanaRpcSubscriptions(subscriptionsUrl(env));
+  const url = subscriptionsUrl(env);
+  if (rpcSubscriptionsCache?.url !== url) {
+    rpcSubscriptionsCache = { url, subs: createSolanaRpcSubscriptions(url) };
+  }
+  return rpcSubscriptionsCache.subs;
 }
 
 export async function getFeePayerSigner(env: CloudflareEnv): Promise<TransactionSigner> {
@@ -264,15 +280,28 @@ async function buildAndSign(
   };
 }
 
+/** Result of a successful submit, carrying what the DO needs to settle later. */
+export type SubmitResult = {
+  signature: Signature;
+  lastValidBlockHeight: bigint;
+};
+
 /**
  * Simulate → size compute budget → send (skipPreflight, already simulated) →
- * await `confirmed`. Returns the confirmed signature.
+ * await `processed`. Returns the signature plus the blockhash height needed to
+ * settle to `confirmed` in the background.
+ *
+ * We release at `processed` (first block inclusion, ~1 slot) rather than
+ * `confirmed` to make perceived confirmation card-network fast: the batch has
+ * already passed an authoritative simulation and each transfer is single-use
+ * (secp verify + slotNumber), so inclusion is a strong signal. The DO upgrades
+ * to `confirmed` out of band via {@link settleConfirmed}.
  */
 export async function sendSponsoredBatch(
   env: CloudflareEnv,
   jobs: TransferJob[],
   ctx: SendContext,
-): Promise<string> {
+): Promise<SubmitResult> {
   if (jobs.length === 0) {
     throw new SubmitError("No jobs to submit", false);
   }
@@ -308,32 +337,93 @@ export async function sendSponsoredBatch(
     throw new SubmitError(message, isTransientRpcError(message));
   }
 
-  await confirmSignature(env, signature);
-  return signature;
+  const lastValidBlockHeight = ctx.latestBlockhash.lastValidBlockHeight;
+  await confirmSignature(env, signature, lastValidBlockHeight, "processed");
+  return { signature, lastValidBlockHeight };
 }
 
 /**
- * Await `confirmed` via WebSocket signature subscription (premium RPC), with a
- * getSignatureStatuses polling fallback if the subscription can't be opened.
+ * Second-stage settlement: wait for `confirmed` after the UI has already been
+ * released at `processed`. Throws (transient) if the tx is dropped before it
+ * confirms, so the DO can reconcile.
  */
-async function confirmSignature(env: CloudflareEnv, signature: Signature): Promise<void> {
+export async function settleConfirmed(
+  env: CloudflareEnv,
+  signature: Signature,
+  lastValidBlockHeight: bigint,
+): Promise<void> {
+  await confirmSignature(env, signature, lastValidBlockHeight, "confirmed");
+}
+
+/** The blockhash is dead once the chain passes its lastValidBlockHeight. */
+async function blockhashExpired(
+  env: CloudflareEnv,
+  lastValidBlockHeight: bigint,
+): Promise<boolean> {
+  const height = await getRpc(env).getBlockHeight().send();
+  return height > lastValidBlockHeight;
+}
+
+/** Commitment levels this module confirms against. */
+type ConfirmCommitment = "processed" | "confirmed";
+
+/** Whether an observed status has reached (or passed) the target commitment. */
+function statusReached(
+  observed: string | null | undefined,
+  target: ConfirmCommitment,
+): boolean {
+  if (observed === "finalized") return true;
+  if (observed === "confirmed") return true;
+  return target === "processed" && observed === "processed";
+}
+
+/**
+ * Await the target commitment via WebSocket signature subscription (premium
+ * RPC), with a getSignatureStatuses polling fallback if the subscription can't
+ * be opened. Both paths share one wall-clock deadline (so the total budget is a
+ * single CONFIRM_TIMEOUT_MS, not double) and give up early — as a transient
+ * error — once the tx's blockhash can no longer land.
+ */
+async function confirmSignature(
+  env: CloudflareEnv,
+  signature: Signature,
+  lastValidBlockHeight: bigint,
+  commitment: ConfirmCommitment,
+): Promise<void> {
+  const deadline = Date.now() + CONFIRM_TIMEOUT_MS;
   try {
-    await confirmViaSubscription(env, signature);
+    await confirmViaSubscription(env, signature, lastValidBlockHeight, deadline, commitment);
   } catch (error) {
-    if (error instanceof SubmitError) throw error; // on-chain failure — don't retry
-    await confirmViaPolling(env, signature);
+    if (error instanceof SubmitError) throw error; // on-chain / expiry — don't retry here
+    await confirmViaPolling(env, signature, lastValidBlockHeight, deadline, commitment);
   }
 }
 
 async function confirmViaSubscription(
   env: CloudflareEnv,
   signature: Signature,
+  lastValidBlockHeight: bigint,
+  deadline: number,
+  commitment: ConfirmCommitment,
 ): Promise<void> {
   const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), CONFIRM_TIMEOUT_MS);
+  const timer = setTimeout(() => abort.abort(), Math.max(0, deadline - Date.now()));
+  // Watchdog: abort (and flag) as soon as the blockhash can no longer land, so
+  // a never-landing tx requeues promptly instead of waiting out the deadline.
+  let expired = false;
+  const watchdog = setInterval(() => {
+    void blockhashExpired(env, lastValidBlockHeight)
+      .then((isExpired) => {
+        if (isExpired) {
+          expired = true;
+          abort.abort();
+        }
+      })
+      .catch(() => {}); // transient lookup failure — ignore, keep waiting
+  }, 2000);
   try {
     const notifications = await getRpcSubscriptions(env)
-      .signatureNotifications(signature, { commitment: "confirmed" })
+      .signatureNotifications(signature, { commitment })
       .subscribe({ abortSignal: abort.signal });
     for await (const notification of notifications) {
       if (notification.value?.err) {
@@ -342,18 +432,27 @@ async function confirmViaSubscription(
           false,
         );
       }
-      return; // confirmed
+      return; // reached target commitment
+    }
+    if (expired) {
+      throw new SubmitError("Blockhash expired before confirmation", true);
     }
     throw new Error("Subscription closed before confirmation");
   } finally {
     clearTimeout(timer);
+    clearInterval(watchdog);
     abort.abort();
   }
 }
 
-async function confirmViaPolling(env: CloudflareEnv, signature: Signature): Promise<void> {
+async function confirmViaPolling(
+  env: CloudflareEnv,
+  signature: Signature,
+  lastValidBlockHeight: bigint,
+  deadline: number,
+  commitment: ConfirmCommitment,
+): Promise<void> {
   const rpc = getRpc(env);
-  const deadline = Date.now() + CONFIRM_TIMEOUT_MS;
   while (Date.now() < deadline) {
     try {
       const { value } = await rpc
@@ -366,11 +465,12 @@ async function confirmViaPolling(env: CloudflareEnv, signature: Signature): Prom
           false,
         );
       }
-      if (
-        status?.confirmationStatus === "confirmed" ||
-        status?.confirmationStatus === "finalized"
-      ) {
+      if (statusReached(status?.confirmationStatus, commitment)) {
         return;
+      }
+      // Not confirmed yet — if the blockhash is dead, it never will be. Retry.
+      if (await blockhashExpired(env, lastValidBlockHeight)) {
+        throw new SubmitError("Blockhash expired before confirmation", true);
       }
     } catch (error) {
       if (error instanceof SubmitError) throw error;

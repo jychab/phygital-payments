@@ -20,7 +20,7 @@ export const BATCH_ACTIVITY_WINDOW_MS = 1_000;
 export const BLOCKHASH_TTL_MS = 2_000;
 
 /** Priority fee (micro-lamports per compute unit) to land in the next block. */
-export const PRIORITY_FEE_MICRO_LAMPORTS = 20_000n;
+export const PRIORITY_FEE_MICRO_LAMPORTS = 10_000n;
 /** Safety margin applied to simulated compute units. */
 export const COMPUTE_UNIT_MARGIN = 1.15;
 /** Hard cap on the requested compute-unit limit. */
@@ -72,6 +72,12 @@ export type TransferJob = {
   attempts: number;
   signature?: string;
   error?: string;
+  /**
+   * Background settlement outcome after the UI was released at `processed`:
+   * `confirmed` once the cluster confirms, `dropped` if it never did (rare —
+   * needs reconciliation). Absent until the background settle resolves.
+   */
+  settled?: "confirmed" | "dropped";
 };
 
 export type SubmitTransferResponse = {

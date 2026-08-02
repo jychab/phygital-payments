@@ -20,6 +20,18 @@ async function submitterFetch(
   });
 }
 
+/**
+ * Pre-warm the submitter DO (fee-payer signer + blockhash) so the actual submit
+ * hits a hot object. Fire-and-forget; failures are swallowed.
+ */
+export async function warmSubmitter(): Promise<void> {
+  try {
+    await submitterFetch("/warm", { method: "POST" });
+  } catch {
+    // Warm-up is best-effort — a cold submit still works, just slower.
+  }
+}
+
 export async function postSponsoredTransfer(
   body: SubmitTransferRequest,
 ): Promise<SubmitTransferResponse> {

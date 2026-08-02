@@ -1,4 +1,7 @@
 import {
+  address,
+  getBase64Encoder,
+  getU64Decoder,
   type Address,
   type Instruction,
   type TransactionSigner,
@@ -12,8 +15,10 @@ import {
   beginVerifyAsset,
   authenticatePasskeyForVerifyAsset,
   buildVerifyAssetArgs,
+  buildVerifyAssetChallenge,
   buildVerifyInputFromWebAuthn,
   parseSecp256r1Pubkey,
+  type VerifyAssetSession,
 } from "phygital-token-sdk";
 import {
   buildTransferMessage,
@@ -50,6 +55,61 @@ export type ReceiveTransferContext = {
   tokenProgram: TokenProgram;
   recipientAta: Address;
 };
+
+/** A recent slot hash, fetched ahead of the tap to skip an RPC before WebAuthn. */
+export type SlotHashPrefetch = {
+  slotHash: Uint8Array;
+  slotNumber: bigint;
+  fetchedAt: number;
+};
+
+/** Standard SlotHashes sysvar (holds ~512 recent slots, ~3.5 min). */
+const SLOT_HASHES_SYSVAR = address(
+  "SysvarS1otHashes111111111111111111111111111",
+);
+
+/**
+ * How long a prefetched slot hash stays usable. The on-chain verify tolerates
+ * any slot still in SlotHashes (~3.5 min) and the DO rejects jobs older than
+ * MAX_JOB_AGE_MS (45s), so a comfortably-fresh cap keeps prefetch safe.
+ */
+export const SLOT_HASH_PREFETCH_TTL_MS = 20_000;
+
+/**
+ * Fetch the latest slot hash directly (mirrors the SDK's internal
+ * `getLatestSlotHash`) so the receive panel can warm it *before* the tap. This
+ * lifts a ~100–300ms RPC round trip off the path between the button press and
+ * the NFC prompt, so WebAuthn fires immediately.
+ */
+export async function prefetchSlotHash(): Promise<SlotHashPrefetch> {
+  const rpc = getSolanaRpc();
+  const { value } = await rpc
+    .getAccountInfo(SLOT_HASHES_SYSVAR, {
+      encoding: "base64",
+      commitment: "confirmed",
+      dataSlice: { offset: 8, length: 40 },
+    })
+    .send();
+  const data = value?.data;
+  if (!data) {
+    throw new Error("Unable to fetch slot hashes sysvar");
+  }
+  const base64 = Array.isArray(data) ? data[0] : data;
+  const bytes = new Uint8Array(getBase64Encoder().encode(base64));
+  const slotNumber = getU64Decoder().decode(bytes.subarray(0, 8));
+  const slotHash = bytes.subarray(8, 40);
+  return { slotHash, slotNumber, fetchedAt: Date.now() };
+}
+
+/** Reuse a prefetched slot hash only while it's fresh enough to land. */
+function usablePrefetch(
+  prefetch: SlotHashPrefetch | undefined,
+): SlotHashPrefetch | null {
+  if (!prefetch) return null;
+  return Date.now() - prefetch.fetchedAt < SLOT_HASH_PREFETCH_TTL_MS
+    ? prefetch
+    : null;
+}
 
 /** True when sponsored fee-payer submit can be enabled in the UI. */
 export function isSponsoredSubmitAvailable(): boolean {
@@ -121,6 +181,8 @@ export async function buildReceiveTransfer(args: {
   rawAmount: bigint;
   mint?: Address;
   context?: ReceiveTransferContext;
+  /** Slot hash warmed before the tap; used when still fresh, else refetched. */
+  slotHash?: SlotHashPrefetch;
 }): Promise<BuiltReceiveTransfer> {
   const { recipient, rawAmount } = args;
   const rpc = getSolanaRpc();
@@ -146,7 +208,22 @@ export async function buildReceiveTransfer(args: {
   }
 
   const message = buildTransferMessage(mint, recipient, rawAmount);
-  const session = await beginVerifyAsset({ rpc, message });
+  // Fast path: with a fresh prefetched slot hash we build the WebAuthn challenge
+  // locally (no RPC) so the NFC prompt appears the instant the button is
+  // pressed. Falls back to the SDK's fetch-then-challenge when it's stale.
+  const fresh = usablePrefetch(args.slotHash);
+  const session: VerifyAssetSession = fresh
+    ? {
+        rpc,
+        slotHash: fresh.slotHash,
+        slotNumber: fresh.slotNumber,
+        challenge: await buildVerifyAssetChallenge({
+          message,
+          slotHash: fresh.slotHash,
+        }),
+        message,
+      }
+    : await beginVerifyAsset({ rpc, message });
   const response = await authenticatePasskeyForVerifyAsset(session);
   const {
     asset,
@@ -243,6 +320,7 @@ export async function receiveTransfer(args: {
   rawAmount: bigint;
   mint?: Address;
   context?: ReceiveTransferContext;
+  slotHash?: SlotHashPrefetch;
 }): Promise<{ signature: string }> {
   if (!isSponsoredSubmitAvailable()) {
     throw new Error("Sponsored submit is not configured");

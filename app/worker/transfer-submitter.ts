@@ -7,10 +7,12 @@ import {
   getFeePayerSigner,
   SubmitError,
   sendSponsoredBatch,
+  settleConfirmed,
   validateTransferWire,
   type BlockhashLifetime,
   type SendContext,
 } from "./solana";
+import type { Signature } from "@solana/kit";
 import {
   BATCH_ACTIVITY_WINDOW_MS,
   BATCH_WINDOW_MS,
@@ -39,6 +41,9 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
   private lastEnqueueAt = 0;
   // Long-poll waiters resolved the instant a job reaches a terminal status.
   private waiters = new Map<string, Array<() => void>>();
+  // In-flight background `confirmed` settlements — retained so they aren't GC'd
+  // while the DO stays warm after releasing the UI at `processed`.
+  private pendingSettles = new Set<Promise<void>>();
 
   async enqueue(body: SubmitTransferRequest): Promise<{ jobId: string }> {
     validateTransferWire(body.transfer);
@@ -190,10 +195,17 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     ctx: SendContext,
   ): Promise<void> {
     try {
-      const signature = await sendSponsoredBatch(this.env, batch, ctx);
+      const { signature, lastValidBlockHeight } = await sendSponsoredBatch(
+        this.env,
+        batch,
+        ctx,
+      );
+      // Released at `processed` for card-fast perceived confirmation; settle to
+      // `confirmed` out of band and reconcile if the tx is ever dropped.
       for (const job of batch) {
         await this.finish(job, "confirmed", { signature });
       }
+      this.settleInBackground(batch, signature, lastValidBlockHeight);
     } catch (error) {
       console.log(error)
       const { transient, message } = classify(error);
@@ -241,6 +253,54 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     if (patch.error) job.error = patch.error;
     await this.ctx.storage.put(`${JOB_PREFIX}${job.id}`, job);
     if (isTerminal(status)) this.notify(job.id);
+  }
+
+  /**
+   * Second-stage settle after a `processed` release: confirm to `confirmed`,
+   * and if the tx was dropped instead, record it on the jobs for reconciliation
+   * (the UI already showed success, so this feeds history/accounting, not the
+   * live long-poll).
+   */
+  private settleInBackground(
+    batch: TransferJob[],
+    signature: Signature,
+    lastValidBlockHeight: bigint,
+  ): void {
+    const settle = settleConfirmed(this.env, signature, lastValidBlockHeight)
+      .then(() => this.markSettled(batch, "confirmed"))
+      .catch((error) => {
+        const message =
+          error instanceof Error ? error.message : "Settlement lost after processed";
+        return this.markSettled(batch, "dropped", message);
+      })
+      .finally(() => this.pendingSettles.delete(settle));
+    this.pendingSettles.add(settle);
+  }
+
+  private async markSettled(
+    batch: TransferJob[],
+    settled: "confirmed" | "dropped",
+    error?: string,
+  ): Promise<void> {
+    for (const job of batch) {
+      const fresh = await this.getJob(job.id);
+      if (!fresh) continue;
+      fresh.settled = settled;
+      if (error) fresh.error = error;
+      await this.ctx.storage.put(`${JOB_PREFIX}${fresh.id}`, fresh);
+    }
+  }
+
+  /**
+   * Pre-warm the fee-payer signer and blockhash cache so a subsequent submit
+   * hits a hot DO (no cold-start signer decode / blockhash fetch on the
+   * critical path). Called by the client when the receive panel is armed.
+   */
+  async warm(): Promise<void> {
+    if (!this.feePayerSigner) {
+      this.feePayerSigner = await getFeePayerSigner(this.env);
+    }
+    await this.refreshBlockhash();
   }
 
   // --- cached inputs --------------------------------------------------------

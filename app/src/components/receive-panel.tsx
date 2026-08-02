@@ -22,10 +22,12 @@ import {
   type ReceiveTransferContext,
 } from "@/lib/payments/receive";
 import { getUsdcMint } from "@/lib/payments/usdc";
+import { warmSubmitter } from "@/lib/payments/submitter-client";
 import { useMintProgram } from "@/hooks/use-mint-program";
 import { useRecipientAtaStatus } from "@/hooks/use-recipient-ata-status";
 import { useCreateAtaMutation } from "@/hooks/use-create-ata-mutation";
 import { useReceiveMutation } from "@/hooks/use-receive-mutation";
+import { useSlotHashPrefetch } from "@/hooks/use-slot-hash-prefetch";
 import { useWalletKitSigner } from "@/lib/wallet/bridge-signer";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
@@ -80,6 +82,9 @@ export function ReceivePanel({
   const readyToReceive = ataStatus?.exists === true;
   const missingAta = ataStatus != null && !ataStatus.exists;
 
+  // While armed, keep a slot hash warmed so the NFC prompt fires without an RPC.
+  const getSlotHash = useSlotHashPrefetch(readyToReceive);
+
   const createAta = useCreateAtaMutation(mint, {
     onSuccess: () => toast.success("USDC account ready"),
   });
@@ -128,14 +133,18 @@ export function ReceivePanel({
       return;
     }
     setPhase("awaiting-tap");
+    // Warm the fee-payer DO now so it's hot by the time the payload posts
+    // (~1s+ later, after the tap) — hides signer/blockhash cold-start.
+    void warmSubmitter();
     try {
       const rawAmount = uiAmountToRaw(amount, mintQuery.data.decimals);
       const context: ReceiveTransferContext = {
         tokenProgram: ataStatus.program,
         recipientAta: ataStatus.ata,
       };
+      const slotHash = getSlotHash();
       setPhase("confirming");
-      await receive.mutateAsync({ recipient, rawAmount, mint, context });
+      await receive.mutateAsync({ recipient, rawAmount, mint, context, slotHash });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Payment didn’t go through",
