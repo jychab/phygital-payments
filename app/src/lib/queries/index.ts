@@ -1,8 +1,6 @@
 /**
  * Centralized React Query keys, fetchers, and option presets — the single
- * source of truth for the payment app's server state. Mirrors the vault app's
- * conventions (object-of-objects keys with `all()` + `by*()`, shared option
- * presets) so the two apps stay idiomatically consistent.
+ * source of truth for the payment app's server state.
  */
 
 import type { Address } from "@solana/kit";
@@ -12,7 +10,7 @@ import {
   resolveMintProgram,
   type TokenProgram,
   type UsdcDelegateStatus,
-} from "@/lib/payments/fund";
+} from "@/lib/payments/usdc-allowance";
 import {
   fetchRecipientAtaStatus,
   type RecipientAtaStatus,
@@ -27,8 +25,6 @@ import {
 // ============================================================================
 
 export const queryKeys = {
-  all: () => ["query"] as const,
-
   delegateStatus: {
     all: () => ["delegateStatus"] as const,
     byOwner: (owner: string | null) =>
@@ -52,6 +48,18 @@ export const queryKeys = {
     byAddress: (address: string | null) =>
       [...queryKeys.history.all(), address] as const,
   },
+
+  tapVerify: {
+    all: () => ["tapVerify"] as const,
+    byParams: (params: string) =>
+      [...queryKeys.tapVerify.all(), params] as const,
+  },
+
+  asset: {
+    all: () => ["assets"] as const,
+    byPk: (pk: string | null) =>
+      [...queryKeys.asset.all(), "pk", pk] as const,
+  },
 };
 
 // ============================================================================
@@ -59,7 +67,7 @@ export const queryKeys = {
 // ============================================================================
 
 export const queryOptions = {
-  /** General reads — allowance, balances. */
+  /** General reads — spending limit, balances. */
   default: { refetchOnWindowFocus: false, staleTime: 1000 * 60 },
   /** Updates as payments confirm on-chain. */
   frequent: { refetchOnWindowFocus: false, staleTime: 1000 * 30 },

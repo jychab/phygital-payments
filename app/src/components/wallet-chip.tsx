@@ -1,33 +1,39 @@
 "use client";
 
-import { LoaderCircle, Wallet } from "lucide-react";
+import { LoaderCircle, LogOut, Wallet } from "lucide-react";
 
 import { CopyableAddress } from "@/components/copyable-address";
+import { Button } from "@/components/ui/button";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
 
 /**
- * Read-only indicator of the wallet the parent vault reports over the bridge.
- * There is no connect/disconnect here — the vault owns the session.
- *
- * When a `recipient` is supplied (from `?recipient=`), it stands in for the
- * connected wallet so the navbar shows who the payment settles to even without
- * a vault session.
+ * Shows the connected Privy Solana wallet, or a Sign in control.
+ * In embeds (`actions="none"`), `recipient` is shown as a read-only address.
+ * Top-level always uses the connected wallet — URL `?recipient=` never
+ * pretends the session is signed in.
  */
 export function WalletChip({
   className,
   recipient,
+  actions = "full",
 }: {
   className?: string;
   recipient?: string | null;
+  /** `none` = address only (iframe embeds). */
+  actions?: "full" | "none";
 }) {
-  const { ready, address, isConnected } = useSolanaAddress();
+  const { ready, address, isConnected, authenticated, connect, disconnect } =
+    useSolanaAddress();
 
-  // An explicit recipient (URL or typed) wins and is known immediately without
-  // waiting on the bridge; otherwise fall back to the connected vault wallet.
-  const display = recipient ?? (isConnected && address ? address : null);
+  const embedDisplay = actions === "none" ? recipient : null;
+  const connectedDisplay =
+    actions === "full" && isConnected && address ? address : null;
+  const display = embedDisplay ?? connectedDisplay;
+  const canDisconnect = actions === "full" && (isConnected || authenticated);
+  const canConnect = actions === "full";
 
-  if (!ready && !recipient) {
+  if (!ready && !embedDisplay) {
     return (
       <span
         className={cn(
@@ -36,7 +42,7 @@ export function WalletChip({
         )}
       >
         <LoaderCircle className="size-3.5 animate-spin" />
-        <span className="tracking-tight">Connecting…</span>
+        <span className="tracking-tight">Signing in…</span>
       </span>
     );
   }
@@ -54,19 +60,35 @@ export function WalletChip({
           aria-hidden
         />
         <CopyableAddress address={display} label="wallet address" />
+        {canDisconnect ? (
+          <button
+            type="button"
+            onClick={() => void disconnect()}
+            className="inline-flex size-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Disconnect"
+          >
+            <LogOut className="size-3" />
+          </button>
+        ) : null}
       </span>
     );
   }
 
+  if (!canConnect) {
+    return null;
+  }
+
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-border/60 px-2.5 py-1.5 text-xs text-muted-foreground",
-        className,
-      )}
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      className={cn("h-8 gap-1.5 rounded-full px-2.5 text-xs", className)}
+      onClick={connect}
+      disabled={!ready}
     >
       <Wallet className="size-3.5" />
-      No wallet
-    </span>
+      Sign in
+    </Button>
   );
 }

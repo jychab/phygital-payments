@@ -3,7 +3,7 @@ use anchor_lang::solana_program::instruction::Instruction;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use p256::ecdsa::signature::Signer;
 use p256::ecdsa::{SigningKey, VerifyingKey};
-use phygital_token_client::Secp256r1VerifyArgs;
+use phygital_payments::Secp256r1VerifyArgs;
 use rand::rngs::OsRng;
 use sha2::{Digest, Sha256};
 
@@ -47,25 +47,16 @@ impl TestPasskey {
         }
     }
 
+    /// `challenge` is the WebAuthn challenge (`build_transfer_challenge` output).
     pub fn verify_asset_secp256r1_instruction_with_rp_id(
         &self,
-        message: impl AsRef<[u8]>,
-        slot_number: u64,
-        slot_hash: [u8; 32],
+        challenge: [u8; 32],
         rp_id: &str,
     ) -> (Instruction, Secp256r1VerifyArgs) {
-        let message_hash: [u8; 32] = Sha256::digest(message.as_ref()).into();
-
-        let mut challenge_buffer = Vec::new();
-        challenge_buffer.extend_from_slice(b"verify_asset");
-        challenge_buffer.extend_from_slice(&message_hash);
-        challenge_buffer.extend_from_slice(&slot_hash);
-        let expected_challenge: [u8; 32] = Sha256::digest(&challenge_buffer).into();
-
         let mut client_data_json = Vec::new();
         client_data_json.extend_from_slice(br#"{"type":"webauthn.get","challenge":"#);
         Self::ccd_to_string(
-            &URL_SAFE_NO_PAD.encode(expected_challenge),
+            &URL_SAFE_NO_PAD.encode(challenge),
             &mut client_data_json,
         );
         client_data_json.extend_from_slice(br#","origin":"#);
@@ -78,7 +69,8 @@ impl TestPasskey {
         let mut authenticator_data = Vec::with_capacity(37);
         authenticator_data.extend_from_slice(&rp_id_hash);
         authenticator_data.push(0x01);
-        authenticator_data.extend_from_slice(&[0u8; 4]);
+        // signCount = 1 so it beats a fresh asset's last_sign_count (0).
+        authenticator_data.extend_from_slice(&1u32.to_be_bytes());
 
         let mut signed_message = Vec::with_capacity(authenticator_data.len() + 32);
         signed_message.extend_from_slice(&authenticator_data);
@@ -96,7 +88,6 @@ impl TestPasskey {
         let verify_args = Secp256r1VerifyArgs {
             verify_args_relative_index: -1,
             signed_message_index: 0,
-            slot_number,
             client_data_json,
         };
 

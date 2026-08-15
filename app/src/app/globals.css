@@ -85,8 +85,7 @@
   --border: oklch(0.29 0.006 260);
   --input: oklch(0.26 0.007 260);
   --ring: oklch(0.7 0.006 260);
-  /* Ambient wash color; the vault bridge overrides this with the accessory
-     accent so glows match the vault. Defaults to a soft neutral light. */
+  /* Ambient wash color for glows. Defaults to a soft neutral light. */
   --accent-glow: oklch(0.8 0.006 260);
   --chart-1: oklch(0.8 0.006 260);
   --chart-2: oklch(0.7 0.09 220);

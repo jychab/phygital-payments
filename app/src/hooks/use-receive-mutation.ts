@@ -7,7 +7,6 @@ import { queryKeys } from "@/lib/queries";
 import {
   receiveTransfer,
   type ReceiveTransferContext,
-  type SlotHashPrefetch,
 } from "@/lib/payments/receive";
 
 type ReceiveVars = {
@@ -15,7 +14,7 @@ type ReceiveVars = {
   rawAmount: bigint;
   mint: Address;
   context?: ReceiveTransferContext;
-  slotHash?: SlotHashPrefetch;
+  onPasskeyComplete?: () => void;
 };
 
 /**

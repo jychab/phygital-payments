@@ -1,0 +1,78 @@
+import { NextResponse } from "next/server";
+
+import {
+  evaluateCounter,
+  TAP_SESSION_TTL_MS,
+} from "@/lib/tap/counter-session";
+import {
+  readCounterSession,
+  writeCounterSession,
+} from "@/lib/tap/counter-store";
+import { verifyDynamicUrlWithoutCounterCheck } from "@/lib/tap/verify-dynamic-url";
+import { toUserErrorMessage } from "@/lib/payments/user-errors";
+
+/**
+ * Verify an NFC dynamic-URL tap (`pk`/`s`/`c`/`n`) for Enable Pay.
+ *
+ * Signature check, then monotonic counter anti-replay against the shared
+ * `revibase_counter` KV (same store as vault / developer). A new counter
+ * (strictly greater than the stored max) advances KV. The same counter may
+ * re-verify inside a short grace window (page remount); after that it fails.
+ */
+export async function GET(req: Request) {
+  try {
+    const params = new URL(req.url).searchParams;
+    if (!["pk", "s", "c", "n"].every((k) => params.get(k))) {
+      return NextResponse.json(
+        { isVerified: false, error: "Missing tap parameters" },
+        { status: 400 },
+      );
+    }
+
+    const { isVerified, counter, secp256r1PublicKey } =
+      verifyDynamicUrlWithoutCounterCheck(params);
+
+    if (!isVerified) {
+      return NextResponse.json(
+        { isVerified: false, error: "Invalid signature" },
+        { status: 400 },
+      );
+    }
+
+    const now = Date.now();
+    const state = await readCounterSession(secp256r1PublicKey);
+    const verdict = evaluateCounter(state, counter, now, TAP_SESSION_TTL_MS);
+
+    if (verdict === "replay") {
+      return NextResponse.json(
+        {
+          isVerified: false,
+          error: "This tap was already used. Tap your NFC device again to continue.",
+        },
+        { status: 409 },
+      );
+    }
+
+    if (verdict === "new") {
+      await writeCounterSession(secp256r1PublicKey, { c: counter, t: now });
+    }
+
+    return NextResponse.json({
+      isVerified: true,
+      secp256r1PublicKey,
+      counter,
+      reentry: verdict === "reentry",
+    });
+  } catch (err) {
+    return NextResponse.json(
+      {
+        isVerified: false,
+        error: toUserErrorMessage(
+          err,
+          "Hold flat against the back of your phone and try again.",
+        ),
+      },
+      { status: 400 },
+    );
+  }
+}

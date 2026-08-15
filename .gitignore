@@ -10,4 +10,4 @@ test-ledger
 .dev.vars
 .wrangler
 .open-next
-
+**/*dist

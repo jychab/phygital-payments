@@ -3,6 +3,7 @@
 // Runtime types generated with workerd@1.20260722.1 2025-07-01 global_fetch_strictly_public,nodejs_compat
 interface __BaseEnv_CloudflareEnv {
 	phygital_payments: D1Database;
+	revibase_counter: KVNamespace;
 	ASSETS: Fetcher;
 	NEXTJS_ENV: string;
 	FEE_PAYER_SECRET_KEY: string;

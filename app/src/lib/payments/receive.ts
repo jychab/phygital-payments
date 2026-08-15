@@ -6,36 +6,36 @@ import {
   type Instruction,
   type TransactionSigner,
 } from "@solana/kit";
-import { getCreateAssociatedTokenIdempotentInstruction as createTokenAtaIx } from "@solana-program/token";
+import { getCreateAssociatedTokenIdempotentInstruction } from "@solana-program/token";
 import {
-  getCreateAssociatedTokenIdempotentInstruction as createToken2022AtaIx,
-  TOKEN_2022_PROGRAM_ADDRESS,
-} from "@solana-program/token-2022";
-import {
-  beginVerifyAsset,
+  AssetType,
   authenticatePasskeyForVerifyAsset,
+  beginVerifyAsset,
   buildVerifyAssetArgs,
-  buildVerifyAssetChallenge,
   buildVerifyInputFromWebAuthn,
+  fetchAsset,
   parseSecp256r1Pubkey,
-  type VerifyAssetSession,
 } from "phygital-token-sdk";
 import {
-  buildTransferMessage,
+  buildTransferChallenge,
+  fetchMaybeOwnerVerifier,
+  findConfigPda,
+  findOwnerVerifierPda,
   findProgramAuthorityPda,
-  getTransferInstruction,
   PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
 } from "phygital-payments-sdk";
 
+import { bytesToBase64 } from "@/lib/crypto/base64";
 import { getSolanaRpc } from "@/lib/solana/rpc";
+import { getUsdcMint } from "./usdc";
 import {
   findAta,
-  getUsdcMint,
   resolveMintProgram,
   type TokenProgram,
-} from "./fund";
-import { bytesToBase64, type SubmitTransferRequest } from "./submitter-types";
-import { pollTransferJob, postSponsoredTransfer } from "./submitter-client";
+} from "./usdc-allowance";
+import type { SubmitTransferRequest } from "./submitter-types";
+import { submitAndWaitSponsoredTransfer } from "./submitter-client";
+import { submitTransferViaOwnerVerifier } from "./verifier-submit";
 
 export type RecipientAtaStatus = {
   mint: Address;
@@ -46,21 +46,23 @@ export type RecipientAtaStatus = {
 };
 
 export type BuiltReceiveTransfer = {
-  instructions: Instruction[];
   payload: SubmitTransferRequest;
+  /**
+   * OwnerVerifier routing resolved during build (avoids a second RPC at submit).
+   * `revi` = default fee-payer DO. `external` = verifier ≠ Revi fee-payer.
+   */
+  ownerVerifierRoute: OwnerVerifierRoute;
 };
+
+/** Result of resolving the optional OwnerVerifier PDA for submit routing. */
+export type OwnerVerifierRoute =
+  | { kind: "revi" }
+  | { kind: "external"; endpoint: string; verifier: Address };
 
 /** Pre-resolved mint program + recipient ATA (e.g. from the receive panel). */
 export type ReceiveTransferContext = {
   tokenProgram: TokenProgram;
   recipientAta: Address;
-};
-
-/** A recent slot hash, fetched ahead of the tap to skip an RPC before WebAuthn. */
-export type SlotHashPrefetch = {
-  slotHash: Uint8Array;
-  slotNumber: bigint;
-  fetchedAt: number;
 };
 
 /** Standard SlotHashes sysvar (holds ~512 recent slots, ~3.5 min). */
@@ -69,19 +71,12 @@ const SLOT_HASHES_SYSVAR = address(
 );
 
 /**
- * How long a prefetched slot hash stays usable. The on-chain verify tolerates
- * any slot still in SlotHashes (~3.5 min) and the DO rejects jobs older than
- * MAX_JOB_AGE_MS (45s), so a comfortably-fresh cap keeps prefetch safe.
+ * Fetch the latest slot hash for the transfer challenge (on demand at receive).
  */
-export const SLOT_HASH_PREFETCH_TTL_MS = 20_000;
-
-/**
- * Fetch the latest slot hash directly (mirrors the SDK's internal
- * `getLatestSlotHash`) so the receive panel can warm it *before* the tap. This
- * lifts a ~100–300ms RPC round trip off the path between the button press and
- * the NFC prompt, so WebAuthn fires immediately.
- */
-export async function prefetchSlotHash(): Promise<SlotHashPrefetch> {
+async function fetchSlotHash(): Promise<{
+  slotHash: Uint8Array;
+  slotNumber: bigint;
+}> {
   const rpc = getSolanaRpc();
   const { value } = await rpc
     .getAccountInfo(SLOT_HASHES_SYSVAR, {
@@ -98,17 +93,7 @@ export async function prefetchSlotHash(): Promise<SlotHashPrefetch> {
   const bytes = new Uint8Array(getBase64Encoder().encode(base64));
   const slotNumber = getU64Decoder().decode(bytes.subarray(0, 8));
   const slotHash = bytes.subarray(8, 40);
-  return { slotHash, slotNumber, fetchedAt: Date.now() };
-}
-
-/** Reuse a prefetched slot hash only while it's fresh enough to land. */
-function usablePrefetch(
-  prefetch: SlotHashPrefetch | undefined,
-): SlotHashPrefetch | null {
-  if (!prefetch) return null;
-  return Date.now() - prefetch.fetchedAt < SLOT_HASH_PREFETCH_TTL_MS
-    ? prefetch
-    : null;
+  return { slotHash, slotNumber };
 }
 
 /** True when sponsored fee-payer submit can be enabled in the UI. */
@@ -154,12 +139,9 @@ export async function buildCreateRecipientAtaInstructions(args: {
     return { instructions: [], ata: status.ata };
   }
 
-  const is2022 = status.program === TOKEN_2022_PROGRAM_ADDRESS;
-  const createAtaIx = is2022 ? createToken2022AtaIx : createTokenAtaIx;
-
   return {
     instructions: [
-      createAtaIx({
+      getCreateAssociatedTokenIdempotentInstruction({
         payer: args.signer,
         ata: status.ata,
         owner,
@@ -173,16 +155,16 @@ export async function buildCreateRecipientAtaInstructions(args: {
 
 /**
  * NFC passkey + build Pattern B transfer payload for a given recipient.
- * The recipient is an explicit address (the vault wallet or a payment link),
+ * The recipient is an explicit address (connected wallet or a payment link),
  * not a connected wallet — receive needs no wallet session.
  */
-export async function buildReceiveTransfer(args: {
+async function buildReceiveTransfer(args: {
   recipient: Address;
   rawAmount: bigint;
   mint?: Address;
   context?: ReceiveTransferContext;
-  /** Slot hash warmed before the tap; used when still fresh, else refetched. */
-  slotHash?: SlotHashPrefetch;
+  /** Fires the instant WebAuthn/NFC returns — before post-tap RPCs. */
+  onPasskeyComplete?: () => void;
 }): Promise<BuiltReceiveTransfer> {
   const { recipient, rawAmount } = args;
   const rpc = getSolanaRpc();
@@ -207,35 +189,25 @@ export async function buildReceiveTransfer(args: {
     recipientAta = status.ata;
   }
 
-  const message = buildTransferMessage(mint, recipient, rawAmount);
-  // Fast path: with a fresh prefetched slot hash we build the WebAuthn challenge
-  // locally (no RPC) so the NFC prompt appears the instant the button is
-  // pressed. Falls back to the SDK's fetch-then-challenge when it's stale.
-  const fresh = usablePrefetch(args.slotHash);
-  const session: VerifyAssetSession = fresh
-    ? {
-        rpc,
-        slotHash: fresh.slotHash,
-        slotNumber: fresh.slotNumber,
-        challenge: await buildVerifyAssetChallenge({
-          message,
-          slotHash: fresh.slotHash,
-        }),
-        message,
-      }
-    : await beginVerifyAsset({ rpc, message });
-  const response = await authenticatePasskeyForVerifyAsset(session);
-  const {
-    asset,
-    assetPda,
-    secp256r1Verify,
-    signedMessageIndex,
-    clientDataJson,
-  } = await buildVerifyAssetArgs(session, response);
+  const { slotHash, slotNumber } = await fetchSlotHash();
+  const messageHash = buildTransferChallenge(mint, recipient, rawAmount, slotHash);
+  const session = await beginVerifyAsset({ messageHash });
 
+  const response = await authenticatePasskeyForVerifyAsset(session);
+  // Card UX: leave "Hold NFC device" the moment the tap returns; RPC/submit = Confirming.
+  args.onPasskeyComplete?.();
+
+  const { assetPda, clientDataJson } = await buildVerifyAssetArgs(response);
+
+  const { data: asset } = await fetchAsset(rpc, assetPda);
+  if (asset.assetType !== AssetType.Lockable || !asset.isLocked) {
+    throw new Error(
+      "No locked NFC device found for this tap. Lock the asset before collecting payment.",
+    );
+  }
   if (asset.owner === recipient) {
     throw new Error(
-      "This pass belongs to the receiving wallet — you can’t collect a payment from yourself.",
+      "This NFC device belongs to the receiving wallet — you can’t collect a payment from yourself.",
     );
   }
 
@@ -244,25 +216,35 @@ export async function buildReceiveTransfer(args: {
     response,
   });
 
-  const [programAuthority, senderTokenAccount] = await Promise.all([
-    findProgramAuthorityPda(asset.owner, PHYGITAL_PAYMENTS_PROGRAM_ADDRESS),
-    findAta(mint, asset.owner, program),
-  ]);
+  const reviFeePayer = process.env.NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY?.trim();
+  if (!reviFeePayer) {
+    throw new Error("Sponsored submit is not configured");
+  }
 
-  const transferIx = getTransferInstruction({
-    asset: assetPda,
-    mint,
-    recipient,
-    programAuthority,
-    senderTokenAccount,
-    recipientTokenAccount: recipientAta,
-    tokenProgram: program,
-    amount: rawAmount,
-    verifyArgsRelativeIndex: -1,
-    signedMessageIndex,
-    slotNumber: session.slotNumber,
-    clientDataJson,
-  });
+  // Resolve PDAs + OwnerVerifier in one wave (single OV RPC for build+submit).
+  const [programAuthority, senderTokenAccount, configPda, ov] =
+    await Promise.all([
+      findProgramAuthorityPda(asset.owner, PHYGITAL_PAYMENTS_PROGRAM_ADDRESS),
+      findAta(mint, asset.owner, program),
+      findConfigPda(),
+      findOwnerVerifierPda({ owner: asset.owner }).then(async ([pda]) => {
+        const account = await fetchMaybeOwnerVerifier(rpc, pda);
+        return { pda, account };
+      }),
+    ]);
+
+  let ownerVerifierRoute: OwnerVerifierRoute = { kind: "revi" };
+  if (ov.account.exists && ov.account.data.verifier !== reviFeePayer) {
+    const endpoint = ov.account.data.endpoint?.trim();
+    if (!endpoint) {
+      throw new Error("Owner verifier endpoint is missing");
+    }
+    ownerVerifierRoute = {
+      kind: "external",
+      endpoint,
+      verifier: ov.account.data.verifier,
+    };
+  }
 
   const payload: SubmitTransferRequest = {
     createdAtMs: Date.now(),
@@ -273,41 +255,70 @@ export async function buildReceiveTransfer(args: {
     },
     transfer: {
       asset: assetPda,
+      owner: asset.owner,
       mint,
       recipient,
       programAuthority,
       senderTokenAccount,
       recipientTokenAccount: recipientAta,
       tokenProgram: program,
+      ownerVerifier: ov.pda,
+      config: configPda[0],
       amount: rawAmount.toString(),
-      slotNumber: session.slotNumber.toString(),
+      slotNumber: slotNumber.toString(),
       clientDataJson: bytesToBase64(new Uint8Array(clientDataJson)),
     },
   };
 
   return {
-    instructions: [secp256r1Verify, transferIx],
     payload,
+    ownerVerifierRoute,
   };
 }
 
 /**
- * Enqueue on the fee-payer DO; long-poll until confirmed/failed. The DO runs
- * an authoritative simulation of the batched transaction before submitting, so
- * no client-side preflight is needed (the sender is only known post-tap anyway).
+ * Route to Revi DO or the owner's external verifier endpoint.
+ * Pass `ownerVerifierRoute` from buildReceiveTransfer to skip a second OV RPC.
  */
-export async function submitSponsoredTransfer(
+async function submitSponsoredTransfer(
   payload: SubmitTransferRequest,
+  ownerVerifierRoute?: OwnerVerifierRoute,
 ): Promise<{ signature: string }> {
-  const { jobId } = await postSponsoredTransfer(payload);
-  const job = await pollTransferJob(jobId);
-  if (job.status === "failed") {
-    throw new Error(job.error ?? "Sponsored transfer failed");
+  const route =
+    ownerVerifierRoute ??
+    (await resolveOwnerVerifierRoute(address(payload.transfer.ownerVerifier)));
+
+  if (route.kind === "external") {
+    return submitTransferViaOwnerVerifier({
+      endpoint: route.endpoint,
+      payload,
+    });
   }
-  if (!job.signature) {
-    throw new Error("Sponsored transfer confirmed without signature");
+
+  const { signature } = await submitAndWaitSponsoredTransfer(payload);
+  return { signature };
+}
+
+async function resolveOwnerVerifierRoute(
+  ownerVerifierPda: Address,
+): Promise<OwnerVerifierRoute> {
+  const reviFeePayer = process.env.NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY?.trim();
+  if (!reviFeePayer) {
+    throw new Error("Sponsored submit is not configured");
   }
-  return { signature: job.signature };
+  const maybeOv = await fetchMaybeOwnerVerifier(getSolanaRpc(), ownerVerifierPda);
+  if (maybeOv.exists && maybeOv.data.verifier !== reviFeePayer) {
+    const endpoint = maybeOv.data.endpoint?.trim();
+    if (!endpoint) {
+      throw new Error("Owner verifier endpoint is missing");
+    }
+    return {
+      kind: "external",
+      endpoint,
+      verifier: maybeOv.data.verifier,
+    };
+  }
+  return { kind: "revi" };
 }
 
 /**
@@ -320,14 +331,16 @@ export async function receiveTransfer(args: {
   rawAmount: bigint;
   mint?: Address;
   context?: ReceiveTransferContext;
-  slotHash?: SlotHashPrefetch;
+  /** Fires once WebAuthn/NFC completes, before post-tap RPCs + submit. */
+  onPasskeyComplete?: () => void;
 }): Promise<{ signature: string }> {
   if (!isSponsoredSubmitAvailable()) {
     throw new Error("Sponsored submit is not configured");
   }
-  const { payload } = await buildReceiveTransfer(args);
-  const { signature } = await submitSponsoredTransfer(payload);
+  const { payload, ownerVerifierRoute } = await buildReceiveTransfer(args);
+  const { signature } = await submitSponsoredTransfer(
+    payload,
+    ownerVerifierRoute,
+  );
   return { signature };
 }
-
-export type { Address };

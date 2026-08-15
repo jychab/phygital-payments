@@ -10,7 +10,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { explorerTxUrl } from "@/lib/solana/cluster";
-import { formatTokenAmount } from "@/lib/payments/fund";
+import { formatTokenAmount } from "@/lib/payments/usdc-allowance";
 import { getUsdcMint, USDC_DECIMALS } from "@/lib/payments/usdc";
 import type { PaymentRecord } from "@/lib/payments/history-client";
 import { usePaymentHistory } from "@/hooks/use-payment-history";
@@ -49,12 +49,10 @@ function toRows(payments: PaymentRecord[], wallet: string): Row[] {
 export function HistoryPanel({
   recipient,
 }: {
-  /** Fallback address (from `?recipient=`) when no vault wallet is connected. */
+  /** Wallet address whose payment history to show. */
   recipient?: string | null;
 } = {}) {
   const { address: connectedAddress } = useSolanaAddress();
-  // The explicit recipient (URL or typed) drives Activity; a connected vault
-  // wallet is only a last-resort fallback.
   const address = recipient ?? connectedAddress ?? null;
   const query = usePaymentHistory(address);
   const usdcMint = getUsdcMint();
@@ -67,7 +65,7 @@ export function HistoryPanel({
   return (
     <div className="flex flex-1 flex-col gap-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-foreground">Recent payments</p>
+        <p className="text-sm font-medium text-foreground">Activity</p>
         <Button
           type="button"
           size="sm"
@@ -90,7 +88,7 @@ export function HistoryPanel({
       ) : error ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            {error.message || "Couldn’t load history"}
+            Couldn’t load activity
           </p>
           <Button
             type="button"
@@ -107,7 +105,9 @@ export function HistoryPanel({
             <History className="size-5 text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground">
-            {address ? "No payments yet." : "Enter a recipient to view activity."}
+            {address
+              ? "Payments you collect will show up here."
+              : "Sign in to see activity."}
           </p>
         </div>
       ) : (
@@ -117,7 +117,7 @@ export function HistoryPanel({
             const amount =
               row.mint === usdcMint
                 ? `${formatTokenAmount(BigInt(row.amount), USDC_DECIMALS)} USDC`
-                : `${row.amount} (raw)`;
+                : "Unknown token";
             return (
               <li key={`${row.signature}:${row.transferIndex}`}>
                 <a
@@ -141,16 +141,6 @@ export function HistoryPanel({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {received ? "Received" : "Sent"}
-                    </p>
-                    <p className="truncate font-mono text-xs text-muted-foreground">
-                      {row.counterparty
-                        ? `${received ? "from" : "to"} ${shortAddress(row.counterparty, 6)}`
-                        : "—"}
-                    </p>
-                  </div>
-                  <div className="text-right">
                     <p
                       className={cn(
                         "text-sm font-semibold tabular-nums",
@@ -161,8 +151,17 @@ export function HistoryPanel({
                       {amount}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      {relativeTime(row.blockTime)}
+                      {received ? "Received" : "Sent"}
+                      {relativeTime(row.blockTime)
+                        ? ` · ${relativeTime(row.blockTime)}`
+                        : ""}
                     </p>
+                    {row.counterparty ? (
+                      <p className="truncate font-mono text-[11px] text-muted-foreground/70">
+                        {received ? "from" : "to"}{" "}
+                        {shortAddress(row.counterparty, 6)}
+                      </p>
+                    ) : null}
                   </div>
                 </a>
               </li>

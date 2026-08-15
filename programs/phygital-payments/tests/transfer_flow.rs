@@ -1,6 +1,6 @@
 mod common;
 
-use common::{TestContext, TestPasskey};
+use common::TestContext;
 use solana_keypair::Keypair;
 use solana_signer::Signer;
 use anchor_lang::prelude::Pubkey;
@@ -23,19 +23,19 @@ fn setup_delegated_payment(
 #[test]
 fn transfer_succeeds_and_moves_tokens() {
     let mut ctx = TestContext::new();
-    let passkey = TestPasskey::generate();
+    let passkey = common::TestPasskey::generate();
+    let identifier = TestContext::unique_identifier();
     let owner = Keypair::new();
     let recipient = Keypair::new().pubkey();
-    let design_mint = Keypair::new().pubkey();
     let asset = ctx.asset_pda(&passkey.compressed_pubkey);
     let amount = 1_000_000u64;
 
     ctx.write_locked_asset(
         asset,
         owner.pubkey(),
-        design_mint,
+        identifier,
         passkey.compressed_pubkey,
-        u64::MAX,
+        0,
     );
     let (payment_mint, sender_token, recipient_token) =
         setup_delegated_payment(&mut ctx, &owner, recipient, amount);
@@ -55,25 +55,25 @@ fn transfer_succeeds_and_moves_tokens() {
 
     assert_eq!(ctx.token_balance(sender_token), 0);
     assert_eq!(ctx.token_balance(recipient_token), amount);
-    assert_ne!(ctx.last_transfer_slot(asset), u64::MAX);
+    assert!(ctx.last_sign_count(asset) > 0);
 }
 
 #[test]
 fn transfer_rejects_wrong_rp_id() {
     let mut ctx = TestContext::new();
-    let passkey = TestPasskey::generate();
+    let passkey = common::TestPasskey::generate();
+    let identifier = TestContext::unique_identifier();
     let owner = Keypair::new();
     let recipient = Keypair::new().pubkey();
-    let design_mint = Keypair::new().pubkey();
     let asset = ctx.asset_pda(&passkey.compressed_pubkey);
     let amount = 1_000_000u64;
 
     ctx.write_locked_asset(
         asset,
         owner.pubkey(),
-        design_mint,
+        identifier,
         passkey.compressed_pubkey,
-        u64::MAX,
+        0,
     );
     let (payment_mint, sender_token, recipient_token) =
         setup_delegated_payment(&mut ctx, &owner, recipient, amount);
@@ -95,7 +95,7 @@ fn transfer_rejects_wrong_rp_id() {
 
     let err_str = format!("{err:?}");
     assert!(
-        err_str.contains("InvalidRpId") || err_str.contains("6001"),
+        err_str.contains("RpIdMismatch") || err_str.contains("6018"),
         "unexpected error: {err:?}"
     );
 
@@ -107,14 +107,19 @@ fn transfer_rejects_wrong_rp_id() {
 #[test]
 fn transfer_rejects_unlocked_asset() {
     let mut ctx = TestContext::new();
-    let passkey = TestPasskey::generate();
+    let passkey = common::TestPasskey::generate();
+    let identifier = TestContext::unique_identifier();
     let owner = Keypair::new();
     let recipient = Keypair::new().pubkey();
-    let design_mint = Keypair::new().pubkey();
     let asset = ctx.asset_pda(&passkey.compressed_pubkey);
     let amount = 1_000u64;
 
-    ctx.write_unlocked_asset(asset, owner.pubkey(), design_mint, passkey.compressed_pubkey);
+    ctx.write_unlocked_asset(
+        asset,
+        owner.pubkey(),
+        identifier,
+        passkey.compressed_pubkey,
+    );
     let (payment_mint, sender_token, recipient_token) =
         setup_delegated_payment(&mut ctx, &owner, recipient, amount);
 
@@ -142,19 +147,19 @@ fn transfer_rejects_unlocked_asset() {
 #[test]
 fn transfer_requires_preceding_secp256r1_instruction() {
     let mut ctx = TestContext::new();
-    let passkey = TestPasskey::generate();
+    let passkey = common::TestPasskey::generate();
+    let identifier = TestContext::unique_identifier();
     let owner = Keypair::new();
     let recipient = Keypair::new().pubkey();
-    let design_mint = Keypair::new().pubkey();
     let asset = ctx.asset_pda(&passkey.compressed_pubkey);
     let amount = 1_000u64;
 
     ctx.write_locked_asset(
         asset,
         owner.pubkey(),
-        design_mint,
+        identifier,
         passkey.compressed_pubkey,
-        u64::MAX,
+        0,
     );
     let (payment_mint, sender_token, recipient_token) =
         setup_delegated_payment(&mut ctx, &owner, recipient, amount);
@@ -187,20 +192,20 @@ fn transfer_requires_preceding_secp256r1_instruction() {
 #[test]
 fn transfer_rejects_wrong_passkey() {
     let mut ctx = TestContext::new();
-    let passkey_a = TestPasskey::generate();
-    let passkey_b = TestPasskey::generate();
+    let passkey_a = common::TestPasskey::generate();
+    let passkey_b = common::TestPasskey::generate();
+    let identifier = TestContext::unique_identifier();
     let owner = Keypair::new();
     let recipient = Keypair::new().pubkey();
-    let design_mint = Keypair::new().pubkey();
     let asset = ctx.asset_pda(&passkey_a.compressed_pubkey);
     let amount = 1_000u64;
 
     ctx.write_locked_asset(
         asset,
         owner.pubkey(),
-        design_mint,
+        identifier,
         passkey_a.compressed_pubkey,
-        u64::MAX,
+        0,
     );
     let (payment_mint, sender_token, recipient_token) =
         setup_delegated_payment(&mut ctx, &owner, recipient, amount);

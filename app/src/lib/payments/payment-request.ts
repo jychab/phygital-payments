@@ -4,7 +4,6 @@ import { getUsdcMint } from "@/lib/payments/usdc";
 
 export type PaymentRequestParams = {
   amount?: string;
-  mint?: string;
   recipient?: string;
 };
 
@@ -13,6 +12,8 @@ export type PaymentRequest = {
   mint: Address;
   /** Recipient wallet the payment settles to, when provided via `?recipient=`. */
   recipient: Address | null;
+  /** True when `?recipient=` was present (even if invalid). */
+  hasRecipientParam: boolean;
   /** True when any payment-request param was present in the URL. */
   fromUrl: boolean;
 };
@@ -52,16 +53,14 @@ export function parsePaymentRequest(
     searchParams.recipient as string | string[] | undefined,
   );
 
-  const fromUrl = Boolean(
-    amountRaw?.trim() || recipientRaw?.trim(),
-  );
-
-  const mint = getUsdcMint();
+  const fromUrl = Boolean(amountRaw?.trim() || recipientRaw?.trim());
+  const hasRecipientParam = Boolean(recipientRaw?.trim());
 
   return {
     amount: normalizeAmount(amountRaw),
-    mint,
+    mint: getUsdcMint(),
     recipient: tryParseAddress(recipientRaw),
+    hasRecipientParam,
     fromUrl,
   };
 }

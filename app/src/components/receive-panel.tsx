@@ -5,20 +5,19 @@ import { toast } from "sonner";
 import {
   AlertCircle,
   Check,
+  ExternalLink,
   LoaderCircle,
   Nfc,
   Plus,
   ShieldCheck,
-  WalletCards,
+  Wallet,
 } from "lucide-react";
 
 import { AmountField } from "@/components/amount-field";
 import { CopyableAddress } from "@/components/copyable-address";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { explorerTxUrl } from "@/lib/solana/cluster";
-import { uiAmountToRaw } from "@/lib/payments/fund";
+import { uiAmountToRaw } from "@/lib/payments/usdc-allowance";
 import {
   tryParseAddress,
   type PaymentRequest,
@@ -28,58 +27,51 @@ import {
   type ReceiveTransferContext,
 } from "@/lib/payments/receive";
 import { getUsdcMint } from "@/lib/payments/usdc";
-import { warmSubmitter } from "@/lib/payments/submitter-client";
+import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { useMintProgram } from "@/hooks/use-mint-program";
 import { useRecipientAtaStatus } from "@/hooks/use-recipient-ata-status";
 import { useCreateAtaMutation } from "@/hooks/use-create-ata-mutation";
 import { useReceiveMutation } from "@/hooks/use-receive-mutation";
-import { useSlotHashPrefetch } from "@/hooks/use-slot-hash-prefetch";
-import { useWalletKitSigner } from "@/lib/wallet/bridge-signer";
+import { useWalletKitSigner } from "@/lib/wallet/wallet-kit-signer";
+import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn, shortAddress } from "@/lib/utils";
 
 type Phase = "idle" | "awaiting-tap" | "confirming" | "success";
 
+const SUCCESS_HOLD_MS = 3200;
+
 export function ReceivePanel({
   paymentRequest,
-  editableRecipient = false,
-  manualRecipient = "",
-  onManualRecipientChange,
   fixedRecipient = null,
   intoOwnWallet = false,
+  walletConnectEnabled = true,
 }: {
   paymentRequest: PaymentRequest;
-  /** When true (standalone, no `?recipient=`), recipient is typed inline. */
-  editableRecipient?: boolean;
-  manualRecipient?: string;
-  onManualRecipientChange?: (value: string) => void;
-  /** The resolved recipient when not editable — connected wallet or `?recipient=`. */
+  /** Resolved recipient — connected wallet or `?recipient=`. */
   fixedRecipient?: string | null;
-  /** True when settling into the connected wallet (embedded), for the label. */
+  /** True when settling into the connected wallet. */
   intoOwnWallet?: boolean;
+  /** False in iframe embeds — no Privy connect / ATA-create via wallet. */
+  walletConnectEnabled?: boolean;
 }) {
   const signer = useWalletKitSigner();
+  const { connect, isConnected } = useSolanaAddress();
   const [amount, setAmount] = useState(paymentRequest.amount ?? "");
   const [phase, setPhase] = useState<Phase>("idle");
   // Amount captured at submit time so the success screen keeps showing it even
   // after the input resets.
   const [settledAmount, setSettledAmount] = useState("");
+  const [failMessage, setFailMessage] = useState<string | null>(null);
 
   const sponsoredAvailable = isSponsoredSubmitAvailable();
   const mint = paymentRequest.mint;
   const amountLocked = Boolean(paymentRequest.amount);
   const mintLabel = mint === getUsdcMint() ? "USDC" : shortAddress(mint, 6);
 
-  // Recipient the payment settles into: the typed address when editable,
-  // otherwise the resolved wallet / URL recipient passed from the parent.
   const recipient = useMemo(
-    () =>
-      editableRecipient
-        ? tryParseAddress(manualRecipient)
-        : tryParseAddress(fixedRecipient ?? ""),
-    [editableRecipient, manualRecipient, fixedRecipient],
+    () => tryParseAddress(fixedRecipient ?? ""),
+    [fixedRecipient],
   );
-  const manualInvalid =
-    editableRecipient && manualRecipient.trim().length > 0 && !recipient;
 
   const mintQuery = useMintProgram(mint);
   const ataQuery = useRecipientAtaStatus(
@@ -92,11 +84,8 @@ export function ReceivePanel({
   const readyToReceive = ataStatus?.exists === true;
   const missingAta = ataStatus != null && !ataStatus.exists;
 
-  // While armed, keep a slot hash warmed so the NFC prompt fires without an RPC.
-  const getSlotHash = useSlotHashPrefetch(readyToReceive);
-
   const createAta = useCreateAtaMutation(mint, {
-    onSuccess: () => toast.success("USDC account ready"),
+    onSuccess: () => toast.success("Ready to receive"),
   });
   const receive = useReceiveMutation({
     onSuccess: (signature) => {
@@ -119,51 +108,67 @@ export function ReceivePanel({
 
   async function onCreateAccount() {
     if (!recipient) return;
+    if (!walletConnectEnabled) return;
+    if (!signer) {
+      connect();
+      return;
+    }
     try {
       await createAta.mutateAsync({ recipient });
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Couldn’t create USDC account",
-      );
+      toast.error(toUserErrorMessage(error, "Couldn’t set up to receive"));
     }
   }
 
   async function onReceive() {
     if (!recipient) {
-      toast.error("No recipient — open this from your vault");
+      setFailMessage("No recipient set.");
       return;
     }
     if (!sponsoredAvailable) {
-      toast.error("Sponsored submit is not configured");
+      setFailMessage("Payments aren’t available right now.");
       return;
     }
     if (!readyToReceive || !ataStatus || !mintQuery.data) {
-      toast.error("The recipient needs a USDC account before receiving");
+      setFailMessage("Set up to receive before collecting a payment.");
       return;
     }
     const paidAmount = amount;
+    setFailMessage(null);
+    // Stay on hold through WebAuthn — only flip to Confirming after the tap.
     setPhase("awaiting-tap");
-    // Warm the fee-payer DO now so it's hot by the time the payload posts
-    // (~1s+ later, after the tap) — hides signer/blockhash cold-start.
-    void warmSubmitter();
     try {
       const rawAmount = uiAmountToRaw(amount, mintQuery.data.decimals);
       const context: ReceiveTransferContext = {
         tokenProgram: ataStatus.program,
         recipientAta: ataStatus.ata,
       };
-      const slotHash = getSlotHash();
-      setPhase("confirming");
-      await receive.mutateAsync({ recipient, rawAmount, mint, context, slotHash });
-      // A calm moment of closure before returning to idle — the equivalent of
-      // Apple Pay's "Done" checkmark.
+      await receive.mutateAsync({
+        recipient,
+        rawAmount,
+        mint,
+        context,
+        onPasskeyComplete: () => {
+          setPhase("confirming");
+          try {
+            navigator.vibrate?.(30);
+          } catch {
+            /* ignore */
+          }
+        },
+      });
       setSettledAmount(paidAmount);
       setPhase("success");
+      try {
+        navigator.vibrate?.([20, 40, 20]);
+      } catch {
+        /* ignore */
+      }
       if (!amountLocked) setAmount("");
-      window.setTimeout(() => setPhase("idle"), 1800);
+      window.setTimeout(() => setPhase("idle"), SUCCESS_HOLD_MS);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Payment didn’t go through",
+      setFailMessage(
+        toUserErrorMessage(error, "Payment didn’t go through. Try again."),
       );
       setPhase("idle");
     }
@@ -193,6 +198,15 @@ export function ReceivePanel({
             </span>
           </p>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground"
+          onClick={() => setPhase("idle")}
+        >
+          Done
+        </Button>
       </div>
     );
   }
@@ -202,7 +216,7 @@ export function ReceivePanel({
       <div className="flex flex-1 flex-col py-6 text-center">
         <div className="space-y-1">
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            Transferring
+            Receiving
           </p>
           <p className="font-[family-name:var(--font-display)] text-[2.75rem] leading-none tracking-tight tabular-nums">
             {amount || "0"}
@@ -236,8 +250,8 @@ export function ReceivePanel({
               )}
             </div>
           </div>
-          <p className="font-[family-name:var(--font-display)] text-xl tracking-tight">
-            {phase === "confirming" ? "Confirming…" : "Hold your pass close"}
+          <p className="font-(family-name:--font-display) text-xl tracking-tight">
+            {phase === "confirming" ? "Confirming…" : "Hold their NFC device close"}
           </p>
         </div>
       </div>
@@ -246,26 +260,16 @@ export function ReceivePanel({
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      {editableRecipient ? (
-        <div className="space-y-1.5">
-          <Label htmlFor="receive-recipient" className="text-xs text-muted-foreground">
-            Recipient
-          </Label>
-          <Input
-            id="receive-recipient"
-            value={manualRecipient}
-            onChange={(event) => onManualRecipientChange?.(event.target.value)}
-            placeholder="Solana wallet address"
-            spellCheck={false}
-            autoComplete="off"
-            aria-invalid={manualInvalid}
-            className="h-10 font-mono text-sm"
-          />
-          {manualInvalid ? (
-            <p className="text-xs text-destructive">Enter a valid Solana address.</p>
-          ) : null}
+      {intoOwnWallet ? (
+        <div className="space-y-1 text-center">
+          <p className="text-sm font-medium text-foreground">Collect</p>
+          <p className="text-xs text-muted-foreground">
+            Enter an amount, then hold their NFC device to your phone.
+          </p>
         </div>
-      ) : recipient ? (
+      ) : null}
+
+      {recipient ? (
         <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/35 px-4 py-2.5 text-xs">
           <span className="text-muted-foreground">
             {intoOwnWallet ? "Into your wallet" : "To recipient"}
@@ -278,84 +282,130 @@ export function ReceivePanel({
         </div>
       ) : null}
 
-      {recipient ? (
+      {recipient && (ataLoading || missingAta) ? (
         <div
           className={cn(
             "flex items-start gap-3 rounded-xl border px-4 py-3",
-            readyToReceive
-              ? "border-primary/25 bg-primary/8"
-              : ataLoading
+            ataLoading
               ? "border-border/50 bg-muted/20"
-              : "border-destructive/40 bg-destructive/8",
+              : "border-border/60 bg-muted/25",
           )}
         >
           <div
             className={cn(
               "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full",
-              readyToReceive
-                ? "bg-primary/20 text-primary"
-                : ataLoading
+              ataLoading
                 ? "bg-muted text-muted-foreground"
-                : "bg-destructive/15 text-destructive",
+                : "bg-muted text-muted-foreground",
             )}
           >
             {ataLoading ? (
               <LoaderCircle className="size-4 animate-spin" />
-            ) : readyToReceive ? (
-              <Check className="size-4" strokeWidth={2.5} />
             ) : (
               <AlertCircle className="size-4" />
             )}
           </div>
           <div className="min-w-0 flex-1 space-y-2">
             <p className="text-sm font-medium text-foreground">
-              {ataLoading
-                ? "Checking…"
-                : readyToReceive
-                ? "Ready to receive"
-                : "No USDC account"}
+              {ataLoading ? "Checking…" : "Set up to receive"}
             </p>
-            {missingAta && !ataLoading && !signer ? (
-              <p className="text-xs text-muted-foreground">
-                Open from your vault to set one up.
-              </p>
+            {missingAta && !ataLoading && !walletConnectEnabled ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                 Click the link below and connect to the receiver wallet. You only need to do this once.
+                </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1.5"
+                    asChild
+                  >
+                    <a
+                      href={"/"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="size-3.5" />
+                      Open to finish setup
+                    </a>
+                  </Button>
+              </>
             ) : null}
-            {missingAta && !ataLoading && signer ? (
+            {missingAta &&
+            !ataLoading &&
+            walletConnectEnabled &&
+            !isConnected ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Sign in once to set up receiving for this address.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1.5"
+                  onClick={connect}
+                  disabled={busy}
+                >
+                  <Wallet className="size-3.5" />
+                  Sign in
+                </Button>
+              </>
+            ) : null}
+            {missingAta &&
+            !ataLoading &&
+            walletConnectEnabled &&
+            isConnected ? (
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
                 className="h-8 gap-1.5"
                 onClick={onCreateAccount}
-                disabled={busy}
+                disabled={busy || !signer}
               >
                 {createAta.isPending ? (
                   <>
                     <LoaderCircle className="size-3.5 animate-spin" />
-                    Creating…
+                    Setting up…
                   </>
                 ) : (
                   <>
                     <Plus className="size-3.5" />
-                    Create USDC account
+                    Set up to receive
                   </>
                 )}
               </Button>
             ) : null}
           </div>
         </div>
-      ) : editableRecipient ? null : (
+      ) : null}
+
+      {recipient && readyToReceive ? (
+        <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
+          <Check className="size-3 text-primary/80" strokeWidth={2.5} />
+          Ready to receive
+        </p>
+      ) : null}
+
+      {!recipient ? (
         <div className="flex items-start gap-3 rounded-xl border border-border/50 bg-muted/20 px-4 py-3">
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <WalletCards className="size-4" />
+            <Wallet className="size-4" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm text-muted-foreground">
-              Open from your vault to receive.
+              Sign in to receive.
             </p>
           </div>
         </div>
-      )}
+      ) : null}
+
+      {failMessage ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-center">
+          <p className="text-xs text-destructive">{failMessage}</p>
+        </div>
+      ) : null}
 
       <div
         className={cn(
@@ -367,7 +417,10 @@ export function ReceivePanel({
           <AmountField
             id="receive-amount"
             value={amount}
-            onChange={setAmount}
+            onChange={(next) => {
+              setFailMessage(null);
+              setAmount(next);
+            }}
             currency={mintLabel}
             disabled={amountLocked || !readyToReceive || busy}
             autoFocus={readyToReceive && !amountLocked}
@@ -383,16 +436,16 @@ export function ReceivePanel({
             disabled={busy || !amount || !readyToReceive || !sponsoredAvailable}
           >
             <Nfc className="size-4" />
-            Tap to receive
+            Hold NFC device to receive
           </Button>
           {sponsoredAvailable ? (
             <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
               <ShieldCheck className="size-3.5 text-primary/80" />
-              No network fee — settles directly on Solana
+              No fee
             </p>
           ) : (
             <p className="text-center text-xs text-muted-foreground">
-              Fee-free payments are unavailable right now.
+              Payments aren’t available right now.
             </p>
           )}
         </div>

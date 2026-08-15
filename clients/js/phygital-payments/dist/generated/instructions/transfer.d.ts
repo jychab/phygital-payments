@@ -1,12 +1,15 @@
-import { type AccountMeta, type Address, type Codec, type Decoder, type Encoder, type Instruction, type InstructionWithAccounts, type InstructionWithData, type ReadonlyAccount, type ReadonlyUint8Array, type WritableAccount } from "@solana/kit";
+import { type AccountMeta, type AccountSignerMeta, type Address, type Codec, type Decoder, type Encoder, type Instruction, type InstructionWithAccounts, type InstructionWithData, type ReadonlyAccount, type ReadonlySignerAccount, type ReadonlyUint8Array, type TransactionSigner, type WritableAccount } from "@solana/kit";
 import { PHYGITAL_PAYMENTS_PROGRAM_ADDRESS } from "../programs/index.js";
 export declare const TRANSFER_DISCRIMINATOR: ReadonlyUint8Array;
 export declare function getTransferDiscriminatorBytes(): ReadonlyUint8Array;
-export type TransferInstruction<TProgram extends string = typeof PHYGITAL_PAYMENTS_PROGRAM_ADDRESS, TAccountAsset extends string | AccountMeta<string> = string, TAccountMint extends string | AccountMeta<string> = string, TAccountRecipient extends string | AccountMeta<string> = string, TAccountProgramAuthority extends string | AccountMeta<string> = string, TAccountSenderTokenAccount extends string | AccountMeta<string> = string, TAccountRecipientTokenAccount extends string | AccountMeta<string> = string, TAccountSlotHashes extends string | AccountMeta<string> = "SysvarS1otHashes111111111111111111111111111", TAccountInstructionsSysvar extends string | AccountMeta<string> = "Sysvar1nstructions1111111111111111111111111", TAccountPhygitalTokenProgram extends string | AccountMeta<string> = "DdwhetyqgSB56XVcR33ySG5dFmvwbjSc5aSMHRg5Bk6A", TAccountTokenProgram extends string | AccountMeta<string> = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", TRemainingAccounts extends readonly AccountMeta<string>[] = []> = Instruction<TProgram> & InstructionWithData<ReadonlyUint8Array> & InstructionWithAccounts<[
+export type TransferInstruction<TProgram extends string = typeof PHYGITAL_PAYMENTS_PROGRAM_ADDRESS, TAccountVerifier extends string | AccountMeta<string> = string, TAccountConfig extends string | AccountMeta<string> = string, TAccountOwnerVerifier extends string | AccountMeta<string> = string, TAccountAsset extends string | AccountMeta<string> = string, TAccountMint extends string | AccountMeta<string> = string, TAccountRecipient extends string | AccountMeta<string> = string, TAccountProgramAuthority extends string | AccountMeta<string> = string, TAccountSenderTokenAccount extends string | AccountMeta<string> = string, TAccountRecipientTokenAccount extends string | AccountMeta<string> = string, TAccountSlotHashes extends string | AccountMeta<string> = "SysvarS1otHashes111111111111111111111111111", TAccountInstructionsSysvar extends string | AccountMeta<string> = "Sysvar1nstructions1111111111111111111111111", TAccountPhygitalTokenProgram extends string | AccountMeta<string> = "DuPpckdjjgVAnYok2aTMAt264ZPBXqq3JSazJjCUzTJQ", TAccountTokenProgram extends string | AccountMeta<string> = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", TRemainingAccounts extends readonly AccountMeta<string>[] = []> = Instruction<TProgram> & InstructionWithData<ReadonlyUint8Array> & InstructionWithAccounts<[
+    TAccountVerifier extends string ? ReadonlySignerAccount<TAccountVerifier> & AccountSignerMeta<TAccountVerifier> : TAccountVerifier,
+    TAccountConfig extends string ? ReadonlyAccount<TAccountConfig> : TAccountConfig,
+    TAccountOwnerVerifier extends string ? ReadonlyAccount<TAccountOwnerVerifier> : TAccountOwnerVerifier,
     TAccountAsset extends string ? WritableAccount<TAccountAsset> : TAccountAsset,
     TAccountMint extends string ? ReadonlyAccount<TAccountMint> : TAccountMint,
     TAccountRecipient extends string ? ReadonlyAccount<TAccountRecipient> : TAccountRecipient,
-    TAccountProgramAuthority extends string ? WritableAccount<TAccountProgramAuthority> : TAccountProgramAuthority,
+    TAccountProgramAuthority extends string ? ReadonlyAccount<TAccountProgramAuthority> : TAccountProgramAuthority,
     TAccountSenderTokenAccount extends string ? WritableAccount<TAccountSenderTokenAccount> : TAccountSenderTokenAccount,
     TAccountRecipientTokenAccount extends string ? WritableAccount<TAccountRecipientTokenAccount> : TAccountRecipientTokenAccount,
     TAccountSlotHashes extends string ? ReadonlyAccount<TAccountSlotHashes> : TAccountSlotHashes,
@@ -20,20 +23,23 @@ export type TransferInstructionData = {
     amount: bigint;
     verifyArgsRelativeIndex: bigint;
     signedMessageIndex: number;
-    slotNumber: bigint;
     clientDataJson: ReadonlyUint8Array;
+    slotNumber: bigint;
 };
 export type TransferInstructionDataArgs = {
     amount: number | bigint;
     verifyArgsRelativeIndex: number | bigint;
     signedMessageIndex: number;
-    slotNumber: number | bigint;
     clientDataJson: ReadonlyUint8Array;
+    slotNumber: number | bigint;
 };
 export declare function getTransferInstructionDataEncoder(): Encoder<TransferInstructionDataArgs>;
 export declare function getTransferInstructionDataDecoder(): Decoder<TransferInstructionData>;
 export declare function getTransferInstructionDataCodec(): Codec<TransferInstructionDataArgs, TransferInstructionData>;
-export type TransferInput<TAccountAsset extends string = string, TAccountMint extends string = string, TAccountRecipient extends string = string, TAccountProgramAuthority extends string = string, TAccountSenderTokenAccount extends string = string, TAccountRecipientTokenAccount extends string = string, TAccountSlotHashes extends string = string, TAccountInstructionsSysvar extends string = string, TAccountPhygitalTokenProgram extends string = string, TAccountTokenProgram extends string = string> = {
+export type TransferAsyncInput<TAccountVerifier extends string = string, TAccountConfig extends string = string, TAccountOwnerVerifier extends string = string, TAccountAsset extends string = string, TAccountMint extends string = string, TAccountRecipient extends string = string, TAccountProgramAuthority extends string = string, TAccountSenderTokenAccount extends string = string, TAccountRecipientTokenAccount extends string = string, TAccountSlotHashes extends string = string, TAccountInstructionsSysvar extends string = string, TAccountPhygitalTokenProgram extends string = string, TAccountTokenProgram extends string = string> = {
+    verifier: TransactionSigner<TAccountVerifier>;
+    config?: Address<TAccountConfig>;
+    ownerVerifier: Address<TAccountOwnerVerifier>;
     asset: Address<TAccountAsset>;
     mint: Address<TAccountMint>;
     recipient: Address<TAccountRecipient>;
@@ -47,25 +53,51 @@ export type TransferInput<TAccountAsset extends string = string, TAccountMint ex
     amount: TransferInstructionDataArgs["amount"];
     verifyArgsRelativeIndex: TransferInstructionDataArgs["verifyArgsRelativeIndex"];
     signedMessageIndex: TransferInstructionDataArgs["signedMessageIndex"];
-    slotNumber: TransferInstructionDataArgs["slotNumber"];
     clientDataJson: TransferInstructionDataArgs["clientDataJson"];
+    slotNumber: TransferInstructionDataArgs["slotNumber"];
 };
-export declare function getTransferInstruction<TAccountAsset extends string, TAccountMint extends string, TAccountRecipient extends string, TAccountProgramAuthority extends string, TAccountSenderTokenAccount extends string, TAccountRecipientTokenAccount extends string, TAccountSlotHashes extends string, TAccountInstructionsSysvar extends string, TAccountPhygitalTokenProgram extends string, TAccountTokenProgram extends string, TProgramAddress extends Address = typeof PHYGITAL_PAYMENTS_PROGRAM_ADDRESS>(input: TransferInput<TAccountAsset, TAccountMint, TAccountRecipient, TAccountProgramAuthority, TAccountSenderTokenAccount, TAccountRecipientTokenAccount, TAccountSlotHashes, TAccountInstructionsSysvar, TAccountPhygitalTokenProgram, TAccountTokenProgram>, config?: {
+export declare function getTransferInstructionAsync<TAccountVerifier extends string, TAccountConfig extends string, TAccountOwnerVerifier extends string, TAccountAsset extends string, TAccountMint extends string, TAccountRecipient extends string, TAccountProgramAuthority extends string, TAccountSenderTokenAccount extends string, TAccountRecipientTokenAccount extends string, TAccountSlotHashes extends string, TAccountInstructionsSysvar extends string, TAccountPhygitalTokenProgram extends string, TAccountTokenProgram extends string, TProgramAddress extends Address = typeof PHYGITAL_PAYMENTS_PROGRAM_ADDRESS>(input: TransferAsyncInput<TAccountVerifier, TAccountConfig, TAccountOwnerVerifier, TAccountAsset, TAccountMint, TAccountRecipient, TAccountProgramAuthority, TAccountSenderTokenAccount, TAccountRecipientTokenAccount, TAccountSlotHashes, TAccountInstructionsSysvar, TAccountPhygitalTokenProgram, TAccountTokenProgram>, config?: {
     programAddress?: TProgramAddress;
-}): TransferInstruction<TProgramAddress, TAccountAsset, TAccountMint, TAccountRecipient, TAccountProgramAuthority, TAccountSenderTokenAccount, TAccountRecipientTokenAccount, TAccountSlotHashes, TAccountInstructionsSysvar, TAccountPhygitalTokenProgram, TAccountTokenProgram>;
+}): Promise<TransferInstruction<TProgramAddress, TAccountVerifier, TAccountConfig, TAccountOwnerVerifier, TAccountAsset, TAccountMint, TAccountRecipient, TAccountProgramAuthority, TAccountSenderTokenAccount, TAccountRecipientTokenAccount, TAccountSlotHashes, TAccountInstructionsSysvar, TAccountPhygitalTokenProgram, TAccountTokenProgram>>;
+export type TransferInput<TAccountVerifier extends string = string, TAccountConfig extends string = string, TAccountOwnerVerifier extends string = string, TAccountAsset extends string = string, TAccountMint extends string = string, TAccountRecipient extends string = string, TAccountProgramAuthority extends string = string, TAccountSenderTokenAccount extends string = string, TAccountRecipientTokenAccount extends string = string, TAccountSlotHashes extends string = string, TAccountInstructionsSysvar extends string = string, TAccountPhygitalTokenProgram extends string = string, TAccountTokenProgram extends string = string> = {
+    verifier: TransactionSigner<TAccountVerifier>;
+    config: Address<TAccountConfig>;
+    ownerVerifier: Address<TAccountOwnerVerifier>;
+    asset: Address<TAccountAsset>;
+    mint: Address<TAccountMint>;
+    recipient: Address<TAccountRecipient>;
+    programAuthority: Address<TAccountProgramAuthority>;
+    senderTokenAccount: Address<TAccountSenderTokenAccount>;
+    recipientTokenAccount: Address<TAccountRecipientTokenAccount>;
+    slotHashes?: Address<TAccountSlotHashes>;
+    instructionsSysvar?: Address<TAccountInstructionsSysvar>;
+    phygitalTokenProgram?: Address<TAccountPhygitalTokenProgram>;
+    tokenProgram?: Address<TAccountTokenProgram>;
+    amount: TransferInstructionDataArgs["amount"];
+    verifyArgsRelativeIndex: TransferInstructionDataArgs["verifyArgsRelativeIndex"];
+    signedMessageIndex: TransferInstructionDataArgs["signedMessageIndex"];
+    clientDataJson: TransferInstructionDataArgs["clientDataJson"];
+    slotNumber: TransferInstructionDataArgs["slotNumber"];
+};
+export declare function getTransferInstruction<TAccountVerifier extends string, TAccountConfig extends string, TAccountOwnerVerifier extends string, TAccountAsset extends string, TAccountMint extends string, TAccountRecipient extends string, TAccountProgramAuthority extends string, TAccountSenderTokenAccount extends string, TAccountRecipientTokenAccount extends string, TAccountSlotHashes extends string, TAccountInstructionsSysvar extends string, TAccountPhygitalTokenProgram extends string, TAccountTokenProgram extends string, TProgramAddress extends Address = typeof PHYGITAL_PAYMENTS_PROGRAM_ADDRESS>(input: TransferInput<TAccountVerifier, TAccountConfig, TAccountOwnerVerifier, TAccountAsset, TAccountMint, TAccountRecipient, TAccountProgramAuthority, TAccountSenderTokenAccount, TAccountRecipientTokenAccount, TAccountSlotHashes, TAccountInstructionsSysvar, TAccountPhygitalTokenProgram, TAccountTokenProgram>, config?: {
+    programAddress?: TProgramAddress;
+}): TransferInstruction<TProgramAddress, TAccountVerifier, TAccountConfig, TAccountOwnerVerifier, TAccountAsset, TAccountMint, TAccountRecipient, TAccountProgramAuthority, TAccountSenderTokenAccount, TAccountRecipientTokenAccount, TAccountSlotHashes, TAccountInstructionsSysvar, TAccountPhygitalTokenProgram, TAccountTokenProgram>;
 export type ParsedTransferInstruction<TProgram extends string = typeof PHYGITAL_PAYMENTS_PROGRAM_ADDRESS, TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[]> = {
     programAddress: Address<TProgram>;
     accounts: {
-        asset: TAccountMetas[0];
-        mint: TAccountMetas[1];
-        recipient: TAccountMetas[2];
-        programAuthority: TAccountMetas[3];
-        senderTokenAccount: TAccountMetas[4];
-        recipientTokenAccount: TAccountMetas[5];
-        slotHashes: TAccountMetas[6];
-        instructionsSysvar: TAccountMetas[7];
-        phygitalTokenProgram: TAccountMetas[8];
-        tokenProgram: TAccountMetas[9];
+        verifier: TAccountMetas[0];
+        config: TAccountMetas[1];
+        ownerVerifier: TAccountMetas[2];
+        asset: TAccountMetas[3];
+        mint: TAccountMetas[4];
+        recipient: TAccountMetas[5];
+        programAuthority: TAccountMetas[6];
+        senderTokenAccount: TAccountMetas[7];
+        recipientTokenAccount: TAccountMetas[8];
+        slotHashes: TAccountMetas[9];
+        instructionsSysvar: TAccountMetas[10];
+        phygitalTokenProgram: TAccountMetas[11];
+        tokenProgram: TAccountMetas[12];
     };
     data: TransferInstructionData;
 };

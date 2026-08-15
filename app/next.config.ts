@@ -11,11 +11,6 @@ void initOpenNextCloudflareForDev();
 /** pnpm hoists `next` to the workspace root — Turbopack must resolve from there. */
 const workspaceRoot = path.join(__dirname, "..");
 
-// Who may embed this app in an iframe. Standalone (top-level) use is unaffected
-// by frame-ancestors. Override FRAME_ANCESTORS for local embedding tests
-// (e.g. "http://localhost:3001"); production default is the Revibase vault.
-const frameAncestors = "*";
-
 const nextConfig: NextConfig = {
   transpilePackages: ["phygital-payments-sdk", "phygital-token-sdk"],
   outputFileTracingRoot: workspaceRoot,
@@ -28,8 +23,9 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           {
+            // Allow merchant sites to embed the payment-link receive UI.
             key: "Content-Security-Policy",
-            value: `frame-ancestors ${frameAncestors};`,
+            value: "frame-ancestors *;",
           },
         ],
       },

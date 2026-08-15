@@ -7,16 +7,16 @@ import {
   buildDelegateInstructions,
   buildRevokeDelegateInstructions,
   formatTokenAmount,
-} from "@/lib/payments/fund";
+} from "@/lib/payments/usdc-allowance";
 import { sendTransaction } from "@/lib/solana/tx";
-import { useWalletKitSigner } from "@/lib/wallet/bridge-signer";
+import { useWalletKitSigner } from "@/lib/wallet/wallet-kit-signer";
 
 type OptimisticContext = { previous?: UsdcDelegateStatus };
 
 /**
  * Approve the program authority as USDC delegate for `rawAmount`. The allowance
  * card flips immediately (optimistic), then the on-chain confirmation resolves;
- * if it fails we roll the cache back. Mirrors the vault's use-set-lock-mutation.
+ * if it fails we roll the cache back.
  */
 export function useSetAllowanceMutation(
   owner: string | null,
@@ -33,7 +33,7 @@ export function useSetAllowanceMutation(
     OptimisticContext
   >({
     mutationFn: async ({ rawAmount }) => {
-      if (!signer) throw new Error("No wallet — open this from your vault");
+      if (!signer) throw new Error("Connect your wallet");
       const { instructions } = await buildDelegateInstructions({
         signer,
         rawAmount,
@@ -79,7 +79,7 @@ export function useRevokeAllowanceMutation(
 
   return useMutation<string, Error, void, OptimisticContext>({
     mutationFn: async () => {
-      if (!signer) throw new Error("No wallet — open this from your vault");
+      if (!signer) throw new Error("Connect your wallet");
       const { instructions } = await buildRevokeDelegateInstructions({ signer });
       const { signature } = await sendTransaction({
         instructions,

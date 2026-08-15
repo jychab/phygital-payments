@@ -2,16 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getSubmitterStub } from "@/lib/server/submitter";
 
+/** GET /api/transfer-submitter/jobs/:id — long-poll until terminal (or timeout). */
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await ctx.params;
-
-    const stub = getSubmitterStub();
-    const wait = req.nextUrl.searchParams.get("wait") === "1";
-    const job = wait ? await stub.waitForJob(id) : await stub.getJob(id);
+    const job = await getSubmitterStub().waitForJob(id);
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
     }

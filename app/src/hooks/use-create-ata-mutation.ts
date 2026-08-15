@@ -6,12 +6,12 @@ import type { Address } from "@solana/kit";
 import { queryKeys, type RecipientAtaStatus } from "@/lib/queries";
 import { buildCreateRecipientAtaInstructions } from "@/lib/payments/receive";
 import { sendTransaction } from "@/lib/solana/tx";
-import { useWalletKitSigner } from "@/lib/wallet/bridge-signer";
+import { useWalletKitSigner } from "@/lib/wallet/wallet-kit-signer";
 
 type OptimisticContext = { previous?: RecipientAtaStatus };
 
 /**
- * Create the recipient's USDC token account (the vault wallet pays rent). The
+ * Create the recipient's USDC token account (connected wallet pays rent). The
  * status flips to "ready" optimistically; rolls back if the tx fails.
  */
 export function useCreateAtaMutation(
@@ -23,7 +23,7 @@ export function useCreateAtaMutation(
 
   return useMutation<void, Error, { recipient: Address }, OptimisticContext>({
     mutationFn: async ({ recipient }) => {
-      if (!signer) throw new Error("No wallet — open this from your vault");
+      if (!signer) throw new Error("Connect your wallet");
       const { instructions } = await buildCreateRecipientAtaInstructions({
         signer,
         owner: recipient,

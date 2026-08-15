@@ -31,6 +31,7 @@ import {
   CONFIRM_TIMEOUT_MS,
   MAX_COMPUTE_UNITS,
   PRIORITY_FEE_MICRO_LAMPORTS,
+  SINGLE_JOB_COMPUTE_UNITS,
   type Secp256r1VerifyEntryWire,
   type TransferAccountsWire,
   type TransferJob,
@@ -120,8 +121,12 @@ export function buildTransferIx(
   transfer: TransferAccountsWire,
   verifyArgsRelativeIndex: number,
   signedMessageIndex: number,
+  feePayer: TransactionSigner,
 ): Instruction {
   return getTransferInstruction({
+    verifier: feePayer,
+    config: address(transfer.config),
+    ownerVerifier: address(transfer.ownerVerifier),
     asset: address(transfer.asset),
     mint: address(transfer.mint),
     recipient: address(transfer.recipient),
@@ -132,13 +137,20 @@ export function buildTransferIx(
     amount: BigInt(transfer.amount),
     verifyArgsRelativeIndex,
     signedMessageIndex,
-    slotNumber: BigInt(transfer.slotNumber),
     clientDataJson: base64ToBytes(transfer.clientDataJson),
+    slotNumber: BigInt(transfer.slotNumber),
   });
 }
 
 export function validateTransferWire(transfer: TransferAccountsWire): void {
-  if (!transfer.asset || !transfer.mint || !transfer.recipient) {
+  if (
+    !transfer.asset ||
+    !transfer.owner ||
+    !transfer.mint ||
+    !transfer.recipient ||
+    !transfer.ownerVerifier ||
+    !transfer.config
+  ) {
     throw new Error("Transfer accounts incomplete");
   }
   // Soft check — full program id validation
@@ -186,11 +198,14 @@ export class SubmitError extends Error {
 }
 
 /** secp verify + one transfer per job, wired to the shared verify instruction. */
-function buildCoreInstructions(jobs: TransferJob[]): Instruction[] {
+function buildCoreInstructions(
+  jobs: TransferJob[],
+  feePayer: TransactionSigner,
+): Instruction[] {
   const entries = jobs.map((job) => entryFromWire(job.secpEntry));
   const secpIx = getSecp256r1VerifyInstruction(entries);
   const transferIxs = jobs.map((job, i) =>
-    buildTransferIx(job.transfer, -(i + 1), i),
+    buildTransferIx(job.transfer, -(i + 1), i, feePayer),
   );
   return [secpIx, ...transferIxs];
 }
@@ -280,36 +295,27 @@ async function buildAndSign(
   };
 }
 
-/** Result of a successful submit, carrying what the DO needs to settle later. */
-export type SubmitResult = {
-  signature: Signature;
-  lastValidBlockHeight: bigint;
-};
-
 /**
  * Simulate → size compute budget → send (skipPreflight, already simulated) →
- * await `processed`. Returns the signature plus the blockhash height needed to
- * settle to `confirmed` in the background.
- *
- * We release at `processed` (first block inclusion, ~1 slot) rather than
- * `confirmed` to make perceived confirmation card-network fast: the batch has
- * already passed an authoritative simulation and each transfer is single-use
- * (secp verify + slotNumber), so inclusion is a strong signal. The DO upgrades
- * to `confirmed` out of band via {@link settleConfirmed}.
+ * await `confirmed`.
  */
 export async function sendSponsoredBatch(
   env: CloudflareEnv,
   jobs: TransferJob[],
   ctx: SendContext,
-): Promise<SubmitResult> {
+): Promise<Signature> {
   if (jobs.length === 0) {
     throw new SubmitError("No jobs to submit", false);
   }
 
-  const core = buildCoreInstructions(jobs);
+  const core = buildCoreInstructions(jobs, ctx.signer);
 
-  // Authoritative validity check + compute-unit measurement.
-  const computeUnitLimit = await simulateBatch(env, core, ctx.signer.address);
+  // Single-job path: skip simulation RTT — use a fixed CU budget sized for
+  // secp + one transfer. Multi-job batches still simulate for a tight limit.
+  const computeUnitLimit =
+    jobs.length === 1
+      ? Math.min(SINGLE_JOB_COMPUTE_UNITS, MAX_COMPUTE_UNITS)
+      : await simulateBatch(env, core, ctx.signer.address);
 
   // Build + sign the final transaction with a tight CU limit + priority fee.
   let built: Awaited<ReturnType<typeof buildAndSign>>;
@@ -337,22 +343,12 @@ export async function sendSponsoredBatch(
     throw new SubmitError(message, isTransientRpcError(message));
   }
 
-  const lastValidBlockHeight = ctx.latestBlockhash.lastValidBlockHeight;
-  await confirmSignature(env, signature, lastValidBlockHeight, "processed");
-  return { signature, lastValidBlockHeight };
-}
-
-/**
- * Second-stage settlement: wait for `confirmed` after the UI has already been
- * released at `processed`. Throws (transient) if the tx is dropped before it
- * confirms, so the DO can reconcile.
- */
-export async function settleConfirmed(
-  env: CloudflareEnv,
-  signature: Signature,
-  lastValidBlockHeight: bigint,
-): Promise<void> {
-  await confirmSignature(env, signature, lastValidBlockHeight, "confirmed");
+  await confirmSignature(
+    env,
+    signature,
+    ctx.latestBlockhash.lastValidBlockHeight,
+  );
+  return signature;
 }
 
 /** The blockhash is dead once the chain passes its lastValidBlockHeight. */
@@ -364,38 +360,29 @@ async function blockhashExpired(
   return height > lastValidBlockHeight;
 }
 
-/** Commitment levels this module confirms against. */
-type ConfirmCommitment = "processed" | "confirmed";
-
-/** Whether an observed status has reached (or passed) the target commitment. */
-function statusReached(
-  observed: string | null | undefined,
-  target: ConfirmCommitment,
-): boolean {
-  if (observed === "finalized") return true;
-  if (observed === "confirmed") return true;
-  return target === "processed" && observed === "processed";
+/** Whether an observed status has reached `confirmed` (or `finalized`). */
+function isConfirmed(observed: string | null | undefined): boolean {
+  return observed === "confirmed" || observed === "finalized";
 }
 
 /**
- * Await the target commitment via WebSocket signature subscription (premium
- * RPC), with a getSignatureStatuses polling fallback if the subscription can't
- * be opened. Both paths share one wall-clock deadline (so the total budget is a
- * single CONFIRM_TIMEOUT_MS, not double) and give up early — as a transient
- * error — once the tx's blockhash can no longer land.
+ * Await `confirmed` via WebSocket signature subscription (premium RPC), with a
+ * getSignatureStatuses polling fallback if the subscription can't be opened.
+ * Both paths share one wall-clock deadline (so the total budget is a single
+ * CONFIRM_TIMEOUT_MS, not double) and give up early — as a transient error —
+ * once the tx's blockhash can no longer land.
  */
 async function confirmSignature(
   env: CloudflareEnv,
   signature: Signature,
   lastValidBlockHeight: bigint,
-  commitment: ConfirmCommitment,
 ): Promise<void> {
   const deadline = Date.now() + CONFIRM_TIMEOUT_MS;
   try {
-    await confirmViaSubscription(env, signature, lastValidBlockHeight, deadline, commitment);
+    await confirmViaSubscription(env, signature, lastValidBlockHeight, deadline);
   } catch (error) {
     if (error instanceof SubmitError) throw error; // on-chain / expiry — don't retry here
-    await confirmViaPolling(env, signature, lastValidBlockHeight, deadline, commitment);
+    await confirmViaPolling(env, signature, lastValidBlockHeight, deadline);
   }
 }
 
@@ -404,7 +391,6 @@ async function confirmViaSubscription(
   signature: Signature,
   lastValidBlockHeight: bigint,
   deadline: number,
-  commitment: ConfirmCommitment,
 ): Promise<void> {
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), Math.max(0, deadline - Date.now()));
@@ -423,7 +409,7 @@ async function confirmViaSubscription(
   }, 2000);
   try {
     const notifications = await getRpcSubscriptions(env)
-      .signatureNotifications(signature, { commitment })
+      .signatureNotifications(signature, { commitment: "confirmed" })
       .subscribe({ abortSignal: abort.signal });
     for await (const notification of notifications) {
       if (notification.value?.err) {
@@ -432,7 +418,7 @@ async function confirmViaSubscription(
           false,
         );
       }
-      return; // reached target commitment
+      return; // confirmed
     }
     if (expired) {
       throw new SubmitError("Blockhash expired before confirmation", true);
@@ -450,7 +436,6 @@ async function confirmViaPolling(
   signature: Signature,
   lastValidBlockHeight: bigint,
   deadline: number,
-  commitment: ConfirmCommitment,
 ): Promise<void> {
   const rpc = getRpc(env);
   while (Date.now() < deadline) {
@@ -465,7 +450,7 @@ async function confirmViaPolling(
           false,
         );
       }
-      if (statusReached(status?.confirmationStatus, commitment)) {
+      if (isConfirmed(status?.confirmationStatus)) {
         return;
       }
       // Not confirmed yet — if the blockhash is dead, it never will be. Retry.

@@ -12,32 +12,109 @@ import {
   extendClient,
   fixEncoderSize,
   getBytesEncoder,
+  SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_ACCOUNT,
   SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_INSTRUCTION,
   SOLANA_ERROR__PROGRAM_CLIENTS__UNRECOGNIZED_INSTRUCTION_TYPE,
   SolanaError,
   type Address,
+  type ClientWithRpc,
   type ClientWithTransactionPlanning,
   type ClientWithTransactionSending,
   type ExtendedClient,
+  type GetAccountInfoApi,
+  type GetMultipleAccountsApi,
   type Instruction,
   type InstructionWithData,
   type ReadonlyUint8Array,
 } from "@solana/kit";
 import {
+  addSelfFetchFunctions,
   addSelfPlanAndSendFunctions,
+  type SelfFetchFunctions,
   type SelfPlanAndSendFunctions,
 } from "@solana/kit/program-client-core";
 import {
-  getTransferInstruction,
+  getConfigCodec,
+  getOwnerVerifierCodec,
+  type Config,
+  type ConfigArgs,
+  type OwnerVerifier,
+  type OwnerVerifierArgs,
+} from "../accounts/index.js";
+import {
+  getAddVerifierInstructionAsync,
+  getClearOwnerVerifierInstructionAsync,
+  getInitializeConfigInstructionAsync,
+  getRemoveVerifierInstructionAsync,
+  getSetOwnerVerifierInstructionAsync,
+  getTransferInstructionAsync,
+  parseAddVerifierInstruction,
+  parseClearOwnerVerifierInstruction,
+  parseInitializeConfigInstruction,
+  parseRemoveVerifierInstruction,
+  parseSetOwnerVerifierInstruction,
   parseTransferInstruction,
+  type AddVerifierAsyncInput,
+  type ClearOwnerVerifierAsyncInput,
+  type InitializeConfigAsyncInput,
+  type ParsedAddVerifierInstruction,
+  type ParsedClearOwnerVerifierInstruction,
+  type ParsedInitializeConfigInstruction,
+  type ParsedRemoveVerifierInstruction,
+  type ParsedSetOwnerVerifierInstruction,
   type ParsedTransferInstruction,
-  type TransferInput,
+  type RemoveVerifierAsyncInput,
+  type SetOwnerVerifierAsyncInput,
+  type TransferAsyncInput,
 } from "../instructions/index.js";
+import { findConfigPda, findOwnerVerifierPda } from "../pdas/index.js";
 
 export const PHYGITAL_PAYMENTS_PROGRAM_ADDRESS =
   "DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok" as Address<"DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok">;
 
+export enum PhygitalPaymentsAccount {
+  Config,
+  OwnerVerifier,
+}
+
+export function identifyPhygitalPaymentsAccount(
+  account: { data: ReadonlyUint8Array } | ReadonlyUint8Array,
+): PhygitalPaymentsAccount {
+  const data = "data" in account ? account.data : account;
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([155, 12, 170, 224, 30, 250, 204, 130]),
+      ),
+      0,
+    )
+  ) {
+    return PhygitalPaymentsAccount.Config;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([241, 123, 5, 72, 241, 211, 246, 253]),
+      ),
+      0,
+    )
+  ) {
+    return PhygitalPaymentsAccount.OwnerVerifier;
+  }
+  throw new SolanaError(
+    SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_ACCOUNT,
+    { accountData: data, programName: "phygitalPayments" },
+  );
+}
+
 export enum PhygitalPaymentsInstruction {
+  AddVerifier,
+  ClearOwnerVerifier,
+  InitializeConfig,
+  RemoveVerifier,
+  SetOwnerVerifier,
   Transfer,
 }
 
@@ -45,6 +122,61 @@ export function identifyPhygitalPaymentsInstruction(
   instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array,
 ): PhygitalPaymentsInstruction {
   const data = "data" in instruction ? instruction.data : instruction;
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([165, 72, 135, 225, 67, 181, 255, 135]),
+      ),
+      0,
+    )
+  ) {
+    return PhygitalPaymentsInstruction.AddVerifier;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([22, 210, 50, 56, 238, 126, 242, 84]),
+      ),
+      0,
+    )
+  ) {
+    return PhygitalPaymentsInstruction.ClearOwnerVerifier;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([208, 127, 21, 1, 194, 190, 196, 70]),
+      ),
+      0,
+    )
+  ) {
+    return PhygitalPaymentsInstruction.InitializeConfig;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([179, 9, 132, 183, 233, 23, 172, 111]),
+      ),
+      0,
+    )
+  ) {
+    return PhygitalPaymentsInstruction.RemoveVerifier;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([99, 221, 200, 143, 93, 97, 22, 69]),
+      ),
+      0,
+    )
+  ) {
+    return PhygitalPaymentsInstruction.SetOwnerVerifier;
+  }
   if (
     containsBytes(
       data,
@@ -64,15 +196,66 @@ export function identifyPhygitalPaymentsInstruction(
 
 export type ParsedPhygitalPaymentsInstruction<
   TProgram extends string = "DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok",
-> = {
-  instructionType: PhygitalPaymentsInstruction.Transfer;
-} & ParsedTransferInstruction<TProgram>;
+> =
+  | ({
+      instructionType: PhygitalPaymentsInstruction.AddVerifier;
+    } & ParsedAddVerifierInstruction<TProgram>)
+  | ({
+      instructionType: PhygitalPaymentsInstruction.ClearOwnerVerifier;
+    } & ParsedClearOwnerVerifierInstruction<TProgram>)
+  | ({
+      instructionType: PhygitalPaymentsInstruction.InitializeConfig;
+    } & ParsedInitializeConfigInstruction<TProgram>)
+  | ({
+      instructionType: PhygitalPaymentsInstruction.RemoveVerifier;
+    } & ParsedRemoveVerifierInstruction<TProgram>)
+  | ({
+      instructionType: PhygitalPaymentsInstruction.SetOwnerVerifier;
+    } & ParsedSetOwnerVerifierInstruction<TProgram>)
+  | ({
+      instructionType: PhygitalPaymentsInstruction.Transfer;
+    } & ParsedTransferInstruction<TProgram>);
 
 export function parsePhygitalPaymentsInstruction<TProgram extends string>(
   instruction: Instruction<TProgram> & InstructionWithData<ReadonlyUint8Array>,
 ): ParsedPhygitalPaymentsInstruction<TProgram> {
   const instructionType = identifyPhygitalPaymentsInstruction(instruction);
   switch (instructionType) {
+    case PhygitalPaymentsInstruction.AddVerifier: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: PhygitalPaymentsInstruction.AddVerifier,
+        ...parseAddVerifierInstruction(instruction),
+      };
+    }
+    case PhygitalPaymentsInstruction.ClearOwnerVerifier: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: PhygitalPaymentsInstruction.ClearOwnerVerifier,
+        ...parseClearOwnerVerifierInstruction(instruction),
+      };
+    }
+    case PhygitalPaymentsInstruction.InitializeConfig: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: PhygitalPaymentsInstruction.InitializeConfig,
+        ...parseInitializeConfigInstruction(instruction),
+      };
+    }
+    case PhygitalPaymentsInstruction.RemoveVerifier: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: PhygitalPaymentsInstruction.RemoveVerifier,
+        ...parseRemoveVerifierInstruction(instruction),
+      };
+    }
+    case PhygitalPaymentsInstruction.SetOwnerVerifier: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: PhygitalPaymentsInstruction.SetOwnerVerifier,
+        ...parseSetOwnerVerifierInstruction(instruction),
+      };
+    }
     case PhygitalPaymentsInstruction.Transfer: {
       assertIsInstructionWithAccounts(instruction);
       return {
@@ -92,18 +275,57 @@ export function parsePhygitalPaymentsInstruction<TProgram extends string>(
 }
 
 export type PhygitalPaymentsPlugin = {
+  accounts: PhygitalPaymentsPluginAccounts;
   instructions: PhygitalPaymentsPluginInstructions;
+  pdas: PhygitalPaymentsPluginPdas;
+  identifyAccount: typeof identifyPhygitalPaymentsAccount;
   identifyInstruction: typeof identifyPhygitalPaymentsInstruction;
   parseInstruction: typeof parsePhygitalPaymentsInstruction;
 };
 
-export type PhygitalPaymentsPluginInstructions = {
-  transfer: (
-    input: TransferInput,
-  ) => ReturnType<typeof getTransferInstruction> & SelfPlanAndSendFunctions;
+export type PhygitalPaymentsPluginAccounts = {
+  config: ReturnType<typeof getConfigCodec> &
+    SelfFetchFunctions<ConfigArgs, Config>;
+  ownerVerifier: ReturnType<typeof getOwnerVerifierCodec> &
+    SelfFetchFunctions<OwnerVerifierArgs, OwnerVerifier>;
 };
 
-export type PhygitalPaymentsPluginRequirements = ClientWithTransactionPlanning &
+export type PhygitalPaymentsPluginInstructions = {
+  addVerifier: (
+    input: AddVerifierAsyncInput,
+  ) => ReturnType<typeof getAddVerifierInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  clearOwnerVerifier: (
+    input: ClearOwnerVerifierAsyncInput,
+  ) => ReturnType<typeof getClearOwnerVerifierInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  initializeConfig: (
+    input: InitializeConfigAsyncInput,
+  ) => ReturnType<typeof getInitializeConfigInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  removeVerifier: (
+    input: RemoveVerifierAsyncInput,
+  ) => ReturnType<typeof getRemoveVerifierInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  setOwnerVerifier: (
+    input: SetOwnerVerifierAsyncInput,
+  ) => ReturnType<typeof getSetOwnerVerifierInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  transfer: (
+    input: TransferAsyncInput,
+  ) => ReturnType<typeof getTransferInstructionAsync> &
+    SelfPlanAndSendFunctions;
+};
+
+export type PhygitalPaymentsPluginPdas = {
+  config: typeof findConfigPda;
+  ownerVerifier: typeof findOwnerVerifierPda;
+};
+
+export type PhygitalPaymentsPluginRequirements = ClientWithRpc<
+  GetAccountInfoApi & GetMultipleAccountsApi
+> &
+  ClientWithTransactionPlanning &
   ClientWithTransactionSending;
 
 export function phygitalPaymentsProgram() {
@@ -112,10 +334,44 @@ export function phygitalPaymentsProgram() {
   ): ExtendedClient<T, { phygitalPayments: PhygitalPaymentsPlugin }> => {
     return extendClient(client, {
       phygitalPayments: <PhygitalPaymentsPlugin>{
-        instructions: {
-          transfer: (input) =>
-            addSelfPlanAndSendFunctions(client, getTransferInstruction(input)),
+        accounts: {
+          config: addSelfFetchFunctions(client, getConfigCodec()),
+          ownerVerifier: addSelfFetchFunctions(client, getOwnerVerifierCodec()),
         },
+        instructions: {
+          addVerifier: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getAddVerifierInstructionAsync(input),
+            ),
+          clearOwnerVerifier: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getClearOwnerVerifierInstructionAsync(input),
+            ),
+          initializeConfig: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getInitializeConfigInstructionAsync(input),
+            ),
+          removeVerifier: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getRemoveVerifierInstructionAsync(input),
+            ),
+          setOwnerVerifier: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getSetOwnerVerifierInstructionAsync(input),
+            ),
+          transfer: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getTransferInstructionAsync(input),
+            ),
+        },
+        pdas: { config: findConfigPda, ownerVerifier: findOwnerVerifierPda },
+        identifyAccount: identifyPhygitalPaymentsAccount,
         identifyInstruction: identifyPhygitalPaymentsInstruction,
         parseInstruction: parsePhygitalPaymentsInstruction,
       },

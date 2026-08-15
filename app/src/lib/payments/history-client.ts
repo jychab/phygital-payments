@@ -1,7 +1,6 @@
 /**
- * Client for the payment-history API. The permissionless wallet bridge forwards
- * no auth token, so no Authorization header is sent (see the history route for
- * how it is gated server-side).
+ * Client for the payment-history API. No Authorization header is sent
+ * (see the history route for how it is gated server-side).
  */
 
 export type PaymentRecord = {

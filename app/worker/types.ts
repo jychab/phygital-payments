@@ -1,4 +1,19 @@
-/** Shared wire types for sponsored transfer submit (client ↔ DO). */
+/**
+ * Worker constants. Wire types live in `../shared/submitter-wire`;
+ * base64 helpers in `../shared/base64`.
+ */
+
+export type {
+  BytesBase64,
+  Secp256r1VerifyEntryWire,
+  TransferAccountsWire,
+  SubmitTransferRequest,
+  JobStatus,
+  TransferJob,
+  JobStatusResponse,
+} from "../shared/submitter-wire";
+
+export { base64ToBytes } from "../shared/base64";
 
 export const MAX_BATCH_SIZE = 8;
 export const BATCH_WINDOW_MS = 200;
@@ -11,8 +26,13 @@ export const MAX_SUBMIT_ATTEMPTS = 3;
 /** Base backoff between transient retry alarms (ms). */
 export const RETRY_BACKOFF_MS = 750;
 
-/** Near-immediate flush delay when the queue has been idle (single terminal). */
-export const IDLE_FLUSH_MS = 15;
+/**
+ * Fixed CU budget for a single secp + transfer (skips simulation RTT).
+ * Sized with headroom for Token-2022 + verify_asset CPI; multi-job batches
+ * still simulate for a tight limit.
+ */
+export const SINGLE_JOB_COMPUTE_UNITS = 100_000;
+
 /** How recently another job must have arrived to widen the batch window. */
 export const BATCH_ACTIVITY_WINDOW_MS = 1_000;
 
@@ -30,77 +50,3 @@ export const MAX_COMPUTE_UNITS = 1_400_000;
 export const CONFIRM_TIMEOUT_MS = 30_000;
 /** Long-poll hold time for job status waits (ms). */
 export const JOB_WAIT_TIMEOUT_MS = 10_000;
-
-export type BytesBase64 = string;
-
-export type Secp256r1VerifyEntryWire = {
-  publicKey: BytesBase64;
-  signature: BytesBase64;
-  message: BytesBase64;
-};
-
-export type TransferAccountsWire = {
-  asset: string;
-  mint: string;
-  recipient: string;
-  programAuthority: string;
-  senderTokenAccount: string;
-  recipientTokenAccount: string;
-  tokenProgram: string;
-  amount: string; // u64 decimal string
-  slotNumber: string; // u64 decimal string
-  clientDataJson: BytesBase64;
-};
-
-export type SubmitTransferRequest = {
-  secpEntry: Secp256r1VerifyEntryWire;
-  transfer: TransferAccountsWire;
-  /** Client-side createdAt for freshness checks (ms). */
-  createdAtMs?: number;
-};
-
-export type JobStatus = "queued" | "submitted" | "confirmed" | "failed";
-
-export type TransferJob = {
-  id: string;
-  createdAtMs: number;
-  slotNumber: string;
-  secpEntry: Secp256r1VerifyEntryWire;
-  transfer: TransferAccountsWire;
-  status: JobStatus;
-  /** Number of flush attempts made so far (for transient retry bounding). */
-  attempts: number;
-  signature?: string;
-  error?: string;
-  /**
-   * Background settlement outcome after the UI was released at `processed`:
-   * `confirmed` once the cluster confirms, `dropped` if it never did (rare —
-   * needs reconciliation). Absent until the background settle resolves.
-   */
-  settled?: "confirmed" | "dropped";
-};
-
-export type SubmitTransferResponse = {
-  jobId: string;
-};
-
-export type JobStatusResponse = {
-  job: TransferJob;
-};
-
-export function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]!);
-  }
-  return btoa(binary);
-}
-
-export function base64ToBytes(value: string): Uint8Array {
-  const binary = atob(value);
-  const out = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    out[i] = binary.charCodeAt(i);
-  }
-  return out;
-}

@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Phygital Pay",
-  description: "Set a USDC allowance, then get paid with a phygital pass tap",
+  description: "Enable tap-to-pay on your NFC device, then get paid with a phygital tap",
 };
 
 export default function RootLayout({

@@ -4,16 +4,26 @@ use anchor_lang::prelude::*;
 pub enum PhygitalError {
     #[msg("Asset must be lockable and currently locked")]
     AssetIsCurrentlyUnLocked,
-    #[msg("Instructions sysvar account is missing or invalid")]
-    MissingInstructionsSysvar,
-    #[msg("Referenced instruction is not the secp256r1 verify instruction")]
-    InvalidSecp256r1Instruction,
-    #[msg("Signature index is out of bounds")]
-    SignatureIndexOutOfBounds,
-    #[msg("secp256r1 signature offsets are malformed")]
-    InvalidSignatureOffsets,
-    #[msg("WebAuthn authenticator data is malformed")]
-    InvalidAuthenticatorData,
-    #[msg("WebAuthn rpId is not whitelisted")]
-    InvalidRpId,
+    #[msg("Verifier is not authorized for this transfer")]
+    UnauthorizedVerifier,
+    #[msg("Owner has configured a custom verifier; that key must sign")]
+    OwnerVerifierRequired,
+    #[msg("Verifier is already in the config set")]
+    VerifierAlreadyExists,
+    #[msg("Verifier was not found in the config set")]
+    VerifierNotFound,
+    #[msg("Config verifier set is full")]
+    TooManyVerifiers,
+    #[msg("Only the config admin may perform this action")]
+    UnauthorizedAdmin,
+    #[msg("Owner verifier account does not match the asset owner")]
+    OwnerVerifierMismatch,
+    #[msg("Verifier endpoint URL is empty or invalid")]
+    InvalidEndpoint,
+    #[msg("Verifier endpoint URL exceeds max length")]
+    EndpointTooLong,
+    #[msg("Slot not found in SlotHashes sysvar — signature has expired or is being replayed")]
+    InvalidSlotHash,
+    #[msg("Invalid SlotHashes sysvar data format")]
+    InvalidSysvarDataFormat,
 }

@@ -1,5 +1,4 @@
 import {
-  address,
   lamports,
   unwrapOption,
   type Address,
@@ -8,21 +7,12 @@ import {
 } from "@solana/kit";
 import { getTransferSolInstruction } from "@solana-program/system";
 import {
-  findAssociatedTokenPda as findTokenAta,
-  getApproveCheckedInstruction as approveCheckedToken,
-  getRevokeInstruction as revokeToken,
-  fetchMint as fetchTokenMint,
-  fetchMaybeToken as fetchMaybeTokenAccount,
+  findAssociatedTokenPda,
+  getApproveCheckedInstruction,
+  getRevokeInstruction,
+  fetchMaybeToken,
   TOKEN_PROGRAM_ADDRESS,
 } from "@solana-program/token";
-import {
-  findAssociatedTokenPda as findToken2022Ata,
-  getApproveCheckedInstruction as approveCheckedToken2022,
-  getRevokeInstruction as revokeToken2022,
-  fetchMint as fetchToken2022Mint,
-  fetchMaybeToken as fetchMaybeToken2022Account,
-  TOKEN_2022_PROGRAM_ADDRESS,
-} from "@solana-program/token-2022";
 import {
   findProgramAuthorityPda,
   PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
@@ -31,9 +21,8 @@ import {
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { getUsdcMint, USDC_DECIMALS } from "@/lib/payments/usdc";
 
-export type TokenProgram =
-  | typeof TOKEN_PROGRAM_ADDRESS
-  | typeof TOKEN_2022_PROGRAM_ADDRESS;
+/** Classic SPL Token only — USDC is not Token-2022. */
+export type TokenProgram = typeof TOKEN_PROGRAM_ADDRESS;
 
 const RENT_EXEMPT_MIN = BigInt(890_880);
 
@@ -94,11 +83,13 @@ export function uiAmountToRaw(uiAmount: string, decimals: number): bigint {
 export async function findAta(
   mint: Address,
   owner: Address,
-  program: TokenProgram,
+  program: TokenProgram = TOKEN_PROGRAM_ADDRESS,
 ): Promise<Address> {
-  const find =
-    program === TOKEN_2022_PROGRAM_ADDRESS ? findToken2022Ata : findTokenAta;
-  const [ata] = await find({ mint, owner, tokenProgram: program });
+  const [ata] = await findAssociatedTokenPda({
+    mint,
+    owner,
+    tokenProgram: program,
+  });
   return ata;
 }
 
@@ -112,12 +103,9 @@ export async function fetchUsdcDelegateStatus(
     PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
   );
 
-  let program: TokenProgram = TOKEN_PROGRAM_ADDRESS;
   let decimals = USDC_DECIMALS;
   try {
-    const resolved = await resolveMintProgram(mint);
-    program = resolved.program;
-    decimals = resolved.decimals;
+    ({ decimals } = await resolveMintProgram(mint));
   } catch {
     return {
       programAuthority,
@@ -130,13 +118,8 @@ export async function fetchUsdcDelegateStatus(
     };
   }
 
-  const ata = await findAta(mint, owner, program);
-  const rpc = getSolanaRpc();
-  const fetchMaybe =
-    program === TOKEN_2022_PROGRAM_ADDRESS
-      ? fetchMaybeToken2022Account
-      : fetchMaybeTokenAccount;
-  const account = await fetchMaybe(rpc, ata);
+  const ata = await findAta(mint, owner);
+  const account = await fetchMaybeToken(getSolanaRpc(), ata);
 
   if (!account.exists) {
     return {
@@ -181,9 +164,6 @@ export async function buildDelegateInstructions(args: {
     PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
   );
 
-  const is2022 = program === TOKEN_2022_PROGRAM_ADDRESS;
-  const approveChecked = is2022 ? approveCheckedToken2022 : approveCheckedToken;
-
   const sourceAta = await findAta(mint, signer.address, program);
   const instructions: Instruction[] = [];
 
@@ -202,7 +182,7 @@ export async function buildDelegateInstructions(args: {
   }
 
   instructions.push(
-    approveChecked(
+    getApproveCheckedInstruction(
       {
         source: sourceAta,
         mint,
@@ -230,13 +210,11 @@ export async function buildRevokeDelegateInstructions(args: {
     PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
   );
 
-  const is2022 = program === TOKEN_2022_PROGRAM_ADDRESS;
-  const revoke = is2022 ? revokeToken2022 : revokeToken;
   const sourceAta = await findAta(mint, signer.address, program);
 
   return {
     instructions: [
-      revoke(
+      getRevokeInstruction(
         {
           source: sourceAta,
           owner: signer,
@@ -247,5 +225,3 @@ export async function buildRevokeDelegateInstructions(args: {
     programAuthority,
   };
 }
-
-export { address, getUsdcMint };

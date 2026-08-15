@@ -8,6 +8,270 @@
   },
   "instructions": [
     {
+      "name": "add_verifier",
+      "discriminator": [
+        165,
+        72,
+        135,
+        225,
+        67,
+        181,
+        255,
+        135
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "verifier",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "clear_owner_verifier",
+      "discriminator": [
+        22,
+        210,
+        50,
+        56,
+        238,
+        126,
+        242,
+        84
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "owner_verifier"
+          ]
+        },
+        {
+          "name": "owner_verifier",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  95,
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_config",
+      "discriminator": [
+        208,
+        127,
+        21,
+        1,
+        194,
+        190,
+        196,
+        70
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "initial_verifiers",
+          "type": {
+            "vec": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "remove_verifier",
+      "discriminator": [
+        179,
+        9,
+        132,
+        183,
+        233,
+        23,
+        172,
+        111
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "verifier",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_owner_verifier",
+      "discriminator": [
+        99,
+        221,
+        200,
+        143,
+        93,
+        97,
+        22,
+        69
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner_verifier",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  95,
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "verifier",
+          "type": "pubkey"
+        },
+        {
+          "name": "endpoint",
+          "type": "string"
+        }
+      ]
+    },
+    {
       "name": "transfer",
       "discriminator": [
         163,
@@ -20,6 +284,67 @@
         186
       ],
       "accounts": [
+        {
+          "name": "verifier",
+          "docs": [
+            "Verifier co-signer. Must match owner override or config set."
+          ],
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner_verifier",
+          "docs": [
+            "Optional per-owner verifier override PDA.",
+            "Uninitialized (system-owned / empty) → use `config.verifiers`.",
+            "Initialized → ONLY `owner_verifier.verifier` is accepted."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  119,
+                  110,
+                  101,
+                  114,
+                  95,
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "asset.owner",
+                "account": "Asset"
+              }
+            ]
+          }
+        },
         {
           "name": "asset",
           "writable": true
@@ -82,7 +407,7 @@
         },
         {
           "name": "phygital_token_program",
-          "address": "DdwhetyqgSB56XVcR33ySG5dFmvwbjSc5aSMHRg5Bk6A"
+          "address": "DuPpckdjjgVAnYok2aTMAt264ZPBXqq3JSazJjCUzTJQ"
         },
         {
           "name": "token_program"
@@ -100,7 +425,39 @@
               "name": "Secp256r1VerifyArgs"
             }
           }
+        },
+        {
+          "name": "slot_number",
+          "type": "u64"
         }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    },
+    {
+      "name": "OwnerVerifier",
+      "discriminator": [
+        241,
+        123,
+        5,
+        72,
+        241,
+        211,
+        246,
+        253
       ]
     }
   ],
@@ -124,11 +481,127 @@
       "code": 6000,
       "name": "AssetIsCurrentlyUnLocked",
       "msg": "Asset must be lockable and currently locked"
+    },
+    {
+      "code": 6001,
+      "name": "UnauthorizedVerifier",
+      "msg": "Verifier is not authorized for this transfer"
+    },
+    {
+      "code": 6002,
+      "name": "OwnerVerifierRequired",
+      "msg": "Owner has configured a custom verifier; that key must sign"
+    },
+    {
+      "code": 6003,
+      "name": "VerifierAlreadyExists",
+      "msg": "Verifier is already in the config set"
+    },
+    {
+      "code": 6004,
+      "name": "VerifierNotFound",
+      "msg": "Verifier was not found in the config set"
+    },
+    {
+      "code": 6005,
+      "name": "TooManyVerifiers",
+      "msg": "Config verifier set is full"
+    },
+    {
+      "code": 6006,
+      "name": "UnauthorizedAdmin",
+      "msg": "Only the config admin may perform this action"
+    },
+    {
+      "code": 6007,
+      "name": "OwnerVerifierMismatch",
+      "msg": "Owner verifier account does not match the asset owner"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidEndpoint",
+      "msg": "Verifier endpoint URL is empty or invalid"
+    },
+    {
+      "code": 6009,
+      "name": "EndpointTooLong",
+      "msg": "Verifier endpoint URL exceeds max length"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidSlotHash",
+      "msg": "Slot not found in SlotHashes sysvar — signature has expired or is being replayed"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidSysvarDataFormat",
+      "msg": "Invalid SlotHashes sysvar data format"
     }
   ],
   "types": [
     {
+      "name": "Config",
+      "docs": [
+        "Global program config: admin + default verifier set (fee-payer/verifiers)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "verifiers",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OwnerVerifier",
+      "docs": [
+        "Optional per-owner verifier override. When present, ONLY this verifier may",
+        "authorize transfers for assets owned by `owner` (admin set is not accepted).",
+        "`endpoint` is the HTTPS URL of that verifier's build/sign/send service."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "verifier",
+            "type": "pubkey"
+          },
+          {
+            "name": "endpoint",
+            "type": "string"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "Secp256r1VerifyArgs",
+      "docs": [
+        "Instruction-arg mirror of `phygital_token_client::Secp256r1VerifyArgs`.",
+        "",
+        "The crates.io client only derives Borsh for this type, which breaks Anchor's",
+        "`idl-build` (`IdlBuild` methods). Keep a same-layout Anchor type here for the",
+        "program interface and convert at the CPI boundary."
+      ],
       "type": {
         "kind": "struct",
         "fields": [
@@ -139,10 +612,6 @@
           {
             "name": "signed_message_index",
             "type": "u8"
-          },
-          {
-            "name": "slot_number",
-            "type": "u64"
           },
           {
             "name": "client_data_json",
@@ -190,6 +659,16 @@
     }
   ],
   "constants": [
+    {
+      "name": "CONFIG_SEED",
+      "type": "bytes",
+      "value": "[99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "OWNER_VERIFIER_SEED",
+      "type": "bytes",
+      "value": "[111, 119, 110, 101, 114, 95, 118, 101, 114, 105, 102, 105, 101, 114]"
+    },
     {
       "name": "PROGRAM_AUTHORITY_SEED",
       "type": "bytes",

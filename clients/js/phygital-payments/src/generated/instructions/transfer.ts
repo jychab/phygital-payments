@@ -28,6 +28,7 @@ import {
   SolanaError,
   transformEncoder,
   type AccountMeta,
+  type AccountSignerMeta,
   type Address,
   type Codec,
   type Decoder,
@@ -36,13 +37,16 @@ import {
   type InstructionWithAccounts,
   type InstructionWithData,
   type ReadonlyAccount,
+  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
+  type TransactionSigner,
   type WritableAccount,
 } from "@solana/kit";
 import {
   getAccountMetaFactory,
   type ResolvedInstructionAccount,
 } from "@solana/kit/program-client-core";
+import { findConfigPda } from "../pdas/index.js";
 import { PHYGITAL_PAYMENTS_PROGRAM_ADDRESS } from "../programs/index.js";
 
 export const TRANSFER_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([
@@ -55,6 +59,9 @@ export function getTransferDiscriminatorBytes(): ReadonlyUint8Array {
 
 export type TransferInstruction<
   TProgram extends string = typeof PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
+  TAccountVerifier extends string | AccountMeta<string> = string,
+  TAccountConfig extends string | AccountMeta<string> = string,
+  TAccountOwnerVerifier extends string | AccountMeta<string> = string,
   TAccountAsset extends string | AccountMeta<string> = string,
   TAccountMint extends string | AccountMeta<string> = string,
   TAccountRecipient extends string | AccountMeta<string> = string,
@@ -66,7 +73,7 @@ export type TransferInstruction<
   TAccountInstructionsSysvar extends string | AccountMeta<string> =
     "Sysvar1nstructions1111111111111111111111111",
   TAccountPhygitalTokenProgram extends string | AccountMeta<string> =
-    "DdwhetyqgSB56XVcR33ySG5dFmvwbjSc5aSMHRg5Bk6A",
+    "DuPpckdjjgVAnYok2aTMAt264ZPBXqq3JSazJjCUzTJQ",
   TAccountTokenProgram extends string | AccountMeta<string> =
     "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
@@ -74,6 +81,16 @@ export type TransferInstruction<
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
+      TAccountVerifier extends string
+        ? ReadonlySignerAccount<TAccountVerifier> &
+            AccountSignerMeta<TAccountVerifier>
+        : TAccountVerifier,
+      TAccountConfig extends string
+        ? ReadonlyAccount<TAccountConfig>
+        : TAccountConfig,
+      TAccountOwnerVerifier extends string
+        ? ReadonlyAccount<TAccountOwnerVerifier>
+        : TAccountOwnerVerifier,
       TAccountAsset extends string
         ? WritableAccount<TAccountAsset>
         : TAccountAsset,
@@ -84,7 +101,7 @@ export type TransferInstruction<
         ? ReadonlyAccount<TAccountRecipient>
         : TAccountRecipient,
       TAccountProgramAuthority extends string
-        ? WritableAccount<TAccountProgramAuthority>
+        ? ReadonlyAccount<TAccountProgramAuthority>
         : TAccountProgramAuthority,
       TAccountSenderTokenAccount extends string
         ? WritableAccount<TAccountSenderTokenAccount>
@@ -113,16 +130,16 @@ export type TransferInstructionData = {
   amount: bigint;
   verifyArgsRelativeIndex: bigint;
   signedMessageIndex: number;
-  slotNumber: bigint;
   clientDataJson: ReadonlyUint8Array;
+  slotNumber: bigint;
 };
 
 export type TransferInstructionDataArgs = {
   amount: number | bigint;
   verifyArgsRelativeIndex: number | bigint;
   signedMessageIndex: number;
-  slotNumber: number | bigint;
   clientDataJson: ReadonlyUint8Array;
+  slotNumber: number | bigint;
 };
 
 export function getTransferInstructionDataEncoder(): Encoder<TransferInstructionDataArgs> {
@@ -132,11 +149,11 @@ export function getTransferInstructionDataEncoder(): Encoder<TransferInstruction
       ["amount", getU64Encoder()],
       ["verifyArgsRelativeIndex", getI64Encoder()],
       ["signedMessageIndex", getU8Encoder()],
-      ["slotNumber", getU64Encoder()],
       [
         "clientDataJson",
         addEncoderSizePrefix(getBytesEncoder(), getU32Encoder()),
       ],
+      ["slotNumber", getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: TRANSFER_DISCRIMINATOR }),
   );
@@ -148,11 +165,11 @@ export function getTransferInstructionDataDecoder(): Decoder<TransferInstruction
     ["amount", getU64Decoder()],
     ["verifyArgsRelativeIndex", getI64Decoder()],
     ["signedMessageIndex", getU8Decoder()],
-    ["slotNumber", getU64Decoder()],
     [
       "clientDataJson",
       addDecoderSizePrefix(getBytesDecoder(), getU32Decoder()),
     ],
+    ["slotNumber", getU64Decoder()],
   ]);
 }
 
@@ -166,7 +183,10 @@ export function getTransferInstructionDataCodec(): Codec<
   );
 }
 
-export type TransferInput<
+export type TransferAsyncInput<
+  TAccountVerifier extends string = string,
+  TAccountConfig extends string = string,
+  TAccountOwnerVerifier extends string = string,
   TAccountAsset extends string = string,
   TAccountMint extends string = string,
   TAccountRecipient extends string = string,
@@ -178,6 +198,15 @@ export type TransferInput<
   TAccountPhygitalTokenProgram extends string = string,
   TAccountTokenProgram extends string = string,
 > = {
+  /** Verifier co-signer. Must match owner override or config set. */
+  verifier: TransactionSigner<TAccountVerifier>;
+  config?: Address<TAccountConfig>;
+  /**
+   * Optional per-owner verifier override PDA.
+   * Uninitialized (system-owned / empty) → use `config.verifiers`.
+   * Initialized → ONLY `owner_verifier.verifier` is accepted.
+   */
+  ownerVerifier: Address<TAccountOwnerVerifier>;
   asset: Address<TAccountAsset>;
   mint: Address<TAccountMint>;
   recipient: Address<TAccountRecipient>;
@@ -191,11 +220,208 @@ export type TransferInput<
   amount: TransferInstructionDataArgs["amount"];
   verifyArgsRelativeIndex: TransferInstructionDataArgs["verifyArgsRelativeIndex"];
   signedMessageIndex: TransferInstructionDataArgs["signedMessageIndex"];
-  slotNumber: TransferInstructionDataArgs["slotNumber"];
   clientDataJson: TransferInstructionDataArgs["clientDataJson"];
+  slotNumber: TransferInstructionDataArgs["slotNumber"];
+};
+
+export async function getTransferInstructionAsync<
+  TAccountVerifier extends string,
+  TAccountConfig extends string,
+  TAccountOwnerVerifier extends string,
+  TAccountAsset extends string,
+  TAccountMint extends string,
+  TAccountRecipient extends string,
+  TAccountProgramAuthority extends string,
+  TAccountSenderTokenAccount extends string,
+  TAccountRecipientTokenAccount extends string,
+  TAccountSlotHashes extends string,
+  TAccountInstructionsSysvar extends string,
+  TAccountPhygitalTokenProgram extends string,
+  TAccountTokenProgram extends string,
+  TProgramAddress extends Address = typeof PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
+>(
+  input: TransferAsyncInput<
+    TAccountVerifier,
+    TAccountConfig,
+    TAccountOwnerVerifier,
+    TAccountAsset,
+    TAccountMint,
+    TAccountRecipient,
+    TAccountProgramAuthority,
+    TAccountSenderTokenAccount,
+    TAccountRecipientTokenAccount,
+    TAccountSlotHashes,
+    TAccountInstructionsSysvar,
+    TAccountPhygitalTokenProgram,
+    TAccountTokenProgram
+  >,
+  config?: { programAddress?: TProgramAddress },
+): Promise<
+  TransferInstruction<
+    TProgramAddress,
+    TAccountVerifier,
+    TAccountConfig,
+    TAccountOwnerVerifier,
+    TAccountAsset,
+    TAccountMint,
+    TAccountRecipient,
+    TAccountProgramAuthority,
+    TAccountSenderTokenAccount,
+    TAccountRecipientTokenAccount,
+    TAccountSlotHashes,
+    TAccountInstructionsSysvar,
+    TAccountPhygitalTokenProgram,
+    TAccountTokenProgram
+  >
+> {
+  // Program address.
+  const programAddress =
+    config?.programAddress ?? PHYGITAL_PAYMENTS_PROGRAM_ADDRESS;
+
+  // Original accounts.
+  const originalAccounts = {
+    verifier: { value: input.verifier ?? null, isWritable: false },
+    config: { value: input.config ?? null, isWritable: false },
+    ownerVerifier: { value: input.ownerVerifier ?? null, isWritable: false },
+    asset: { value: input.asset ?? null, isWritable: true },
+    mint: { value: input.mint ?? null, isWritable: false },
+    recipient: { value: input.recipient ?? null, isWritable: false },
+    programAuthority: {
+      value: input.programAuthority ?? null,
+      isWritable: false,
+    },
+    senderTokenAccount: {
+      value: input.senderTokenAccount ?? null,
+      isWritable: true,
+    },
+    recipientTokenAccount: {
+      value: input.recipientTokenAccount ?? null,
+      isWritable: true,
+    },
+    slotHashes: { value: input.slotHashes ?? null, isWritable: false },
+    instructionsSysvar: {
+      value: input.instructionsSysvar ?? null,
+      isWritable: false,
+    },
+    phygitalTokenProgram: {
+      value: input.phygitalTokenProgram ?? null,
+      isWritable: false,
+    },
+    tokenProgram: { value: input.tokenProgram ?? null, isWritable: false },
+  };
+  const accounts = originalAccounts as Record<
+    keyof typeof originalAccounts,
+    ResolvedInstructionAccount
+  >;
+
+  // Original args.
+  const args = { ...input };
+
+  // Resolve default values.
+  if (!accounts.config.value) {
+    accounts.config.value = await findConfigPda();
+  }
+  if (!accounts.slotHashes.value) {
+    accounts.slotHashes.value =
+      "SysvarS1otHashes111111111111111111111111111" as Address<"SysvarS1otHashes111111111111111111111111111">;
+  }
+  if (!accounts.instructionsSysvar.value) {
+    accounts.instructionsSysvar.value =
+      "Sysvar1nstructions1111111111111111111111111" as Address<"Sysvar1nstructions1111111111111111111111111">;
+  }
+  if (!accounts.phygitalTokenProgram.value) {
+    accounts.phygitalTokenProgram.value =
+      "DuPpckdjjgVAnYok2aTMAt264ZPBXqq3JSazJjCUzTJQ" as Address<"DuPpckdjjgVAnYok2aTMAt264ZPBXqq3JSazJjCUzTJQ">;
+  }
+  if (!accounts.tokenProgram.value) {
+    accounts.tokenProgram.value =
+      "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address<"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA">;
+  }
+
+  const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
+  return Object.freeze({
+    accounts: [
+      getAccountMeta("verifier", accounts.verifier),
+      getAccountMeta("config", accounts.config),
+      getAccountMeta("ownerVerifier", accounts.ownerVerifier),
+      getAccountMeta("asset", accounts.asset),
+      getAccountMeta("mint", accounts.mint),
+      getAccountMeta("recipient", accounts.recipient),
+      getAccountMeta("programAuthority", accounts.programAuthority),
+      getAccountMeta("senderTokenAccount", accounts.senderTokenAccount),
+      getAccountMeta("recipientTokenAccount", accounts.recipientTokenAccount),
+      getAccountMeta("slotHashes", accounts.slotHashes),
+      getAccountMeta("instructionsSysvar", accounts.instructionsSysvar),
+      getAccountMeta("phygitalTokenProgram", accounts.phygitalTokenProgram),
+      getAccountMeta("tokenProgram", accounts.tokenProgram),
+    ],
+    data: getTransferInstructionDataEncoder().encode(
+      args as TransferInstructionDataArgs,
+    ),
+    programAddress,
+  } as TransferInstruction<
+    TProgramAddress,
+    TAccountVerifier,
+    TAccountConfig,
+    TAccountOwnerVerifier,
+    TAccountAsset,
+    TAccountMint,
+    TAccountRecipient,
+    TAccountProgramAuthority,
+    TAccountSenderTokenAccount,
+    TAccountRecipientTokenAccount,
+    TAccountSlotHashes,
+    TAccountInstructionsSysvar,
+    TAccountPhygitalTokenProgram,
+    TAccountTokenProgram
+  >);
+}
+
+export type TransferInput<
+  TAccountVerifier extends string = string,
+  TAccountConfig extends string = string,
+  TAccountOwnerVerifier extends string = string,
+  TAccountAsset extends string = string,
+  TAccountMint extends string = string,
+  TAccountRecipient extends string = string,
+  TAccountProgramAuthority extends string = string,
+  TAccountSenderTokenAccount extends string = string,
+  TAccountRecipientTokenAccount extends string = string,
+  TAccountSlotHashes extends string = string,
+  TAccountInstructionsSysvar extends string = string,
+  TAccountPhygitalTokenProgram extends string = string,
+  TAccountTokenProgram extends string = string,
+> = {
+  /** Verifier co-signer. Must match owner override or config set. */
+  verifier: TransactionSigner<TAccountVerifier>;
+  config: Address<TAccountConfig>;
+  /**
+   * Optional per-owner verifier override PDA.
+   * Uninitialized (system-owned / empty) → use `config.verifiers`.
+   * Initialized → ONLY `owner_verifier.verifier` is accepted.
+   */
+  ownerVerifier: Address<TAccountOwnerVerifier>;
+  asset: Address<TAccountAsset>;
+  mint: Address<TAccountMint>;
+  recipient: Address<TAccountRecipient>;
+  programAuthority: Address<TAccountProgramAuthority>;
+  senderTokenAccount: Address<TAccountSenderTokenAccount>;
+  recipientTokenAccount: Address<TAccountRecipientTokenAccount>;
+  slotHashes?: Address<TAccountSlotHashes>;
+  instructionsSysvar?: Address<TAccountInstructionsSysvar>;
+  phygitalTokenProgram?: Address<TAccountPhygitalTokenProgram>;
+  tokenProgram?: Address<TAccountTokenProgram>;
+  amount: TransferInstructionDataArgs["amount"];
+  verifyArgsRelativeIndex: TransferInstructionDataArgs["verifyArgsRelativeIndex"];
+  signedMessageIndex: TransferInstructionDataArgs["signedMessageIndex"];
+  clientDataJson: TransferInstructionDataArgs["clientDataJson"];
+  slotNumber: TransferInstructionDataArgs["slotNumber"];
 };
 
 export function getTransferInstruction<
+  TAccountVerifier extends string,
+  TAccountConfig extends string,
+  TAccountOwnerVerifier extends string,
   TAccountAsset extends string,
   TAccountMint extends string,
   TAccountRecipient extends string,
@@ -209,6 +435,9 @@ export function getTransferInstruction<
   TProgramAddress extends Address = typeof PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
 >(
   input: TransferInput<
+    TAccountVerifier,
+    TAccountConfig,
+    TAccountOwnerVerifier,
     TAccountAsset,
     TAccountMint,
     TAccountRecipient,
@@ -223,6 +452,9 @@ export function getTransferInstruction<
   config?: { programAddress?: TProgramAddress },
 ): TransferInstruction<
   TProgramAddress,
+  TAccountVerifier,
+  TAccountConfig,
+  TAccountOwnerVerifier,
   TAccountAsset,
   TAccountMint,
   TAccountRecipient,
@@ -240,12 +472,15 @@ export function getTransferInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    verifier: { value: input.verifier ?? null, isWritable: false },
+    config: { value: input.config ?? null, isWritable: false },
+    ownerVerifier: { value: input.ownerVerifier ?? null, isWritable: false },
     asset: { value: input.asset ?? null, isWritable: true },
     mint: { value: input.mint ?? null, isWritable: false },
     recipient: { value: input.recipient ?? null, isWritable: false },
     programAuthority: {
       value: input.programAuthority ?? null,
-      isWritable: true,
+      isWritable: false,
     },
     senderTokenAccount: {
       value: input.senderTokenAccount ?? null,
@@ -285,7 +520,7 @@ export function getTransferInstruction<
   }
   if (!accounts.phygitalTokenProgram.value) {
     accounts.phygitalTokenProgram.value =
-      "DdwhetyqgSB56XVcR33ySG5dFmvwbjSc5aSMHRg5Bk6A" as Address<"DdwhetyqgSB56XVcR33ySG5dFmvwbjSc5aSMHRg5Bk6A">;
+      "DuPpckdjjgVAnYok2aTMAt264ZPBXqq3JSazJjCUzTJQ" as Address<"DuPpckdjjgVAnYok2aTMAt264ZPBXqq3JSazJjCUzTJQ">;
   }
   if (!accounts.tokenProgram.value) {
     accounts.tokenProgram.value =
@@ -295,6 +530,9 @@ export function getTransferInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({
     accounts: [
+      getAccountMeta("verifier", accounts.verifier),
+      getAccountMeta("config", accounts.config),
+      getAccountMeta("ownerVerifier", accounts.ownerVerifier),
       getAccountMeta("asset", accounts.asset),
       getAccountMeta("mint", accounts.mint),
       getAccountMeta("recipient", accounts.recipient),
@@ -312,6 +550,9 @@ export function getTransferInstruction<
     programAddress,
   } as TransferInstruction<
     TProgramAddress,
+    TAccountVerifier,
+    TAccountConfig,
+    TAccountOwnerVerifier,
     TAccountAsset,
     TAccountMint,
     TAccountRecipient,
@@ -331,16 +572,25 @@ export type ParsedTransferInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    asset: TAccountMetas[0];
-    mint: TAccountMetas[1];
-    recipient: TAccountMetas[2];
-    programAuthority: TAccountMetas[3];
-    senderTokenAccount: TAccountMetas[4];
-    recipientTokenAccount: TAccountMetas[5];
-    slotHashes: TAccountMetas[6];
-    instructionsSysvar: TAccountMetas[7];
-    phygitalTokenProgram: TAccountMetas[8];
-    tokenProgram: TAccountMetas[9];
+    /** Verifier co-signer. Must match owner override or config set. */
+    verifier: TAccountMetas[0];
+    config: TAccountMetas[1];
+    /**
+     * Optional per-owner verifier override PDA.
+     * Uninitialized (system-owned / empty) → use `config.verifiers`.
+     * Initialized → ONLY `owner_verifier.verifier` is accepted.
+     */
+    ownerVerifier: TAccountMetas[2];
+    asset: TAccountMetas[3];
+    mint: TAccountMetas[4];
+    recipient: TAccountMetas[5];
+    programAuthority: TAccountMetas[6];
+    senderTokenAccount: TAccountMetas[7];
+    recipientTokenAccount: TAccountMetas[8];
+    slotHashes: TAccountMetas[9];
+    instructionsSysvar: TAccountMetas[10];
+    phygitalTokenProgram: TAccountMetas[11];
+    tokenProgram: TAccountMetas[12];
   };
   data: TransferInstructionData;
 };
@@ -353,12 +603,12 @@ export function parseTransferInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>,
 ): ParsedTransferInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 10) {
+  if (instruction.accounts.length < 13) {
     throw new SolanaError(
       SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
       {
         actualAccountMetas: instruction.accounts.length,
-        expectedAccountMetas: 10,
+        expectedAccountMetas: 13,
       },
     );
   }
@@ -371,6 +621,9 @@ export function parseTransferInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      verifier: getNextAccount(),
+      config: getNextAccount(),
+      ownerVerifier: getNextAccount(),
       asset: getNextAccount(),
       mint: getNextAccount(),
       recipient: getNextAccount(),

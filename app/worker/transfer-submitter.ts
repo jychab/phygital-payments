@@ -1,24 +1,30 @@
 import { DurableObject } from "cloudflare:workers";
 
 import type { TransactionSigner } from "@solana/kit";
+import { address } from "@solana/kit";
+import { fetchMaybeOwnerVerifier } from "phygital-payments-sdk";
 
 import {
   fetchLatestBlockhash,
   getFeePayerSigner,
+  getRpc,
   SubmitError,
   sendSponsoredBatch,
-  settleConfirmed,
   validateTransferWire,
   type BlockhashLifetime,
   type SendContext,
 } from "./solana";
-import type { Signature } from "@solana/kit";
+import {
+  claimGrantForTransfer,
+  consumeGrants,
+  releaseGrantClaims,
+  type D1Database,
+} from "./preauth";
 import {
   BATCH_ACTIVITY_WINDOW_MS,
   BATCH_WINDOW_MS,
   BLOCKHASH_TTL_MS,
   FORCE_FLUSH_AGE_MS,
-  IDLE_FLUSH_MS,
   JOB_WAIT_TIMEOUT_MS,
   MAX_BATCH_SIZE,
   MAX_JOB_AGE_MS,
@@ -31,19 +37,17 @@ import {
 
 const QUEUE_KEY = "queue";
 const JOB_PREFIX = "job:";
+const IDEMPOTENCY_PREFIX = "idem:";
 
 export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
   private flushing = false;
 
-  // In-memory caches (survive while the DO is warm; rebuilt on eviction).
+  // In-memory caches (rebuilt on DO eviction).
   private feePayerSigner?: TransactionSigner;
   private blockhashCache?: { value: BlockhashLifetime; fetchedAt: number };
   private lastEnqueueAt = 0;
   // Long-poll waiters resolved the instant a job reaches a terminal status.
   private waiters = new Map<string, Array<() => void>>();
-  // In-flight background `confirmed` settlements — retained so they aren't GC'd
-  // while the DO stays warm after releasing the UI at `processed`.
-  private pendingSettles = new Set<Promise<void>>();
 
   async enqueue(body: SubmitTransferRequest): Promise<{ jobId: string }> {
     validateTransferWire(body.transfer);
@@ -52,6 +56,24 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     const createdAtMs = body.createdAtMs ?? now;
     if (now - createdAtMs > MAX_JOB_AGE_MS) {
       throw new Error("Transfer job is too stale for SlotHashes validity");
+    }
+
+    // Network-blip safe: same WebAuthn assertion → same job (no second grant claim).
+    const idem = body.idempotencyKey?.trim();
+    if (idem) {
+      const existingId = await this.ctx.storage.get<string>(
+        `${IDEMPOTENCY_PREFIX}${idem}`,
+      );
+      if (existingId) {
+        const existing = await this.getJob(existingId);
+        if (existing) {
+          // Resume: if the first request died mid-flush, kick another pass.
+          if (existing.status === "queued") {
+            await this.flush();
+          }
+          return { jobId: existingId };
+        }
+      }
     }
 
     const jobId = crypto.randomUUID();
@@ -65,7 +87,6 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
       attempts: 0,
     };
 
-    await this.ctx.storage.put(`${JOB_PREFIX}${jobId}`, job);
     const queue = (await this.ctx.storage.get<string[]>(QUEUE_KEY)) ?? [];
     const wasEmpty = queue.length === 0;
     // Coalescing is only worthwhile when a peer arrived recently; otherwise a
@@ -73,27 +94,56 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     const recentlyActive = now - this.lastEnqueueAt <= BATCH_ACTIVITY_WINDOW_MS;
     this.lastEnqueueAt = now;
     queue.push(jobId);
-    await this.ctx.storage.put(QUEUE_KEY, queue);
 
-    // Warm the blockhash cache in the background while the flush alarm pends.
-    void this.refreshBlockhash().catch(() => {});
+    const puts: Record<string, unknown> = {
+      [`${JOB_PREFIX}${jobId}`]: job,
+      [QUEUE_KEY]: queue,
+    };
+    if (idem) {
+      puts[`${IDEMPOTENCY_PREFIX}${idem}`] = jobId;
+    }
+    await this.ctx.storage.put(puts);
 
     const oldest = wasEmpty ? job : await this.getJob(queue[0]!);
     const oldestAging =
       !!oldest && now - oldest.createdAtMs >= FORCE_FLUSH_AGE_MS;
 
     if (queue.length >= MAX_BATCH_SIZE || oldestAging) {
-      await this.ctx.storage.setAlarm(Date.now()); // flush ASAP
+      // Full / aging — flush now (inline) so waiting clients aren't gated on
+      // Durable Object alarm scheduling jitter.
+      await this.flush();
+    } else if (!recentlyActive) {
+      // Single terminal, idle queue — flush inline for card-like latency.
+      await this.flush();
     } else {
       const alarm = await this.ctx.storage.getAlarm();
       if (alarm == null) {
-        // Idle → flush almost immediately; busy → allow a coalescing window.
-        const delay = recentlyActive ? BATCH_WINDOW_MS : IDLE_FLUSH_MS;
-        await this.ctx.storage.setAlarm(Date.now() + delay);
+        // Peers arriving — coalesce briefly.
+        await this.ctx.storage.setAlarm(Date.now() + BATCH_WINDOW_MS);
       }
     }
 
     return { jobId };
+  }
+
+  /**
+   * Enqueue and long-poll until the job is terminal. Collapses submit+wait into
+   * one DO interaction from the API route's perspective (one browser RTT).
+   */
+  async enqueueAndWait(
+    body: SubmitTransferRequest,
+    timeoutMs: number = JOB_WAIT_TIMEOUT_MS,
+  ): Promise<TransferJob> {
+    const { jobId } = await this.enqueue(body);
+    const job = await this.waitForJob(jobId, timeoutMs);
+    if (!job) {
+      throw new Error("Transfer job disappeared before completion");
+    }
+    if (!isTerminal(job.status)) {
+      // Hold timed out — return current state; client may retry wait.
+      return job;
+    }
+    return job;
   }
 
   async getJob(jobId: string): Promise<TransferJob | null> {
@@ -140,19 +190,28 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
       if (queue.length === 0) return;
 
       const now = Date.now();
+      const jobKeys = queue.map((id) => `${JOB_PREFIX}${id}`);
+      const jobMap = await this.ctx.storage.get<TransferJob>(jobKeys);
+
       const queuedJobs: TransferJob[] = [];
+      const expiredPuts: Record<string, TransferJob> = {};
       for (const id of queue) {
-        const job = await this.getJob(id);
+        const job = jobMap.get(`${JOB_PREFIX}${id}`);
         if (!job) continue;
         // Drop jobs too stale to land against SlotHashes anymore.
         if (job.status === "queued" && now - job.createdAtMs > MAX_JOB_AGE_MS) {
-          await this.finish(job, "failed", {
-            error: "Expired before submission (SlotHashes validity)",
-          });
+          job.status = "failed";
+          job.error = "Expired before submission (SlotHashes validity)";
+          expiredPuts[`${JOB_PREFIX}${job.id}`] = job;
+          this.notify(job.id);
           continue;
         }
         if (job.status === "queued") queuedJobs.push(job);
       }
+      if (Object.keys(expiredPuts).length > 0) {
+        await this.ctx.storage.put(expiredPuts);
+      }
+
       if (queuedJobs.length > 0) {
         // Group by slot so coalesced transfers share ordering; oldest first.
         queuedJobs.sort((a, b) => {
@@ -162,20 +221,56 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
           return a.createdAtMs - b.createdAtMs;
         });
 
-        const batch = queuedJobs.slice(0, MAX_BATCH_SIZE);
-        for (const job of batch) {
-          job.status = "submitted";
-          job.attempts += 1;
-          await this.ctx.storage.put(`${JOB_PREFIX}${job.id}`, job);
-        }
         const ctx = await this.getSendContext();
-        // submitBatch leaves each job terminal (confirmed/failed) or requeued
-        // ("queued"); the backoff alarm for requeues is set inside it.
-        await this.submitBatch(batch, ctx);
+        const feePayer = ctx.signer.address;
+        // One RPC per distinct OwnerVerifier PDA for this flush.
+        const verifierCache = new Map<string, string>();
+
+        const eligible: TransferJob[] = [];
+        for (const job of queuedJobs) {
+          try {
+            const verifier = await this.resolveVerifier(
+              job,
+              feePayer,
+              verifierCache,
+            );
+            if (verifier !== feePayer) {
+              await this.finish(job, "failed", {
+                error:
+                  "Owner configured an external verifier; submit via their endpoint",
+              });
+              continue;
+            }
+            eligible.push(job);
+          } catch (error) {
+            await this.finish(job, "failed", {
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Failed to resolve verifier",
+            });
+          }
+        }
+
+        if (eligible.length > 0) {
+          // Eligible is already Revi-only; take the next MAX_BATCH_SIZE by slot order.
+          const batch = eligible.slice(0, MAX_BATCH_SIZE);
+
+          const submittedPuts: Record<string, TransferJob> = {};
+          for (const job of batch) {
+            job.status = "submitted";
+            job.attempts += 1;
+            submittedPuts[`${JOB_PREFIX}${job.id}`] = job;
+          }
+          await this.ctx.storage.put(submittedPuts);
+          await this.submitBatch(batch, ctx);
+        }
       }
 
       // Drop terminal/missing jobs; keep still-queued ones (peers + requeues).
-      await this.compactQueue();
+      // Reuse the job map we already loaded, then refresh any that may have
+      // changed during submit.
+      await this.compactQueue(queue);
       const remaining = (await this.ctx.storage.get<string[]>(QUEUE_KEY)) ?? [];
       if (remaining.length > 0 && (await this.ctx.storage.getAlarm()) == null) {
         await this.ctx.storage.setAlarm(Date.now() + BATCH_WINDOW_MS);
@@ -194,24 +289,26 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     batch: TransferJob[],
     ctx: SendContext,
   ): Promise<void> {
+    let grantIds: string[] = [];
     try {
-      const { signature, lastValidBlockHeight } = await sendSponsoredBatch(
-        this.env,
-        batch,
-        ctx,
-      );
-      // Released at `processed` for card-fast perceived confirmation; settle to
-      // `confirmed` out of band and reconcile if the tx is ever dropped.
+      grantIds = await this.authorizeBatch(batch);
+      const signature = await sendSponsoredBatch(this.env, batch, ctx);
       for (const job of batch) {
         await this.finish(job, "confirmed", { signature });
       }
-      this.settleInBackground(batch, signature, lastValidBlockHeight);
+      void this.consumeGrants(grantIds).catch((error) => {
+        console.error("Failed to consume preauth grants", error);
+      });
     } catch (error) {
-      console.log(error)
+      console.error(
+        "Sponsored submit failed",
+        error instanceof Error ? error.message : error,
+      );
+      // Free claims so isolate/retry can re-claim (or the payer can open a new window).
+      await this.releaseGrants(grantIds);
       const { transient, message } = classify(error);
 
       if (!transient && batch.length > 1) {
-        // Degrade to per-job submits (only this failed batch loses coalescing).
         for (const job of batch) {
           await this.submitBatch([job], ctx);
         }
@@ -242,6 +339,89 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     }
   }
 
+  /**
+   * Fail closed: each job atomically claims a single-use preauth grant for
+   * `asset.owner`. Same-batch / concurrent peers lose the claim race.
+   * Verifier gating happens in {@link flush} (external → fail; only Revi-eligible
+   * jobs reach this method).
+   */
+  private async authorizeBatch(batch: TransferJob[]): Promise<string[]> {
+    const db = this.preauthDb();
+    const settled = await Promise.allSettled(
+      batch.map(async (job) => {
+        const { owner, amount, mint } = job.transfer;
+        const { grantId } = await claimGrantForTransfer(db, {
+          wallet: owner,
+          amount,
+          mint,
+          jobId: job.id,
+        });
+        return grantId;
+      }),
+    );
+
+    const grantIds: string[] = [];
+    let failure: unknown;
+    for (const result of settled) {
+      if (result.status === "fulfilled") {
+        grantIds.push(result.value);
+      } else if (!failure) {
+        failure = result.reason;
+      }
+    }
+
+    if (failure) {
+      await this.releaseGrants(grantIds);
+      throw new SubmitError(
+        failure instanceof Error ? failure.message : "Preauth grant check failed",
+        false,
+      );
+    }
+    return grantIds;
+  }
+
+  private async consumeGrants(grantIds: string[]): Promise<void> {
+    await consumeGrants(this.preauthDb(), grantIds);
+  }
+
+  private async releaseGrants(grantIds: string[]): Promise<void> {
+    if (grantIds.length === 0) return;
+    try {
+      await releaseGrantClaims(this.preauthDb(), grantIds);
+    } catch (error) {
+      console.error("Failed to release preauth claims", error);
+    }
+  }
+
+  /**
+   * Resolve the transfer verifier from on-chain OwnerVerifier state.
+   */
+  private async resolveVerifier(
+    job: TransferJob,
+    feePayer: string,
+    cache?: Map<string, string>,
+  ): Promise<string> {
+    const key = job.transfer.ownerVerifier;
+    const hit = cache?.get(key);
+    if (hit !== undefined) return hit;
+
+    const maybe = await fetchMaybeOwnerVerifier(
+      getRpc(this.env),
+      address(key),
+    );
+    const verifier = maybe.exists ? maybe.data.verifier : feePayer;
+    cache?.set(key, verifier);
+    return verifier;
+  }
+
+  private preauthDb(): D1Database {
+    const db = this.env.phygital_payments;
+    if (!db) {
+      throw new SubmitError("D1 binding phygital_payments is not configured", false);
+    }
+    return db as unknown as D1Database;
+  }
+
   /** Persist a terminal status and wake any long-poll waiters. */
   private async finish(
     job: TransferJob,
@@ -253,54 +433,6 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     if (patch.error) job.error = patch.error;
     await this.ctx.storage.put(`${JOB_PREFIX}${job.id}`, job);
     if (isTerminal(status)) this.notify(job.id);
-  }
-
-  /**
-   * Second-stage settle after a `processed` release: confirm to `confirmed`,
-   * and if the tx was dropped instead, record it on the jobs for reconciliation
-   * (the UI already showed success, so this feeds history/accounting, not the
-   * live long-poll).
-   */
-  private settleInBackground(
-    batch: TransferJob[],
-    signature: Signature,
-    lastValidBlockHeight: bigint,
-  ): void {
-    const settle = settleConfirmed(this.env, signature, lastValidBlockHeight)
-      .then(() => this.markSettled(batch, "confirmed"))
-      .catch((error) => {
-        const message =
-          error instanceof Error ? error.message : "Settlement lost after processed";
-        return this.markSettled(batch, "dropped", message);
-      })
-      .finally(() => this.pendingSettles.delete(settle));
-    this.pendingSettles.add(settle);
-  }
-
-  private async markSettled(
-    batch: TransferJob[],
-    settled: "confirmed" | "dropped",
-    error?: string,
-  ): Promise<void> {
-    for (const job of batch) {
-      const fresh = await this.getJob(job.id);
-      if (!fresh) continue;
-      fresh.settled = settled;
-      if (error) fresh.error = error;
-      await this.ctx.storage.put(`${JOB_PREFIX}${fresh.id}`, fresh);
-    }
-  }
-
-  /**
-   * Pre-warm the fee-payer signer and blockhash cache so a subsequent submit
-   * hits a hot DO (no cold-start signer decode / blockhash fetch on the
-   * critical path). Called by the client when the receive panel is armed.
-   */
-  async warm(): Promise<void> {
-    if (!this.feePayerSigner) {
-      this.feePayerSigner = await getFeePayerSigner(this.env);
-    }
-    await this.refreshBlockhash();
   }
 
   // --- cached inputs --------------------------------------------------------
@@ -345,12 +477,21 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
 
   // --- queue maintenance ----------------------------------------------------
 
-  /** Rebuild the queue to only ids whose job still exists and is queued. */
-  private async compactQueue(): Promise<void> {
-    const queue = (await this.ctx.storage.get<string[]>(QUEUE_KEY)) ?? [];
+  /**
+   * Rebuild the queue to only ids whose job still exists and is queued.
+   * Uses a single batched storage get for the queue ids.
+   */
+  private async compactQueue(queueIds?: string[]): Promise<void> {
+    const queue =
+      queueIds ?? (await this.ctx.storage.get<string[]>(QUEUE_KEY)) ?? [];
+    if (queue.length === 0) return;
+
+    const keys = queue.map((id) => `${JOB_PREFIX}${id}`);
+    const jobs = await this.ctx.storage.get<TransferJob>(keys);
+
     const remaining: string[] = [];
     for (const id of queue) {
-      const job = await this.getJob(id);
+      const job = jobs.get(`${JOB_PREFIX}${id}`);
       if (job && job.status === "queued") remaining.push(id);
     }
     if (remaining.length !== queue.length) {

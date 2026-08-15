@@ -14,11 +14,14 @@ import type {
  */
 export type SubmitterStub = {
   enqueue(body: SubmitTransferRequest): Promise<{ jobId: string }>;
+  /** Enqueue then long-poll until terminal (or hold timeout). */
+  enqueueAndWait(
+    body: SubmitTransferRequest,
+    timeoutMs?: number,
+  ): Promise<TransferJob>;
   getJob(jobId: string): Promise<TransferJob | null>;
   /** Long-poll: resolves when the job reaches a terminal status or on timeout. */
   waitForJob(jobId: string, timeoutMs?: number): Promise<TransferJob | null>;
-  /** Pre-warm the fee-payer signer + blockhash cache ahead of a submit. */
-  warm(): Promise<void>;
 };
 
 /** Resolve the single global TransferSubmitterDO stub. */
