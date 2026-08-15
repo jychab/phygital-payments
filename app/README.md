@@ -33,26 +33,54 @@ Configure the Privy app for Solana (embedded wallets + external connectors). Log
 
 ## Modes
 
-### Owner app (no query params)
+### Home (`/`)
 
-Connect a wallet via Privy, then use:
+Connect a wallet via Privy, then use tabs:
 
-- **Receive** — tap a locked phygital NFC device; funds settle into your connected wallet (sponsored fees).
-- **Activity** — recent payments for your connected wallet (shown only when connected).
+- **Pay** — set/update the wallet spending limit (USDC delegate). When the limit is on **and** you own ≥1 NFC device, Ready to pay + Manage Pay (API key / Shortcuts) live here.
+- **Devices** — informational list of NFC devices claimed by this wallet (no deep links). Add a device by holding an NFC tag to the phone (opens `/asset`).
+- **Activity** — recent payments for the connected wallet.
 
-### Enable Pay (`/enable?pk=&s=&c=&n=`)
+Header mode dropdown: **Home** | **Collect** (`/collect?recipient=<connected-wallet>`). Collect is disabled until connected.
 
-Tap-gated setup for the payer NFC device (same NFC proof params as vault). Flow:
+**Pay is ready** only when both are true: spending limit set, and at least one claimed NFC device.
 
-1. Verify tap (silent) — chip counter must be **greater than** the last value in the shared `revibase_counter` KV (same store as vault); the same counter may remount briefly, then needs a fresh tap
-2. Sign in
-3. Add NFC device to this phone if needed (claim when unclaimed or unlocked)
-4. Set a spending limit (“Turn on Pay”) — also provisions a device pay key automatically
-5. Everyday use (in-app): choose amount → Ready to pay (opens grant) → hold NFC to merchant. No in-app “Paid” poll — same as Shortcuts.
+Legacy collect query params on `/` (`?recipient=` / `?amount=`) redirect to `/collect`.
 
-The Pay UI always requires a fresh NFC tap (`pk` / `s` / `c` / `n`). Opening a spending window itself uses the device API key (same GET as Shortcuts).
+### Collect (`/collect`)
 
-Locked NFC devices owned by someone else require the current owner to unlock first.
+Destination flow — **no Privy / Connect**. The settle-to wallet **must** come from `?recipient=`:
+
+- Enter an amount, then hold NFC. Must run in Safari/Chrome (not a wallet in-app browser).
+- If the wallet has no USDC receive account yet, Collect shows an error with a link to **`/setup`**.
+- Missing or invalid `?recipient=` shows an error.
+- Top-level Collect uses the header mode dropdown to return to **Home**. Embeds stay sealed (static Collect label, no dropdown).
+
+Activity lives on Home, not Collect.
+
+### Receive setup (`/setup?recipient=`)
+
+One-time ATA creation (Connect required):
+
+1. Connect the wallet that matches `?recipient=`
+2. Create the receive account
+3. **Open Collect** opens `/collect?recipient=…` in a new tab
+
+Embeds cannot use `/setup` (error screen).
+
+### Asset / claim (`/asset?pk=&s=&c=&n=`)
+
+**NFC tap only — no Privy / Connect.** No in-app links to this route (tag URL only). Bare `?pk=` without tap proof shows “Hold NFC device.”
+
+Flow:
+
+1. Verify tap (silent) — chip counter must be **greater than** the last value in the shared `revibase_counter` KV; the same counter may remount briefly, then needs a fresh tap
+2. Claim if unclaimed or unlocked — paste the paying-from wallet (Safari/Chrome for NFC)
+3. Status — verified, lock state, owner address + **Open Home** (set limit / Ready to pay on Home)
+
+Locked devices show owner status only. Spending limits and Ready to pay are **not** on `/asset`.
+
+`/enable` redirects to `/asset` (query params preserved) if present.
 
 ### Open a spending window (API key)
 
@@ -109,28 +137,26 @@ Android has no single first-party Shortcuts equivalent; use an HTTP automation a
 5. Run the task → within ~45 seconds hold NFC to the merchant Collect phone.
 6. After rotating the key, update `apiKey` in the saved URL.
 
-### Payment link (`?recipient=<solana-address>`)
+### Payment link (`/collect?recipient=<solana-address>`)
 
-Opens a receive-only view settled to the URL recipient. **No Sign in / wallet controls** — same idea as an embed, usable top-level. Optional `?amount=` prefills (and locks) the amount.
-
-Without `?recipient=`, the owner app requires Sign in and settles into the connected wallet.
+This is the only Collect entry point. Settles to the URL recipient. **No Sign in / wallet controls** in the header — sealed destination chip only. Optional `?amount=` prefills (and locks) the amount. Without a valid `?recipient=`, Collect shows an error.
 
 ### iframe embed
 
-Merchant sites may embed the home route as an iframe. CSP allows `frame-ancestors *`.
+Merchant sites may embed the Collect route as an iframe. CSP allows `frame-ancestors *`.
 
 Requirements when embedded:
 
 - `?recipient=<solana-address>` is **required** (invalid/missing → error screen)
 - Optional `?amount=`
 - Wallet connect / disconnect is disabled
-- Only the payment-link receive UI is shown (`/enable` is blocked in iframes)
+- Only the payment-link receive UI is shown (`/asset` is blocked in iframes)
 
 Example:
 
 ```html
 <iframe
-  src="https://your-pay-host/?recipient=<SOLANA_ADDRESS>&amount=12.50"
+  src="https://your-pay-host/collect?recipient=<SOLANA_ADDRESS>&amount=12.50"
   title="Pay"
   style="width:100%;height:640px;border:0"
   allow="publickey-credentials-get *"

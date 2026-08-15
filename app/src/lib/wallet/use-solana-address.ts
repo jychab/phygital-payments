@@ -1,83 +1,94 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { useConnectWallet, usePrivy } from "@privy-io/react-auth";
 import { useWallets } from "@privy-io/react-auth/solana";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useIsEmbedded } from "@/hooks/use-is-embedded";
-import { clearPreauthApiKey } from "@/lib/payments/preauth-client";
+import { clearAppClientStorage } from "@/lib/wallet/clear-client-session";
 
 /**
- * Connected Solana address from Privy (embedded or external wallet).
- *
- * Connect is always user-initiated. Disconnect drops Solana wallet sessions
- * and ends the Privy auth session when present. Connect is a no-op inside
- * iframes (payment-link embeds).
+ * Shared across every `useSolanaAddress` consumer so disconnect hides the
+ * wallet on all routes immediately — even before Privy finishes disconnect.
+ */
+let sessionCleared = false;
+const sessionListeners = new Set<() => void>();
+
+function subscribeSessionCleared(onStoreChange: () => void): () => void {
+  sessionListeners.add(onStoreChange);
+  return () => {
+    sessionListeners.delete(onStoreChange);
+  };
+}
+
+function getSessionCleared(): boolean {
+  return sessionCleared;
+}
+
+function setSessionCleared(next: boolean): void {
+  if (sessionCleared === next) return;
+  sessionCleared = next;
+  for (const listener of sessionListeners) listener();
+}
+
+/**
+ * Connected Solana address from Privy `useWallets()`.
+ * Connect / disconnect are wallet-only (`connectWallet` / `wallet.disconnect`).
  */
 export function useSolanaAddress(): {
   address: string | null;
   isConnected: boolean;
   ready: boolean;
-  /** Open Privy login / wallet connect — never auto-creates a wallet. */
+  /** Open Privy wallet-connect modal — never logs the user into Privy. */
   connect: () => void;
-  /** Disconnect Solana wallets and log out of Privy when authenticated. */
+  /** Disconnect wallets + clear app storage / query cache. */
   disconnect: () => Promise<void>;
-  authenticated: boolean;
 } {
   const embedded = useIsEmbedded();
+  const queryClient = useQueryClient();
   const {
     ready: privyReady,
-    authenticated,
-    login,
-    logout: privyLogout,
   } = usePrivy();
   const { wallets, ready: walletsReady } = useWallets();
   const { connectWallet } = useConnectWallet();
+  const cleared = useSyncExternalStore(
+    subscribeSessionCleared,
+    getSessionCleared,
+    () => false,
+  );
 
-  const address = wallets[0]?.address ?? null;
+  const wallet = wallets[0] ?? null;
+  const walletAddress = wallet?.address ?? null;
+  const address = cleared ? null : walletAddress;
   const ready = privyReady && walletsReady;
 
   const connect = useCallback(() => {
-    // Payment-link iframes never prompt wallet connect.
     if (embedded) return;
     if (!privyReady) return;
+    if (walletAddress && !cleared) return;
 
-    if (!authenticated) {
-      // Login modal: Google and/or wallet. Embedded Solana wallets are minted
-      // only when the user has none (createOnLogin: users-without-wallets).
-      login();
-      return;
-    }
-
-    if (address) return;
-
-    // Logged in without a Solana wallet — prompt an external wallet connect.
+    setSessionCleared(false);
     connectWallet({ walletChainType: "solana-only" });
-  }, [embedded, privyReady, authenticated, address, login, connectWallet]);
+  }, [embedded, privyReady, walletAddress, cleared, connectWallet]);
 
   const disconnect = useCallback(async () => {
-    clearPreauthApiKey();
+    setSessionCleared(true);
+    clearAppClientStorage();
+    queryClient.clear();
 
-    // Drop every connected Solana account first (works even with a stale
-    // Privy session / invalid auth token).
     await Promise.all(
-      wallets.map(async (wallet) => {
+      wallets.map(async (w) => {
         try {
-          await wallet.disconnect();
+          await w.disconnect();
         } catch {
           /* ignore */
         }
       }),
     );
 
-    if (privyReady && authenticated) {
-      try {
-        await privyLogout();
-      } catch {
-        // Invalid/stale token — wallets are already disconnected above.
-      }
-    }
-  }, [wallets, privyReady, authenticated, privyLogout]);
+
+  }, [wallets, queryClient]);
 
   return {
     address,
@@ -85,6 +96,5 @@ export function useSolanaAddress(): {
     ready,
     connect,
     disconnect,
-    authenticated,
   };
 }

@@ -2,26 +2,23 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Nfc } from "lucide-react";
+import { Nfc } from "lucide-react";
 
-import { CenteredStatus } from "@/components/enable/gate-message";
 import { InAppBrowserGate } from "@/components/in-app-browser-gate";
 import { NfcHoldStatus } from "@/components/nfc-hold-status";
 import { SolanaAddressField } from "@/components/solana-address-field";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/use-is-in-app-browser";
-import { usePrefillAddress } from "@/hooks/use-prefill-address";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
 import { claimSponsoredOwnership, assertClaimReady } from "@/lib/payments/claim";
 import { tryParseAddress } from "@/lib/payments/payment-request";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { queryKeys } from "@/lib/queries";
-import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 
-type Stage = "ready" | "reading" | "confirming" | "done";
+type Stage = "ready" | "reading" | "confirming";
 
 /**
- * Paste spending wallet, then NFC + sponsored claim (no wallet signature).
+ * Paste the paying-from wallet, then NFC + sponsored claim (no wallet signature).
  */
 export function ClaimPanel({
   asset,
@@ -32,22 +29,20 @@ export function ClaimPanel({
   unclaimed?: boolean;
   onClaimed?: (recipient: string) => void;
 }) {
-  const { address: connectedAddress } = useSolanaAddress();
   const inApp = useIsInAppBrowser();
   const queryClient = useQueryClient();
   const assetKey = queryKeys.asset.byPk(asset.secp256r1PublicKey);
 
   const [stage, setStage] = useState<Stage>("ready");
   const [error, setError] = useState<string | null>(null);
-  const [recipientInput, setRecipientInput] = useState(connectedAddress ?? "");
-  usePrefillAddress(connectedAddress, recipientInput, setRecipientInput);
+  const [recipientInput, setRecipientInput] = useState("");
 
   const recipient = tryParseAddress(recipientInput);
   const busy = stage === "reading" || stage === "confirming";
 
   async function onClaim() {
     if (!recipient) {
-      setError("Enter a valid wallet address.");
+      setError("Paste a valid wallet address.");
       return;
     }
     setError(null);
@@ -76,8 +71,7 @@ export function ClaimPanel({
           }
         },
       });
-      setStage("done");
-      window.setTimeout(() => onClaimed?.(recipient), 1200);
+      onClaimed?.(recipient);
     } catch (err) {
       setStage("ready");
       setError(
@@ -90,26 +84,15 @@ export function ClaimPanel({
       );
     } finally {
       void queryClient.invalidateQueries({ queryKey: assetKey });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.asset.byOwner(recipient),
+      });
     }
   }
 
   if (inApp) {
     return (
       <InAppBrowserGate body="Adding an NFC device needs Safari or Chrome." />
-    );
-  }
-
-  if (stage === "done" && recipient) {
-    return (
-      <CenteredStatus>
-        <div className="flex size-14 items-center justify-center rounded-full bg-success/15 text-success">
-          <CheckCircle2 className="size-7" />
-        </div>
-        <p className="text-base font-medium text-foreground">Added</p>
-        <p className="max-w-56 text-sm text-muted-foreground">
-          Next, choose how much this device can spend.
-        </p>
-      </CenteredStatus>
     );
   }
 
@@ -138,17 +121,13 @@ export function ClaimPanel({
           {unclaimed ? "Add to this phone" : "Move to this phone"}
         </p>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Choose the wallet that holds your USDC, then hold your NFC device.
+          Paste the wallet whose USDC will back this NFC device, then hold it.
         </p>
       </div>
 
       <SolanaAddressField
         value={recipientInput}
         onChange={setRecipientInput}
-        connectedAddress={connectedAddress}
-        onUseConnected={() => {
-          if (connectedAddress) setRecipientInput(connectedAddress);
-        }}
         disabled={busy}
         label="Paying from"
         hint="This is the balance your NFC device will use."

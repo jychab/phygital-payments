@@ -1,32 +1,72 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { Check, ChevronDown } from "lucide-react";
 
 import { WalletChip } from "@/components/wallet-chip";
+import { CopyableAddress } from "@/components/copyable-address";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { collectHref } from "@/lib/payments/payment-request";
 import { isMainnet } from "@/lib/solana/cluster";
+import { cn } from "@/lib/utils";
 
 export type WalletActionsMode = "full" | "display-only" | "hidden";
+
+export type AppMode = "Home" | "Collect" | "Setup" | "Device";
+
+export type ModeNavItem = {
+  mode: "Home" | "Collect";
+  href: string;
+  /** Visible but not selectable (e.g. Collect before Connect). */
+  disabled?: boolean;
+};
+
+/** Shared Home ↔ Collect header dropdown items. */
+export function homeCollectModeNav(recipient: string | null): ModeNavItem[] {
+  return [
+    { mode: "Home", href: "/" },
+    {
+      mode: "Collect",
+      href: recipient ? collectHref({ recipient }) : "/collect",
+      disabled: !recipient,
+    },
+  ];
+}
 
 export function AppShell({
   recipient,
   children,
   walletActions = "full",
   modeLabel,
+  modeNav,
 }: {
-  recipient: string | null;
+  /** Required for `walletActions="display-only"` (sealed Collect chip). */
+  recipient?: string | null;
   children: ReactNode;
-  /** iframe embeds show recipient read-only; top-level passes connected wallet or null. */
+  /** Session wallet via WalletChip (`full`), sealed link display (`display-only`), or hidden. */
   walletActions?: WalletActionsMode;
-  /** One-line role label: Collect vs Pay (not a second nav). */
-  modeLabel?: "Collect" | "Pay";
+  /** Current mode label in the header. */
+  modeLabel?: AppMode;
+  /** When set, mode label becomes a dropdown to switch Home ↔ Collect. */
+  modeNav?: ModeNavItem[] | null;
 }) {
+  const navItems = modeNav && modeNav.length > 0 ? modeNav : null;
+
   return (
     <div className="relative flex min-h-full flex-1 flex-col">
       <AmbientBackground />
       <main className="relative z-10 mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-10 pt-5 md:px-6">
         <div className="mb-5 flex items-center justify-between gap-3 motion-safe:animate-[wallet-rise_0.5s_cubic-bezier(0.22,1,0.36,1)_both]">
-          <div className="flex items-center gap-2">
-            {modeLabel ? (
+          <div className="flex min-w-0 items-center gap-2">
+            {modeLabel && navItems ? (
+              <ModeSwitcher current={modeLabel} items={navItems} />
+            ) : modeLabel ? (
               <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 {modeLabel}
               </span>
@@ -40,18 +80,77 @@ export function AppShell({
               <span aria-hidden />
             )}
           </div>
-          {walletActions === "hidden" ? (
-            <span aria-hidden />
+          {walletActions === "full" ? (
+            <WalletChip />
+          ) : walletActions === "display-only" && recipient ? (
+            <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-2.5 py-1.5 text-xs">
+              <span
+                className="size-1.5 rounded-full bg-muted-foreground/50"
+                aria-hidden
+              />
+              <CopyableAddress address={recipient} label="wallet address" />
+            </span>
           ) : (
-            <WalletChip
-              recipient={recipient}
-              actions={walletActions === "display-only" ? "none" : "full"}
-            />
+            <span aria-hidden />
           )}
         </div>
         {children}
       </main>
     </div>
+  );
+}
+
+function ModeSwitcher({
+  current,
+  items,
+}: {
+  current: AppMode;
+  items: ModeNavItem[];
+}) {
+  const router = useRouter();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "inline-flex h-8 items-center gap-1 px-2.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground outline-none transition-colors",
+            "hover:text-foreground",
+            "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40",
+            "data-[state=open]:border-border data-[state=open]:bg-muted/40 data-[state=open]:text-foreground",
+          )}
+          aria-label="Switch mode"
+        >
+          {current}
+          <ChevronDown className="size-3.5 opacity-70" aria-hidden />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-40">
+        {items.map((item) => {
+          const selected = item.mode === current;
+          return (
+            <DropdownMenuItem
+              key={item.mode}
+              disabled={item.disabled}
+              onSelect={() => {
+                if (selected || item.disabled) return;
+                router.push(item.href);
+              }}
+              className={cn(
+                "justify-between text-[0.8125rem]",
+                selected && "bg-muted/50 text-foreground",
+              )}
+            >
+              <span>{item.mode}</span>
+              {selected ? (
+                <Check className="size-3.5 text-primary" aria-hidden />
+              ) : null}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

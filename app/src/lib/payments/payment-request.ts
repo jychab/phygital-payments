@@ -71,3 +71,27 @@ export function parsePaymentRequest(
     fromUrl,
   };
 }
+
+type PaymentLinkArgs = {
+  recipient: string;
+  mint?: string;
+  amount?: string | null;
+};
+
+function paymentLinkHref(path: "/collect" | "/setup", args: PaymentLinkArgs): string {
+  const params = new URLSearchParams();
+  params.set("recipient", args.recipient);
+  if (args.mint) params.set("mint", args.mint);
+  if (args.amount) params.set("amount", args.amount);
+  return `${path}?${params.toString()}`;
+}
+
+/** Build `/setup` URL for one-time receive-account creation. */
+export function receiveSetupHref(args: PaymentLinkArgs): string {
+  return paymentLinkHref("/setup", args);
+}
+
+/** Build `/collect` URL (payment link / after setup). */
+export function collectHref(args: PaymentLinkArgs): string {
+  return paymentLinkHref("/collect", args);
+}

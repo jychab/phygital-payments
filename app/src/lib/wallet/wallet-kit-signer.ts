@@ -26,7 +26,7 @@ type SignTx = ReturnType<typeof useSignTransaction>["signTransaction"];
 
 /**
  * A @solana/kit TransactionPartialSigner backed by Privy's Solana
- * signTransaction (embedded or external wallet).
+ * signTransaction.
  */
 export function makePrivyKitSigner(
   wallet: ConnectedStandardSolanaWallet,

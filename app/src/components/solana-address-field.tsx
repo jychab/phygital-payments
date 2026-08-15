@@ -9,8 +9,6 @@ import { cn, shortAddress } from "@/lib/utils";
 export function SolanaAddressField({
   value,
   onChange,
-  connectedAddress = null,
-  onUseConnected,
   disabled = false,
   label = "Wallet address",
   hint,
@@ -19,8 +17,6 @@ export function SolanaAddressField({
 }: {
   value: string;
   onChange: (value: string) => void;
-  connectedAddress?: string | null;
-  onUseConnected?: () => void;
   disabled?: boolean;
   label?: string;
   hint?: string;
@@ -33,31 +29,15 @@ export function SolanaAddressField({
   const parsed = tryParseAddress(value);
   const trimmed = value.trim();
   const showInvalid = trimmed.length > 0 && !parsed;
-  const connected =
-    connectedAddress && onUseConnected && connectedAddress !== parsed
-      ? connectedAddress
-      : null;
 
   return (
     <div className={cn("flex flex-col gap-2", compact && "gap-1.5")}>
-      <div className="flex items-center justify-between gap-2">
-        <label
-          htmlFor={id}
-          className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground"
-        >
-          {label}
-        </label>
-        {connected ? (
-          <button
-            type="button"
-            className="text-xs text-primary underline-offset-4 hover:underline disabled:opacity-50"
-            disabled={disabled}
-            onClick={onUseConnected}
-          >
-            Use mine
-          </button>
-        ) : null}
-      </div>
+      <label
+        htmlFor={id}
+        className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground"
+      >
+        {label}
+      </label>
       <input
         id={id}
         type="text"

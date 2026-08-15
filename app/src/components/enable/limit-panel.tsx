@@ -20,7 +20,7 @@ import { shortAddress } from "@/lib/utils";
 const PRESETS = ["20", "50", "100"] as const;
 
 /**
- * Pick a spending limit; connect-if-needed, then approve + provision.
+ * Pick a spending limit for the connected wallet (program-authority delegate).
  */
 export function LimitPanel({
   expectedOwner,
@@ -29,8 +29,7 @@ export function LimitPanel({
   expectedOwner: string;
   onEnabled?: () => void;
 }) {
-  const { address: walletAddress, isConnected, connect, ready } =
-    useSolanaAddress();
+  const { address: walletAddress, isConnected } = useSolanaAddress();
   const { ensureKey } = useDevicePayKeyHelpers();
   const [amount, setAmount] = useState("50");
   const [provisioning, setProvisioning] = useState(false);
@@ -47,9 +46,8 @@ export function LimitPanel({
     !!status?.isProgramAuthorityDelegate && status.delegatedAmountRaw > BigInt(0);
   const wrongWallet =
     isConnected && walletAddress != null && walletAddress !== expectedOwner;
-  const needsConnect = !isConnected || wrongWallet;
-  const busy = setAllowance.isPending || provisioning || statusQuery.isLoading;
   const matched = isConnected && walletAddress === expectedOwner;
+  const busy = setAllowance.isPending || provisioning || statusQuery.isLoading;
 
   async function runEnable() {
     if (!walletAddress || walletAddress !== expectedOwner) return;
@@ -77,33 +75,17 @@ export function LimitPanel({
       } finally {
         setProvisioning(false);
       }
-      toast.success("Pay is on");
+      toast.success("Spending limit saved");
       onEnabled?.();
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t turn on Pay"));
+      toast.error(toUserErrorMessage(error, "Couldn’t save spending limit"));
     }
-  }
-
-  function onEnable() {
-    if (!amount || !ready) return;
-    if (!matched) {
-      if (wrongWallet) {
-        toast.error(
-          `Switch to ${shortAddress(expectedOwner, 4)} — that’s the wallet this device pays from.`,
-        );
-      }
-      connect();
-      return;
-    }
-    void runEnable();
   }
 
   const cta = (() => {
     if (setAllowance.isPending || provisioning) return null;
-    if (wrongWallet) return `Switch to ${shortAddress(expectedOwner, 4)}`;
-    if (!isConnected) return "Continue";
     if (hasDelegate) return "Update limit";
-    return "Turn on Pay";
+    return "Allow spending";
   })();
 
   return (
@@ -113,8 +95,8 @@ export function LimitPanel({
           Allow up to how much?
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Your NFC device can spend up to this amount when you tap to pay.
-          Change it anytime.
+          This wallet can spend up to this amount when any of your NFC devices
+          tap to pay. Change it anytime.
         </p>
       </div>
 
@@ -122,15 +104,15 @@ export function LimitPanel({
         id="enable-limit"
         value={amount}
         onChange={setAmount}
-        disabled={busy}
-        autoFocus
+        disabled={busy || !matched}
+        autoFocus={matched}
       />
 
       <AmountPresets
         value={amount}
         onChange={setAmount}
         presets={PRESETS}
-        disabled={busy}
+        disabled={busy || !matched}
       />
 
       <p className="text-center text-[11px] tabular-nums text-muted-foreground">
@@ -138,9 +120,13 @@ export function LimitPanel({
         {status ? ` · ${status.balanceUi} USDC` : null}
       </p>
 
-      {wrongWallet ? (
+      {!isConnected ? (
+        <p className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2 text-center text-xs text-muted-foreground">
+          Connect {shortAddress(expectedOwner, 4)} above to continue.
+        </p>
+      ) : wrongWallet ? (
         <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
-          Connected wallet doesn’t match. Connect{" "}
+          Wrong wallet. Disconnect above, then connect{" "}
           {shortAddress(expectedOwner, 4)}.
         </p>
       ) : null}
@@ -150,8 +136,8 @@ export function LimitPanel({
           type="button"
           size="lg"
           className="h-11 w-full text-[0.9375rem]"
-          onClick={onEnable}
-          disabled={busy || !amount || !ready}
+          onClick={() => void runEnable()}
+          disabled={busy || !amount || !matched}
         >
           {setAllowance.isPending || provisioning ? (
             <>
@@ -167,7 +153,7 @@ export function LimitPanel({
             cta
           )}
         </Button>
-        {needsConnect ? (
+        {matched ? (
           <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground/80">
             <Lock className="size-3" strokeWidth={2.25} />
             You’ll confirm in your wallet

@@ -14,7 +14,6 @@ import { formatTokenAmount } from "@/lib/payments/usdc-allowance";
 import { getUsdcMint, USDC_DECIMALS } from "@/lib/payments/usdc";
 import type { PaymentRecord } from "@/lib/payments/history-client";
 import { usePaymentHistory } from "@/hooks/use-payment-history";
-import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn, shortAddress } from "@/lib/utils";
 
 function relativeTime(unixSeconds: number | null): string {
@@ -46,44 +45,31 @@ function toRows(payments: PaymentRecord[], wallet: string): Row[] {
   });
 }
 
-export function HistoryPanel({
-  recipient,
-  allowConnect = false,
-}: {
-  /** Wallet address whose payment history to show. */
-  recipient?: string | null;
-  /** Show an inline connect CTA when no address is available. */
-  allowConnect?: boolean;
-} = {}) {
-  const { address: connectedAddress, connect, ready } = useSolanaAddress();
-  const address = recipient ?? connectedAddress ?? null;
-  const query = usePaymentHistory(address);
+export function HistoryPanel({ recipient }: { recipient: string }) {
+  const query = usePaymentHistory(recipient);
   const usdcMint = getUsdcMint();
 
   const loading = query.isLoading;
   const error = query.error as Error | null;
-  const rows =
-    query.data && address ? toRows(query.data, address) : [];
+  const rows = query.data ? toRows(query.data, recipient) : [];
 
   return (
     <div className="flex flex-1 flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-foreground">Activity</p>
-        {address ? (
-          <Button
-            type="button"
-            size="icon-sm"
-            variant="ghost"
-            className="text-muted-foreground"
-            onClick={() => query.refetch()}
-            disabled={query.isFetching}
-            aria-label="Refresh"
-          >
-            <RefreshCw
-              className={cn("size-3.5", query.isFetching && "animate-spin")}
-            />
-          </Button>
-        ) : null}
+        <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          className="text-muted-foreground"
+          onClick={() => query.refetch()}
+          disabled={query.isFetching}
+          aria-label="Refresh"
+        >
+          <RefreshCw
+            className={cn("size-3.5", query.isFetching && "animate-spin")}
+          />
+        </Button>
       </div>
 
       {loading ? (
@@ -110,21 +96,8 @@ export function HistoryPanel({
             <History className="size-5 text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground">
-            {address
-              ? "Payments you collect will show up here."
-              : "Connect a wallet to see activity."}
+            Payments for this wallet will show up here.
           </p>
-          {!address && allowConnect ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={!ready}
-              onClick={connect}
-            >
-              Connect wallet
-            </Button>
-          ) : null}
         </div>
       ) : (
         <ul className="flex flex-col gap-2">

@@ -1,5 +1,6 @@
 import { address, type Address, type Rpc, type SolanaRpcApi } from "@solana/kit";
 import {
+  fetchAllAssetsFromOwner,
   fetchAsset,
   findAssetPda,
   parseSecp256r1Pubkey,
@@ -47,6 +48,20 @@ export async function fetchPhygitalAsset(
   );
   const instance = await fetchAsset(rpc, assetAddress);
   return phygitalAssetFromAccount(assetAddress, instance.data);
+}
+
+/** All phygital assets whose on-chain `owner` matches `owner`. */
+export async function fetchPhygitalAssetsByOwner(
+  rpc: Rpc<SolanaRpcApi>,
+  owner: Address,
+): Promise<PhygitalAsset[]> {
+  const assets = await fetchAllAssetsFromOwner(owner, rpc);
+  return Promise.all(
+    assets.map(async (asset) => {
+      const assetAddress = await findAssetPda(asset.publicKey);
+      return phygitalAssetFromAccount(assetAddress, asset);
+    }),
+  );
 }
 
 /** True when no wallet has claimed the asset yet. */

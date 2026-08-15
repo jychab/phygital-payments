@@ -44,9 +44,8 @@ async function fetchTapVerification(
 }
 
 /**
- * Require the same NFC tap URL params as vault (`pk` / `s` / `c` / `n`) and
- * verify the chip signature before unlocking Enable Pay.
- * Anti-replay is the shared KV counter (must be greater than the last seen).
+ * NFC tap URL params (`pk` / `s` / `c` / `n`) for Asset claim / verify.
+ * Full tap proof is required — there is no owner-only `?pk=` path.
  */
 export function useTapVerify() {
   const params = useSearchParams();

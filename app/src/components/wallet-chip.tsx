@@ -3,28 +3,20 @@
 import { LoaderCircle, LogOut } from "lucide-react";
 
 import { CopyableAddress } from "@/components/copyable-address";
+import { Button } from "@/components/ui/button";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
 
-/** Connected wallet status / disconnect only — connect lives in contextual CTAs. */
-export function WalletChip({
-  className,
-  recipient,
-  actions = "full",
-}: {
-  className?: string;
-  recipient?: string | null;
-  actions?: "full" | "none";
-}) {
-  const { ready, address, isConnected, authenticated, disconnect } =
+/**
+ * Session wallet control for Privy routes (Home / setup).
+ * Do not mount on `/asset` or `/collect` (no PrivyProvider there).
+ */
+export function WalletChip({ className }: { className?: string }) {
+  const { ready, address, isConnected, connect, disconnect } =
     useSolanaAddress();
 
-  const display =
-    (actions === "none" ? recipient : null) ??
-    (actions === "full" && isConnected && address ? address : null) ??
-    (actions === "full" && !isConnected && recipient ? recipient : null);
-
-  const canDisconnect = actions === "full" && (isConnected || authenticated);
+  const display = isConnected && address ? address : null;
+  const canConnect = ready && !display;
 
   if (!ready && !display) {
     return (
@@ -39,6 +31,20 @@ export function WalletChip({
     );
   }
 
+  if (canConnect) {
+    return (
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className={cn("h-8 rounded-full px-3 text-xs", className)}
+        onClick={connect}
+      >
+        Connect
+      </Button>
+    );
+  }
+
   if (!display) return null;
 
   return (
@@ -49,25 +55,18 @@ export function WalletChip({
       )}
     >
       <span
-        className={cn(
-          "size-1.5 rounded-full",
-          isConnected
-            ? "bg-primary shadow-[0_0_0_3px_color-mix(in_oklch,var(--primary)_18%,transparent)]"
-            : "bg-muted-foreground/50",
-        )}
+        className="size-1.5 rounded-full bg-primary shadow-[0_0_0_3px_color-mix(in_oklch,var(--primary)_18%,transparent)]"
         aria-hidden
       />
       <CopyableAddress address={display} label="wallet address" />
-      {canDisconnect ? (
-        <button
-          type="button"
-          onClick={() => void disconnect()}
-          className="inline-flex size-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          aria-label="Disconnect"
-        >
-          <LogOut className="size-3" />
-        </button>
-      ) : null}
+      <button
+        type="button"
+        onClick={() => void disconnect()}
+        className="inline-flex size-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        aria-label="Disconnect"
+      >
+        <LogOut className="size-3" />
+      </button>
     </span>
   );
 }

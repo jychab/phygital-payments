@@ -68,6 +68,14 @@ const RULES: Rule[] = [
       "This NFC device isn’t locked for payments. Lock it, then try again.",
   },
   {
+    test: /asset is not lockable|AssetIsNotLockable/i,
+    message: "This NFC device can’t be locked.",
+  },
+  {
+    test: /owner mismatch|OwnerMismatch/i,
+    message: "Connect the wallet that owns this NFC device.",
+  },
+  {
     test: /belongs to the receiving wallet|collect a payment from yourself/i,
     message: "You can’t collect a payment from your own NFC device.",
   },
