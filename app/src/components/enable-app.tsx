@@ -5,7 +5,6 @@ import { LoaderCircle, Nfc, ShieldAlert, Wallet } from "lucide-react";
 
 import { AppCard, AppShell } from "@/components/app-shell";
 import { ClaimPanel } from "@/components/claim-panel";
-import { ConnectPrompt } from "@/components/connect-prompt";
 import { EmbedBoot, EmbedError } from "@/components/embed-error";
 import { CenteredStatus, GateMessage } from "@/components/enable/gate-message";
 import { LimitPanel } from "@/components/enable/limit-panel";
@@ -22,12 +21,11 @@ import { shortAddress } from "@/lib/utils";
 
 /**
  * Enable Pay — tap-gated setup then everyday pay.
- * Flow: verify → sign in → claim if needed → spending limit → ready to pay.
- * Not available inside iframes (embeds only support payment links).
+ * verify → claim if needed → limit (connect-if-needed) → pay.
  */
 export function EnableApp() {
   const embedded = useIsEmbedded();
-  const { address: walletAddress, isConnected } = useSolanaAddress();
+  const { address: walletAddress } = useSolanaAddress();
   const { pk, hasTapProof, verify, verifyPending, verifyError } = useTapVerify();
 
   if (embedded === null) {
@@ -45,7 +43,7 @@ export function EnableApp() {
 
   if (!hasTapProof) {
     return (
-      <Shell recipient={walletAddress} step="device">
+      <Shell recipient={walletAddress}>
         <GateMessage
           icon={<Nfc className="size-5 text-muted-foreground" />}
           title="Hold NFC device to this phone"
@@ -57,27 +55,25 @@ export function EnableApp() {
 
   if (verifyPending || verify === "pending") {
     return (
-      <Shell recipient={walletAddress} step="device">
+      <Shell recipient={walletAddress}>
         <CenteredStatus>
           <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Setting up Pay…</p>
-          <p className="text-xs text-muted-foreground/70">Checking your NFC device</p>
         </CenteredStatus>
       </Shell>
     );
   }
 
   if (verify !== "verified") {
-    const body = toUserErrorMessage(
-      verifyError,
-      "Hold flat against the back of your phone and try again.",
-    );
     return (
-      <Shell recipient={walletAddress} step="device">
+      <Shell recipient={walletAddress}>
         <GateMessage
           icon={<ShieldAlert className="size-5 text-destructive" />}
           title="Couldn’t check this NFC device"
-          body={body}
+          body={toUserErrorMessage(
+            verifyError,
+            "Hold flat against the back of your phone and try again.",
+          )}
           destructive
           action={
             <Button
@@ -96,207 +92,154 @@ export function EnableApp() {
     );
   }
 
-  if (!isConnected || !walletAddress) {
-    return (
-      <Shell recipient={walletAddress} step="account">
-        <ConnectPrompt
-          title="Sign in to continue"
-          body="Use Google or a wallet so this NFC device can pay from your balance."
-          buttonLabel="Sign in"
-        />
-      </Shell>
-    );
-  }
-
   return (
     <Shell recipient={walletAddress}>
-      <OwnedGate pk={pk} walletAddress={walletAddress} />
+      <OwnedGate pk={pk} />
     </Shell>
   );
 }
 
-type SetupStep = "device" | "account" | "limit" | "pay";
-
 function Shell({
   recipient,
   children,
-  step,
 }: {
   recipient: string | null;
   children: ReactNode;
-  step?: SetupStep;
 }) {
   return (
     <AppShell recipient={recipient} modeLabel="Pay">
-      <AppCard>
-        {step && step !== "pay" ? <SetupSteps current={step} /> : null}
-        {children}
-      </AppCard>
+      <AppCard>{children}</AppCard>
     </AppShell>
   );
 }
 
-function SetupSteps({ current }: { current: SetupStep }) {
-  const order: SetupStep[] = ["device", "account", "limit", "pay"];
-  const labels: Record<SetupStep, string> = {
-    device: "NFC device",
-    account: "Account",
-    limit: "Limit",
-    pay: "Pay",
-  };
-  const idx = order.indexOf(current);
-
-  return (
-    <div className="mb-5 flex items-center justify-center gap-1.5">
-      {order.map((s, i) => {
-        const active = i === idx;
-        const done = i < idx;
-        return (
-          <span
-            key={s}
-            className={
-              active
-                ? "rounded-full bg-primary/15 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-primary"
-                : done
-                  ? "rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground"
-                  : "rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground/40"
-            }
-          >
-            {labels[s]}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
-function OwnedGate({
-  pk,
-  walletAddress,
-}: {
-  pk: string | null;
-  walletAddress: string;
-}) {
+function OwnedGate({ pk }: { pk: string | null }) {
+  const { address: connectedAddress } = useSolanaAddress();
   const assetQuery = usePhygitalAsset(pk);
   const [forceLimit, setForceLimit] = useState(false);
-  const [claimedLocal, setClaimedLocal] = useState(false);
+  const [claimedOwner, setClaimedOwner] = useState<string | null>(null);
 
-  if (assetQuery.isPending && !claimedLocal) {
+  if (assetQuery.isPending && !claimedOwner) {
     return (
-      <>
-        <SetupSteps current="account" />
-        <CenteredStatus>
-          <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Setting up Pay…</p>
-          <p className="text-xs text-muted-foreground/70">Loading your NFC device</p>
-        </CenteredStatus>
-      </>
+      <CenteredStatus>
+        <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Setting up Pay…</p>
+      </CenteredStatus>
     );
   }
 
-  if ((assetQuery.isError || !assetQuery.data) && !claimedLocal) {
+  if ((assetQuery.isError || !assetQuery.data) && !claimedOwner) {
     return (
-      <>
-        <SetupSteps current="device" />
-        <GateMessage
-          icon={<ShieldAlert className="size-5 text-destructive" />}
-          title="NFC device not found"
-          body={toUserErrorMessage(
-            assetQuery.error,
-            "We couldn’t find this NFC device. Try tapping again.",
-          )}
-          destructive
-        />
-      </>
+      <GateMessage
+        icon={<ShieldAlert className="size-5 text-destructive" />}
+        title="NFC device not found"
+        body={toUserErrorMessage(
+          assetQuery.error,
+          "We couldn’t find this NFC device. Try tapping again.",
+        )}
+        destructive
+      />
+    );
+  }
+
+  if (claimedOwner) {
+    return (
+      <OwnerPayFlow
+        ownerAddress={claimedOwner}
+        forceLimit={forceLimit}
+        onEditLimit={() => setForceLimit(true)}
+        onLimitDone={() => setForceLimit(false)}
+      />
     );
   }
 
   const asset = assetQuery.data;
-  const isOwner = claimedLocal || asset?.currentOwner === walletAddress;
+  if (!asset) return null;
 
-  if (asset && !isOwner && asset.isLocked) {
+  const onChainOwner = asset.currentOwner.toString();
+  const connectedIsOwner = connectedAddress === onChainOwner;
+
+  if (isUnclaimedAsset(asset) || (!asset.isLocked && !connectedIsOwner)) {
     return (
-      <>
-        <SetupSteps current="device" />
-        <GateMessage
-          icon={<Wallet className="size-5 text-muted-foreground" />}
-          title="NFC device is locked"
-          body={`This NFC device belongs to ${shortAddress(asset.currentOwner.toString())}. Ask them to unlock it before you can add it here.`}
-          action={
-            <p className="max-w-56 text-xs text-muted-foreground">
-              How to unlock: open the NFC device in their vault, unlock it, then
-              hold it to this phone again.
-            </p>
-          }
-        />
-      </>
+      <ClaimPanel
+        asset={asset}
+        unclaimed={isUnclaimedAsset(asset)}
+        onClaimed={(recipient) => {
+          setClaimedOwner(recipient);
+          setForceLimit(true);
+        }}
+      />
     );
   }
 
-  if (asset && !isOwner) {
+  if (asset.isLocked && connectedAddress && !connectedIsOwner) {
     return (
-      <>
-        <SetupSteps current="account" />
-        <ClaimPanel
-          asset={asset}
-          unclaimed={isUnclaimedAsset(asset)}
-          onClaimed={() => {
-            setClaimedLocal(true);
-            setForceLimit(true);
-          }}
-        />
-      </>
+      <GateMessage
+        icon={<Wallet className="size-5 text-muted-foreground" />}
+        title="NFC device is locked"
+        body={`This NFC device belongs to ${shortAddress(onChainOwner)}. Ask them to unlock it before you can add it here.`}
+        action={
+          <p className="max-w-56 text-xs text-muted-foreground">
+            How to unlock: open the NFC device in their vault, unlock it, then
+            hold it to this phone again.
+          </p>
+        }
+      />
     );
   }
 
   return (
     <OwnerPayFlow
-      walletAddress={walletAddress}
+      ownerAddress={onChainOwner}
       forceLimit={forceLimit}
       onEditLimit={() => setForceLimit(true)}
       onLimitDone={() => setForceLimit(false)}
-      showSteps={forceLimit}
     />
   );
 }
 
 function OwnerPayFlow({
-  walletAddress,
+  ownerAddress,
   forceLimit,
   onEditLimit,
   onLimitDone,
-  showSteps,
 }: {
-  walletAddress: string;
+  ownerAddress: string;
   forceLimit: boolean;
   onEditLimit: () => void;
   onLimitDone: () => void;
-  showSteps: boolean;
 }) {
-  const statusQuery = useDelegateStatus(walletAddress);
+  const { address: connectedAddress, connect, ready } = useSolanaAddress();
+  const statusQuery = useDelegateStatus(ownerAddress);
   const status = statusQuery.data;
   const hasLimit =
     !!status?.isProgramAuthorityDelegate && status.delegatedAmountRaw > BigInt(0);
 
   if (statusQuery.isLoading) {
     return (
-      <>
-        {showSteps ? <SetupSteps current="limit" /> : null}
-        <CenteredStatus>
-          <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Setting up Pay…</p>
-          <p className="text-xs text-muted-foreground/70">Checking Pay</p>
-        </CenteredStatus>
-      </>
+      <CenteredStatus>
+        <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Setting up Pay…</p>
+      </CenteredStatus>
     );
   }
 
   if (!hasLimit || forceLimit) {
+    return <LimitPanel expectedOwner={ownerAddress} onEnabled={onLimitDone} />;
+  }
+
+  if (connectedAddress !== ownerAddress) {
     return (
-      <>
-        <SetupSteps current="limit" />
-        <LimitPanel onEnabled={onLimitDone} />
-      </>
+      <GateMessage
+        icon={<Wallet className="size-5 text-muted-foreground" />}
+        title="Connect to pay"
+        body={`Connect ${shortAddress(ownerAddress, 4)} to open a spending window.`}
+        action={
+          <Button type="button" size="sm" disabled={!ready} onClick={connect}>
+            {ready ? "Continue" : "Loading…"}
+          </Button>
+        }
+      />
     );
   }
 

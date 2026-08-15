@@ -6,7 +6,7 @@
 import type { Address } from "@solana/kit";
 
 import {
-  fetchUsdcDelegateStatus,
+  fetchMintDelegateStatus,
   resolveMintProgram,
   type TokenProgram,
   type UsdcDelegateStatus,
@@ -88,7 +88,7 @@ export function fetchMintProgram(mint: Address): Promise<MintProgramInfo> {
 export function fetchDelegateStatus(
   owner: Address,
 ): Promise<UsdcDelegateStatus> {
-  return fetchUsdcDelegateStatus(owner);
+  return fetchMintDelegateStatus(owner);
 }
 
 export function fetchAtaStatus(args: {

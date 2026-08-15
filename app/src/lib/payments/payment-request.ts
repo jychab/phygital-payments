@@ -5,6 +5,8 @@ import { getUsdcMint } from "@/lib/payments/usdc";
 export type PaymentRequestParams = {
   amount?: string;
   recipient?: string;
+  /** Defaults to USDC. */
+  mint?: string;
 };
 
 export type PaymentRequest = {
@@ -44,7 +46,7 @@ function normalizeAmount(value: string | undefined): string | null {
   return frac.length > 0 ? `${whole}.${frac}` : whole;
 }
 
-/** Parse `?amount=&recipient=` into a receive-flow payment request. */
+/** Parse `?amount=&recipient=&mint=` into a receive-flow payment request. */
 export function parsePaymentRequest(
   searchParams: Record<string, string | string[] | undefined> | PaymentRequestParams,
 ): PaymentRequest {
@@ -52,13 +54,18 @@ export function parsePaymentRequest(
   const recipientRaw = firstValue(
     searchParams.recipient as string | string[] | undefined,
   );
+  const mintRaw = firstValue(searchParams.mint as string | string[] | undefined);
 
-  const fromUrl = Boolean(amountRaw?.trim() || recipientRaw?.trim());
+  const fromUrl = Boolean(
+    amountRaw?.trim() || recipientRaw?.trim() || mintRaw?.trim(),
+  );
   const hasRecipientParam = Boolean(recipientRaw?.trim());
+  const usdc = getUsdcMint();
+  const mint = tryParseAddress(mintRaw) ?? usdc;
 
   return {
     amount: normalizeAmount(amountRaw),
-    mint: getUsdcMint(),
+    mint,
     recipient: tryParseAddress(recipientRaw),
     hasRecipientParam,
     fromUrl,

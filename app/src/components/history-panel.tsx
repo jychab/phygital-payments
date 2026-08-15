@@ -48,11 +48,14 @@ function toRows(payments: PaymentRecord[], wallet: string): Row[] {
 
 export function HistoryPanel({
   recipient,
+  allowConnect = false,
 }: {
   /** Wallet address whose payment history to show. */
   recipient?: string | null;
+  /** Show an inline connect CTA when no address is available. */
+  allowConnect?: boolean;
 } = {}) {
-  const { address: connectedAddress } = useSolanaAddress();
+  const { address: connectedAddress, connect, ready } = useSolanaAddress();
   const address = recipient ?? connectedAddress ?? null;
   const query = usePaymentHistory(address);
   const usdcMint = getUsdcMint();
@@ -66,19 +69,21 @@ export function HistoryPanel({
     <div className="flex flex-1 flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-foreground">Activity</p>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="h-8 gap-1.5 px-2 text-xs"
-          onClick={() => query.refetch()}
-          disabled={query.isFetching || !address}
-        >
-          <RefreshCw
-            className={cn("size-3.5", query.isFetching && "animate-spin")}
-          />
-          Refresh
-        </Button>
+        {address ? (
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            className="text-muted-foreground"
+            onClick={() => query.refetch()}
+            disabled={query.isFetching}
+            aria-label="Refresh"
+          >
+            <RefreshCw
+              className={cn("size-3.5", query.isFetching && "animate-spin")}
+            />
+          </Button>
+        ) : null}
       </div>
 
       {loading ? (
@@ -107,8 +112,19 @@ export function HistoryPanel({
           <p className="text-sm text-muted-foreground">
             {address
               ? "Payments you collect will show up here."
-              : "Sign in to see activity."}
+              : "Connect a wallet to see activity."}
           </p>
+          {!address && allowConnect ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!ready}
+              onClick={connect}
+            >
+              Connect wallet
+            </Button>
+          ) : null}
         </div>
       ) : (
         <ul className="flex flex-col gap-2">

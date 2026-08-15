@@ -13,10 +13,17 @@ export type {
   JobStatusResponse,
 } from "../shared/submitter-wire";
 
+export type {
+  ClaimAuthWire,
+  SubmitClaimRequest,
+  ClaimJob,
+  ClaimJobStatusResponse,
+} from "../shared/claim-wire";
+
 export { base64ToBytes } from "../shared/base64";
 
 export const MAX_BATCH_SIZE = 8;
-export const BATCH_WINDOW_MS = 200;
+export const BATCH_WINDOW_MS = 1000;
 /** Force flush if oldest job older than this (slot hash safety). */
 export const FORCE_FLUSH_AGE_MS = 10_000;
 /** Reject enqueue if slot/job older than this. */

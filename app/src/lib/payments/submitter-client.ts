@@ -1,185 +1,190 @@
 import type {
-  JobStatusResponse,
   SubmitTransferRequest,
   TransferJob,
 } from "./submitter-types";
+import type {
+  ClaimJob,
+  SubmitClaimRequest,
+} from "../../../shared/claim-wire";
+import type { authenticatePasskeyForTransfer } from "phygital-token-sdk";
 
-/** Same-origin proxy path to the sponsored-transfer submitter. */
 const SUBMITTER_BASE = "/api/transfer-submitter";
-
-/** How many times to retry across network blips / 5xx (idempotent on the DO). */
 const SUBMIT_NETWORK_RETRIES = 4;
 const SUBMIT_RETRY_BASE_MS = 180;
 
-async function submitterFetch(
-  path: string,
-  init?: RequestInit,
-): Promise<Response> {
-  return fetch(`${SUBMITTER_BASE}${path}`, {
-    ...init,
-    headers: {
-      ...(init?.headers ?? {}),
-    },
-  });
-}
+type SponsoredJob = {
+  id: string;
+  status: string;
+  signature?: string;
+  error?: string;
+};
 
-/**
- * Idempotency key for one WebAuthn assertion — stable across blip retries,
- * unique per tap (secp signature).
- */
-async function idempotencyKeyForTransfer(
-  body: SubmitTransferRequest,
-): Promise<string> {
-  if (body.idempotencyKey?.trim()) return body.idempotencyKey.trim();
-  const data = new TextEncoder().encode(body.secpEntry.signature);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return [...new Uint8Array(digest)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-/**
- * Card-rail submit: one browser RTT with idempotency + blip retries.
- *
- * Terminals don't fail the first dropped packet — they resume the same auth.
- * One WebAuthn assertion → one DO job; transient network / 5xx retry without
- * double-claiming the preauth grant.
- */
+/** Card-rail transfer submit: one RTT with idempotency + blip retries. */
 export async function submitAndWaitSponsoredTransfer(
   body: SubmitTransferRequest,
 ): Promise<{ signature: string; job: TransferJob }> {
-  const payload = await withIdempotencyKey(body);
+  const idempotencyKey =
+    body.idempotencyKey?.trim() ||
+    (await sha256Hex(body.secpEntry.signature));
+  return submitSponsoredJob({
+    submitUrl: `${SUBMITTER_BASE}/transfer`,
+    jobUrl: (id) => `${SUBMITTER_BASE}/jobs/${encodeURIComponent(id)}`,
+    body: { ...body, idempotencyKey },
+    label: "Sponsored transfer",
+  }) as Promise<{ signature: string; job: TransferJob }>;
+}
 
+type ClaimAuthResponse = Awaited<
+  ReturnType<typeof authenticatePasskeyForTransfer>
+>;
+
+/** Sponsored ownership claim (same DO / retry shape as transfers). */
+export async function submitSponsoredClaim(params: {
+  asset: string;
+  slotNumber: string | bigint;
+  auth: ClaimAuthResponse;
+  recipient: string;
+}): Promise<{ signature: string; job: ClaimJob }> {
+  const body: SubmitClaimRequest = {
+    asset: params.asset,
+    slotNumber: String(params.slotNumber),
+    recipient: params.recipient,
+    auth: params.auth as SubmitClaimRequest["auth"],
+    createdAtMs: Date.now(),
+    idempotencyKey: await sha256Hex(params.auth.response.signature),
+  };
+  return submitSponsoredJob({
+    submitUrl: "/api/claim",
+    jobUrl: (id) => `/api/claim/jobs/${encodeURIComponent(id)}`,
+    body,
+    label: "Sponsored claim",
+  }) as Promise<{ signature: string; job: ClaimJob }>;
+}
+
+async function submitSponsoredJob(args: {
+  submitUrl: string;
+  jobUrl: (id: string) => string;
+  body: unknown;
+  label: string;
+}): Promise<{ signature: string; job: SponsoredJob }> {
   let lastError: unknown;
   for (let attempt = 0; attempt < SUBMIT_NETWORK_RETRIES; attempt++) {
     try {
-      return await submitAndWaitOnce(payload);
+      return await submitAndWaitOnce(args);
     } catch (error) {
       lastError = error;
-      if (!isRetryableSubmitError(error) || attempt === SUBMIT_NETWORK_RETRIES - 1) {
-        throw error instanceof Error ? error : new Error(String(error));
+      if (
+        !isRetryableSubmitError(error) ||
+        attempt === SUBMIT_NETWORK_RETRIES - 1
+      ) {
+        throw asError(error);
       }
       await sleep(SUBMIT_RETRY_BASE_MS * 2 ** attempt);
     }
   }
-  throw lastError instanceof Error ? lastError : new Error("Submit failed");
+  throw asError(lastError ?? new Error(`${args.label} failed`));
 }
 
-async function withIdempotencyKey(
-  body: SubmitTransferRequest,
-): Promise<SubmitTransferRequest> {
-  const idempotencyKey = await idempotencyKeyForTransfer(body);
-  return { ...body, idempotencyKey };
-}
-
-async function submitAndWaitOnce(
-  body: SubmitTransferRequest,
-): Promise<{ signature: string; job: TransferJob }> {
-  const res = await submitterFetch("/transfer", {
+async function submitAndWaitOnce(args: {
+  submitUrl: string;
+  jobUrl: (id: string) => string;
+  body: unknown;
+  label: string;
+}): Promise<{ signature: string; job: SponsoredJob }> {
+  const res = await fetch(args.submitUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(args.body),
   });
 
   let data: {
     jobId?: string;
-    job?: TransferJob;
+    job?: SponsoredJob;
     signature?: string;
     error?: string;
   };
   try {
     data = (await res.json()) as typeof data;
   } catch {
-    const err = new Error(`Submit failed (${res.status})`);
-    (err as Error & { status?: number }).status = res.status || 502;
-    throw err;
+    throw statusError(`${args.label} failed (${res.status})`, res.status || 502);
   }
 
   if (data.job?.status === "confirmed" && (data.signature || data.job.signature)) {
     const signature = data.signature ?? data.job.signature;
-    if (!signature) {
-      throw new Error("Sponsored transfer confirmed without signature");
-    }
-    return {
-      signature,
-      job: data.job,
-    };
+    if (!signature) throw new Error(`${args.label} confirmed without signature`);
+    return { signature, job: data.job };
   }
 
-  // Hold timed out / still in flight — resume on the job id (blip-safe).
   if (data.jobId) {
-    const job = await pollTransferJob(data.jobId);
-    return terminalJobResult(job);
+    return terminalJobResult(
+      await pollJob(args.jobUrl(data.jobId), args.label),
+      args.label,
+    );
   }
 
   if (data.job?.status === "failed") {
-    throw new Error(data.error ?? data.job.error ?? "Sponsored transfer failed");
+    throw new Error(data.error ?? data.job.error ?? `${args.label} failed`);
   }
 
   if (!res.ok) {
-    const err = new Error(data.error ?? `Submit failed (${res.status})`);
-    (err as Error & { status?: number }).status = res.status;
-    throw err;
+    throw statusError(data.error ?? `${args.label} failed (${res.status})`, res.status);
   }
-  throw new Error(data.error ?? "Sponsored transfer did not confirm");
+  throw new Error(data.error ?? `${args.label} did not confirm`);
 }
 
-function terminalJobResult(job: TransferJob): { signature: string; job: TransferJob } {
+function terminalJobResult(
+  job: SponsoredJob,
+  label: string,
+): { signature: string; job: SponsoredJob } {
   if (job.status === "failed") {
-    throw new Error(job.error ?? "Sponsored transfer failed");
+    throw new Error(job.error ?? `${label} failed`);
   }
   if (!job.signature) {
-    throw new Error("Sponsored transfer confirmed without signature");
+    throw new Error(`${label} confirmed without signature`);
   }
   return { signature: job.signature, job };
 }
 
-async function getTransferJob(jobId: string): Promise<TransferJob> {
-  const res = await submitterFetch(`/jobs/${encodeURIComponent(jobId)}`);
-  const data = (await res.json()) as JobStatusResponse & { error?: string };
-  if (!res.ok) {
-    const err = new Error(data.error ?? `Job lookup failed (${res.status})`);
-    (err as Error & { status?: number }).status = res.status;
-    throw err;
-  }
-  return data.job;
-}
-
-/**
- * Wait for a terminal job status via server long-poll.
- * Retries the long-poll on network blips without re-creating the job.
- */
-async function pollTransferJob(
-  jobId: string,
-  opts?: { timeoutMs?: number },
-): Promise<TransferJob> {
-  const deadline = Date.now() + (opts?.timeoutMs ?? 90_000);
+async function pollJob(jobUrl: string, label: string): Promise<SponsoredJob> {
+  const deadline = Date.now() + 90_000;
   let blipAttempt = 0;
 
   while (Date.now() < deadline) {
     try {
-      const job = await getTransferJob(jobId);
-      blipAttempt = 0;
-      if (isTerminal(job.status)) {
-        return job;
+      const res = await fetch(jobUrl);
+      const data = (await res.json()) as { job?: SponsoredJob; error?: string };
+      if (!res.ok || !data.job) {
+        throw statusError(
+          data.error ?? `Job lookup failed (${res.status})`,
+          res.status,
+        );
       }
-      // Hold timed out without terminal status — re-issue.
+      blipAttempt = 0;
+      if (data.job.status === "confirmed" || data.job.status === "failed") {
+        return data.job;
+      }
+      // Long-poll timed out without terminal status — re-issue.
     } catch (error) {
       if (!isRetryableSubmitError(error) || Date.now() >= deadline) {
-        throw error instanceof Error ? error : new Error(String(error));
+        throw asError(error);
       }
       await sleep(SUBMIT_RETRY_BASE_MS * 2 ** Math.min(blipAttempt, 3));
       blipAttempt += 1;
     }
   }
-  throw new Error("Timed out waiting for sponsored transfer");
+  throw new Error(`Timed out waiting for ${label.toLowerCase()}`);
 }
 
-function isTerminal(status: TransferJob["status"]): boolean {
-  return status === "confirmed" || status === "failed";
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return [...new Uint8Array(digest)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
-/** Network / gateway failures — safe to retry because enqueue is idempotent. */
 function isRetryableSubmitError(error: unknown): boolean {
   if (!(error instanceof Error)) return true;
   const status = (error as Error & { status?: number }).status;
@@ -209,6 +214,16 @@ function isRetryableSubmitError(error: unknown): boolean {
     msg.includes("504") ||
     msg.includes("submit failed (5")
   );
+}
+
+function statusError(message: string, status: number): Error {
+  const err = new Error(message);
+  (err as Error & { status?: number }).status = status;
+  return err;
+}
+
+function asError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
 }
 
 function sleep(ms: number): Promise<void> {

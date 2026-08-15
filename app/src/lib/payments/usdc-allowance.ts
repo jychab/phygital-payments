@@ -10,6 +10,7 @@ import {
   findAssociatedTokenPda,
   getApproveCheckedInstruction,
   getRevokeInstruction,
+  fetchMaybeMint,
   fetchMaybeToken,
   TOKEN_PROGRAM_ADDRESS,
 } from "@solana-program/token";
@@ -21,7 +22,7 @@ import {
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { getUsdcMint, USDC_DECIMALS } from "@/lib/payments/usdc";
 
-/** Classic SPL Token only — USDC is not Token-2022. */
+/** Classic SPL Token only — Token-2022 not wired in the app yet. */
 export type TokenProgram = typeof TOKEN_PROGRAM_ADDRESS;
 
 const RENT_EXEMPT_MIN = BigInt(890_880);
@@ -51,19 +52,26 @@ export function formatTokenAmount(raw: bigint, decimals: number): string {
   return negative ? `-${formatted}` : formatted;
 }
 
-export function requireUsdcMint(mint: Address): void {
-  if (mint !== getUsdcMint()) {
-    throw new Error("Only USDC is supported");
-  }
-}
-
 export async function resolveMintProgram(
   mint: Address,
 ): Promise<{ program: TokenProgram; decimals: number }> {
-  requireUsdcMint(mint);
+  if (mint === getUsdcMint()) {
+    return {
+      program: TOKEN_PROGRAM_ADDRESS,
+      decimals: USDC_DECIMALS,
+    };
+  }
+
+  const account = await fetchMaybeMint(getSolanaRpc(), mint);
+  if (!account.exists) {
+    throw new Error("Mint account not found");
+  }
+  if (account.programAddress !== TOKEN_PROGRAM_ADDRESS) {
+    throw new Error("Only classic SPL Token mints are supported");
+  }
   return {
     program: TOKEN_PROGRAM_ADDRESS,
-    decimals: USDC_DECIMALS,
+    decimals: account.data.decimals,
   };
 }
 
@@ -93,32 +101,18 @@ export async function findAta(
   return ata;
 }
 
-/** Read USDC ATA balance + program_authority delegated amount for `owner`. */
-export async function fetchUsdcDelegateStatus(
+/** Read ATA balance + program_authority delegated amount for `owner` + mint. */
+export async function fetchMintDelegateStatus(
   owner: Address,
+  mint: Address = getUsdcMint(),
 ): Promise<UsdcDelegateStatus> {
-  const mint = getUsdcMint();
-  const programAuthority = await findProgramAuthorityPda(
-    owner,
-    PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
-  );
+  const [programAuthority, resolved] = await Promise.all([
+    findProgramAuthorityPda(owner, PHYGITAL_PAYMENTS_PROGRAM_ADDRESS),
+    resolveMintProgram(mint),
+  ]);
 
-  let decimals = USDC_DECIMALS;
-  try {
-    ({ decimals } = await resolveMintProgram(mint));
-  } catch {
-    return {
-      programAuthority,
-      ata: null,
-      isProgramAuthorityDelegate: false,
-      delegatedAmountRaw: BigInt(0),
-      delegatedAmountUi: "0",
-      balanceRaw: BigInt(0),
-      balanceUi: "0",
-    };
-  }
-
-  const ata = await findAta(mint, owner);
+  const { decimals, program } = resolved;
+  const ata = await findAta(mint, owner, program);
   const account = await fetchMaybeToken(getSolanaRpc(), ata);
 
   if (!account.exists) {
@@ -151,18 +145,18 @@ export async function fetchUsdcDelegateStatus(
   };
 }
 
-/** Approve program_authority as SPL delegate for USDC `rawAmount` on the signer's ATA. */
+/** Approve program_authority as SPL delegate for `rawAmount` on the signer's USDC ATA. */
 export async function buildDelegateInstructions(args: {
   signer: TransactionSigner;
   rawAmount: bigint;
 }): Promise<{ instructions: Instruction[]; programAuthority: Address }> {
   const { signer, rawAmount } = args;
   const mint = getUsdcMint();
-  const { program, decimals } = await resolveMintProgram(mint);
-  const programAuthority = await findProgramAuthorityPda(
-    signer.address,
-    PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
-  );
+  const [resolved, programAuthority] = await Promise.all([
+    resolveMintProgram(mint),
+    findProgramAuthorityPda(signer.address, PHYGITAL_PAYMENTS_PROGRAM_ADDRESS),
+  ]);
+  const { program, decimals } = resolved;
 
   const sourceAta = await findAta(mint, signer.address, program);
   const instructions: Instruction[] = [];
@@ -204,11 +198,10 @@ export async function buildRevokeDelegateInstructions(args: {
 }): Promise<{ instructions: Instruction[]; programAuthority: Address }> {
   const { signer } = args;
   const mint = getUsdcMint();
-  const { program } = await resolveMintProgram(mint);
-  const programAuthority = await findProgramAuthorityPda(
-    signer.address,
-    PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
-  );
+  const [{ program }, programAuthority] = await Promise.all([
+    resolveMintProgram(mint),
+    findProgramAuthorityPda(signer.address, PHYGITAL_PAYMENTS_PROGRAM_ADDRESS),
+  ]);
 
   const sourceAta = await findAta(mint, signer.address, program);
 

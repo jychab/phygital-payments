@@ -16,7 +16,9 @@ import {
   signTransactionMessageWithSigners,
   type Address,
   type Instruction,
+  type Rpc,
   type Signature,
+  type SolanaRpcApi,
   type TransactionSigner,
 } from "@solana/kit";
 import { getSecp256r1VerifyInstruction } from "phygital-token-sdk";
@@ -48,15 +50,13 @@ export type SendContext = {
   latestBlockhash: BlockhashLifetime;
 };
 
-// Cache the RPC / subscriptions clients so a single flush (simulate → send →
-// confirm) doesn't rebuild a transport on every call. Keyed by URL so a config
-// change still produces a fresh client.
-let rpcCache: { url: string; rpc: ReturnType<typeof createSolanaRpc> } | undefined;
+// Cache RPC clients across simulate → send → confirm. Keyed by URL.
+let rpcCache: { url: string; rpc: Rpc<SolanaRpcApi> } | undefined;
 let rpcSubscriptionsCache:
   | { url: string; subs: ReturnType<typeof createSolanaRpcSubscriptions> }
   | undefined;
 
-export function getRpc(env: CloudflareEnv) {
+export function getRpc(env: CloudflareEnv): Rpc<SolanaRpcApi> {
   const url = env.NEXT_PUBLIC_SOLANA_RPC_URL;
   if (rpcCache?.url !== url) {
     rpcCache = { url, rpc: createSolanaRpc(url) };
@@ -64,47 +64,40 @@ export function getRpc(env: CloudflareEnv) {
   return rpcCache.rpc;
 }
 
-function subscriptionsUrl(env: CloudflareEnv): string {
-  return (
-    env.NEXT_PUBLIC_SOLANA_RPC_URL.replace(/^http/, "ws")
-  );
-}
-
 export function getRpcSubscriptions(env: CloudflareEnv) {
-  const url = subscriptionsUrl(env);
+  const url = env.NEXT_PUBLIC_SOLANA_RPC_URL.replace(/^http/, "ws");
   if (rpcSubscriptionsCache?.url !== url) {
     rpcSubscriptionsCache = { url, subs: createSolanaRpcSubscriptions(url) };
   }
   return rpcSubscriptionsCache.subs;
 }
 
-export async function getFeePayerSigner(env: CloudflareEnv): Promise<TransactionSigner> {
+export async function getFeePayerSigner(
+  env: CloudflareEnv,
+): Promise<TransactionSigner> {
   const secret = env.FEE_PAYER_SECRET_KEY?.trim();
   if (!secret) {
     throw new Error("FEE_PAYER_SECRET_KEY is not configured");
   }
-  const bytes = decodeSecretKey(secret);
+  const bytes = secret.startsWith("[")
+    ? Uint8Array.from(JSON.parse(secret) as number[])
+    : new Uint8Array(getBase58Encoder().encode(secret));
   const signer = await createKeyPairSignerFromBytes(bytes);
   if (
     env.NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY &&
     signer.address !== address(env.NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY)
   ) {
-    throw new Error("FEE_PAYER_SECRET_KEY does not match NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY");
+    throw new Error(
+      "FEE_PAYER_SECRET_KEY does not match NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY",
+    );
   }
   return signer;
 }
 
-function decodeSecretKey(secret: string): Uint8Array {
-  if (secret.startsWith("[")) {
-    const arr = JSON.parse(secret) as number[];
-    return Uint8Array.from(arr);
-  }
-  // base58-encoded 64-byte secret key (Kit: encoder maps base58 string → bytes)
-  return new Uint8Array(getBase58Encoder().encode(secret));
-}
-
 /** Fetch a fresh blockhash lifetime (the DO caches the result). */
-export async function fetchLatestBlockhash(env: CloudflareEnv): Promise<BlockhashLifetime> {
+export async function fetchLatestBlockhash(
+  env: CloudflareEnv,
+): Promise<BlockhashLifetime> {
   const { value } = await getRpc(env).getLatestBlockhash().send();
   return value;
 }
@@ -295,9 +288,25 @@ async function buildAndSign(
   };
 }
 
+/** Claim / arbitrary ix list — fixed single-job CU budget. */
+export async function sendSponsoredInstructions(
+  env: CloudflareEnv,
+  core: Instruction[],
+  ctx: SendContext,
+): Promise<Signature> {
+  if (core.length === 0) {
+    throw new SubmitError("No instructions to submit", false);
+  }
+  return sendSponsoredCore(
+    env,
+    core,
+    ctx,
+    Math.min(SINGLE_JOB_COMPUTE_UNITS, MAX_COMPUTE_UNITS),
+  );
+}
+
 /**
- * Simulate → size compute budget → send (skipPreflight, already simulated) →
- * await `confirmed`.
+ * Simulate → size compute budget → send (skipPreflight) → await `confirmed`.
  */
 export async function sendSponsoredBatch(
   env: CloudflareEnv,
@@ -307,17 +316,20 @@ export async function sendSponsoredBatch(
   if (jobs.length === 0) {
     throw new SubmitError("No jobs to submit", false);
   }
-
   const core = buildCoreInstructions(jobs, ctx.signer);
-
-  // Single-job path: skip simulation RTT — use a fixed CU budget sized for
-  // secp + one transfer. Multi-job batches still simulate for a tight limit.
   const computeUnitLimit =
     jobs.length === 1
       ? Math.min(SINGLE_JOB_COMPUTE_UNITS, MAX_COMPUTE_UNITS)
       : await simulateBatch(env, core, ctx.signer.address);
+  return sendSponsoredCore(env, core, ctx, computeUnitLimit);
+}
 
-  // Build + sign the final transaction with a tight CU limit + priority fee.
+async function sendSponsoredCore(
+  env: CloudflareEnv,
+  core: Instruction[],
+  ctx: SendContext,
+  computeUnitLimit: number,
+): Promise<Signature> {
   let built: Awaited<ReturnType<typeof buildAndSign>>;
   try {
     built = await buildAndSign(ctx, computeUnitLimit, core);
@@ -328,12 +340,10 @@ export async function sendSponsoredBatch(
     );
   }
   const { signature, wire } = built;
-
   try {
     await getRpc(env)
       .sendTransaction(wire, {
         encoding: "base64",
-        // Already simulated above — skip the RPC's redundant preflight.
         skipPreflight: true,
         maxRetries: 0n,
       })
@@ -342,7 +352,6 @@ export async function sendSponsoredBatch(
     const message = errorMessage(error, "sendTransaction failed");
     throw new SubmitError(message, isTransientRpcError(message));
   }
-
   await confirmSignature(
     env,
     signature,

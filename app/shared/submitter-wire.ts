@@ -46,17 +46,20 @@ export type SubmitTransferRequest = {
 
 export type JobStatus = "queued" | "submitted" | "confirmed" | "failed";
 
-export type TransferJob = {
+/** Shared terminal envelope for claim + transfer jobs. */
+export type SponsoredJob = {
   id: string;
   createdAtMs: number;
-  slotNumber: string;
-  secpEntry: Secp256r1VerifyEntryWire;
-  transfer: TransferAccountsWire;
   status: JobStatus;
-  /** Flush attempts so far (worker-only; clients may omit). */
   attempts: number;
   signature?: string;
   error?: string;
+};
+
+export type TransferJob = SponsoredJob & {
+  slotNumber: string;
+  secpEntry: Secp256r1VerifyEntryWire;
+  transfer: TransferAccountsWire;
 };
 
 export type JobStatusResponse = {

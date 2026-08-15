@@ -7,6 +7,22 @@ type Rule = { test: RegExp | string; message: string };
 
 const RULES: Rule[] = [
   {
+    test: /transaction would fail|simulation failed/i,
+    message: "That payment wouldn’t go through. Check the amount and try again.",
+  },
+  {
+    test: /already on that wallet/i,
+    message: "This NFC device is already on that wallet.",
+  },
+  {
+    test: /device is locked|unlock it before moving/i,
+    message: "This NFC device is locked. Unlock it, then try again.",
+  },
+  {
+    test: /recipient token account is missing|token account is missing\. create it/i,
+    message: "Set up a USDC account before receiving.",
+  },
+  {
     test: /no active preauth grant|preauth grant already used|missing preauth/i,
     message: "Ask them to tap Ready to pay again, then hold their NFC device here.",
   },
@@ -25,6 +41,10 @@ const RULES: Rule[] = [
   {
     test: /missing preauth api key|enable Pay on this device/i,
     message: "Turn on Pay on this phone first.",
+  },
+  {
+    test: /sponsored claim|claim failed/i,
+    message: "Couldn’t add this NFC device. Try again.",
   },
   {
     test: /sponsored submit is not configured|fee-free|fee_payer|fee payer/i,
@@ -64,8 +84,8 @@ const RULES: Rule[] = [
     message: "Hold flat against the back of your phone and try again.",
   },
   {
-    test: /connect your wallet|connect a wallet/i,
-    message: "Sign in to continue.",
+    test: /connect your wallet|connect a wallet|sign in to continue/i,
+    message: "Connect your wallet to continue.",
   },
   {
     test: /(pass|device|NFC device) not found|missing passkey/i,

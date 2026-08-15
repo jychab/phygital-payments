@@ -10,6 +10,7 @@ import {
   getRpc,
   SubmitError,
   sendSponsoredBatch,
+  sendSponsoredInstructions,
   validateTransferWire,
   type BlockhashLifetime,
   type SendContext,
@@ -34,10 +35,14 @@ import {
   type SubmitTransferRequest,
   type TransferJob,
 } from "./types";
+import type { ClaimJob, SubmitClaimRequest } from "../shared/claim-wire";
+import { completeTransfer } from "phygital-token-sdk";
 
 const QUEUE_KEY = "queue";
 const JOB_PREFIX = "job:";
 const IDEMPOTENCY_PREFIX = "idem:";
+const CLAIM_JOB_PREFIX = "claim_job:";
+const CLAIM_IDEMPOTENCY_PREFIX = "claim_idem:";
 
 export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
   private flushing = false;
@@ -127,6 +132,152 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
   }
 
   /**
+   * Sponsored ownership claim (phygital-token transfer). No preauth —
+   * flushes inline to terminal with the same fee payer as payments.
+   */
+  async enqueueClaimAndWait(body: SubmitClaimRequest): Promise<ClaimJob> {
+    return this.enqueueClaim(body);
+  }
+
+  async enqueueClaim(body: SubmitClaimRequest): Promise<ClaimJob> {
+    if (
+      !body.asset?.trim() ||
+      !body.slotNumber?.trim() ||
+      !body.recipient?.trim() ||
+      !body.auth?.id
+    ) {
+      throw new Error("Invalid claim payload");
+    }
+
+    const now = Date.now();
+    const createdAtMs = body.createdAtMs ?? now;
+    if (now - createdAtMs > MAX_JOB_AGE_MS) {
+      throw new Error("Claim job is too stale for SlotHashes validity");
+    }
+
+    const idem = body.idempotencyKey?.trim();
+    if (idem) {
+      const existingId = await this.ctx.storage.get<string>(
+        `${CLAIM_IDEMPOTENCY_PREFIX}${idem}`,
+      );
+      if (existingId) {
+        const existing = await this.getClaimJob(existingId);
+        if (existing) {
+          if (existing.status === "queued") {
+            await this.flushClaim(existingId);
+            return (await this.getClaimJob(existingId)) ?? existing;
+          }
+          return existing;
+        }
+      }
+    }
+
+    const jobId = crypto.randomUUID();
+    const job: ClaimJob = {
+      id: jobId,
+      createdAtMs,
+      status: "queued",
+      attempts: 0,
+    };
+
+    const puts: Record<string, unknown> = {
+      [`${CLAIM_JOB_PREFIX}${jobId}`]: job,
+      [`${CLAIM_JOB_PREFIX}${jobId}:body`]: body,
+    };
+    if (idem) {
+      puts[`${CLAIM_IDEMPOTENCY_PREFIX}${idem}`] = jobId;
+    }
+    await this.ctx.storage.put(puts);
+    await this.flushClaim(jobId);
+    const done = await this.getClaimJob(jobId);
+    if (!done) throw new Error("Claim job disappeared before completion");
+    return done;
+  }
+
+  async getClaimJob(jobId: string): Promise<ClaimJob | null> {
+    return (
+      (await this.ctx.storage.get<ClaimJob>(`${CLAIM_JOB_PREFIX}${jobId}`)) ??
+      null
+    );
+  }
+
+  async waitForClaimJob(
+    jobId: string,
+    timeoutMs: number = JOB_WAIT_TIMEOUT_MS,
+  ): Promise<ClaimJob | null> {
+    return this.waitUntilTerminal(jobId, (id) => this.getClaimJob(id), timeoutMs);
+  }
+
+  private async flushClaim(jobId: string): Promise<void> {
+    const job = await this.getClaimJob(jobId);
+    if (!job || job.status !== "queued") return;
+
+    const body = await this.ctx.storage.get<SubmitClaimRequest>(
+      `${CLAIM_JOB_PREFIX}${jobId}:body`,
+    );
+    if (!body) {
+      job.status = "failed";
+      job.error = "Claim payload missing";
+      await this.ctx.storage.put(`${CLAIM_JOB_PREFIX}${jobId}`, job);
+      this.notify(jobId);
+      return;
+    }
+
+    let instructions: Awaited<ReturnType<typeof completeTransfer>>;
+    try {
+      // Session fields besides asset/slotNumber are unused by completeTransfer.
+      instructions = await completeTransfer(
+        {
+          rpc: getRpc(this.env),
+          asset: address(body.asset),
+          slotHash: new Uint8Array(32),
+          slotNumber: BigInt(body.slotNumber),
+          challenge: new Uint8Array(32),
+        },
+        body.auth as Parameters<typeof completeTransfer>[1],
+        address(body.recipient),
+      );
+    } catch (error) {
+      job.status = "failed";
+      job.error = error instanceof Error ? error.message : "Claim build failed";
+      await this.ctx.storage.put(`${CLAIM_JOB_PREFIX}${jobId}`, job);
+      this.notify(jobId);
+      return;
+    }
+
+    while (job.status === "queued") {
+      job.attempts += 1;
+      try {
+        this.blockhashCache = undefined;
+        const ctx = await this.getSendContext();
+        const signature = await sendSponsoredInstructions(
+          this.env,
+          instructions,
+          ctx,
+        );
+        job.status = "confirmed";
+        job.signature = signature;
+        await this.ctx.storage.put(`${CLAIM_JOB_PREFIX}${jobId}`, job);
+        await this.ctx.storage.delete(`${CLAIM_JOB_PREFIX}${jobId}:body`);
+        this.notify(jobId);
+        return;
+      } catch (error) {
+        const { transient, message } = classifyClaim(error);
+        if (transient && job.attempts < MAX_SUBMIT_ATTEMPTS) {
+          await this.ctx.storage.put(`${CLAIM_JOB_PREFIX}${jobId}`, job);
+          await sleep(RETRY_BACKOFF_MS * job.attempts);
+          continue;
+        }
+        job.status = "failed";
+        job.error = message;
+        await this.ctx.storage.put(`${CLAIM_JOB_PREFIX}${jobId}`, job);
+        this.notify(jobId);
+        return;
+      }
+    }
+  }
+
+  /**
    * Enqueue and long-poll until the job is terminal. Collapses submit+wait into
    * one DO interaction from the API route's perspective (one browser RTT).
    */
@@ -157,7 +308,15 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     jobId: string,
     timeoutMs: number = JOB_WAIT_TIMEOUT_MS,
   ): Promise<TransferJob | null> {
-    const job = await this.getJob(jobId);
+    return this.waitUntilTerminal(jobId, (id) => this.getJob(id), timeoutMs);
+  }
+
+  private async waitUntilTerminal<T extends { status: JobStatus }>(
+    jobId: string,
+    getJob: (id: string) => Promise<T | null>,
+    timeoutMs: number,
+  ): Promise<T | null> {
+    const job = await getJob(jobId);
     if (!job || isTerminal(job.status)) return job;
 
     await new Promise<void>((resolve) => {
@@ -174,7 +333,7 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
       this.waiters.set(jobId, arr);
     });
 
-    return this.getJob(jobId);
+    return getJob(jobId);
   }
 
   async alarm(): Promise<void> {
@@ -512,4 +671,19 @@ function classify(error: unknown): { transient: boolean; message: string } {
     transient: true,
     message: error instanceof Error ? error.message : "Sponsored submit failed",
   };
+}
+
+/** Claim retries only known submit/network failures — unknown errors fail closed. */
+function classifyClaim(error: unknown): { transient: boolean; message: string } {
+  if (error instanceof SubmitError) {
+    return { transient: error.transient, message: error.message };
+  }
+  return {
+    transient: false,
+    message: error instanceof Error ? error.message : "Sponsored claim failed",
+  };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

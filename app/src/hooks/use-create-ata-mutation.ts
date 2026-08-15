@@ -26,6 +26,7 @@ export function useCreateAtaMutation(
       if (!signer) throw new Error("Connect your wallet");
       const { instructions } = await buildCreateRecipientAtaInstructions({
         signer,
+        mint,
         owner: recipient,
       });
       if (instructions.length > 0) {

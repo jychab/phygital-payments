@@ -21,14 +21,16 @@ import {
   fetchMaybeOwnerVerifier,
   findConfigPda,
   findOwnerVerifierPda,
-  findProgramAuthorityPda,
-  PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
 } from "phygital-payments-sdk";
 
 import { bytesToBase64 } from "@/lib/crypto/base64";
 import { getSolanaRpc } from "@/lib/solana/rpc";
-import { getUsdcMint } from "./usdc";
 import {
+  simulateSponsoredInstructions,
+} from "@/lib/solana/simulate-sponsored";
+import { buildSponsoredTransferInstructions } from "./build-sponsored-transfer-ix";
+import {
+  fetchMintDelegateStatus,
   findAta,
   resolveMintProgram,
   type TokenProgram,
@@ -103,20 +105,20 @@ export function isSponsoredSubmitAvailable(): boolean {
 
 /** Resolve recipient ATA and whether it already exists on-chain. */
 export async function fetchRecipientAtaStatus(args: {
-  mint?: Address;
+  mint: Address;
   owner: Address;
   program?: TokenProgram;
 }): Promise<RecipientAtaStatus> {
-  const mint = args.mint ?? getUsdcMint();
+  const { mint, owner } = args;
   const program = args.program ?? (await resolveMintProgram(mint)).program;
-  const ata = await findAta(mint, args.owner, program);
+  const ata = await findAta(mint, owner, program);
   const rpc = getSolanaRpc();
   const { value } = await rpc
     .getAccountInfo(ata, { encoding: "base64" })
     .send();
   return {
     mint,
-    owner: args.owner,
+    owner,
     ata,
     program,
     exists: value !== null,
@@ -129,10 +131,10 @@ export async function fetchRecipientAtaStatus(args: {
  */
 export async function buildCreateRecipientAtaInstructions(args: {
   signer: TransactionSigner;
-  mint?: Address;
+  mint: Address;
   owner?: Address;
 }): Promise<{ instructions: Instruction[]; ata: Address }> {
-  const mint = args.mint ?? getUsdcMint();
+  const mint = args.mint;
   const owner = args.owner ?? args.signer.address;
   const status = await fetchRecipientAtaStatus({ mint, owner });
   if (status.exists) {
@@ -161,33 +163,28 @@ export async function buildCreateRecipientAtaInstructions(args: {
 async function buildReceiveTransfer(args: {
   recipient: Address;
   rawAmount: bigint;
-  mint?: Address;
+  mint: Address;
   context?: ReceiveTransferContext;
   /** Fires the instant WebAuthn/NFC returns — before post-tap RPCs. */
   onPasskeyComplete?: () => void;
 }): Promise<BuiltReceiveTransfer> {
-  const { recipient, rawAmount } = args;
+  const { recipient, rawAmount, mint } = args;
   const rpc = getSolanaRpc();
-  const mint = args.mint ?? getUsdcMint();
   const program =
     args.context?.tokenProgram ?? (await resolveMintProgram(mint)).program;
 
-  let recipientAta: Address;
-  if (args.context?.recipientAta) {
-    recipientAta = args.context.recipientAta;
-  } else {
-    const status = await fetchRecipientAtaStatus({
-      mint,
-      owner: recipient,
-      program,
-    });
-    if (!status.exists) {
-      throw new Error(
-        "Recipient USDC account is missing. Create it before receiving payment.",
-      );
-    }
-    recipientAta = status.ata;
+  // Always re-check ATA existence — UI context can be stale.
+  const ataStatus = await fetchRecipientAtaStatus({
+    mint,
+    owner: recipient,
+    program,
+  });
+  if (!ataStatus.exists) {
+    throw new Error(
+      "Recipient token account is missing. Create it before receiving payment.",
+    );
   }
+  const recipientAta = ataStatus.ata;
 
   const { slotHash, slotNumber } = await fetchSlotHash();
   const messageHash = buildTransferChallenge(mint, recipient, rawAmount, slotHash);
@@ -221,17 +218,34 @@ async function buildReceiveTransfer(args: {
     throw new Error("Sponsored submit is not configured");
   }
 
-  // Resolve PDAs + OwnerVerifier in one wave (single OV RPC for build+submit).
-  const [programAuthority, senderTokenAccount, configPda, ov] =
-    await Promise.all([
-      findProgramAuthorityPda(asset.owner, PHYGITAL_PAYMENTS_PROGRAM_ADDRESS),
-      findAta(mint, asset.owner, program),
-      findConfigPda(),
-      findOwnerVerifierPda({ owner: asset.owner }).then(async ([pda]) => {
-        const account = await fetchMaybeOwnerVerifier(rpc, pda);
-        return { pda, account };
-      }),
-    ]);
+  // PDA derivation is local; allowance + OV share one RPC wave.
+  const [funding, configPda, ov] = await Promise.all([
+    fetchMintDelegateStatus(asset.owner, mint),
+    findConfigPda(),
+    findOwnerVerifierPda({ owner: asset.owner }).then(async ([pda]) => {
+      const account = await fetchMaybeOwnerVerifier(rpc, pda);
+      return { pda, account };
+    }),
+  ]);
+
+  if (!funding.ata) {
+    throw new Error(
+      "Sender has no token account for this mint. Enable payments for this mint first.",
+    );
+  }
+  if (!funding.isProgramAuthorityDelegate) {
+    throw new Error(
+      "Program authority is not the SPL delegate on the sender token account.",
+    );
+  }
+  if (
+    funding.delegatedAmountRaw < rawAmount ||
+    funding.balanceRaw < rawAmount
+  ) {
+    throw new Error(
+      "Delegated amount is insufficient for this payment. Increase allowance on the Enable page.",
+    );
+  }
 
   let ownerVerifierRoute: OwnerVerifierRoute = { kind: "revi" };
   if (ov.account.exists && ov.account.data.verifier !== reviFeePayer) {
@@ -258,8 +272,8 @@ async function buildReceiveTransfer(args: {
       owner: asset.owner,
       mint,
       recipient,
-      programAuthority,
-      senderTokenAccount,
+      programAuthority: funding.programAuthority,
+      senderTokenAccount: funding.ata,
       recipientTokenAccount: recipientAta,
       tokenProgram: program,
       ownerVerifier: ov.pda,
@@ -329,7 +343,7 @@ async function resolveOwnerVerifierRoute(
 export async function receiveTransfer(args: {
   recipient: Address;
   rawAmount: bigint;
-  mint?: Address;
+  mint: Address;
   context?: ReceiveTransferContext;
   /** Fires once WebAuthn/NFC completes, before post-tap RPCs + submit. */
   onPasskeyComplete?: () => void;
@@ -337,7 +351,17 @@ export async function receiveTransfer(args: {
   if (!isSponsoredSubmitAvailable()) {
     throw new Error("Sponsored submit is not configured");
   }
+
   const { payload, ownerVerifierRoute } = await buildReceiveTransfer(args);
+
+  // Simulate the same core ixs the fee-payer DO will submit (Revi path).
+  // External verifiers run their own submit path — still validate accounts above.
+  if (ownerVerifierRoute.kind === "revi") {
+    await simulateSponsoredInstructions(
+      buildSponsoredTransferInstructions(payload),
+    );
+  }
+
   const { signature } = await submitSponsoredTransfer(
     payload,
     ownerVerifierRoute,

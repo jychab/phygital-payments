@@ -6,6 +6,7 @@ export type {
   TransferAccountsWire,
   SubmitTransferRequest,
   JobStatus,
+  SponsoredJob,
   TransferJob,
   JobStatusResponse,
 } from "../../../shared/submitter-wire";
