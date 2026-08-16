@@ -43,7 +43,7 @@
     }
   ],
   "vars": {
-    "NEXT_PUBLIC_SOLANA_RPC_URL": "https://mainnet.helius-rpc.com/?api-key=b45192fd-4a0f-4d78-917a-6ba18ac3f2cc",
+    "NEXT_PUBLIC_SOLANA_RPC_URL": "https://rpc.revibase.com",
     "NEXT_PUBLIC_SOLANA_CLUSTER": "mainnet",
     "NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY": "2qLZosEYxN4Bp7dGySYgjWEmXR9jQ4za6hr2AFocUHxU"
   }
