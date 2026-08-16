@@ -1,9 +1,8 @@
 import { address, type Address, type Rpc, type SolanaRpcApi } from "@solana/kit";
 import {
   fetchAllAssetsFromOwner,
-  fetchAsset,
+  fetchAssetByIdentifier,
   findAssetPda,
-  parseSecp256r1Pubkey,
   type Asset,
   type AssetType,
 } from "phygital-token-sdk";
@@ -18,6 +17,7 @@ export const DEFAULT_ASSET_OWNER = address(
 /** Lean view of an on-chain phygital Asset (ownership-only). */
 export type PhygitalAsset = {
   assetType: AssetType;
+  identifier: string;
   secp256r1PublicKey: string;
   asset: Address;
   isLocked: boolean;
@@ -31,6 +31,7 @@ export function phygitalAssetFromAccount(
 ): PhygitalAsset {
   return {
     assetType: asset.assetType,
+    identifier: bytesToBase64Url(new Uint8Array(asset.identifier[0])),
     secp256r1PublicKey: bytesToBase64Url(new Uint8Array(asset.publicKey[0])),
     asset: assetAddress,
     isLocked: asset.isLocked,
@@ -39,15 +40,20 @@ export function phygitalAssetFromAccount(
   };
 }
 
-export async function fetchPhygitalAsset(
+/**
+ * Load asset by chip `identifier` (NFC URL `pk`), not by passkey.
+ * PDA is still derived from on-chain `publicKey` after the GPA lookup.
+ */
+export async function fetchPhygitalAssetByIdentifier(
   rpc: Rpc<SolanaRpcApi>,
-  secp256r1PublicKey: string,
+  identifier: string,
 ): Promise<PhygitalAsset> {
-  const assetAddress = await findAssetPda(
-    parseSecp256r1Pubkey(secp256r1PublicKey),
-  );
-  const instance = await fetchAsset(rpc, assetAddress);
-  return phygitalAssetFromAccount(assetAddress, instance.data);
+  const asset = await fetchAssetByIdentifier(rpc, identifier);
+  if (!asset) {
+    throw new Error("Asset not found for identifier");
+  }
+  const assetAddress = await findAssetPda(asset.publicKey);
+  return phygitalAssetFromAccount(assetAddress, asset);
 }
 
 /** All phygital assets whose on-chain `owner` matches `owner`. */

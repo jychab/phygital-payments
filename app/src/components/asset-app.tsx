@@ -9,6 +9,7 @@ import {
   Nfc,
   ShieldAlert,
   ShieldCheck,
+  Unlock,
 } from "lucide-react";
 
 import { AppCard, AppShell } from "@/components/app-shell";
@@ -199,8 +200,8 @@ function DeviceStatus({
         <div className="flex items-center justify-between gap-2">
           <span className="text-muted-foreground">Status</span>
           <span className="inline-flex items-center gap-1.5 text-foreground">
-            <Lock className="size-3.5 text-muted-foreground" />
-            Locked
+            {asset?.isLocked ? <Lock className="size-3.5 text-muted-foreground" />: <Unlock className="size-3.5 text-muted-foreground" />}
+            {asset?.isLocked ? "Locked" : "Unlocked"}
           </span>
         </div>
         {asset ? (

@@ -31,7 +31,7 @@ export function ClaimPanel({
 }) {
   const inApp = useIsInAppBrowser();
   const queryClient = useQueryClient();
-  const assetKey = queryKeys.asset.byPk(asset.secp256r1PublicKey);
+  const assetKey = queryKeys.asset.byIdentifier(asset.identifier);
 
   const [stage, setStage] = useState<Stage>("ready");
   const [error, setError] = useState<string | null>(null);

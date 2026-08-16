@@ -57,8 +57,8 @@ export const queryKeys = {
 
   asset: {
     all: () => ["assets"] as const,
-    byPk: (pk: string | null) =>
-      [...queryKeys.asset.all(), "pk", pk] as const,
+    byIdentifier: (identifier: string | null) =>
+      [...queryKeys.asset.all(), "identifier", identifier] as const,
     byOwner: (owner: string | null) =>
       [...queryKeys.asset.all(), "owner", owner] as const,
   },

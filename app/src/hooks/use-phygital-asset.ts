@@ -3,21 +3,21 @@
 import { useQuery } from "@tanstack/react-query";
 
 import {
-  fetchPhygitalAsset,
+  fetchPhygitalAssetByIdentifier,
   type PhygitalAsset,
 } from "@/lib/phygital/asset";
 import { queryKeys, queryOptions } from "@/lib/queries";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 
-/** Load on-chain asset state for a passkey (`pk`). */
-export function usePhygitalAsset(pk: string | null) {
+/** Load on-chain asset by chip identifier (NFC URL `pk`). */
+export function usePhygitalAsset(identifier: string | null) {
   return useQuery<PhygitalAsset, Error>({
-    queryKey: queryKeys.asset.byPk(pk),
+    queryKey: queryKeys.asset.byIdentifier(identifier),
     queryFn: () => {
-      if (!pk) throw new Error("Missing passkey");
-      return fetchPhygitalAsset(getSolanaRpc(), pk);
+      if (!identifier) throw new Error("Missing identifier");
+      return fetchPhygitalAssetByIdentifier(getSolanaRpc(), identifier);
     },
-    enabled: Boolean(pk),
+    enabled: Boolean(identifier),
     ...queryOptions.frequent,
   });
 }
