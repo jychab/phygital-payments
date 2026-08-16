@@ -9,7 +9,7 @@ pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok");
+declare_id!("EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH");
 
 #[program]
 pub mod phygital_payments {

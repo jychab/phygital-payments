@@ -70,7 +70,7 @@ import {
 import { findConfigPda, findOwnerVerifierPda } from "../pdas/index.js";
 
 export const PHYGITAL_PAYMENTS_PROGRAM_ADDRESS =
-  "DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok" as Address<"DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok">;
+  "EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH" as Address<"EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH">;
 
 export enum PhygitalPaymentsAccount {
   Config,
@@ -195,7 +195,7 @@ export function identifyPhygitalPaymentsInstruction(
 }
 
 export type ParsedPhygitalPaymentsInstruction<
-  TProgram extends string = "DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok",
+  TProgram extends string = "EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH",
 > =
   | ({
       instructionType: PhygitalPaymentsInstruction.AddVerifier;

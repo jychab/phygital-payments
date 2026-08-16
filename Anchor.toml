@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-phygital_payments = "DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok"
+phygital_payments = "EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH"
 
 [provider]
 cluster = "localnet"

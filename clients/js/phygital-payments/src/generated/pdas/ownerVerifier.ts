@@ -23,7 +23,7 @@ export async function findOwnerVerifierPda(
   config: { programAddress?: Address | undefined } = {},
 ): Promise<ProgramDerivedAddress> {
   const {
-    programAddress = "DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok" as Address<"DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok">,
+    programAddress = "EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH" as Address<"EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH">,
   } = config;
   return await getProgramDerivedAddress({
     programAddress,

@@ -3,7 +3,7 @@ import { addSelfFetchFunctions, addSelfPlanAndSendFunctions, } from "@solana/kit
 import { getConfigCodec, getOwnerVerifierCodec, } from "../accounts/index.js";
 import { getAddVerifierInstructionAsync, getClearOwnerVerifierInstructionAsync, getInitializeConfigInstructionAsync, getRemoveVerifierInstructionAsync, getSetOwnerVerifierInstructionAsync, getTransferInstructionAsync, parseAddVerifierInstruction, parseClearOwnerVerifierInstruction, parseInitializeConfigInstruction, parseRemoveVerifierInstruction, parseSetOwnerVerifierInstruction, parseTransferInstruction, } from "../instructions/index.js";
 import { findConfigPda, findOwnerVerifierPda } from "../pdas/index.js";
-export const PHYGITAL_PAYMENTS_PROGRAM_ADDRESS = "DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok";
+export const PHYGITAL_PAYMENTS_PROGRAM_ADDRESS = "EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH";
 export var PhygitalPaymentsAccount;
 (function (PhygitalPaymentsAccount) {
     PhygitalPaymentsAccount[PhygitalPaymentsAccount["Config"] = 0] = "Config";

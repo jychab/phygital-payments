@@ -3,7 +3,7 @@ import { type SelfFetchFunctions, type SelfPlanAndSendFunctions } from "@solana/
 import { getConfigCodec, getOwnerVerifierCodec, type Config, type ConfigArgs, type OwnerVerifier, type OwnerVerifierArgs } from "../accounts/index.js";
 import { getAddVerifierInstructionAsync, getClearOwnerVerifierInstructionAsync, getInitializeConfigInstructionAsync, getRemoveVerifierInstructionAsync, getSetOwnerVerifierInstructionAsync, getTransferInstructionAsync, type AddVerifierAsyncInput, type ClearOwnerVerifierAsyncInput, type InitializeConfigAsyncInput, type ParsedAddVerifierInstruction, type ParsedClearOwnerVerifierInstruction, type ParsedInitializeConfigInstruction, type ParsedRemoveVerifierInstruction, type ParsedSetOwnerVerifierInstruction, type ParsedTransferInstruction, type RemoveVerifierAsyncInput, type SetOwnerVerifierAsyncInput, type TransferAsyncInput } from "../instructions/index.js";
 import { findConfigPda, findOwnerVerifierPda } from "../pdas/index.js";
-export declare const PHYGITAL_PAYMENTS_PROGRAM_ADDRESS: Address<"DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok">;
+export declare const PHYGITAL_PAYMENTS_PROGRAM_ADDRESS: Address<"EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH">;
 export declare enum PhygitalPaymentsAccount {
     Config = 0,
     OwnerVerifier = 1
@@ -22,7 +22,7 @@ export declare enum PhygitalPaymentsInstruction {
 export declare function identifyPhygitalPaymentsInstruction(instruction: {
     data: ReadonlyUint8Array;
 } | ReadonlyUint8Array): PhygitalPaymentsInstruction;
-export type ParsedPhygitalPaymentsInstruction<TProgram extends string = "DQJiqvPmzfsrd2UnAfG5msSvgo1X8QXvm1q4axUsdvok"> = ({
+export type ParsedPhygitalPaymentsInstruction<TProgram extends string = "EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH"> = ({
     instructionType: PhygitalPaymentsInstruction.AddVerifier;
 } & ParsedAddVerifierInstruction<TProgram>) | ({
     instructionType: PhygitalPaymentsInstruction.ClearOwnerVerifier;
