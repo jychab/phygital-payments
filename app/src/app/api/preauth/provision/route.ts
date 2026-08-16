@@ -3,7 +3,7 @@ import { address, getAddressEncoder } from "@solana/kit";
 import { ed25519 } from "@noble/curves/ed25519.js";
 
 import { base64ToBytes } from "@/lib/crypto/base64";
-import { getPreauthDb, issueWalletApiKey } from "@/lib/server/preauth-db";
+import { getPreauthDb, issueWalletApiKey } from "@/lib/server/presence-grants-db";
 
 const MESSAGE_PREFIX = "phygital-pay:provision:";
 const MAX_AGE_MS = 5 * 60 * 1000;

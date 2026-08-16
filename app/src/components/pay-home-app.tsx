@@ -15,9 +15,9 @@ import { AssetType } from "phygital-token-sdk";
 
 import { AppCard, AppShell, homeCollectModeNav } from "@/components/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/embed-error";
-import { CenteredStatus, GateMessage } from "@/components/enable/gate-message";
-import { LimitPanel } from "@/components/enable/limit-panel";
-import { PayPanel } from "@/components/enable/pay-panel";
+import { CenteredStatus, GateMessage } from "@/components/gate-message";
+import { LimitPanel } from "@/components/pay/pay-limit-panel";
+import { PayPanel } from "@/components/pay/pay-panel";
 import { HistoryPanel } from "@/components/history-panel";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,10 +25,14 @@ import {
   useRemoveOwnershipMutation,
   useSetLockStateMutation,
 } from "@/hooks/use-asset-mutations";
-import { useDelegateStatus } from "@/hooks/use-delegate-status";
+import { useDelegateStatuses } from "@/hooks/use-delegate-status";
 import { useIsEmbedded } from "@/hooks/use-is-embedded";
 import { usePhygitalAssetsByOwner } from "@/hooks/use-phygital-assets-by-owner";
+import { useTokenHoldings } from "@/hooks/use-verified-tokens";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
+import { getDefaultMint } from "@/lib/payments/payment-token";
+import type { PaymentTokenHolding } from "@/lib/payments/payment-token";
+import { isDelegateEnabled } from "@/lib/payments/mint-delegate";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { shortAddress } from "@/lib/utils";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
@@ -39,11 +43,10 @@ type HomeTab = "pay" | "devices" | "history";
  * Home — Connect wallet for Pay (limit + ready), Devices list, and Activity.
  * NFC devices are added only by tapping a tag (opens /asset); no deep links.
  */
-export function AssetsHomeApp() {
+export function PayHomeApp() {
   const embedded = useIsEmbedded();
   const { address, isConnected, ready } = useSolanaAddress();
   const [mode, setMode] = useState<HomeTab>("pay");
-  const [forceLimit, setForceLimit] = useState(false);
 
   if (embedded === null) {
     return <EmbedBoot />;
@@ -114,12 +117,7 @@ export function AssetsHomeApp() {
               value="pay"
               className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
             >
-              <HomePayTab
-                owner={address}
-                forceLimit={forceLimit}
-                onEditLimit={() => setForceLimit(true)}
-                onLimitDone={() => setForceLimit(false)}
-              />
+              <HomePayTab owner={address} />
             </TabsContent>
             <TabsContent
               value="devices"
@@ -140,27 +138,34 @@ export function AssetsHomeApp() {
   );
 }
 
-function HomePayTab({
-  owner,
-  forceLimit,
-  onEditLimit,
-  onLimitDone,
-}: {
-  owner: string;
-  forceLimit: boolean;
-  onEditLimit: () => void;
-  onLimitDone: () => void;
-}) {
-  const statusQuery = useDelegateStatus(owner);
+function HomePayTab({ owner }: { owner: string }) {
+  const holdings = useTokenHoldings(owner);
+  const holdingsReady = holdings.isSuccess || holdings.isError;
+  const mints =
+    holdings.data && holdings.data.length > 0
+      ? holdings.data.map((h) => h.mint)
+      : [String(getDefaultMint())];
+  const statuses = useDelegateStatuses(
+    holdingsReady ? owner : null,
+    mints,
+  );
   const assetsQuery = usePhygitalAssetsByOwner(owner);
+  const [editHolding, setEditHolding] = useState<PaymentTokenHolding | null>(
+    null,
+  );
 
-  const status = statusQuery.data;
-  const hasLimit =
-    !!status?.isProgramAuthorityDelegate && status.delegatedAmountRaw > BigInt(0);
+  const usdcMint = String(getDefaultMint());
+  const usdcStatus = statuses.data?.get(usdcMint);
+  const hasAnyLimit = statuses.enabledMints.length > 0;
   const deviceCount = assetsQuery.data?.length ?? 0;
-  const payReady = hasLimit && deviceCount > 0;
+  const payReady = hasAnyLimit && deviceCount > 0;
+  const loading =
+    holdings.isLoading ||
+    !holdingsReady ||
+    (mints.length > 0 && statuses.isLoading) ||
+    statuses.isPending;
 
-  if (statusQuery.isLoading) {
+  if (loading) {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
@@ -169,8 +174,21 @@ function HomePayTab({
     );
   }
 
-  if (!hasLimit || forceLimit) {
-    return <LimitPanel expectedOwner={owner} onEnabled={onLimitDone} />;
+  if (editHolding) {
+    return (
+      <LimitPanel
+        expectedOwner={owner}
+        mint={editHolding.mint}
+        onEnabled={() => setEditHolding(null)}
+        onBack={() => setEditHolding(null)}
+      />
+    );
+  }
+
+  if (!hasAnyLimit) {
+    return (
+      <LimitPanel expectedOwner={owner} mint={getDefaultMint()} />
+    );
   }
 
   if (assetsQuery.isPending) {
@@ -183,16 +201,21 @@ function HomePayTab({
   }
 
   if (!payReady) {
+    const limitHint = isDelegateEnabled(usdcStatus)
+      ? `up to ${usdcStatus?.delegatedAmountUi ?? "—"} USDC`
+      : `${statuses.enabledMints.length} token${statuses.enabledMints.length === 1 ? "" : "s"} enabled`;
     return (
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
         title="Add an NFC device"
-        body={`Spending is allowed up to ${status?.delegatedAmountUi ?? "—"} USDC. Hold an NFC device to this phone to claim it, then come back here to pay.`}
+        body={`Spending is allowed (${limitHint}). Hold an NFC device to this phone to claim it, then come back here to pay.`}
       />
     );
   }
 
-  return <PayPanel onChangeLimit={onEditLimit} />;
+  return (
+    <PayPanel onEditTokenLimit={(holding) => setEditHolding(holding)} />
+  );
 }
 
 function OwnedAssetsList({ owner }: { owner: string }) {

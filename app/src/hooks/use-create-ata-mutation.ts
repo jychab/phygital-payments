@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Address } from "@solana/kit";
 
 import { queryKeys, type RecipientAtaStatus } from "@/lib/queries";
-import { buildCreateRecipientAtaInstructions } from "@/lib/payments/receive";
+import { buildCreateRecipientAtaInstructions } from "@/lib/payments/collect-settle";
 import { sendTransaction } from "@/lib/solana/tx";
 import { useWalletKitSigner } from "@/lib/wallet/wallet-kit-signer";
 

@@ -1,30 +1,37 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { address, type Address } from "@solana/kit";
 
-import { queryKeys, type UsdcDelegateStatus } from "@/lib/queries";
+import { queryKeys, type MintDelegateStatus } from "@/lib/queries";
 import {
   buildDelegateInstructions,
   buildRevokeDelegateInstructions,
   formatTokenAmount,
-} from "@/lib/payments/usdc-allowance";
+} from "@/lib/payments/mint-delegate";
 import { sendTransaction } from "@/lib/solana/tx";
 import { useWalletKitSigner } from "@/lib/wallet/wallet-kit-signer";
 
-type OptimisticContext = { previous?: UsdcDelegateStatus };
+type OptimisticContext = { previous?: MintDelegateStatus };
+
+type AllowanceOptions = {
+  mint: Address | string;
+  onSuccess?: (signature: string) => void;
+};
 
 /**
- * Approve the program authority as USDC delegate for `rawAmount`. The allowance
+ * Approve the program authority as mint delegate for `rawAmount`. The allowance
  * card flips immediately (optimistic), then the on-chain confirmation resolves;
  * if it fails we roll the cache back.
  */
-export function useSetAllowanceMutation(
+export function useSetDelegateMutation(
   owner: string | null,
-  options?: { onSuccess?: (signature: string) => void },
+  options: AllowanceOptions,
 ) {
   const signer = useWalletKitSigner();
   const queryClient = useQueryClient();
-  const key = queryKeys.delegateStatus.byOwner(owner);
+  const mintStr = String(options.mint);
+  const key = queryKeys.delegateStatus.byOwnerMint(owner, mintStr);
 
   return useMutation<
     string,
@@ -37,6 +44,7 @@ export function useSetAllowanceMutation(
       const { instructions } = await buildDelegateInstructions({
         signer,
         rawAmount,
+        mint: address(mintStr),
       });
       const { signature } = await sendTransaction({
         instructions,
@@ -46,8 +54,8 @@ export function useSetAllowanceMutation(
     },
     onMutate: async ({ rawAmount, decimals }) => {
       await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<UsdcDelegateStatus>(key);
-      queryClient.setQueryData<UsdcDelegateStatus>(key, (prev) =>
+      const previous = queryClient.getQueryData<MintDelegateStatus>(key);
+      queryClient.setQueryData<MintDelegateStatus>(key, (prev) =>
         prev
           ? {
               ...prev,
@@ -64,23 +72,35 @@ export function useSetAllowanceMutation(
         queryClient.setQueryData(key, context.previous);
       }
     },
-    onSuccess: (signature) => options?.onSuccess?.(signature),
+    onSuccess: (signature) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.holdings.byOwner(owner),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.delegateStatus.byOwner(owner),
+      });
+      options.onSuccess?.(signature);
+    },
   });
 }
 
-/** Revoke the USDC delegate. Optimistically clears the allowance, rolls back on error. */
-export function useRevokeAllowanceMutation(
+/** Revoke the mint delegate. Optimistically clears the allowance, rolls back on error. */
+export function useRevokeDelegateMutation(
   owner: string | null,
-  options?: { onSuccess?: (signature: string) => void },
+  options: AllowanceOptions,
 ) {
   const signer = useWalletKitSigner();
   const queryClient = useQueryClient();
-  const key = queryKeys.delegateStatus.byOwner(owner);
+  const mintStr = String(options.mint);
+  const key = queryKeys.delegateStatus.byOwnerMint(owner, mintStr);
 
   return useMutation<string, Error, void, OptimisticContext>({
     mutationFn: async () => {
       if (!signer) throw new Error("Connect your wallet");
-      const { instructions } = await buildRevokeDelegateInstructions({ signer });
+      const { instructions } = await buildRevokeDelegateInstructions({
+        signer,
+        mint: address(mintStr),
+      });
       const { signature } = await sendTransaction({
         instructions,
         feePayer: signer,
@@ -89,8 +109,8 @@ export function useRevokeAllowanceMutation(
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<UsdcDelegateStatus>(key);
-      queryClient.setQueryData<UsdcDelegateStatus>(key, (prev) =>
+      const previous = queryClient.getQueryData<MintDelegateStatus>(key);
+      queryClient.setQueryData<MintDelegateStatus>(key, (prev) =>
         prev
           ? {
               ...prev,
@@ -107,6 +127,14 @@ export function useRevokeAllowanceMutation(
         queryClient.setQueryData(key, context.previous);
       }
     },
-    onSuccess: (signature) => options?.onSuccess?.(signature),
+    onSuccess: (signature) => {
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.holdings.byOwner(owner),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.delegateStatus.byOwner(owner),
+      });
+      options.onSuccess?.(signature);
+    },
   });
 }

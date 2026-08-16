@@ -1,0 +1,20 @@
+# Local secrets + public config for `next dev` and Wrangler.
+# Copied to `.dev.vars` (gitignored). Do not use `.env` / `.env.local`.
+
+NEXTJS_ENV=development
+
+# Privy (required for login + Solana wallets)
+NEXT_PUBLIC_PRIVY_APP_ID=
+
+# Solana
+# NEXT_PUBLIC_SOLANA_CLUSTER=devnet
+# NEXT_PUBLIC_SOLANA_RPC_URL=https://api.devnet.solana.com
+# NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY=
+
+# Worker secrets (Wrangler / OpenNext)
+# FEE_PAYER_SECRET_KEY=
+# HELIUS_WEBHOOK_AUTH=
+# PREAUTH_OPS_SECRET=
+
+# Token catalog (optional — without these, Collect falls back to USDC-only)
+# JUPITER_API_KEY=

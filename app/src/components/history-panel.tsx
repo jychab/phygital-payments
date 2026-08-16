@@ -8,10 +8,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+import { TokenSymbol } from "@/components/token-chip";
 import { Button } from "@/components/ui/button";
+import { useVerifiedTokens } from "@/hooks/use-verified-tokens";
 import { explorerTxUrl } from "@/lib/solana/cluster";
-import { formatTokenAmount } from "@/lib/payments/usdc-allowance";
-import { getUsdcMint, USDC_DECIMALS } from "@/lib/payments/usdc";
+import { formatTokenAmount } from "@/lib/payments/mint-delegate";
+import { resolvePaymentToken, type PaymentToken } from "@/lib/payments/payment-token";
 import type { PaymentRecord } from "@/lib/payments/history-client";
 import { usePaymentHistory } from "@/hooks/use-payment-history";
 import { cn, shortAddress } from "@/lib/utils";
@@ -45,9 +47,24 @@ function toRows(payments: PaymentRecord[], wallet: string): Row[] {
   });
 }
 
+function formatPaymentAmountUi(
+  mint: string,
+  amount: string,
+  catalog: PaymentToken[] | undefined,
+): { token: PaymentToken; amountUi: string } {
+  const token = resolvePaymentToken(mint, catalog);
+  if (!/^\d+$/.test(amount)) {
+    return { token, amountUi: "—" };
+  }
+  return {
+    token,
+    amountUi: formatTokenAmount(BigInt(amount), token.decimals),
+  };
+}
+
 export function HistoryPanel({ recipient }: { recipient: string }) {
   const query = usePaymentHistory(recipient);
-  const usdcMint = getUsdcMint();
+  const verified = useVerifiedTokens();
 
   const loading = query.isLoading;
   const error = query.error as Error | null;
@@ -103,10 +120,11 @@ export function HistoryPanel({ recipient }: { recipient: string }) {
         <ul className="flex flex-col gap-2">
           {rows.map((row) => {
             const received = row.direction === "received";
-            const amount =
-              row.mint === usdcMint
-                ? `${formatTokenAmount(BigInt(row.amount), USDC_DECIMALS)} USDC`
-                : "Unknown token";
+            const { token, amountUi } = formatPaymentAmountUi(
+              row.mint,
+              row.amount,
+              verified.data,
+            );
             return (
               <li key={`${row.signature}:${row.transferIndex}`}>
                 <a
@@ -132,12 +150,19 @@ export function HistoryPanel({ recipient }: { recipient: string }) {
                   <div className="min-w-0 flex-1">
                     <p
                       className={cn(
-                        "text-sm font-semibold tabular-nums",
+                        "flex flex-wrap items-center gap-1.5 text-sm font-semibold tabular-nums",
                         received ? "text-primary" : "text-foreground",
                       )}
                     >
-                      {received ? "+" : "−"}
-                      {amount}
+                      <span>
+                        {received ? "+" : "−"}
+                        {amountUi}
+                      </span>
+                      <TokenSymbol
+                        token={token}
+                        size="xs"
+                        symbolClassName="font-semibold"
+                      />
                     </p>
                     <p className="text-[11px] text-muted-foreground">
                       {received ? "Received" : "Sent"}

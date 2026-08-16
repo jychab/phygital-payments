@@ -2,7 +2,7 @@
 
 import { AppCard, AppShell, homeCollectModeNav } from "@/components/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/embed-error";
-import { ReceivePanel } from "@/components/receive-panel";
+import { CollectPanel } from "@/components/collect-panel";
 import { useIsEmbedded } from "@/hooks/use-is-embedded";
 import type { PaymentRequest } from "@/lib/payments/payment-request";
 
@@ -10,7 +10,7 @@ import type { PaymentRequest } from "@/lib/payments/payment-request";
  * Collect — settle-to wallet always comes from `?recipient=`.
  * No Privy connect; missing ATA hands off to `/setup`.
  */
-export function PaymentsApp({
+export function CollectApp({
   paymentRequest,
 }: {
   paymentRequest: PaymentRequest;
@@ -47,7 +47,7 @@ export function PaymentsApp({
       modeNav={embedded ? null : homeCollectModeNav(recipientStr)}
     >
       <AppCard>
-        <ReceivePanel paymentRequest={paymentRequest} recipient={recipient} />
+        <CollectPanel paymentRequest={paymentRequest} recipient={recipient} />
       </AppCard>
     </AppShell>
   );

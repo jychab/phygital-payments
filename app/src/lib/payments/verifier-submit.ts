@@ -1,4 +1,4 @@
-import type { SubmitTransferRequest } from "./submitter-types";
+import type { SubmitTransferRequest } from "./settle-types";
 
 /**
  * POST the transfer payload to an owner's custom verifier endpoint.

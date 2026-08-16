@@ -3,9 +3,17 @@
 import { useState, type ReactNode } from "react";
 import { PrivyClientConfig, PrivyProvider } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 
 import { Toaster } from "@/components/ui/sonner";
+import {
+  CACHE_BUSTER,
+  QUERY_CACHE_MAX_AGE_MS,
+  createQueryPersister,
+  shouldDehydrateQuery,
+} from "@/lib/queries/persist";
+import { queryOptions } from "@/lib/queries";
 
 const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "";
 
@@ -33,23 +41,37 @@ function getPrivyConfig(): PrivyClientConfig {
 }
 
 /**
- * Shared by all routes: React Query + toasts. No Privy / WalletConnect.
+ * Shared by all routes: React Query (localStorage-persisted) + toasts.
+ * No Privy / WalletConnect.
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { refetchOnWindowFocus: false, staleTime: 1000 * 60 },
+          queries: {
+            ...queryOptions.default,
+            // Must be ≥ persist maxAge or restored queries are GC'd immediately.
+            gcTime: QUERY_CACHE_MAX_AGE_MS,
+          },
         },
       }),
   );
+  const [persister] = useState(() => createQueryPersister());
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: QUERY_CACHE_MAX_AGE_MS,
+        buster: CACHE_BUSTER,
+        dehydrateOptions: { shouldDehydrateQuery },
+      }}
+    >
       {children}
       <Toaster richColors position="top-center" />
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
 

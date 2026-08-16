@@ -7,7 +7,7 @@ import { queryKeys } from "@/lib/queries";
 import {
   receiveTransfer,
   type ReceiveTransferContext,
-} from "@/lib/payments/receive";
+} from "@/lib/payments/collect-settle";
 
 type ReceiveVars = {
   recipient: Address;
@@ -21,7 +21,7 @@ type ReceiveVars = {
  * Collect a tap-authorized payment (passkey + sponsored fee-payer submit).
  * On success, refresh the recipient's history so the new payment appears.
  */
-export function useReceiveMutation(options?: {
+export function useCollectMutation(options?: {
   onSuccess?: (signature: string) => void;
 }) {
   const queryClient = useQueryClient();

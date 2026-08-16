@@ -4,7 +4,7 @@ import {
   getPreauthDb,
   invalidateActiveGrantsForWallet,
   resolveWalletFromApiKey,
-} from "@/lib/server/preauth-db";
+} from "@/lib/server/presence-grants-db";
 import { getErrorMessage } from "@/lib/utils";
 
 async function resolveAuthedWallet(

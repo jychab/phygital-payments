@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import type { SubmitClaimRequest } from "../../../../shared/claim-wire";
-import { getSubmitterStub } from "@/lib/server/submitter";
+import { getSubmitterStub } from "@/lib/server/settle-do";
 import { jsonForSponsoredJob } from "@/lib/server/sponsored-job-response";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 

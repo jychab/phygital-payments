@@ -1,16 +1,16 @@
 import "server-only";
 
 import { getPaymentsDb } from "./payments-db";
-import type { D1Database } from "../../../worker/preauth";
+import type { D1Database } from "../../../worker/presence-grants";
 
-/** Next API surface — worker-only helpers stay imported from `worker/preauth`. */
+/** Next API surface — worker-only helpers stay imported from `worker/presence-grants`. */
 export {
   issueWalletApiKey,
   revokeWalletApiKey,
   resolveWalletFromApiKey,
   createPreauthGrant,
   invalidateActiveGrantsForWallet,
-} from "../../../worker/preauth";
+} from "../../../worker/presence-grants";
 
 export function getPreauthDb(): D1Database {
   return getPaymentsDb() as unknown as D1Database;

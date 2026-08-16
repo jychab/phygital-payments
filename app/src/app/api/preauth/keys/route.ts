@@ -4,7 +4,7 @@ import {
   getPreauthDb,
   issueWalletApiKey,
   revokeWalletApiKey,
-} from "@/lib/server/preauth-db";
+} from "@/lib/server/presence-grants-db";
 
 function assertOpsAuth(req: NextRequest): NextResponse | null {
   const expected = process.env.PREAUTH_OPS_SECRET?.trim();

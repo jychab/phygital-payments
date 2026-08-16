@@ -1,5 +1,5 @@
 -- Wallet API keys (raw key shared out of band; only hash stored) and
--- short-lived single-use preauth grants (wallet + maxAmount, no recipient).
+-- short-lived single-use presence grants (wallet only; spend caps are on-chain).
 
 CREATE TABLE IF NOT EXISTS wallet_api_keys (
   wallet      TEXT    NOT NULL PRIMARY KEY,
@@ -11,8 +11,6 @@ CREATE TABLE IF NOT EXISTS wallet_api_keys (
 CREATE TABLE IF NOT EXISTS preauth_grants (
   id          TEXT    NOT NULL PRIMARY KEY,
   wallet      TEXT    NOT NULL,
-  max_amount  TEXT    NOT NULL,  -- raw u64 decimal string
-  mint        TEXT,               -- optional; NULL = any / app default
   expires_at  INTEGER NOT NULL,  -- unix seconds
   consumed_at INTEGER,
   claimed_at  INTEGER,            -- set at authorize (single-use lock)

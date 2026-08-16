@@ -8,7 +8,7 @@ From the repo root:
 
 ```bash
 pnpm install
-cp app/.env.example app/.env.local
+cp app/.dev.vars.example app/.dev.vars
 # set NEXT_PUBLIC_PRIVY_APP_ID (required)
 # set NEXT_PUBLIC_SOLANA_RPC_URL (optional; defaults to public Solana RPC)
 pnpm --filter app dev
@@ -22,6 +22,8 @@ pnpm dev
 ```
 
 ### Environment
+
+Local config lives in **`.dev.vars`** only (not `.env` / `.env.local`). `next.config.ts` copies it into `process.env` so Next and Wrangler share the same file. Production still uses Cloudflare `vars` / secrets + `wrangler.jsonc`.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -82,12 +84,12 @@ Locked devices show owner status only. Spending limits and Ready to pay are **no
 
 `/enable` redirects to `/asset` (query params preserved) if present.
 
-### Open a spending window (API key)
+### Open a presence window (API key)
 
-After Enable Pay, Manage Pay can **Copy API key** or **Copy open URL**. Any client can open a ~45s grant without NFC:
+After Enable Pay, Manage Pay can **Copy API key** or **Copy open URL**. Any client can open a ~45s **presence** grant without NFC (mint and amount are chosen on Collect; spend caps are on-chain delegates):
 
 ```
-GET /api/preauth/open?apiKey=<ppk_…>&amountUi=20
+GET /api/preauth/open?apiKey=<ppk_…>
 ```
 
 Query params:
@@ -95,20 +97,17 @@ Query params:
 | Param | Required | Description |
 |-------|----------|-------------|
 | `apiKey` | Yes | Device pay key (`ppk_…`) |
-| `amountUi` | One of | Human USDC amount, e.g. `20` |
-| `amount` | One of | Raw u64 decimal (smallest units) |
-| `mint` | No | Token mint (defaults on server / receive path) |
 
-Provide **exactly one** of `amountUi` or `amount`. Response: `{ grantId, expiresAt, wallet, maxAmount }`. Responses use `Cache-Control: no-store`.
+Response: `{ grantId, expiresAt, wallet }`. Responses use `Cache-Control: no-store`.
 
-A **200 from `/open` only means the spending window is open** — not that payment completed. Settlement happens when you hold NFC to the merchant Collect phone; the merchant UI is the receipt. In-app Pay and Shortcuts both stop after opening the window (countdown / toast only). They do **not** poll for `paid`.
+A **200 from `/open` only means the presence window is open** — not that payment completed. Settlement happens when you hold NFC to the merchant Collect phone; the merchant UI is the receipt. In-app Pay and Shortcuts both stop after opening the window (countdown / toast only). They do **not** poll for `paid`.
 
 Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey>`.
 
 Keys in query strings may appear in CDN/proxy logs — use **Rotate API key** in Manage Pay if leaked, and update saved Shortcut URLs.
 
 ```bash
-curl "https://<host>/api/preauth/open?apiKey=ppk_…&amountUi=20"
+curl "https://<host>/api/preauth/open?apiKey=ppk_…"
 ```
 
 #### Set up iOS Shortcuts
@@ -117,9 +116,7 @@ curl "https://<host>/api/preauth/open?apiKey=ppk_…&amountUi=20"
 2. Shortcuts → New Shortcut → **Get Contents of URL**.
 3. Method **GET**. URL:
 
-   `https://<host>/api/preauth/open?apiKey=<pasted ppk_…>&amountUi=20`
-
-   Optional: use Ask Each Time / Text actions to change `amountUi`.
+   `https://<host>/api/preauth/open?apiKey=<pasted ppk_…>`
 4. Optional: **Show Notification** when the GET succeeds — that means **window opened** (e.g. “Ready — hold NFC to merchant”), not that you were charged.
 5. Run the Shortcut → within ~45 seconds hold your NFC device to the merchant Collect phone.
 6. After **Rotate API key**, update `apiKey` in the Shortcut URL.
@@ -132,14 +129,14 @@ Android has no single first-party Shortcuts equivalent; use an HTTP automation a
 2. New task → **HTTP Request** (or Net → HTTP Get).
 3. Method **GET**, URL:
 
-   `https://<host>/api/preauth/open?apiKey=<pasted ppk_…>&amountUi=20`
+   `https://<host>/api/preauth/open?apiKey=<pasted ppk_…>`
 4. Optional: toast when the GET succeeds (**window opened**, not payment settled).
 5. Run the task → within ~45 seconds hold NFC to the merchant Collect phone.
 6. After rotating the key, update `apiKey` in the saved URL.
 
 ### Payment link (`/collect?recipient=<solana-address>`)
 
-This is the only Collect entry point. Settles to the URL recipient. **No Sign in / wallet controls** in the header — sealed destination chip only. Optional `?amount=` prefills (and locks) the amount. Without a valid `?recipient=`, Collect shows an error.
+This is the only Collect entry point. Settles to the URL recipient. **No Sign in / wallet controls** in the header — sealed destination chip only. Optional `?amount=` prefills (and locks) the amount. Optional `?mint=` selects a Jupiter-verified classic SPL mint (defaults to USDC). Without a valid `?recipient=`, Collect shows an error.
 
 ### iframe embed
 

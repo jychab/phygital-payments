@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import type { SubmitTransferRequest } from "@/lib/payments/submitter-types";
-import { getSubmitterStub } from "@/lib/server/submitter";
+import type { SubmitTransferRequest } from "@/lib/payments/settle-types";
+import { getSubmitterStub } from "@/lib/server/settle-do";
 import { jsonForSponsoredJob } from "@/lib/server/sponsored-job-response";
 
 export const runtime = "nodejs";

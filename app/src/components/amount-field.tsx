@@ -1,5 +1,7 @@
 "use client";
 
+import { TokenIcon } from "@/components/token-chip";
+import type { PaymentToken } from "@/lib/payments/payment-token";
 import { cn } from "@/lib/utils";
 
 type AmountFieldProps = {
@@ -7,7 +9,9 @@ type AmountFieldProps = {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
-  currency?: string;
+  token: PaymentToken;
+  /** Max fractional digits (defaults to token.decimals, capped at 18). */
+  decimals?: number;
   autoFocus?: boolean;
   className?: string;
 };
@@ -18,14 +22,17 @@ export function AmountField({
   value,
   onChange,
   disabled,
-  currency = "USDC",
+  token,
+  decimals,
   autoFocus,
   className,
 }: AmountFieldProps) {
+  const label = token.symbol;
+  const fracCap = Math.max(0, Math.min(decimals ?? token.decimals, 18));
   return (
     <div className={cn("relative flex flex-col items-center gap-1 py-2", className)}>
       <label htmlFor={id} className="sr-only">
-        Amount in {currency}
+        Amount in {label}
       </label>
       <div className="flex w-full items-baseline justify-center gap-2">
         <input
@@ -42,7 +49,7 @@ export function AmountField({
             const cleaned =
               parts.length <= 1
                 ? next
-                : `${parts[0]}.${parts.slice(1).join("").slice(0, 6)}`;
+                : `${parts[0]}.${parts.slice(1).join("").slice(0, fracCap)}`;
             onChange(cleaned);
           }}
           className={cn(
@@ -53,8 +60,9 @@ export function AmountField({
           )}
         />
       </div>
-      <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-        {currency}
+      <span className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        <TokenIcon token={token} size="xs" />
+        {label}
       </span>
     </div>
   );

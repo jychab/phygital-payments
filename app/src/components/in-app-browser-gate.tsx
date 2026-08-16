@@ -3,7 +3,7 @@
 import { toast } from "sonner";
 import { ExternalLink, Smartphone } from "lucide-react";
 
-import { GateMessage } from "@/components/enable/gate-message";
+import { GateMessage } from "@/components/gate-message";
 import { Button } from "@/components/ui/button";
 import { safariOpenHintUrl } from "@/lib/browser/in-app-browser";
 

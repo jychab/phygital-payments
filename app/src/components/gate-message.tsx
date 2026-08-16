@@ -19,7 +19,7 @@ export function GateMessage({
 }: {
   icon: ReactNode;
   title: string;
-  body?: string;
+  body?: ReactNode;
   destructive?: boolean;
   action?: ReactNode;
 }) {

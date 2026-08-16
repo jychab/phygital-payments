@@ -9,7 +9,7 @@ import { bytesToBase64 } from "@/lib/crypto/base64";
 import {
   loadPreauthApiKey,
   storePreauthApiKey,
-} from "@/lib/payments/preauth-client";
+} from "@/lib/payments/presence-grant-client";
 
 /**
  * Ensure this device has a pay key for `wallet`. Signs a short proof once,

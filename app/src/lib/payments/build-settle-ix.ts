@@ -8,7 +8,7 @@ import { getSecp256r1VerifyInstruction } from "phygital-token-sdk";
 import { getTransferInstruction } from "phygital-payments-sdk";
 
 import { base64ToBytes } from "@/lib/crypto/base64";
-import type { SubmitTransferRequest } from "@/lib/payments/submitter-types";
+import type { SubmitTransferRequest } from "@/lib/payments/settle-types";
 import { getSponsoredFeePayerAddress } from "@/lib/solana/simulate-sponsored";
 
 /** Address-only signer meta for building verifier account metas (no signing). */
@@ -20,7 +20,7 @@ function feePayerMeta(feePayer: Address): TransactionSigner {
  * Same secp + transfer core the TransferSubmitterDO submits for one job.
  * Used for client-side simulation before enqueue.
  */
-export function buildSponsoredTransferInstructions(
+export function buildSettleInstructions(
   payload: SubmitTransferRequest,
   feePayer: Address = getSponsoredFeePayerAddress(),
 ): Instruction[] {

@@ -28,15 +28,15 @@ import { getSolanaRpc } from "@/lib/solana/rpc";
 import {
   simulateSponsoredInstructions,
 } from "@/lib/solana/simulate-sponsored";
-import { buildSponsoredTransferInstructions } from "./build-sponsored-transfer-ix";
+import { buildSettleInstructions } from "./build-settle-ix";
 import {
   fetchMintDelegateStatus,
   findAta,
   resolveMintProgram,
   type TokenProgram,
-} from "./usdc-allowance";
-import type { SubmitTransferRequest } from "./submitter-types";
-import { submitAndWaitSponsoredTransfer } from "./submitter-client";
+} from "./mint-delegate";
+import type { SubmitTransferRequest } from "./settle-types";
+import { submitAndWaitSettle } from "./settle-client";
 import { submitTransferViaOwnerVerifier } from "./verifier-submit";
 
 export type RecipientAtaStatus = {
@@ -228,11 +228,6 @@ async function buildReceiveTransfer(args: {
     }),
   ]);
 
-  if (!funding.ata) {
-    throw new Error(
-      "Sender has no token account for this mint. Enable payments for this mint first.",
-    );
-  }
   if (!funding.isProgramAuthorityDelegate) {
     throw new Error(
       "Program authority is not the SPL delegate on the sender token account.",
@@ -243,7 +238,7 @@ async function buildReceiveTransfer(args: {
     funding.balanceRaw < rawAmount
   ) {
     throw new Error(
-      "Delegated amount is insufficient for this payment. Increase allowance on the Enable page.",
+      "Delegated amount is insufficient for this payment. Ask them to enable this token for Pay or raise the limit.",
     );
   }
 
@@ -309,7 +304,7 @@ async function submitSponsoredTransfer(
     });
   }
 
-  const { signature } = await submitAndWaitSponsoredTransfer(payload);
+  const { signature } = await submitAndWaitSettle(payload);
   return { signature };
 }
 
@@ -358,7 +353,7 @@ export async function receiveTransfer(args: {
   // External verifiers run their own submit path — still validate accounts above.
   if (ownerVerifierRoute.kind === "revi") {
     await simulateSponsoredInstructions(
-      buildSponsoredTransferInstructions(payload),
+      buildSettleInstructions(payload),
     );
   }
 

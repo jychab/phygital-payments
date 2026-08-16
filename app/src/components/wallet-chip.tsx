@@ -12,8 +12,15 @@ import { cn } from "@/lib/utils";
  * Do not mount on `/asset` or `/collect` (no PrivyProvider there).
  */
 export function WalletChip({ className }: { className?: string }) {
-  const { ready, address, isConnected, connect, disconnect } =
-    useSolanaAddress();
+  const {
+    ready,
+    address,
+    isConnected,
+    walletIcon,
+    walletName,
+    connect,
+    disconnect,
+  } = useSolanaAddress();
 
   const display = isConnected && address ? address : null;
   const canConnect = ready && !display;
@@ -54,10 +61,22 @@ export function WalletChip({ className }: { className?: string }) {
         className,
       )}
     >
-      <span
-        className="size-1.5 rounded-full bg-primary shadow-[0_0_0_3px_color-mix(in_oklch,var(--primary)_18%,transparent)]"
-        aria-hidden
-      />
+      {walletIcon ? (
+        // Wallet-standard icons are data: URLs from the connected wallet.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={walletIcon}
+          alt={walletName ?? "Connected wallet"}
+          width={16}
+          height={16}
+          className="size-4 shrink-0 rounded-sm"
+        />
+      ) : (
+        <span
+          className="size-1.5 rounded-full bg-primary shadow-[0_0_0_3px_color-mix(in_oklch,var(--primary)_18%,transparent)]"
+          aria-hidden
+        />
+      )}
       <CopyableAddress address={display} label="wallet address" />
       <button
         type="button"

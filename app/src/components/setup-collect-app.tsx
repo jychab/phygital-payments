@@ -12,7 +12,8 @@ import {
 import { AppCard, AppShell } from "@/components/app-shell";
 import { CopyableAddress } from "@/components/copyable-address";
 import { EmbedBoot, EmbedError } from "@/components/embed-error";
-import { CenteredStatus, GateMessage } from "@/components/enable/gate-message";
+import { CenteredStatus, GateMessage } from "@/components/gate-message";
+import { TokenSymbol } from "@/components/token-chip";
 import { Button } from "@/components/ui/button";
 import { useCreateAtaMutation } from "@/hooks/use-create-ata-mutation";
 import { useIsEmbedded } from "@/hooks/use-is-embedded";
@@ -22,17 +23,20 @@ import {
   collectHref,
   type PaymentRequest,
 } from "@/lib/payments/payment-request";
-import { getUsdcMint } from "@/lib/payments/usdc";
+import {
+  resolvePaymentToken,
+} from "@/lib/payments/payment-token";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { shortAddress } from "@/lib/utils";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { useWalletKitSigner } from "@/lib/wallet/wallet-kit-signer";
+import { useVerifiedTokens } from "@/hooks/use-verified-tokens";
 
 /**
- * One-time USDC receive-account (ATA) setup — Connect required.
+ * One-time receive-account (ATA) setup — Connect required.
  * After success, open Collect in a new tab.
  */
-export function SetupReceiveApp({
+export function SetupCollectApp({
   paymentRequest,
 }: {
   paymentRequest: PaymentRequest;
@@ -49,8 +53,8 @@ export function SetupReceiveApp({
 
   const recipient = paymentRequest.recipient;
   const mint = paymentRequest.mint;
-  const mintLabel = mint === getUsdcMint() ? "USDC" : shortAddress(mint, 6);
-
+  const verified = useVerifiedTokens();
+  const token = resolvePaymentToken(mint, verified.data);
   const mintQuery = useMintProgram(mint);
   const ataQuery = useRecipientAtaStatus(
     recipient,
@@ -91,7 +95,7 @@ export function SetupReceiveApp({
     isConnected && connectedAddress != null && connectedAddress !== recipient;
   const collectUrl = collectHref({
     recipient,
-    mint: mint === getUsdcMint() ? undefined : mint,
+    mint,
     amount: paymentRequest.amount,
   });
 
@@ -119,8 +123,14 @@ export function SetupReceiveApp({
             </div>
             <p className="text-base font-medium text-foreground">Ready to collect</p>
             <p className="max-w-56 text-sm text-muted-foreground">
-              This wallet can receive {mintLabel}. Open Collect in a new tab to
-              continue.
+              This wallet can receive{" "}
+              <TokenSymbol
+                token={token}
+                size="xs"
+                className="mx-0.5"
+                symbolClassName="font-medium text-foreground"
+              />
+              . Open Collect in a new tab to continue.
             </p>
             <Button type="button" className="mt-2 gap-1.5" asChild>
               <a href={collectUrl} target="_blank" rel="noopener noreferrer">
@@ -133,8 +143,18 @@ export function SetupReceiveApp({
           <GateMessage
             icon={<Wallet className="size-5 text-muted-foreground" />}
             title="Connect to set up"
-            body={`Connect ${shortAddress(recipient, 4)} above to create its ${mintLabel} receive account.`}
-            action={
+            body={
+              <>
+                Connect {shortAddress(recipient, 4)} above to create its{" "}
+                <TokenSymbol
+                  token={token}
+                  size="xs"
+                  className="mx-0.5"
+                  symbolClassName="font-medium text-foreground"
+                />{" "}
+                receive account.
+              </>
+            }            action={
               <div className="flex w-full max-w-64 flex-col items-center gap-3">
                 <div className="flex w-full items-center justify-between gap-2 rounded-xl bg-muted/35 px-4 py-2.5 text-xs">
                   <span className="text-muted-foreground">Wallet</span>
@@ -173,8 +193,14 @@ export function SetupReceiveApp({
                 Create receive account
               </p>
               <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-                One-time setup so this wallet can receive {mintLabel}. Your
-                wallet pays a small network rent.
+                One-time setup so this wallet can receive{" "}
+                <TokenSymbol
+                  token={token}
+                  size="xs"
+                  className="mx-0.5"
+                  symbolClassName="font-medium text-foreground"
+                />
+                . Your wallet pays a small network rent.
               </p>
             </div>
 

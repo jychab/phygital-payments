@@ -7,18 +7,25 @@ import type { Address } from "@solana/kit";
 
 import {
   fetchMintDelegateStatus,
+  fetchMintDelegateStatuses,
   resolveMintProgram,
+  type MintDelegateStatus,
   type TokenProgram,
-  type UsdcDelegateStatus,
-} from "@/lib/payments/usdc-allowance";
+} from "@/lib/payments/mint-delegate";
 import {
   fetchRecipientAtaStatus,
   type RecipientAtaStatus,
-} from "@/lib/payments/receive";
+} from "@/lib/payments/collect-settle";
 import {
   fetchPaymentHistory,
   type PaymentRecord,
 } from "@/lib/payments/history-client";
+import {
+  fetchHoldingsClient,
+  fetchVerifiedTokensClient,
+  type PaymentToken,
+  type PaymentTokenHolding,
+} from "@/lib/payments/verified-tokens-client";
 
 // ============================================================================
 // Query keys
@@ -29,6 +36,20 @@ export const queryKeys = {
     all: () => ["delegateStatus"] as const,
     byOwner: (owner: string | null) =>
       [...queryKeys.delegateStatus.all(), owner] as const,
+    byOwnerMint: (owner: string | null, mint: string | null) =>
+      [...queryKeys.delegateStatus.byOwner(owner), mint] as const,
+    byOwnerMints: (owner: string | null, mintsKey: string) =>
+      [...queryKeys.delegateStatus.byOwner(owner), "batch", mintsKey] as const,
+  },
+
+  holdings: {
+    all: () => ["holdings"] as const,
+    byOwner: (owner: string | null) =>
+      [...queryKeys.holdings.all(), owner] as const,
+  },
+
+  verifiedTokens: {
+    all: () => ["verifiedTokens"] as const,
   },
 
   ataStatus: {
@@ -89,8 +110,16 @@ export function fetchMintProgram(mint: Address): Promise<MintProgramInfo> {
 
 export function fetchDelegateStatus(
   owner: Address,
-): Promise<UsdcDelegateStatus> {
-  return fetchMintDelegateStatus(owner);
+  mint: Address,
+): Promise<MintDelegateStatus> {
+  return fetchMintDelegateStatus(owner, mint);
+}
+
+export function fetchDelegateStatuses(
+  owner: Address,
+  mints: Address[],
+): Promise<Map<string, MintDelegateStatus>> {
+  return fetchMintDelegateStatuses(owner, mints);
 }
 
 export function fetchAtaStatus(args: {
@@ -105,9 +134,19 @@ export function fetchHistory(address: string): Promise<PaymentRecord[]> {
   return fetchPaymentHistory(address, { limit: 50 });
 }
 
+export function fetchVerifiedTokens(): Promise<PaymentToken[]> {
+  return fetchVerifiedTokensClient();
+}
+
+export function fetchHoldings(owner: string): Promise<PaymentTokenHolding[]> {
+  return fetchHoldingsClient(owner);
+}
+
 export type {
-  UsdcDelegateStatus,
+  MintDelegateStatus,
   RecipientAtaStatus,
   TokenProgram,
   PaymentRecord,
+  PaymentToken,
+  PaymentTokenHolding,
 };

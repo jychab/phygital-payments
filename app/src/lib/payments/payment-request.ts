@@ -1,6 +1,6 @@
 import { address, type Address } from "@solana/kit";
 
-import { getUsdcMint } from "@/lib/payments/usdc";
+import { getDefaultMint, isDefaultMint } from "@/lib/payments/payment-token";
 
 export type PaymentRequestParams = {
   amount?: string;
@@ -37,12 +37,15 @@ export function tryParseAddress(value: string | null | undefined): Address | nul
   }
 }
 
-function normalizeAmount(value: string | undefined): string | null {
+function normalizeAmount(
+  value: string | undefined,
+  maxDecimals = 18,
+): string | null {
   if (!value?.trim()) return null;
   const cleaned = value.trim().replace(/[^0-9.]/g, "");
   if (!cleaned || Number(cleaned) <= 0) return null;
   const [whole = "0", ...rest] = cleaned.split(".");
-  const frac = rest.join("").slice(0, 6);
+  const frac = rest.join("").slice(0, maxDecimals);
   return frac.length > 0 ? `${whole}.${frac}` : whole;
 }
 
@@ -60,7 +63,7 @@ export function parsePaymentRequest(
     amountRaw?.trim() || recipientRaw?.trim() || mintRaw?.trim(),
   );
   const hasRecipientParam = Boolean(recipientRaw?.trim());
-  const usdc = getUsdcMint();
+  const usdc = getDefaultMint();
   const mint = tryParseAddress(mintRaw) ?? usdc;
 
   return {
@@ -81,7 +84,7 @@ type PaymentLinkArgs = {
 function paymentLinkHref(path: "/collect" | "/setup", args: PaymentLinkArgs): string {
   const params = new URLSearchParams();
   params.set("recipient", args.recipient);
-  if (args.mint) params.set("mint", args.mint);
+  if (args.mint && !isDefaultMint(args.mint)) params.set("mint", args.mint);
   if (args.amount) params.set("amount", args.amount);
   return `${path}?${params.toString()}`;
 }

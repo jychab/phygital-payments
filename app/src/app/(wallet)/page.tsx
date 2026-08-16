@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { AssetsHomeApp } from "@/components/assets-home-app";
+import { PayHomeApp } from "@/components/pay-home-app";
 
 export const metadata: Metadata = {
   title: "Phygital Pay",
@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 
 
 export default async function Home() {
-  return <AssetsHomeApp />;
+  return <PayHomeApp />;
 }

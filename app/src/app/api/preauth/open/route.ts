@@ -1,21 +1,18 @@
 import { NextRequest } from "next/server";
 
-import { openPreauthGrant } from "@/lib/server/preauth-open";
+import { openPresenceGrant } from "@/lib/server/open-presence-grant";
 
 /**
- * GET /api/preauth/open?apiKey=&amountUi=20
- *     /api/preauth/open?apiKey=&amount=<raw>&mint=<optional>
+ * GET /api/preauth/open?apiKey=
  *
- * Opens a short-lived spending window. Same path for Shortcuts and in-app Pay.
+ * Opens a short-lived presence window. Same path for Shortcuts and in-app Pay.
+ * Mint and amount are not part of the grant — Collect + on-chain delegate.
  * API key is accepted as a query param for integrator simplicity — do not log it;
  * responses use Cache-Control: no-store.
  */
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;
-  return openPreauthGrant({
+  return openPresenceGrant({
     apiKey: params.get("apiKey") ?? "",
-    amount: params.get("amount"),
-    amountUi: params.get("amountUi"),
-    mint: params.get("mint"),
   });
 }

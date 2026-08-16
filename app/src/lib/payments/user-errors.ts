@@ -20,19 +20,21 @@ const RULES: Rule[] = [
   },
   {
     test: /recipient token account is missing|token account is missing\. create it/i,
-    message: "Set up a USDC account before receiving.",
+    message: "Set up a receive account before collecting.",
   },
   {
     test: /no active preauth grant|preauth grant already used|missing preauth/i,
     message: "Ask them to tap Ready to pay again, then hold their NFC device here.",
   },
   {
-    test: /exceeds preauth maxAmount|amount exceeds/i,
-    message: "Amount is higher than they authorized. Ask them to raise it and try again.",
+    test: /not the SPL delegate|enable this token for Pay|Delegated amount is insufficient/i,
+    message:
+      "They need to enable this token for Pay (or raise the limit), then try again.",
   },
   {
-    test: /preauth grant mint mismatch/i,
-    message: "Payment didn’t go through. Try again.",
+    test: /delegated amount|delegate mismatch|insufficient funds|insufficient lamports|custom program error: 0x1\b/i,
+    message:
+      "They need to enable this token for Pay (or raise the limit), then try again.",
   },
   {
     test: /preauth rate limited/i,
@@ -80,8 +82,8 @@ const RULES: Rule[] = [
     message: "You can’t collect a payment from your own NFC device.",
   },
   {
-    test: /USDC account is missing|needs a USDC account|create it before receiving/i,
-    message: "Set up a USDC account before receiving.",
+    test: /USDC account is missing|needs a USDC account|create it before receiving|receive account/i,
+    message: "Set up a receive account before collecting.",
   },
   {
     test: /this tap was already used/i,
@@ -100,8 +102,12 @@ const RULES: Rule[] = [
     message: "We couldn’t find this NFC device. Try tapping again.",
   },
   {
-    test: /only usdc is supported/i,
-    message: "Only USDC is supported.",
+    test: /only classic spl|token-2022|only usdc is supported/i,
+    message: "Only verified classic SPL tokens are supported.",
+  },
+  {
+    test: /mint account not found/i,
+    message: "That token isn’t available. Switch to USDC.",
   },
   {
     test: /enter a valid amount/i,

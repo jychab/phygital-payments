@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { PaymentsApp } from "@/components/payments-app";
+import { CollectApp } from "@/components/collect-app";
 import { parsePaymentRequest } from "@/lib/payments/payment-request";
 
 export const metadata: Metadata = {
@@ -15,5 +15,5 @@ type CollectProps = {
 export default async function CollectPage({ searchParams }: CollectProps) {
   const params = await searchParams;
   const paymentRequest = parsePaymentRequest(params);
-  return <PaymentsApp paymentRequest={paymentRequest} />;
+  return <CollectApp paymentRequest={paymentRequest} />;
 }

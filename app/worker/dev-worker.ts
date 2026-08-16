@@ -9,7 +9,7 @@
 //
 // The fetch handler is never invoked in dev (Next serves requests); it only
 // exists to satisfy the worker module shape.
-export { TransferSubmitterDO } from "./transfer-submitter";
+export { TransferSubmitterDO } from "./settle-submitter";
 
 export default {
   fetch(): Response {

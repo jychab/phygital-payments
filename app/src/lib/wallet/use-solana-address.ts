@@ -40,6 +40,10 @@ export function useSolanaAddress(): {
   address: string | null;
   isConnected: boolean;
   ready: boolean;
+  /** Wallet-standard icon (data URL) for the connected wallet, if any. */
+  walletIcon: string | null;
+  /** Wallet-standard display name (e.g. "Phantom"). */
+  walletName: string | null;
   /** Open Privy wallet-connect modal — never logs the user into Privy. */
   connect: () => void;
   /** Disconnect wallets + clear app storage / query cache. */
@@ -62,6 +66,14 @@ export function useSolanaAddress(): {
   const walletAddress = wallet?.address ?? null;
   const address = cleared ? null : walletAddress;
   const ready = privyReady && walletsReady;
+  const walletIcon =
+    !cleared && wallet?.standardWallet.icon
+      ? wallet.standardWallet.icon
+      : null;
+  const walletName =
+    !cleared && wallet?.standardWallet.name
+      ? wallet.standardWallet.name
+      : null;
 
   const connect = useCallback(() => {
     if (embedded) return;
@@ -86,14 +98,14 @@ export function useSolanaAddress(): {
         }
       }),
     );
-
-
   }, [wallets, queryClient]);
 
   return {
     address,
     isConnected: Boolean(address),
     ready,
+    walletIcon,
+    walletName,
     connect,
     disconnect,
   };

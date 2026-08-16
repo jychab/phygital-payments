@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getSubmitterStub } from "@/lib/server/submitter";
+import { getSubmitterStub } from "@/lib/server/settle-do";
 
 export const runtime = "nodejs";
 

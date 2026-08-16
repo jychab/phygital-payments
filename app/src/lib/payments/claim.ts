@@ -6,8 +6,8 @@ import {
 } from "phygital-token-sdk";
 import type { Address } from "@solana/kit";
 
-import { isSponsoredSubmitAvailable } from "@/lib/payments/receive";
-import { submitSponsoredClaim } from "@/lib/payments/submitter-client";
+import { isSponsoredSubmitAvailable } from "@/lib/payments/collect-settle";
+import { submitSettleClaim } from "@/lib/payments/settle-client";
 import {
   simulateSponsoredInstructions,
 } from "@/lib/solana/simulate-sponsored";
@@ -66,7 +66,7 @@ export async function claimSponsoredOwnership(args: {
   );
   await simulateSponsoredInstructions(instructions);
 
-  const { signature } = await submitSponsoredClaim({
+  const { signature } = await submitSettleClaim({
     asset: session.asset,
     slotNumber: session.slotNumber,
     auth,

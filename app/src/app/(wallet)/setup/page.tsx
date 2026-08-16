@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { SetupReceiveApp } from "@/components/setup-receive-app";
+import { SetupCollectApp } from "@/components/setup-collect-app";
 import { parsePaymentRequest } from "@/lib/payments/payment-request";
 
 export const metadata: Metadata = {
@@ -15,5 +15,5 @@ type SetupProps = {
 export default async function SetupPage({ searchParams }: SetupProps) {
   const params = await searchParams;
   const paymentRequest = parsePaymentRequest(params);
-  return <SetupReceiveApp paymentRequest={paymentRequest} />;
+  return <SetupCollectApp paymentRequest={paymentRequest} />;
 }

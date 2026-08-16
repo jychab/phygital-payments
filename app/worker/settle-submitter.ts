@@ -20,7 +20,7 @@ import {
   consumeGrants,
   releaseGrantClaims,
   type D1Database,
-} from "./preauth";
+} from "./presence-grants";
 import {
   BATCH_ACTIVITY_WINDOW_MS,
   BATCH_WINDOW_MS,
@@ -508,11 +508,9 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     const db = this.preauthDb();
     const settled = await Promise.allSettled(
       batch.map(async (job) => {
-        const { owner, amount, mint } = job.transfer;
+        const { owner } = job.transfer;
         const { grantId } = await claimGrantForTransfer(db, {
           wallet: owner,
-          amount,
-          mint,
           jobId: job.id,
         });
         return grantId;

@@ -9,7 +9,7 @@ import type {
 import type {
   SubmitTransferRequest,
   TransferJob,
-} from "@/lib/payments/submitter-types";
+} from "@/lib/payments/settle-types";
 
 /** RPC surface of TransferSubmitterDO — keep in sync with the worker. */
 export type SubmitterStub = {

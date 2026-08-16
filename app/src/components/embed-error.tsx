@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { AlertCircle } from "lucide-react";
 
 import { AppCard, AppShell } from "@/components/app-shell";
-import { GateMessage } from "@/components/enable/gate-message";
+import { GateMessage } from "@/components/gate-message";
 
 /** Full-page error for invalid iframe embeds (missing/invalid recipient, etc.). */
 export function EmbedError({

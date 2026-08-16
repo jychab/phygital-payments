@@ -16,7 +16,7 @@ import { AppCard, AppShell } from "@/components/app-shell";
 import { ClaimPanel } from "@/components/claim-panel";
 import { CopyableAddress } from "@/components/copyable-address";
 import { EmbedBoot, EmbedError } from "@/components/embed-error";
-import { CenteredStatus, GateMessage } from "@/components/enable/gate-message";
+import { CenteredStatus, GateMessage } from "@/components/gate-message";
 import { Button } from "@/components/ui/button";
 import { useIsEmbedded } from "@/hooks/use-is-embedded";
 import { usePhygitalAsset } from "@/hooks/use-phygital-asset";

@@ -1,7 +1,7 @@
 import type {
   SubmitTransferRequest,
   TransferJob,
-} from "./submitter-types";
+} from "./settle-types";
 import type {
   ClaimJob,
   SubmitClaimRequest,
@@ -20,7 +20,7 @@ type SponsoredJob = {
 };
 
 /** Card-rail transfer submit: one RTT with idempotency + blip retries. */
-export async function submitAndWaitSponsoredTransfer(
+export async function submitAndWaitSettle(
   body: SubmitTransferRequest,
 ): Promise<{ signature: string; job: TransferJob }> {
   const idempotencyKey =
@@ -39,7 +39,7 @@ type ClaimAuthResponse = Awaited<
 >;
 
 /** Sponsored ownership claim (same DO / retry shape as transfers). */
-export async function submitSponsoredClaim(params: {
+export async function submitSettleClaim(params: {
   asset: string;
   slotNumber: string | bigint;
   auth: ClaimAuthResponse;

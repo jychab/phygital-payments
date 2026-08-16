@@ -10,62 +10,75 @@ import {
   X,
 } from "lucide-react";
 
-import { AmountField } from "@/components/amount-field";
-import { AmountPresets } from "@/components/amount-presets";
+import { ManagePayTokens } from "@/components/pay/pay-limit-panel";
 import { NfcHoldStatus } from "@/components/nfc-hold-status";
+import { TokenSymbol } from "@/components/token-chip";
 import { Button } from "@/components/ui/button";
-import { useDelegateStatus } from "@/hooks/use-delegate-status";
-import { useMintProgram } from "@/hooks/use-mint-program";
-import { useRevokeAllowanceMutation } from "@/hooks/use-allowance-mutations";
-import { uiAmountToRaw } from "@/lib/payments/usdc-allowance";
+import { useRevokeDelegateMutation } from "@/hooks/use-delegate-mutations";
+import { useDelegateStatuses } from "@/hooks/use-delegate-status";
+import { useTokenHoldings } from "@/hooks/use-verified-tokens";
 import {
   buildPreauthOpenUrl,
   cancelPreauth,
   loadPreauthApiKey,
   requestPreauth,
-} from "@/lib/payments/preauth-client";
-import { useDevicePayKeyHelpers } from "@/lib/payments/provision-client";
-import { getUsdcMint } from "@/lib/payments/usdc";
+} from "@/lib/payments/presence-grant-client";
+import { useDevicePayKeyHelpers } from "@/lib/payments/device-pay-key-client";
+import {
+  defaultUsdcToken,
+  getDefaultMint,
+} from "@/lib/payments/payment-token";
+import type { PaymentTokenHolding } from "@/lib/payments/payment-token";
+import { isDelegateEnabled } from "@/lib/payments/mint-delegate";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
 
-const PRESETS = ["10", "20", "50"] as const;
-
 type Phase = "idle" | "window" | "expired";
 
 /**
- * Everyday Pay: open a short spending window (same GET as Shortcuts),
- * then hold NFC to the merchant. No paid/receipt polling — merchant Collect
- * is the source of truth for settlement.
+ * Everyday Pay: open a presence window, then hold NFC to the merchant.
+ * Mint and amount come from Collect; on-chain delegates are the spend caps.
  */
-export function PayPanel({ onChangeLimit }: { onChangeLimit?: () => void }) {
+export function PayPanel({
+  onEditTokenLimit,
+}: {
+  onEditTokenLimit: (holding: PaymentTokenHolding) => void;
+}) {
   const { address: walletAddress } = useSolanaAddress();
   const { ensureKey } = useDevicePayKeyHelpers();
-  const [amount, setAmount] = useState("20");
   const [busy, setBusy] = useState(false);
   const [keyBusy, setKeyBusy] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const [hasKey, setHasKey] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [keyEpoch, setKeyEpoch] = useState(0);
+  // Re-read localStorage after provision / rotate (keyEpoch bump).
+  void keyEpoch;
+  const hasKey = Boolean(walletAddress && loadPreauthApiKey(walletAddress));
 
-  useEffect(() => {
-    setHasKey(Boolean(walletAddress && loadPreauthApiKey(walletAddress)));
-  }, [walletAddress]);
+  const defaultMint = getDefaultMint();
+  const holdings = useTokenHoldings(walletAddress);
+  const mints =
+    holdings.data && holdings.data.length > 0
+      ? holdings.data.map((h) => h.mint)
+      : [String(defaultMint)];
+  const statuses = useDelegateStatuses(walletAddress, mints);
+  const usdcStatus = statuses.data?.get(String(defaultMint));
+  const enabledMintCount = statuses.enabledMints.length;
+  const usdcLimitLabel = isDelegateEnabled(usdcStatus)
+    ? usdcStatus?.delegatedAmountUi
+    : null;
 
-  const usdcMint = getUsdcMint();
-  const statusQuery = useDelegateStatus(walletAddress);
-  const mintQuery = useMintProgram(usdcMint);
-  const status = statusQuery.data;
-  const revoke = useRevokeAllowanceMutation(walletAddress, {
-    onSuccess: () => toast.message("Pay turned off"),
+  const revoke = useRevokeDelegateMutation(walletAddress, {
+    mint: defaultMint,
+    onSuccess: () => toast.message("USDC Pay turned off"),
   });
 
-  const limitLabel = status?.delegatedAmountUi ?? "—";
   const windowOpen = phase === "window";
   const manageBusy = busy || revoke.isPending || keyBusy;
+  const usdcToken = defaultUsdcToken();
   const secondsLeft =
     expiresAt != null && expiresAt * 1000 > nowMs
       ? Math.max(0, Math.ceil((expiresAt * 1000 - nowMs) / 1000))
@@ -84,33 +97,23 @@ export function PayPanel({ onChangeLimit }: { onChangeLimit?: () => void }) {
     return () => window.clearInterval(id);
   }, [windowOpen, expiresAt]);
 
+  function noteKeyReady() {
+    setKeyEpoch((n) => n + 1);
+  }
+
   async function onReady() {
     if (!walletAddress) {
       toast.error("Sign in to continue");
-      return;
-    }
-    if (!mintQuery.data) {
-      toast.error("Still loading — try again in a moment");
       return;
     }
     try {
       setBusy(true);
       if (!loadPreauthApiKey(walletAddress)) {
         await ensureKey(walletAddress);
-        setHasKey(true);
-      }
-      const rawAmount = uiAmountToRaw(amount, mintQuery.data.decimals);
-      if (
-        status?.delegatedAmountRaw != null &&
-        rawAmount > status.delegatedAmountRaw
-      ) {
-        toast.error(`Amount exceeds your ${limitLabel} USDC limit`);
-        return;
+        noteKeyReady();
       }
       const grant = await requestPreauth({
         wallet: walletAddress,
-        amountUi: amount,
-        mint: usdcMint,
       });
       setNowMs(Date.now());
       setExpiresAt(grant.expiresAt);
@@ -137,7 +140,6 @@ export function PayPanel({ onChangeLimit }: { onChangeLimit?: () => void }) {
     try {
       await revoke.mutateAsync();
       setManageOpen(false);
-      onChangeLimit?.();
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn’t turn off Pay"));
     }
@@ -153,7 +155,7 @@ export function PayPanel({ onChangeLimit }: { onChangeLimit?: () => void }) {
       let key = loadPreauthApiKey(walletAddress);
       if (!key) {
         key = await ensureKey(walletAddress);
-        setHasKey(true);
+        noteKeyReady();
       }
       await navigator.clipboard.writeText(key);
       toast.success("API key copied");
@@ -174,13 +176,9 @@ export function PayPanel({ onChangeLimit }: { onChangeLimit?: () => void }) {
       let key = loadPreauthApiKey(walletAddress);
       if (!key) {
         key = await ensureKey(walletAddress);
-        setHasKey(true);
+        noteKeyReady();
       }
-      const url = buildPreauthOpenUrl({
-        apiKey: key,
-        amountUi: amount || "20",
-        mint: usdcMint,
-      });
+      const url = buildPreauthOpenUrl({ apiKey: key });
       await navigator.clipboard.writeText(url);
       toast.success("Open URL copied");
     } catch (error) {
@@ -198,7 +196,7 @@ export function PayPanel({ onChangeLimit }: { onChangeLimit?: () => void }) {
     try {
       setKeyBusy(true);
       await ensureKey(walletAddress, { rotate: true });
-      setHasKey(true);
+      noteKeyReady();
       toast.success("New API key ready — update any Shortcuts");
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn’t rotate API key"));
@@ -239,7 +237,7 @@ export function PayPanel({ onChangeLimit }: { onChangeLimit?: () => void }) {
       <NfcHoldStatus
         size="lg"
         title="Hold NFC device to their phone"
-        body={`Paying up to ${amount} USDC · ${secondsLeft}s left`}
+        body={`Ready to pay · ${secondsLeft}s left`}
         pulsing
         action={
           <Button
@@ -261,29 +259,26 @@ export function PayPanel({ onChangeLimit }: { onChangeLimit?: () => void }) {
         <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
           Pay
         </p>
-        <p className="text-sm font-medium text-foreground">This payment</p>
+        <p className="text-sm font-medium text-foreground">Ready to pay</p>
         <p className="text-xs text-muted-foreground">
-          Choose how much, then hold your NFC device to their phone.
+          Open a short window, then hold your NFC device to their phone. They
+          choose the token and amount.
         </p>
       </div>
 
-      <AmountField
-        id="pay-amount"
-        value={amount}
-        onChange={setAmount}
-        disabled={manageBusy}
-      />
-
-      <AmountPresets
-        value={amount}
-        onChange={setAmount}
-        presets={PRESETS}
-        disabled={manageBusy}
-      />
-
-      <p className="text-center text-[11px] text-muted-foreground">
-        Up to {limitLabel} USDC
-        <span className="text-muted-foreground/50"> · </span>
+      <p className="flex flex-wrap items-center justify-center gap-1 text-center text-[11px] text-muted-foreground">
+        {usdcLimitLabel != null ? (
+          <>
+            <TokenSymbol token={usdcToken} size="xs" />
+            <span>limit {usdcLimitLabel}</span>
+          </>
+        ) : (
+          <span>
+            {enabledMintCount} token
+            {enabledMintCount === 1 ? "" : "s"} enabled
+          </span>
+        )}
+        <span className="text-muted-foreground/50">·</span>
         <span className="inline-flex items-center gap-1 text-primary/90">
           <Check className="size-3" strokeWidth={2.5} />
           Ready
@@ -296,7 +291,7 @@ export function PayPanel({ onChangeLimit }: { onChangeLimit?: () => void }) {
           size="lg"
           className="h-11 w-full text-[0.9375rem]"
           onClick={onReady}
-          disabled={manageBusy || !amount}
+          disabled={manageBusy}
         >
           {busy ? (
             <>
@@ -324,22 +319,20 @@ export function PayPanel({ onChangeLimit }: { onChangeLimit?: () => void }) {
         {manageOpen ? (
           <div
             className={cn(
-              "flex flex-col gap-1 rounded-xl border border-border/50 bg-muted/25 p-2",
+              "flex flex-col gap-2 rounded-xl border border-border/50 bg-muted/25 p-2",
             )}
           >
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="justify-start text-muted-foreground"
-              onClick={() => {
-                setManageOpen(false);
-                onChangeLimit?.();
-              }}
-              disabled={manageBusy}
-            >
-              Change limit
-            </Button>
+            {walletAddress ? (
+              <div className="space-y-1">
+                <p className="px-2 pt-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Enabled tokens
+                </p>
+                <ManagePayTokens
+                  owner={walletAddress}
+                  onEditLimit={onEditTokenLimit}
+                />
+              </div>
+            ) : null}
             <Button
               type="button"
               variant="ghost"
@@ -378,7 +371,7 @@ export function PayPanel({ onChangeLimit }: { onChangeLimit?: () => void }) {
               onClick={onTurnOff}
               disabled={manageBusy}
             >
-              {revoke.isPending ? "Turning off…" : "Turn off Pay"}
+              {revoke.isPending ? "Turning off…" : "Turn off USDC Pay"}
             </Button>
           </div>
         ) : null}

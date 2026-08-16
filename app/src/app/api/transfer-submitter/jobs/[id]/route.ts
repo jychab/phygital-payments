@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSubmitterStub } from "@/lib/server/submitter";
+import { getSubmitterStub } from "@/lib/server/settle-do";
 
 /** GET /api/transfer-submitter/jobs/:id — long-poll until terminal (or timeout). */
 export async function GET(
