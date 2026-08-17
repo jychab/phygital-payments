@@ -11,6 +11,10 @@ import { NfcHoldStatus } from "@/components/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/use-is-in-app-browser";
 import { createPendingClaim } from "@/lib/claim/pending-claim-client";
+import {
+  serializePendingClaimSession,
+  type CreatePendingClaimResponse,
+} from "../../shared/pending-claim-wire";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
 import { assertCaptureReady, captureClaimTap } from "@/lib/payments/claim";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
@@ -33,11 +37,7 @@ export function ClaimPanel({
 
   const [stage, setStage] = useState<Stage>("ready");
   const [error, setError] = useState<string | null>(null);
-  const [handoff, setHandoff] = useState<{
-    token: string;
-    finishUrl: string;
-    expiresAtMs: number;
-  } | null>(null);
+  const [handoff, setHandoff] = useState<CreatePendingClaimResponse | null>(null);
 
   const title = unclaimed ? "Add to this phone" : "Move to this phone";
 
@@ -64,8 +64,7 @@ export function ClaimPanel({
       });
 
       const pending = await createPendingClaim({
-        asset: session.asset.toString(),
-        slotNumber: session.slotNumber.toString(),
+        session: serializePendingClaimSession(session),
         auth,
       });
 

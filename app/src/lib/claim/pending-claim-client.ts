@@ -1,6 +1,6 @@
 import type {
-  CreatePendingClaimRequest,
   CreatePendingClaimResponse,
+  PendingClaimRecord,
   PendingClaimView,
 } from "../../../shared/pending-claim-wire";
 
@@ -13,7 +13,7 @@ async function readJson<T>(res: Response, fallback: string): Promise<T> {
 }
 
 export async function createPendingClaim(
-  body: CreatePendingClaimRequest,
+  body: Omit<PendingClaimRecord, "createdAtMs">,
 ): Promise<CreatePendingClaimResponse> {
   const res = await fetch("/api/claim/pending", {
     method: "POST",

@@ -6,9 +6,9 @@ import {
   writePendingClaim,
 } from "@/lib/claim/pending-claim-store";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
-import type {
-  CreatePendingClaimRequest,
-  CreatePendingClaimResponse,
+import {
+  parseCreatePendingClaimRequest,
+  type CreatePendingClaimResponse,
 } from "../../../../../shared/pending-claim-wire";
 
 function finishPath(token: string): string {
@@ -24,35 +24,10 @@ function tokenFromRequest(req: Request): string | null {
   return new URL(req.url).searchParams.get("token")?.trim() || null;
 }
 
-function parseCreateBody(body: unknown): CreatePendingClaimRequest | null {
-  if (!body || typeof body !== "object") return null;
-  const o = body as Record<string, unknown>;
-  if (typeof o.asset !== "string" || !o.asset.trim()) return null;
-  if (typeof o.slotNumber !== "string" || !o.slotNumber.trim()) return null;
-  if (!o.auth || typeof o.auth !== "object") return null;
-  const auth = o.auth as Record<string, unknown>;
-  if (typeof auth.id !== "string" || typeof auth.rawId !== "string") return null;
-  if (auth.type !== "public-key") return null;
-  if (!auth.response || typeof auth.response !== "object") return null;
-  const response = auth.response as Record<string, unknown>;
-  if (
-    typeof response.authenticatorData !== "string" ||
-    typeof response.clientDataJSON !== "string" ||
-    typeof response.signature !== "string"
-  ) {
-    return null;
-  }
-  return {
-    asset: o.asset.trim(),
-    slotNumber: o.slotNumber.trim(),
-    auth: auth as CreatePendingClaimRequest["auth"],
-  };
-}
-
 /** Store a tap proof for wallet-browser finish (SlotHashes TTL). */
 export async function POST(req: Request) {
   try {
-    const body = parseCreateBody(await req.json());
+    const body = parseCreatePendingClaimRequest(await req.json());
     if (!body) {
       return NextResponse.json(
         { error: "Invalid pending claim payload" },

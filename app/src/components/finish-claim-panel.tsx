@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, LoaderCircle, Wallet } from "lucide-react";
 import Link from "next/link";
-import { address as toAddress } from "@solana/kit";
 
 import { AppCard, AppShell } from "@/components/app-shell";
 import { CenteredStatus, GateMessage, SuccessStatus } from "@/components/gate-message";
@@ -33,7 +32,7 @@ export function FinishClaimPanel() {
 
   const pendingQuery = usePendingClaim(token || null);
   const pending = pendingQuery.data;
-  const assetQuery = usePhygitalAssetByAddress(pending?.asset ?? null);
+  const assetQuery = usePhygitalAssetByAddress(pending?.session.asset ?? null);
 
   const [phase, setPhase] = useState<Phase>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,12 +57,8 @@ export function FinishClaimPanel() {
 
     setPhase("confirming");
     try {
-      await finishClaim({
-        asset: toAddress(pending.asset),
-        slotNumber: pending.slotNumber,
-        auth: pending.auth,
-        recipient: signer,
-      });
+      const { session, auth } = pending;
+      await finishClaim({ session, auth, recipient: signer });
       try {
         await consumePendingClaim(token);
       } catch {
@@ -72,7 +67,7 @@ export function FinishClaimPanel() {
 
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: queryKeys.asset.byAddress(pending.asset),
+          queryKey: queryKeys.asset.byAddress(pending.session.asset),
         }),
         queryClient.invalidateQueries({
           queryKey: queryKeys.asset.byIdentifier(asset.identifier),

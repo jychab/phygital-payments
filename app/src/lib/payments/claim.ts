@@ -4,10 +4,8 @@ import {
   completeTransfer,
   type TransferSession,
 } from "phygital-token-sdk";
-import { type Address, type TransactionSigner } from "@solana/kit";
-
-import type { ClaimAuthWire } from "../../../shared/pending-claim-wire";
-import { SLOT_HASHES_CAPACITY } from "../../../shared/slot-hashes";
+import { address, getBase58Encoder, type Address, type TransactionSigner } from "@solana/kit";
+import type { PendingClaimRecord } from "../../../shared/pending-claim-wire";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { sendTransaction } from "@/lib/solana/tx";
@@ -40,7 +38,7 @@ export async function captureClaimTap(args: {
   onPasskeyComplete?: () => void;
 }): Promise<{
   session: TransferSession;
-  auth: ClaimAuthWire;
+  auth: PendingClaimRecord["auth"];
 }> {
   const session = await beginTransfer({
     rpc: getSolanaRpc(),
@@ -51,23 +49,26 @@ export async function captureClaimTap(args: {
   return { session, auth };
 }
 
-/** Wallet step: SDK transfer_ownership + recipient-signed submit. */
-export async function finishClaim(args: {
-  asset: Address;
-  slotNumber: string;
-  auth: ClaimAuthWire;
-  recipient: TransactionSigner;
-}): Promise<{ signature: string }> {
-  const slotNumber = BigInt(args.slotNumber);
 
-  // completeTransfer only reads asset + slotNumber from the session.
-  const session: TransferSession = {
+function hydrateTransferSession(
+  json: PendingClaimRecord["session"],
+): TransferSession {
+  return {
     rpc: getSolanaRpc(),
-    asset: args.asset,
-    slotNumber,
-    slotHash: new Uint8Array(32),
-    challenge: new Uint8Array(32),
+    asset: address(json.asset),
+    slotNumber: BigInt(json.slotNumber),
+    slotHash: new Uint8Array(getBase58Encoder().encode(json.slotHash)),
+    challenge: new Uint8Array(getBase58Encoder().encode(json.challenge)),
   };
+}
+
+/** Wallet step: SDK completeTransfer (transfer_ownership) + recipient-signed submit. */
+export async function finishClaim(
+  args: Omit<PendingClaimRecord, "createdAtMs"> & {
+    recipient: TransactionSigner;
+  },
+): Promise<{ signature: string }> {
+  const session = hydrateTransferSession(args.session);
 
   const instructions = await completeTransfer(session, args.auth, args.recipient);
 

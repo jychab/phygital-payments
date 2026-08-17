@@ -1,5 +1,4 @@
 import {
-  addSignersToTransactionMessage,
   appendTransactionMessageInstructions,
   assertIsTransactionWithBlockhashLifetime,
   createTransactionMessage,
@@ -30,9 +29,8 @@ function sendAndConfirm() {
 export async function sendTransaction(params: {
   instructions: Instruction[];
   feePayer: TransactionSigner;
-  signers?: TransactionSigner[];
 }): Promise<{ signature: string }> {
-  const { instructions, feePayer, signers } = params;
+  const { instructions, feePayer } = params;
 
   const { value: latestBlockhash } = await getSolanaRpc()
     .getLatestBlockhash()
@@ -44,12 +42,7 @@ export async function sendTransaction(params: {
     (m) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, m),
     (m) => appendTransactionMessageInstructions(instructions, m),
   );
-  const message =
-    signers && signers.length > 0
-      ? addSignersToTransactionMessage(signers, unsigned)
-      : unsigned;
-
-  const signedTransaction = await signTransactionMessageWithSigners(message);
+  const signedTransaction = await signTransactionMessageWithSigners(unsigned);
   assertIsTransactionWithBlockhashLifetime(signedTransaction);
   await sendAndConfirm()(signedTransaction, { commitment: "confirmed" });
 

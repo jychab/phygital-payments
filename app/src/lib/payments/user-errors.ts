@@ -7,6 +7,11 @@ type Rule = { test: RegExp | string; message: string };
 
 const RULES: Rule[] = [
   {
+    test: /signature verification|signatures missing|7050012/i,
+    message:
+      "Wallet signature didn’t verify. Disconnect, reconnect, and try again.",
+  },
+  {
     test: /transaction would fail|simulation failed/i,
     message: "That payment wouldn’t go through. Check the amount and try again.",
   },
