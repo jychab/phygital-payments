@@ -1,20 +1,14 @@
 import {
-  address,
   appendTransactionMessageInstructions,
   assertIsTransactionWithBlockhashLifetime,
   createTransactionMessage,
-  getBase58Decoder,
-  getPublicKeyFromAddress,
   getSignatureFromTransaction,
   pipe,
   sendAndConfirmTransactionFactory,
   setTransactionMessageFeePayerSigner,
   setTransactionMessageLifetimeUsingBlockhash,
   signTransactionMessageWithSigners,
-  verifySignature,
   type Instruction,
-  type SignatureBytes,
-  type Transaction,
   type TransactionSigner,
 } from "@solana/kit";
 
@@ -30,39 +24,6 @@ function sendAndConfirm() {
     rpcSubscriptions: getSolanaRpcSubscriptions(),
   });
   return _sendAndConfirm;
-}
-
-function isNonZeroSignature(sig: SignatureBytes | null | undefined): sig is SignatureBytes {
-  return Boolean(sig?.some((b) => b !== 0));
-}
-
-/** RPC #7050012 does not name the pubkey — verify each ed25519 slot locally. */
-async function assertEd25519Signatures(tx: Transaction): Promise<void> {
-  const report: { address: string; present: boolean; valid: boolean }[] = [];
-
-  for (const [addr, sig] of Object.entries(tx.signatures)) {
-    const present = isNonZeroSignature(sig);
-    let valid = false;
-    if (present) {
-      const key = await getPublicKeyFromAddress(address(addr));
-      valid = await verifySignature(key, sig, tx.messageBytes);
-    }
-    report.push({ address: addr, present, valid });
-  }
-
-  const failed = report.filter((row) => !row.valid);
-  if (failed.length === 0) return;
-
-  console.error("[tx] ed25519 signature check failed", {
-    report,
-    messageLen: tx.messageBytes.length,
-    messageB58: getBase58Decoder().decode(tx.messageBytes),
-  });
-  throw new Error(
-    `Transaction did not pass signature verification for: ${failed
-      .map((row) => row.address)
-      .join(", ")}`,
-  );
 }
 
 export async function sendTransaction(params: {
@@ -83,7 +44,6 @@ export async function sendTransaction(params: {
   );
   const signedTransaction = await signTransactionMessageWithSigners(unsigned);
   assertIsTransactionWithBlockhashLifetime(signedTransaction);
-  await assertEd25519Signatures(signedTransaction);
   await sendAndConfirm()(signedTransaction, { commitment: "confirmed" });
 
   return { signature: getSignatureFromTransaction(signedTransaction) };
