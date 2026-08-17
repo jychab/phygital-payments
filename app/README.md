@@ -40,7 +40,7 @@ Configure the Privy app for Solana (embedded wallets + external connectors). Log
 Connect a wallet via Privy, then use tabs:
 
 - **Pay** — set/update the wallet spending limit (USDC delegate). When the limit is on **and** you own ≥1 NFC device, Ready to pay + Manage Pay (API key / Shortcuts) live here.
-- **Devices** — informational list of NFC devices claimed by this wallet (no deep links). Add a device by holding an NFC tag to the phone (opens `/asset`).
+- **Devices** — informational list of NFC devices claimed by this wallet (no deep links). Add a device by holding an NFC tag to the phone (opens `/device`).
 - **Activity** — recent payments for the connected wallet.
 
 Header mode dropdown: **Home** | **Collect** (`/collect?recipient=<connected-wallet>`). Collect is disabled until connected.
@@ -70,7 +70,7 @@ One-time ATA creation (Connect required):
 
 Embeds cannot use `/setup` (error screen).
 
-### Asset / claim (`/asset?pk=&s=&c=&n=`)
+### Device / claim (`/device?pk=&s=&c=&n=`)
 
 **NFC tap only — no Privy / Connect.** No in-app links to this route (tag URL only). Bare `?pk=` without tap proof shows “Hold NFC device.”
 
@@ -80,9 +80,7 @@ Flow:
 2. Claim if unclaimed or unlocked — paste the paying-from wallet (Safari/Chrome for NFC)
 3. Status — verified, lock state, owner address + **Open Home** (set limit / Ready to pay on Home)
 
-Locked devices show owner status only. Spending limits and Ready to pay are **not** on `/asset`.
-
-`/enable` redirects to `/asset` (query params preserved) if present.
+Locked devices show owner status only. Spending limits and Ready to pay are **not** on `/device`.
 
 ### Open a presence window (API key)
 
@@ -147,7 +145,7 @@ Requirements when embedded:
 - `?recipient=<solana-address>` is **required** (invalid/missing → error screen)
 - Optional `?amount=`
 - Wallet connect / disconnect is disabled
-- Only the payment-link receive UI is shown (`/asset` is blocked in iframes)
+- Only the payment-link receive UI is shown (`/device` is blocked in iframes)
 
 Example:
 

@@ -5,11 +5,11 @@ import { EmbedBoot } from "@/components/embed-error";
 import { AssetApp } from "@/components/asset-app";
 
 export const metadata: Metadata = {
-  title: "Asset — Phygital Pay",
+  title: "Device — Phygital Pay",
   description: "Manage tap-to-pay for your NFC device",
 };
 
-export default function AssetPage() {
+export default function DevicePage() {
   return (
     <Suspense fallback={<EmbedBoot />}>
       <AssetApp />

@@ -41,7 +41,7 @@ type HomeTab = "pay" | "devices" | "history";
 
 /**
  * Home — Connect wallet for Pay (limit + ready), Devices list, and Activity.
- * NFC devices are added only by tapping a tag (opens /asset); no deep links.
+ * NFC devices are added only by tapping a tag (opens /device); no deep links.
  */
 export function PayHomeApp() {
   const embedded = useIsEmbedded();

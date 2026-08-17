@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Session wallet control for Privy routes (Home / setup).
- * Do not mount on `/asset` or `/collect` (no PrivyProvider there).
+ * Do not mount on `/device` or `/collect` (no PrivyProvider there).
  */
 export function WalletChip({ className }: { className?: string }) {
   const {

@@ -80,18 +80,6 @@ export function AssetApp() {
             "Hold flat against the back of your phone and try again.",
           )}
           destructive
-          action={
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                window.location.href = "/asset";
-              }}
-            >
-              Try again
-            </Button>
-          }
         />
       </Shell>
     );
