@@ -17,6 +17,8 @@ export const PREAUTH_MIN_INTERVAL_SECONDS = 2;
 export type PreauthGrant = {
   id: string;
   wallet: string;
+  maxAmount: string;
+  mint: string | null;
   expiresAt: number;
   consumedAt: number | null;
 };
@@ -24,6 +26,8 @@ export type PreauthGrant = {
 type GrantRow = {
   id: string;
   wallet: string;
+  max_amount: string;
+  mint: string | null;
   expires_at: number;
   consumed_at: number | null;
 };
@@ -47,6 +51,8 @@ export function ensurePreauthSchema(db: D1Database): Promise<void> {
           `CREATE TABLE IF NOT EXISTS preauth_grants (
              id TEXT NOT NULL PRIMARY KEY,
              wallet TEXT NOT NULL,
+             max_amount TEXT NOT NULL,
+             mint TEXT,
              expires_at INTEGER NOT NULL,
              consumed_at INTEGER,
              claimed_at INTEGER,
@@ -59,8 +65,8 @@ export function ensurePreauthSchema(db: D1Database): Promise<void> {
              ON preauth_grants (wallet, expires_at DESC)`,
         ),
       ]);
-      // Local Miniflare may lag behind wrangler migrations (old max_amount/mint).
-      await migrateDropLegacyGrantColumns(db);
+      // Local Miniflare may lag behind wrangler migrations (presence-only → mint/max_amount).
+      await migrateEnsureGrantMintAmount(db);
     })().catch((error) => {
       preauthSchemaReady = null;
       throw error;
@@ -69,40 +75,26 @@ export function ensurePreauthSchema(db: D1Database): Promise<void> {
   return preauthSchemaReady;
 }
 
-/** Drop legacy max_amount / mint if present (presence-only grants). Same as 0003. */
-async function migrateDropLegacyGrantColumns(db: D1Database): Promise<void> {
+/** Add mint / max_amount if a presence-only table already exists (same as 0004). */
+async function migrateEnsureGrantMintAmount(db: D1Database): Promise<void> {
   const cols = await db
     .prepare(`PRAGMA table_info(preauth_grants)`)
     .all<{ name: string }>();
   const names = new Set((cols.results ?? []).map((c) => c.name));
-  if (!names.has("max_amount") && !names.has("mint")) return;
-
-  await db.batch([
-    db.prepare(`DROP TABLE IF EXISTS preauth_grants_v3`),
-    db.prepare(
-      `CREATE TABLE preauth_grants_v3 (
-         id TEXT NOT NULL PRIMARY KEY,
-         wallet TEXT NOT NULL,
-         expires_at INTEGER NOT NULL,
-         consumed_at INTEGER,
-         claimed_at INTEGER,
-         claimed_by TEXT,
-         created_at INTEGER NOT NULL DEFAULT (unixepoch())
-       )`,
-    ),
-    db.prepare(
-      `INSERT INTO preauth_grants_v3
-         (id, wallet, expires_at, consumed_at, claimed_at, claimed_by, created_at)
-       SELECT id, wallet, expires_at, consumed_at, claimed_at, claimed_by, created_at
-       FROM preauth_grants`,
-    ),
-    db.prepare(`DROP TABLE preauth_grants`),
-    db.prepare(`ALTER TABLE preauth_grants_v3 RENAME TO preauth_grants`),
-    db.prepare(
-      `CREATE INDEX IF NOT EXISTS idx_preauth_wallet_active
-         ON preauth_grants (wallet, expires_at DESC)`,
-    ),
-  ]);
+  const statements: D1PreparedStatement[] = [];
+  if (!names.has("max_amount")) {
+    statements.push(
+      db.prepare(
+        `ALTER TABLE preauth_grants ADD COLUMN max_amount TEXT NOT NULL DEFAULT '0'`,
+      ),
+    );
+  }
+  if (!names.has("mint")) {
+    statements.push(
+      db.prepare(`ALTER TABLE preauth_grants ADD COLUMN mint TEXT`),
+    );
+  }
+  if (statements.length > 0) await db.batch(statements);
 }
 
 /** SHA-256 hex digest of an API key (Web Crypto). */
@@ -173,13 +165,13 @@ export async function resolveWalletFromApiKey(
 }
 
 /**
- * Open (or replace) a presence window for `wallet`.
- * Presence-only: no mint / maxAmount — spend caps are on-chain delegates.
+ * Open (or replace) a spending window for `wallet`.
+ * Grant binds mint + maxAmount; on-chain delegate is a second cap.
  * Grant does not bind recipient — payer opens before the merchant NFC tap.
  */
 export async function createPreauthGrant(
   db: D1Database,
-  args: { wallet: string },
+  args: { wallet: string; maxAmount: string; mint?: string | null },
 ): Promise<PreauthGrant> {
   await ensurePreauthSchema(db);
   const now = Math.floor(Date.now() / 1000);
@@ -203,19 +195,22 @@ export async function createPreauthGrant(
 
   const id = crypto.randomUUID();
   const expiresAt = now + PREAUTH_TTL_SECONDS;
+  const mint = args.mint ?? null;
 
   await db
     .prepare(
       `INSERT INTO preauth_grants
-         (id, wallet, expires_at, consumed_at, claimed_at, claimed_by, created_at)
-       VALUES (?, ?, ?, NULL, NULL, NULL, ?)`,
+         (id, wallet, max_amount, mint, expires_at, consumed_at, claimed_at, claimed_by, created_at)
+       VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL, ?)`,
     )
-    .bind(id, args.wallet, expiresAt, now)
+    .bind(id, args.wallet, args.maxAmount, mint, expiresAt, now)
     .run();
 
   return {
     id,
     wallet: args.wallet,
+    maxAmount: args.maxAmount,
+    mint,
     expiresAt,
     consumedAt: null,
   };
@@ -233,7 +228,7 @@ export async function findActiveGrantForWallet(
   const now = Math.floor(Date.now() / 1000);
   const row = await db
     .prepare(
-      `SELECT id, wallet, expires_at, consumed_at
+      `SELECT id, wallet, max_amount, mint, expires_at, consumed_at
        FROM preauth_grants
        WHERE wallet = ?
          AND consumed_at IS NULL
@@ -247,13 +242,13 @@ export async function findActiveGrantForWallet(
 }
 
 /**
- * Atomically claim a presence grant for `jobId` (single-use).
- * Mint/amount are enforced on-chain via delegate — not on the grant.
- * Second job in the same batch / concurrent flush loses the race.
+ * Atomically claim a grant for `jobId` (single-use).
+ * Mint must match when the grant bound one; amount must be ≤ maxAmount.
+ * On-chain delegate is a second cap. Second job in the same batch loses the race.
  */
 export async function claimGrantForTransfer(
   db: D1Database,
-  args: { wallet: string; jobId: string },
+  args: { wallet: string; amount: string; mint: string; jobId: string },
 ): Promise<{ grantId: string }> {
   await ensurePreauthSchema(db);
   const now = Math.floor(Date.now() / 1000);
@@ -261,6 +256,12 @@ export async function claimGrantForTransfer(
   const grant = await findActiveGrantForWallet(db, args.wallet);
   if (!grant) {
     throw new Error("No active preauth grant for this wallet");
+  }
+  if (grant.mint && grant.mint !== args.mint) {
+    throw new Error("Preauth grant mint mismatch");
+  }
+  if (BigInt(args.amount) > BigInt(grant.maxAmount)) {
+    throw new Error("Transfer amount exceeds preauth maxAmount");
   }
 
   const result = await db
@@ -366,6 +367,8 @@ function rowToGrant(row: GrantRow): PreauthGrant {
   return {
     id: row.id,
     wallet: row.wallet,
+    maxAmount: row.max_amount,
+    mint: row.mint,
     expiresAt: row.expires_at,
     consumedAt: row.consumed_at,
   };

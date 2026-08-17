@@ -32,6 +32,16 @@ const RULES: Rule[] = [
     message: "Ask them to tap Ready to pay again, then hold their NFC device here.",
   },
   {
+    test: /preauth grant mint mismatch/i,
+    message:
+      "They opened a window for a different token. Ask them to Ready to pay again.",
+  },
+  {
+    test: /exceeds preauth maxAmount/i,
+    message:
+      "That amount is more than they authorized. Ask them to raise the max and Ready to pay again.",
+  },
+  {
     test: /not the SPL delegate|enable this token for Pay|Delegated amount is insufficient/i,
     message:
       "They need to enable this token for Pay (or raise the limit), then try again.",

@@ -1,4 +1,4 @@
-/** Client helpers for the payer-side preauth presence window. */
+/** Client helpers for the payer-side preauth spending window. */
 
 const API_KEY_STORAGE = "phygital.preauth.apiKey";
 const API_KEY_WALLET_STORAGE = "phygital.preauth.wallet";
@@ -7,6 +7,8 @@ export type PreauthResponse = {
   expiresAt: number;
   grantId: string;
   wallet: string;
+  maxAmount: string;
+  mint: string | null;
 };
 
 /** Load the device pay key only when it belongs to `wallet`. */
@@ -34,11 +36,20 @@ export function clearPreauthApiKey(): void {
 /** Build the integrator / in-app open URL (relative or absolute). */
 export function buildPreauthOpenUrl(args: {
   apiKey: string;
+  amountUi?: string;
+  amount?: string;
+  mint?: string;
   /** Defaults to `window.location.origin` in the browser. */
   origin?: string;
 }): string {
   const params = new URLSearchParams();
   params.set("apiKey", args.apiKey.trim());
+  if (args.amountUi != null && args.amountUi !== "") {
+    params.set("amountUi", args.amountUi);
+  } else if (args.amount != null && args.amount !== "") {
+    params.set("amount", args.amount);
+  }
+  if (args.mint) params.set("mint", args.mint);
   const path = `/api/preauth/open?${params.toString()}`;
   const origin =
     args.origin ??
@@ -47,13 +58,18 @@ export function buildPreauthOpenUrl(args: {
 }
 
 /**
- * Open a short-lived presence window via GET /api/preauth/open.
+ * Open a short-lived spending window via GET /api/preauth/open.
  * Call this on the payer phone *before* tapping the merchant NFC device.
- * Spend mint/amount come from Collect; caps are on-chain delegates.
+ * Provide exactly one of `amount` (raw) or `amountUi` (human). Mint defaults to USDC.
  */
 export async function requestPreauth(args: {
   apiKey?: string;
   wallet?: string;
+  /** Raw u64 amount (smallest units) as decimal string. */
+  amount?: string;
+  /** Human amount, e.g. "100". */
+  amountUi?: string;
+  mint?: string;
 }): Promise<PreauthResponse> {
   const apiKey =
     args.apiKey?.trim() || loadPreauthApiKey(args.wallet) || null;
@@ -63,6 +79,9 @@ export async function requestPreauth(args: {
 
   const url = buildPreauthOpenUrl({
     apiKey,
+    amount: args.amount,
+    amountUi: args.amountUi,
+    mint: args.mint,
     origin: "",
   });
 

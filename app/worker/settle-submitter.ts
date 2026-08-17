@@ -349,9 +349,9 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
 
   /**
    * Fail closed: each job atomically claims a single-use preauth grant for
-   * `asset.owner`. Same-batch / concurrent peers lose the claim race.
-   * Verifier gating happens in {@link flush} (external → fail; only Revi-eligible
-   * jobs reach this method).
+   * `asset.owner` (mint match + amount ≤ maxAmount). Same-batch / concurrent
+   * peers lose the claim race. Verifier gating happens in {@link flush}
+   * (external → fail; only Revi-eligible jobs reach this method).
    */
   private async authorizeBatch(batch: TransferJob[]): Promise<string[]> {
     const db = this.preauthDb();
@@ -360,6 +360,8 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
         const { owner } = job.transfer;
         const { grantId } = await claimGrantForTransfer(db, {
           wallet: owner,
+          amount: job.transfer.amount,
+          mint: job.transfer.mint,
           jobId: job.id,
         });
         return grantId;
