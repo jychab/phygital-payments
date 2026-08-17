@@ -51,6 +51,7 @@ export function FinishClaimPanel() {
     try {
       assertClaimReady(asset, signer.address);
     } catch (err) {
+      console.error("[finish-claim] pre-submit check failed", err);
       setError(toUserErrorMessage(err, "Couldn’t add this NFC device. Try again."));
       return;
     }
@@ -86,6 +87,11 @@ export function FinishClaimPanel() {
 
       setPhase("done");
     } catch (err) {
+      console.error("[finish-claim] finishClaim failed", {
+        error: err,
+        message: err instanceof Error ? err.message : String(err),
+        cause: err instanceof Error ? err.cause : undefined,
+      });
       setPhase(null);
       setError(
         toUserErrorMessage(
