@@ -3,6 +3,7 @@ import {
   appendTransactionMessageInstructions,
   assertIsTransactionWithBlockhashLifetime,
   createTransactionMessage,
+  getBase58Decoder,
   getPublicKeyFromAddress,
   getSignatureFromTransaction,
   pipe,
@@ -52,7 +53,11 @@ async function assertEd25519Signatures(tx: Transaction): Promise<void> {
   const failed = report.filter((row) => !row.valid);
   if (failed.length === 0) return;
 
-  console.error("[tx] ed25519 signature check failed", report);
+  console.error("[tx] ed25519 signature check failed", {
+    report,
+    messageLen: tx.messageBytes.length,
+    messageB58: getBase58Decoder().decode(tx.messageBytes),
+  });
   throw new Error(
     `Transaction did not pass signature verification for: ${failed
       .map((row) => row.address)
