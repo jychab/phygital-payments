@@ -1,8 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { address } from "@solana/kit";
 
 import {
+  fetchPhygitalAsset,
   fetchPhygitalAssetByIdentifier,
   type PhygitalAsset,
 } from "@/lib/phygital/asset";
@@ -18,6 +20,19 @@ export function usePhygitalAsset(identifier: string | null) {
       return fetchPhygitalAssetByIdentifier(getSolanaRpc(), identifier);
     },
     enabled: Boolean(identifier),
+    ...queryOptions.frequent,
+  });
+}
+
+/** Load on-chain asset by PDA. */
+export function usePhygitalAssetByAddress(assetAddress: string | null) {
+  return useQuery<PhygitalAsset, Error>({
+    queryKey: queryKeys.asset.byAddress(assetAddress),
+    queryFn: () => {
+      if (!assetAddress) throw new Error("Missing asset");
+      return fetchPhygitalAsset(getSolanaRpc(), address(assetAddress));
+    },
+    enabled: Boolean(assetAddress),
     ...queryOptions.frequent,
   });
 }

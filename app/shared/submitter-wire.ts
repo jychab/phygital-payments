@@ -46,7 +46,7 @@ export type SubmitTransferRequest = {
 
 export type JobStatus = "queued" | "submitted" | "confirmed" | "failed";
 
-/** Shared terminal envelope for claim + transfer jobs. */
+/** Shared terminal envelope for sponsored transfer jobs. */
 export type SponsoredJob = {
   id: string;
   createdAtMs: number;

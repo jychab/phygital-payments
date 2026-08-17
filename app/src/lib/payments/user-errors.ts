@@ -45,8 +45,8 @@ const RULES: Rule[] = [
     message: "Turn on Pay on this phone first.",
   },
   {
-    test: /sponsored claim|claim failed/i,
-    message: "Couldn’t add this NFC device. Try again.",
+    test: /user rejected|rejected the request|transaction cancelled|signing was cancelled/i,
+    message: "Transaction cancelled.",
   },
   {
     test: /sponsored submit is not configured|fee-free|fee_payer|fee payer/i,
@@ -55,6 +55,10 @@ const RULES: Rule[] = [
   {
     test: /timed out waiting for sponsored/i,
     message: "That’s taking too long. Try again.",
+  },
+  {
+    test: /tap proof expired|slot hash no longer valid/i,
+    message: "Tap proof expired. Tap your NFC device again in Safari.",
   },
   {
     test: /slot hashes|slot hash/i,

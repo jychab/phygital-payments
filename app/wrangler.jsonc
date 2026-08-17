@@ -40,6 +40,10 @@
     {
       "binding": "revibase_counter",
       "id": "a9aa768ab4854f11ac0314170849c172"
+    },
+    {
+      "binding": "pending_claim",
+      "id": "8c7da72631dc4aa98aebd5295eb319bc"
     }
   ],
   "vars": {

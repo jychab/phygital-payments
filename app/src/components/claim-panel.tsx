@@ -1,69 +1,61 @@
 "use client";
 
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { Nfc } from "lucide-react";
+import { CheckCircle2, Copy, ExternalLink, Nfc } from "lucide-react";
 
+import { GateMessage, SuccessStatus } from "@/components/gate-message";
+import { ExpiryCountdown } from "@/components/expiry-countdown";
 import { InAppBrowserGate } from "@/components/in-app-browser-gate";
 import { NfcHoldStatus } from "@/components/nfc-hold-status";
-import { SolanaAddressField } from "@/components/solana-address-field";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/use-is-in-app-browser";
+import { createPendingClaim } from "@/lib/claim/pending-claim-client";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
-import { claimSponsoredOwnership, assertClaimReady } from "@/lib/payments/claim";
-import { tryParseAddress } from "@/lib/payments/payment-request";
+import { assertCaptureReady, captureClaimTap } from "@/lib/payments/claim";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
-import { queryKeys } from "@/lib/queries";
+import { toast } from "sonner";
 
-type Stage = "ready" | "reading" | "confirming";
+type Stage = "ready" | "reading";
+
+function phantomBrowseUrl(finishUrl: string): string {
+  return `https://phantom.app/ul/browse/${encodeURIComponent(finishUrl)}`;
+}
 
 /**
- * Paste the paying-from wallet, then NFC + sponsored claim (no wallet signature).
+ * Safari step 1: NFC tap only, then hand off to wallet in-app browser.
  */
 export function ClaimPanel({
   asset,
   unclaimed = false,
-  onClaimed,
 }: {
   asset: PhygitalAsset;
   unclaimed?: boolean;
-  onClaimed?: (recipient: string) => void;
 }) {
   const inApp = useIsInAppBrowser();
-  const queryClient = useQueryClient();
-  const assetKey = queryKeys.asset.byIdentifier(asset.identifier);
 
   const [stage, setStage] = useState<Stage>("ready");
   const [error, setError] = useState<string | null>(null);
-  const [recipientInput, setRecipientInput] = useState("");
+  const [handoff, setHandoff] = useState<{
+    finishUrl: string;
+    expiresAtMs: number;
+  } | null>(null);
 
-  const recipient = tryParseAddress(recipientInput);
-  const busy = stage === "reading" || stage === "confirming";
+  const title = unclaimed ? "Add to this phone" : "Move to this phone";
 
-  async function onClaim() {
-    if (!recipient) {
-      setError("Paste a valid wallet address.");
-      return;
-    }
+  async function onCapture() {
     setError(null);
     try {
-      await assertClaimReady({ asset: asset.asset, recipient });
+      assertCaptureReady(asset);
     } catch (err) {
       setError(toUserErrorMessage(err, "Couldn’t add this NFC device. Try again."));
       return;
     }
 
-    const progress = { confirming: false };
     setStage("reading");
     try {
-      await queryClient.cancelQueries({ queryKey: assetKey });
-      await claimSponsoredOwnership({
+      const { session, auth } = await captureClaimTap({
         asset: asset.asset,
-        recipient,
-        skipReadyCheck: true,
         onPasskeyComplete: () => {
-          progress.confirming = true;
-          setStage("confirming");
           try {
             navigator.vibrate?.(30);
           } catch {
@@ -71,22 +63,35 @@ export function ClaimPanel({
           }
         },
       });
-      onClaimed?.(recipient);
+
+      const pending = await createPendingClaim({
+        asset: session.asset.toString(),
+        slotNumber: session.slotNumber.toString(),
+        auth,
+      });
+
+      setHandoff({
+        finishUrl: pending.finishUrl,
+        expiresAtMs: pending.expiresAtMs,
+      });
     } catch (err) {
       setStage("ready");
       setError(
         toUserErrorMessage(
           err,
-          progress.confirming
-            ? "That didn’t go through. Check the address and try again."
-            : "Couldn’t read the NFC device. Turn on NFC and hold it near the back of your phone.",
+          "Couldn’t read the NFC device. Turn on NFC and hold it near the back of your phone.",
         ),
       );
-    } finally {
-      void queryClient.invalidateQueries({ queryKey: assetKey });
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.asset.byOwner(recipient),
-      });
+    }
+  }
+
+  async function onCopyLink() {
+    if (!handoff) return;
+    try {
+      await navigator.clipboard.writeText(handoff.finishUrl);
+      toast.success("Finish link copied");
+    } catch {
+      toast.error("Couldn’t copy link");
     }
   }
 
@@ -96,58 +101,79 @@ export function ClaimPanel({
     );
   }
 
-  if (busy) {
+  if (handoff) {
+    return (
+      <div className="flex flex-1 flex-col gap-5 py-2">
+        <SuccessStatus
+          icon={<CheckCircle2 className="size-7" />}
+          title="NFC tap verified"
+          body="Open the finish link in your wallet app to connect and confirm. You’ll pay a small network fee."
+        />
+
+        <ExpiryCountdown
+          expiresAtMs={handoff.expiresAtMs}
+          className="text-center text-xs text-muted-foreground"
+        />
+
+        <div className="flex flex-col gap-2">
+          <Button type="button" className="w-full" asChild>
+            <a href={phantomBrowseUrl(handoff.finishUrl)}>
+              <ExternalLink className="size-4" />
+              Open in Phantom
+            </a>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => void onCopyLink()}
+          >
+            <Copy className="size-4" />
+            Copy finish link
+          </Button>
+        </div>
+
+        <p className="text-center text-[11px] text-muted-foreground">
+          Use Safari for the NFC tap. Finish in Phantom, Solflare, or another wallet
+          app browser.
+        </p>
+      </div>
+    );
+  }
+
+  if (stage === "reading") {
     return (
       <NfcHoldStatus
-        title={stage === "confirming" ? "Adding…" : "Hold your NFC device close"}
-        body={
-          stage === "confirming"
-            ? "Almost done…"
-            : "Keep it against the back until it reads."
-        }
-        pulsing={stage === "reading"}
-        busy={stage === "confirming"}
+        title="Hold your NFC device close"
+        body="Keep it against the back until it reads."
+        pulsing
       />
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-5 py-2">
-      <div className="space-y-1.5 text-center">
-        <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
-          <Nfc className="size-5 text-muted-foreground" />
+    <GateMessage
+      icon={<Nfc className="size-5 text-muted-foreground" />}
+      title={title}
+      body="Hold your NFC device to verify, then finish in your wallet app."
+      action={
+        <div className="flex w-full max-w-64 flex-col gap-3">
+          {error ? (
+            <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={() => void onCapture()}
+          >
+            <Nfc className="size-4" />
+            {error ? "Try again" : "Hold to add"}
+          </Button>
         </div>
-        <p className="text-sm font-medium text-foreground">
-          {unclaimed ? "Add to this phone" : "Move to this phone"}
-        </p>
-        <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Paste the wallet whose USDC will back this NFC device, then hold it.
-        </p>
-      </div>
-
-      <SolanaAddressField
-        value={recipientInput}
-        onChange={setRecipientInput}
-        disabled={busy}
-        label="Paying from"
-        hint="This is the balance your NFC device will use."
-      />
-
-      {error ? (
-        <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
-          {error}
-        </p>
-      ) : null}
-
-      <Button
-        type="button"
-        className="w-full"
-        disabled={!recipient || busy}
-        onClick={() => void onClaim()}
-      >
-        <Nfc className="size-4" />
-        {error ? "Try again" : "Hold to add"}
-      </Button>
-    </div>
+      }
+    />
   );
 }

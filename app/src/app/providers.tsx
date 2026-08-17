@@ -76,7 +76,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
 }
 
 /**
- * Wallet routes only (`/`, `/setup`). Do not wrap `/device` or `/collect`.
+ * Wallet routes (`/`, `/setup`, `/device/finish`). Do not wrap `/collect` or `/device`.
  */
 export function PrivyWalletProvider({ children }: { children: ReactNode }) {
   const [config] = useState(() => getPrivyConfig());

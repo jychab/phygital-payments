@@ -7,7 +7,7 @@ type SponsoredJobLike = {
   error?: string;
 };
 
-/** Shared 200 / 202 / 502 shaping for claim + transfer submit routes. */
+/** Shared 200 / 202 / 502 shaping for transfer submit routes. */
 export function jsonForSponsoredJob(
   job: SponsoredJobLike,
   failedMessage?: string,

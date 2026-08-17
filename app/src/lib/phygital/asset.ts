@@ -1,6 +1,7 @@
 import { address, type Address, type Rpc, type SolanaRpcApi } from "@solana/kit";
 import {
   fetchAllAssetsFromOwner,
+  fetchAsset,
   fetchAssetByIdentifier,
   findAssetPda,
   type Asset,
@@ -38,6 +39,15 @@ export function phygitalAssetFromAccount(
     currentOwner: asset.owner,
     lastSignCount: asset.lastSignCount,
   };
+}
+
+/** Load asset by on-chain PDA (finish page already has `pending.asset`). */
+export async function fetchPhygitalAsset(
+  rpc: Rpc<SolanaRpcApi>,
+  assetAddress: Address,
+): Promise<PhygitalAsset> {
+  const { data } = await fetchAsset(rpc, assetAddress);
+  return phygitalAssetFromAccount(assetAddress, data);
 }
 
 /**

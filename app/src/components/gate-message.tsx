@@ -2,11 +2,37 @@
 
 import type { ReactNode } from "react";
 
+import { cn } from "@/lib/utils";
+
 export function CenteredStatus({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 py-14 text-center">
       {children}
     </div>
+  );
+}
+
+export function SuccessStatus({
+  icon,
+  title,
+  body,
+  bodyClassName = "max-w-72",
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+  bodyClassName?: string;
+}) {
+  return (
+    <CenteredStatus>
+      <div className="mx-auto mb-2 flex size-14 items-center justify-center rounded-full bg-success/15 text-success">
+        {icon}
+      </div>
+      <p className="text-base font-medium text-foreground">{title}</p>
+      <p className={cn("mx-auto text-sm text-muted-foreground", bodyClassName)}>
+        {body}
+      </p>
+    </CenteredStatus>
   );
 }
 

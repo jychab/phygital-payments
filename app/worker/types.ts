@@ -13,13 +13,6 @@ export type {
   JobStatusResponse,
 } from "../shared/submitter-wire";
 
-export type {
-  ClaimAuthWire,
-  SubmitClaimRequest,
-  ClaimJob,
-  ClaimJobStatusResponse,
-} from "../shared/claim-wire";
-
 export { base64ToBytes } from "../shared/base64";
 
 export const MAX_BATCH_SIZE = 8;

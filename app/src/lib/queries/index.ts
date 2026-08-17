@@ -76,10 +76,18 @@ export const queryKeys = {
       [...queryKeys.tapVerify.all(), params] as const,
   },
 
+  pendingClaim: {
+    all: () => ["pendingClaim"] as const,
+    byToken: (token: string | null) =>
+      [...queryKeys.pendingClaim.all(), token] as const,
+  },
+
   asset: {
     all: () => ["assets"] as const,
     byIdentifier: (identifier: string | null) =>
       [...queryKeys.asset.all(), "identifier", identifier] as const,
+    byAddress: (asset: string | null) =>
+      [...queryKeys.asset.all(), "address", asset] as const,
     byOwner: (owner: string | null) =>
       [...queryKeys.asset.all(), "owner", owner] as const,
   },

@@ -8,8 +8,8 @@ import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
 
 /**
- * Session wallet control for Privy routes (Home / setup).
- * Do not mount on `/device` or `/collect` (no PrivyProvider there).
+ * Session wallet control for Privy routes (Home / setup / device/finish).
+ * Do not mount on `/collect` or `/device` (no PrivyProvider there).
  */
 export function WalletChip({ className }: { className?: string }) {
   const {

@@ -3,10 +3,6 @@ import "server-only";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import type {
-  ClaimJob,
-  SubmitClaimRequest,
-} from "../../../shared/claim-wire";
-import type {
   SubmitTransferRequest,
   TransferJob,
 } from "@/lib/payments/settle-types";
@@ -20,8 +16,6 @@ export type SubmitterStub = {
   ): Promise<TransferJob>;
   getJob(jobId: string): Promise<TransferJob | null>;
   waitForJob(jobId: string, timeoutMs?: number): Promise<TransferJob | null>;
-  enqueueClaimAndWait(body: SubmitClaimRequest): Promise<ClaimJob>;
-  waitForClaimJob(jobId: string, timeoutMs?: number): Promise<ClaimJob | null>;
 };
 
 export function getSubmitterStub(): SubmitterStub {

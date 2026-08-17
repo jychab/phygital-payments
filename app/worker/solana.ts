@@ -288,23 +288,6 @@ async function buildAndSign(
   };
 }
 
-/** Claim / arbitrary ix list — fixed single-job CU budget. */
-export async function sendSponsoredInstructions(
-  env: CloudflareEnv,
-  core: Instruction[],
-  ctx: SendContext,
-): Promise<Signature> {
-  if (core.length === 0) {
-    throw new SubmitError("No instructions to submit", false);
-  }
-  return sendSponsoredCore(
-    env,
-    core,
-    ctx,
-    Math.min(SINGLE_JOB_COMPUTE_UNITS, MAX_COMPUTE_UNITS),
-  );
-}
-
 /**
  * Simulate → size compute budget → send (skipPreflight) → await `confirmed`.
  */

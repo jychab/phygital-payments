@@ -2,11 +2,6 @@ import type {
   SubmitTransferRequest,
   TransferJob,
 } from "./settle-types";
-import type {
-  ClaimJob,
-  SubmitClaimRequest,
-} from "../../../shared/claim-wire";
-import type { authenticatePasskeyForTransfer } from "phygital-token-sdk";
 
 const SUBMITTER_BASE = "/api/transfer-submitter";
 const SUBMIT_NETWORK_RETRIES = 4;
@@ -32,33 +27,6 @@ export async function submitAndWaitSettle(
     body: { ...body, idempotencyKey },
     label: "Sponsored transfer",
   }) as Promise<{ signature: string; job: TransferJob }>;
-}
-
-type ClaimAuthResponse = Awaited<
-  ReturnType<typeof authenticatePasskeyForTransfer>
->;
-
-/** Sponsored ownership claim (same DO / retry shape as transfers). */
-export async function submitSettleClaim(params: {
-  asset: string;
-  slotNumber: string | bigint;
-  auth: ClaimAuthResponse;
-  recipient: string;
-}): Promise<{ signature: string; job: ClaimJob }> {
-  const body: SubmitClaimRequest = {
-    asset: params.asset,
-    slotNumber: String(params.slotNumber),
-    recipient: params.recipient,
-    auth: params.auth as SubmitClaimRequest["auth"],
-    createdAtMs: Date.now(),
-    idempotencyKey: await sha256Hex(params.auth.response.signature),
-  };
-  return submitSponsoredJob({
-    submitUrl: "/api/claim",
-    jobUrl: (id) => `/api/claim/jobs/${encodeURIComponent(id)}`,
-    body,
-    label: "Sponsored claim",
-  }) as Promise<{ signature: string; job: ClaimJob }>;
 }
 
 async function submitSponsoredJob(args: {

@@ -72,15 +72,23 @@ Embeds cannot use `/setup` (error screen).
 
 ### Device / claim (`/device?pk=&s=&c=&n=`)
 
-**NFC tap only — no Privy / Connect.** No in-app links to this route (tag URL only). Bare `?pk=` without tap proof shows “Hold NFC device.”
+**Two-step handoff:** Safari NFC tap first, then finish in a wallet in-app browser. No in-app links to `/device` (tag URL only). Bare `?pk=` without tap proof shows “Hold NFC device.”
 
-Flow:
+**Step 1 — Safari / Chrome (`/device`):** no wallet connect.
 
 1. Verify tap (silent) — chip counter must be **greater than** the last value in the shared `revibase_counter` KV; the same counter may remount briefly, then needs a fresh tap
-2. Claim if unclaimed or unlocked — paste the paying-from wallet (Safari/Chrome for NFC)
-3. Status — verified, lock state, owner address + **Open Home** (set limit / Ready to pay on Home)
+2. Hold NFC device for ownership transfer challenge (WebAuthn tap)
+3. Handoff — **Open in Phantom** or copy the finish link. Tap proof expires in ~3 minutes (Solana SlotHashes window)
 
-Locked devices show owner status only. Spending limits and Ready to pay are **not** on `/device`.
+**Step 2 — wallet app browser (`/device/finish?token=…`):** Privy connect required.
+
+1. Connect the wallet that should own the device
+2. Confirm transaction — recipient wallet pays the network fee
+3. **Open Home** — set a spending limit and Ready to pay
+
+Locked devices show owner status only on step 1 (no claim UI). Spending limits and Ready to pay are **not** on `/device`.
+
+Pending tap proofs are stored in the `pending_claim` KV namespace with TTL aligned to the SlotHashes validity window (~512 slots, ~3m 25s).
 
 ### Open a presence window (API key)
 
