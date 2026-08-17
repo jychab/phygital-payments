@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { SetupCollectApp } from "@/components/setup-collect-app";
+import { SetupCollectApp } from "@/components/wallet-client-apps";
 import { parsePaymentRequest } from "@/lib/payments/payment-request";
 
 export const metadata: Metadata = {

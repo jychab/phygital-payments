@@ -1,10 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown } from "lucide-react";
 
-import { WalletChip } from "@/components/wallet-chip";
 import { CopyableAddress } from "@/components/copyable-address";
 import {
   DropdownMenu,
@@ -15,6 +15,11 @@ import {
 import { collectHref } from "@/lib/payments/payment-request";
 import { isMainnet } from "@/lib/solana/cluster";
 import { cn } from "@/lib/utils";
+
+const WalletChip = dynamic(
+  () => import("@/components/wallet-chip").then((m) => m.WalletChip),
+  { ssr: false },
+);
 
 export type WalletActionsMode = "full" | "display-only" | "hidden";
 

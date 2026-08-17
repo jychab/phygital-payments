@@ -46,7 +46,7 @@ export function PayPanel({
   onEditTokenLimit: (holding: PaymentTokenHolding) => void;
 }) {
   const { address: walletAddress } = useSolanaAddress();
-  const { ensureKey } = useDevicePayKeyHelpers();
+  const { provisionKey } = useDevicePayKeyHelpers();
   const [busy, setBusy] = useState(false);
   const [keyBusy, setKeyBusy] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -101,17 +101,34 @@ export function PayPanel({
     setKeyEpoch((n) => n + 1);
   }
 
+  async function onEnablePhone() {
+    if (!walletAddress) {
+      toast.error("Connect your wallet first");
+      return;
+    }
+    try {
+      setKeyBusy(true);
+      await provisionKey(walletAddress);
+      noteKeyReady();
+      toast.success("Payment verifier ready");
+    } catch (error) {
+      toast.error(toUserErrorMessage(error, "Couldn’t set up payment verifier"));
+    } finally {
+      setKeyBusy(false);
+    }
+  }
+
   async function onReady() {
     if (!walletAddress) {
-      toast.error("Sign in to continue");
+      toast.error("Connect your wallet first");
+      return;
+    }
+    if (!loadPreauthApiKey(walletAddress)) {
+      toast.error("Set up a payment verifier first");
       return;
     }
     try {
       setBusy(true);
-      if (!loadPreauthApiKey(walletAddress)) {
-        await ensureKey(walletAddress);
-        noteKeyReady();
-      }
       const grant = await requestPreauth({
         wallet: walletAddress,
       });
@@ -147,16 +164,16 @@ export function PayPanel({
 
   async function onCopyApiKey() {
     if (!walletAddress) {
-      toast.error("Sign in to continue");
+      toast.error("Connect your wallet first");
+      return;
+    }
+    const key = loadPreauthApiKey(walletAddress);
+    if (!key) {
+      toast.error("Set up a payment verifier first");
       return;
     }
     try {
       setKeyBusy(true);
-      let key = loadPreauthApiKey(walletAddress);
-      if (!key) {
-        key = await ensureKey(walletAddress);
-        noteKeyReady();
-      }
       await navigator.clipboard.writeText(key);
       toast.success("API key copied");
     } catch (error) {
@@ -168,16 +185,16 @@ export function PayPanel({
 
   async function onCopyOpenUrl() {
     if (!walletAddress) {
-      toast.error("Sign in to continue");
+      toast.error("Connect your wallet first");
+      return;
+    }
+    const key = loadPreauthApiKey(walletAddress);
+    if (!key) {
+      toast.error("Set up a payment verifier first");
       return;
     }
     try {
       setKeyBusy(true);
-      let key = loadPreauthApiKey(walletAddress);
-      if (!key) {
-        key = await ensureKey(walletAddress);
-        noteKeyReady();
-      }
       const url = buildPreauthOpenUrl({ apiKey: key });
       await navigator.clipboard.writeText(url);
       toast.success("Open URL copied");
@@ -190,14 +207,14 @@ export function PayPanel({
 
   async function onRotateKey() {
     if (!walletAddress) {
-      toast.error("Sign in to continue");
+      toast.error("Connect your wallet first");
       return;
     }
     try {
       setKeyBusy(true);
-      await ensureKey(walletAddress, { rotate: true });
+      await provisionKey(walletAddress, { rotate: true });
       noteKeyReady();
-      toast.success("New API key ready — update any Shortcuts");
+      toast.success("Api key rotated — update any Shortcuts");
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn’t rotate API key"));
     } finally {
@@ -259,11 +276,26 @@ export function PayPanel({
         <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
           Pay
         </p>
-        <p className="text-sm font-medium text-foreground">Ready to pay</p>
-        <p className="text-xs text-muted-foreground">
-          Open a short window, then hold your NFC device to their phone. They
-          choose the token and amount.
-        </p>
+        {hasKey ? (
+          <>
+            <p className="text-sm font-medium text-foreground">Ready to pay</p>
+            <p className="text-xs text-muted-foreground">
+              Open a short window, then hold your NFC device to their phone. They
+              choose the token and amount.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-medium text-foreground">
+              Set Up Payment Verifier
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Your wallet will ask you to sign a message to set up a payment
+              verifier on this phone. That is not a transaction and does not
+              move funds.
+            </p>
+          </>
+        )}
       </div>
 
       <p className="flex flex-wrap items-center justify-center gap-1 text-center text-[11px] text-muted-foreground">
@@ -279,32 +311,55 @@ export function PayPanel({
           </span>
         )}
         <span className="text-muted-foreground/50">·</span>
-        <span className="inline-flex items-center gap-1 text-primary/90">
-          <Check className="size-3" strokeWidth={2.5} />
-          Ready
-        </span>
+        {hasKey ? (
+          <span className="inline-flex items-center gap-1 text-primary/90">
+            <Check className="size-3" strokeWidth={2.5} />
+            Ready
+          </span>
+        ) : (
+          <span>Needs a payment verifier</span>
+        )}
       </p>
 
       <div className="mt-auto flex flex-col gap-2.5">
-        <Button
-          type="button"
-          size="lg"
-          className="w-full"
-          onClick={onReady}
-          disabled={manageBusy}
-        >
-          {busy ? (
-            <>
-              <LoaderCircle className="size-4 animate-spin" />
-              Getting ready…
-            </>
-          ) : (
-            <>
-              <Nfc className="size-4" />
-              Ready to pay
-            </>
-          )}
-        </Button>
+        {hasKey ? (
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={onReady}
+            disabled={manageBusy}
+          >
+            {busy ? (
+              <>
+                <LoaderCircle className="size-4 animate-spin" />
+                Getting ready…
+              </>
+            ) : (
+              <>
+                <Nfc className="size-4" />
+                Ready to pay
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={() => void onEnablePhone()}
+            disabled={manageBusy}
+          >
+            {keyBusy ? (
+              <>
+                <LoaderCircle className="size-4 animate-spin" />
+                Sign in your wallet…
+              </>
+            ) : (
+              "Set Up Payment Verifier"
+            )}
+          </Button>
+        )}
         <Button
           type="button"
           variant="ghost"
@@ -339,7 +394,7 @@ export function PayPanel({
               size="sm"
               className="justify-start text-muted-foreground"
               onClick={() => void onCopyApiKey()}
-              disabled={manageBusy}
+              disabled={manageBusy || !hasKey}
             >
               {keyBusy ? "Working…" : "Copy API key"}
             </Button>
@@ -349,7 +404,7 @@ export function PayPanel({
               size="sm"
               className="justify-start text-muted-foreground"
               onClick={() => void onCopyOpenUrl()}
-              disabled={manageBusy}
+              disabled={manageBusy || !hasKey}
             >
               Copy open URL
             </Button>
@@ -359,9 +414,9 @@ export function PayPanel({
               size="sm"
               className="justify-start text-muted-foreground"
               onClick={() => void onRotateKey()}
-              disabled={manageBusy}
+              disabled={manageBusy || !hasKey}
             >
-              Rotate API key
+              Rotate Api Key
             </Button>
             <Button
               type="button"
@@ -374,11 +429,6 @@ export function PayPanel({
               {revoke.isPending ? "Turning off…" : "Turn off USDC Pay"}
             </Button>
           </div>
-        ) : null}
-        {!hasKey ? (
-          <p className="text-center text-[11px] text-muted-foreground/70">
-            First time on this phone may ask you to confirm once.
-          </p>
         ) : null}
       </div>
     </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { PayHomeApp } from "@/components/pay-home-app";
+import { PayHomeApp } from "@/components/wallet-client-apps";
 
 export const metadata: Metadata = {
   title: "Phygital Pay",

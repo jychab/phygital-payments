@@ -12,11 +12,11 @@ import {
 } from "@/lib/payments/presence-grant-client";
 
 /**
- * Ensure this device has a pay key for `wallet`. Signs a short proof once,
- * stores the key locally. Pass `rotate: true` to issue a new key (invalidates
- * the previous one and any Shortcuts that still use it).
+ * Issue a device pay key for `wallet`. Always prompts `signMessage` — call
+ * only from an explicit user action that says they will sign a message.
+ * Pass `rotate: true` to replace an existing key (invalidates Shortcuts).
  */
-export async function ensureDevicePayKey(args: {
+export async function provisionDevicePayKey(args: {
   wallet: string;
   signMessage: ReturnType<typeof useSignMessage>["signMessage"];
   solanaWallet: NonNullable<ReturnType<typeof useWallets>["wallets"][number]>;
@@ -34,7 +34,12 @@ export async function ensureDevicePayKey(args: {
     wallet: args.solanaWallet,
     options: {
       uiOptions: {
-        title: args.rotate ? "Rotate Pay API key" : "Enable Pay on this device",
+        title: args.rotate
+          ? "Rotate Api Key"
+          : "Set Up Payment Verifier",
+        description: args.rotate
+          ? "This message issues a new api key. It does not move funds."
+          : "This message sets up a payment verifier on this phone. It does not move funds.",
       },
     },
   });
@@ -63,9 +68,9 @@ export function useDevicePayKeyHelpers() {
 
   return {
     solanaWallet,
-    async ensureKey(wallet: string, opts?: { rotate?: boolean }) {
+    async provisionKey(wallet: string, opts?: { rotate?: boolean }) {
       if (!solanaWallet) throw new Error("Connect your wallet first");
-      return ensureDevicePayKey({
+      return provisionDevicePayKey({
         wallet,
         signMessage,
         solanaWallet,

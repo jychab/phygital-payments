@@ -17,7 +17,6 @@ import {
   isDelegateEnabled,
   uiAmountToRaw,
 } from "@/lib/payments/mint-delegate";
-import { useDevicePayKeyHelpers } from "@/lib/payments/device-pay-key-client";
 import {
   resolvePaymentToken,
   type PaymentTokenHolding,
@@ -43,11 +42,9 @@ export function LimitPanel({
   onBack?: () => void;
 }) {
   const { address: walletAddress, isConnected } = useSolanaAddress();
-  const { ensureKey } = useDevicePayKeyHelpers();
   const mint = String(mintProp);
   const mintAddress = address(mint);
   const [amount, setAmount] = useState("50");
-  const [provisioning, setProvisioning] = useState(false);
 
   const statusQuery = useDelegateStatus(expectedOwner, mintAddress);
   const mintQuery = useMintProgram(mintAddress);
@@ -70,7 +67,7 @@ export function LimitPanel({
   const wrongWallet =
     isConnected && walletAddress != null && walletAddress !== expectedOwner;
   const matched = isConnected && walletAddress === expectedOwner;
-  const busy = setAllowance.isPending || provisioning || statusQuery.isLoading;
+  const busy = setAllowance.isPending || statusQuery.isLoading;
 
   async function runEnable() {
     if (!walletAddress || walletAddress !== expectedOwner) return;
@@ -84,20 +81,6 @@ export function LimitPanel({
         rawAmount,
         decimals: mintQuery.data.decimals,
       });
-      setProvisioning(true);
-      try {
-        await ensureKey(walletAddress);
-      } catch (error) {
-        toast.error(
-          toUserErrorMessage(
-            error,
-            "Limit saved, but this phone isn’t ready to pay yet. Try again.",
-          ),
-        );
-        return;
-      } finally {
-        setProvisioning(false);
-      }
       toast.success("Spending limit saved");
       onEnabled?.();
     } catch (error) {
@@ -106,7 +89,7 @@ export function LimitPanel({
   }
 
   const cta = (() => {
-    if (setAllowance.isPending || provisioning) return null;
+    if (setAllowance.isPending) return null;
     if (hasDelegate) return "Update limit";
     return "Allow spending";
   })();
@@ -186,10 +169,10 @@ export function LimitPanel({
           onClick={() => void runEnable()}
           disabled={busy || !amount || !matched}
         >
-          {setAllowance.isPending || provisioning ? (
+          {setAllowance.isPending ? (
             <>
               <LoaderCircle className="size-4 animate-spin" />
-              {provisioning ? "Finishing…" : "Confirm in wallet…"}
+              Confirm spending limit in wallet…
             </>
           ) : hasDelegate && matched ? (
             <>
@@ -203,7 +186,7 @@ export function LimitPanel({
         {matched ? (
           <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground/80">
             <Lock className="size-3" strokeWidth={2.25} />
-            You’ll confirm in your wallet
+            You’ll confirm a spending-limit transaction in your wallet
           </p>
         ) : null}
       </div>
