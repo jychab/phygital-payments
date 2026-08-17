@@ -1,15 +1,13 @@
 import {
   authenticatePasskeyForTransfer,
   beginTransfer,
-  buildSecp256r1VerifyInstructionFromWebAuthnResponse,
-  parseSecp256r1Pubkey,
+  completeTransfer,
   type TransferSession,
 } from "phygital-token-sdk";
-import { address as toAddress, type Address, type TransactionSigner } from "@solana/kit";
+import { type Address, type TransactionSigner } from "@solana/kit";
 
 import type { ClaimAuthWire } from "../../../shared/pending-claim-wire";
 import { SLOT_HASHES_CAPACITY } from "../../../shared/slot-hashes";
-import { getExecuteTransferInstruction } from "@/lib/phygital/execute-transfer-ix";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { sendTransaction } from "@/lib/solana/tx";
@@ -53,16 +51,7 @@ export async function captureClaimTap(args: {
   return { session, auth };
 }
 
-async function assertSlotStillValid(slotNumber: bigint): Promise<void> {
-  const currentSlot = await getSolanaRpc().getSlot().send();
-  if (currentSlot - slotNumber >= BigInt(SLOT_HASHES_CAPACITY)) {
-    throw new Error(
-      "Tap proof expired (slot hash no longer valid). Tap again in Safari.",
-    );
-  }
-}
-
-/** Wallet step: build execute_transfer + recipient-signed submit. */
+/** Wallet step: SDK transfer_ownership + recipient-signed submit. */
 export async function finishClaim(args: {
   asset: Address;
   slotNumber: string;
@@ -70,27 +59,20 @@ export async function finishClaim(args: {
   recipient: TransactionSigner;
 }): Promise<{ signature: string }> {
   const slotNumber = BigInt(args.slotNumber);
-  await assertSlotStillValid(slotNumber);
 
-  const { secp256r1Verify, signedMessageIndex, clientDataJson } =
-    await buildSecp256r1VerifyInstructionFromWebAuthnResponse({
-      response: args.auth,
-      secp256r1PublicKey: parseSecp256r1Pubkey(args.auth.id),
-    });
-
-  const executeTransfer = getExecuteTransferInstruction({
-    recipient: toAddress(args.recipient.address),
+  // completeTransfer only reads asset + slotNumber from the session.
+  const session: TransferSession = {
+    rpc: getSolanaRpc(),
     asset: args.asset,
     slotNumber,
-    secp256r1VerifyArgs: {
-      verifyArgsRelativeIndex: -1,
-      signedMessageIndex,
-      clientDataJson,
-    },
-  });
+    slotHash: new Uint8Array(32),
+    challenge: new Uint8Array(32),
+  };
+
+  const instructions = await completeTransfer(session, args.auth, args.recipient);
 
   const { signature } = await sendTransaction({
-    instructions: [secp256r1Verify, executeTransfer],
+    instructions,
     feePayer: args.recipient,
   });
   return { signature };
