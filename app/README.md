@@ -39,13 +39,13 @@ Configure the Privy app for Solana (embedded wallets + external connectors). Log
 
 Connect a wallet via Privy, then use tabs:
 
-- **Pay** — set/update the wallet spending limit (USDC delegate). When the limit is on **and** you own ≥1 NFC device, Ready to pay + Manage Pay (API key / Shortcuts) live here.
+- **Pay** — Get Ready (open a spending window) when setup is complete. If spending cap or NFC device is missing, Home asks you to hold your NFC device — first-time setup is on **`/device`**. If this wallet has no payment verifier yet (or this browser has no key), Pay offers **Allow payment verifier**.
 - **Devices** — informational list of NFC devices claimed by this wallet (no deep links). Add a device by holding an NFC tag to the phone (opens `/device`).
 - **Activity** — recent payments for the connected wallet.
 
 Header mode dropdown: **Home** | **Collect** (`/collect?recipient=<connected-wallet>`). Collect is disabled until connected.
 
-**Pay is ready** only when both are true: spending limit set, and at least one claimed NFC device.
+**Pay is ready** on Home when the spending cap is set and this wallet owns at least one NFC device. Everyday Get Ready uses the payment verifier issued to **this wallet**.
 
 Legacy collect query params on `/` (`?recipient=` / `?amount=`) redirect to `/collect`.
 
@@ -72,21 +72,27 @@ Embeds cannot use `/setup` (error screen).
 
 ### Device / claim (`/device?pk=&s=&c=&n=`)
 
-**Two-step handoff:** Safari NFC tap first, then finish in a wallet in-app browser. No in-app links to `/device` (tag URL only). Bare `?pk=` without tap proof shows “Hold NFC device.”
+**Setup always starts here** after an NFC tap. `/device` has **no Privy / Connect**. Status (linked wallet, spending cap set/not set, payment verifier enabled/not set) is read from chain + D1. Acting on a prompt hands off to `/device/finish` (wallet connect), the same Continue / Copy finish link pattern as claiming.
 
-**Step 1 — Safari / Chrome (`/device`):** no wallet connect.
+No in-app links to `/device` (tag URL only). Bare `?pk=` without tap proof shows “Hold NFC device.”
+
+**Step 1 — Safari or Chrome (`/device`):** no wallet connect.
 
 1. Verify tap (silent) — chip counter must be **greater than** the last value in the shared `revibase_counter` KV; the same counter may remount briefly, then needs a fresh tap
-2. Hold NFC device for ownership transfer challenge (WebAuthn tap)
-3. Handoff — **Continue** to the finish screen, then connect with Privy. Tap proof expires in ~3 minutes (Solana SlotHashes window)
+2. **Unclaimed / unlocked** — Hold NFC device for ownership transfer challenge (WebAuthn tap), then Continue / Copy finish link
+3. **Locked and owned** — status card:
+   - Linked wallet (address only)
+   - Spending cap: Set / Not set (amount is never shown)
+   - Payment verifier: Enabled / Not set
+   - Primary CTA is the next gap (Set spending cap or Allow payment verifier), or **Open Home** when all three are done
 
-**Step 2 — finish screen (`/device/finish?token=…`):** Privy wallet connect.
+**Step 2 — finish screen (`/device/finish`):** Privy wallet connect.
 
-1. **Connect wallet** — Privy picker (Phantom, Solflare, etc.)
-2. Confirm transaction — recipient wallet pays the network fee
-3. **Open Home** — set a spending limit and Ready to pay
+- `?token=` — pending claim (tap proof expires in ~3 minutes, Solana SlotHashes window). Confirm the claim tx, then **stay here** for spending cap and payment verifier if those are still missing.
+- `?intent=limit&owner=` — set spending cap (no tap-proof expiry)
+- `?intent=verifier&owner=` — allow payment verifier (sign message; not a transfer). After success, **Copy pay link** for Shortcuts / phone automation.
 
-Locked devices show owner status only on step 1 (no claim UI). Spending limits and Ready to pay are **not** on `/device`.
+Wrong wallet: disconnect, then connect the linked owner. The payment verifier is issued to the **wallet**, not the phone or NFC device. After it is allowed, copy the pay link from this screen so Get Ready works from a shortcut.
 
 Pending tap proofs are stored in the `pending_claim` KV namespace with TTL aligned to the SlotHashes validity window (~512 slots, ~3m 25s).
 

@@ -8,6 +8,7 @@ export {
   issueWalletApiKey,
   revokeWalletApiKey,
   resolveWalletFromApiKey,
+  walletHasActiveApiKey,
   createPreauthGrant,
   invalidateActiveGrantsForWallet,
 } from "../../../worker/presence-grants";

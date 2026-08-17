@@ -73,7 +73,7 @@ export async function GET(req: Request) {
       return NextResponse.json(
         {
           error:
-            "This tap proof expired or was already used. Tap your NFC device again in Safari.",
+            "This tap proof expired or was already used. Tap your NFC device again in Safari or Chrome.",
         },
         { status: 410 },
       );

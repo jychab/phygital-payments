@@ -2,14 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-  Check,
-  LoaderCircle,
-  Nfc,
-  Settings2,
-  X,
-} from "lucide-react";
+import { Check, LoaderCircle, Nfc, Settings2, X } from "lucide-react";
 import { address } from "@solana/kit";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { AmountField } from "@/components/amount-field";
 import { AmountPresets } from "@/components/amount-presets";
@@ -20,7 +15,10 @@ import { Button } from "@/components/ui/button";
 import { useRevokeDelegateMutation } from "@/hooks/use-delegate-mutations";
 import { useDelegateStatuses } from "@/hooks/use-delegate-status";
 import { useMintProgram } from "@/hooks/use-mint-program";
-import { useTokenHoldings, useVerifiedTokens } from "@/hooks/use-verified-tokens";
+import {
+  useTokenHoldings,
+  useVerifiedTokens,
+} from "@/hooks/use-verified-tokens";
 import {
   buildPreauthOpenUrl,
   cancelPreauth,
@@ -35,11 +33,9 @@ import {
   resolvePaymentToken,
 } from "@/lib/payments/payment-token";
 import type { PaymentTokenHolding } from "@/lib/payments/payment-token";
-import {
-  isDelegateEnabled,
-  uiAmountToRaw,
-} from "@/lib/payments/mint-delegate";
+import { isDelegateEnabled, uiAmountToRaw } from "@/lib/payments/mint-delegate";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
+import { queryKeys } from "@/lib/queries";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { cn } from "@/lib/utils";
 
@@ -64,6 +60,7 @@ export function PayPanel({
 }) {
   const { address: walletAddress } = useSolanaAddress();
   const { provisionKey } = useDevicePayKeyHelpers();
+  const queryClient = useQueryClient();
   const [amountDraft, setAmountDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [keyBusy, setKeyBusy] = useState(false);
@@ -90,8 +87,8 @@ export function PayPanel({
     mintOverride && statuses.enabledMints.includes(mintOverride)
       ? mintOverride
       : statuses.enabledMints.includes(defaultMint)
-        ? defaultMint
-        : (statuses.enabledMints[0] ?? defaultMint);
+      ? defaultMint
+      : statuses.enabledMints[0] ?? defaultMint;
   const mintAddress = useMemo(() => address(mint), [mint]);
   const mintQuery = useMintProgram(mintAddress);
   const selectedStatus = statuses.data?.get(mint);
@@ -104,8 +101,7 @@ export function PayPanel({
   const holding = holdings.data?.find(
     (h: PaymentTokenHolding) => h.mint === mint,
   );
-  const token =
-    holding ?? resolvePaymentToken(mint, verified.data);
+  const token = holding ?? resolvePaymentToken(mint, verified.data);
   const enabledHoldings = (holdings.data ?? []).filter((h) =>
     statuses.enabledMints.includes(h.mint),
   );
@@ -154,9 +150,14 @@ export function PayPanel({
       setKeyBusy(true);
       await provisionKey(walletAddress);
       noteKeyReady();
-      toast.success("Payment verifier ready");
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.preauthStatus.byWallet(walletAddress),
+      });
+      toast.success("Payment verifier enabled for this wallet");
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t set up payment verifier"));
+      toast.error(
+        toUserErrorMessage(error, "Couldn’t allow the payment verifier"),
+      );
     } finally {
       setKeyBusy(false);
     }
@@ -168,7 +169,7 @@ export function PayPanel({
       return;
     }
     if (!loadPreauthApiKey(walletAddress)) {
-      toast.error("Set up a payment verifier first");
+      toast.error("Allow the payment verifier for this wallet first");
       return;
     }
     if (!mintQuery.data) {
@@ -183,7 +184,9 @@ export function PayPanel({
         rawAmount > selectedStatus.delegatedAmountRaw
       ) {
         toast.error(
-          `Amount exceeds your ${selectedLimitLabel ?? "—"} ${token.symbol} limit`,
+          `Amount exceeds your ${selectedLimitLabel ?? "—"} ${
+            token.symbol
+          } limit`,
         );
         return;
       }
@@ -229,7 +232,7 @@ export function PayPanel({
     }
     const key = loadPreauthApiKey(walletAddress);
     if (!key) {
-      toast.error("Set up a payment verifier first");
+      toast.error("Allow the payment verifier for this wallet first");
       return;
     }
     try {
@@ -250,7 +253,7 @@ export function PayPanel({
     }
     const key = loadPreauthApiKey(walletAddress);
     if (!key) {
-      toast.error("Set up a payment verifier first");
+      toast.error("Allow the payment verifier for this wallet first");
       return;
     }
     const amountUi = amount || defaultTapAmountUi(mint);
@@ -283,7 +286,10 @@ export function PayPanel({
       setKeyBusy(true);
       await provisionKey(walletAddress, { rotate: true });
       noteKeyReady();
-      toast.success("Api key rotated — update any Shortcuts");
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.preauthStatus.byWallet(walletAddress),
+      });
+      toast.success("Payment verifier reset — update any saved pay links");
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn’t rotate API key"));
     } finally {
@@ -298,9 +304,7 @@ export function PayPanel({
           <X className="size-6" strokeWidth={2} />
         </div>
         <div className="max-w-60 space-y-1.5">
-          <p className="text-base font-medium text-foreground">
-            Window ended
-          </p>
+          <p className="text-base font-medium text-foreground">Window ended</p>
           <p className="text-sm text-muted-foreground">
             If you already held your NFC device to their phone, check with them.
             Otherwise open a new window to try again.
@@ -356,12 +360,11 @@ export function PayPanel({
         ) : (
           <>
             <p className="text-sm font-medium text-foreground">
-              Set Up Payment Verifier
+              Allow payment verifier
             </p>
             <p className="text-xs text-muted-foreground">
-              Your wallet will ask you to sign a message to set up a payment
-              verifier on this phone. That is not a transaction and does not
-              move funds.
+              Your wallet will ask you to sign. That sets up a payment verifier
+              for this wallet. It is not a transaction and does not move funds.
             </p>
           </>
         )}
@@ -387,7 +390,9 @@ export function PayPanel({
                   <TokenListRow
                     token={h}
                     selected={h.mint === mint}
-                    subtitle={`Limit ${statuses.data?.get(h.mint)?.delegatedAmountUi ?? "—"}`}
+                    subtitle={`Limit ${
+                      statuses.data?.get(h.mint)?.delegatedAmountUi ?? "—"
+                    }`}
                     onSelect={() => {
                       setMintOverride(h.mint);
                       setAmountDraft(null);
@@ -442,7 +447,7 @@ export function PayPanel({
             Ready
           </span>
         ) : (
-          <span>Needs a payment verifier</span>
+          <span>Needs a payment verifier for this wallet</span>
         )}
       </p>
 
@@ -481,7 +486,7 @@ export function PayPanel({
                 Sign in your wallet…
               </>
             ) : (
-              "Set Up Payment Verifier"
+              "Allow payment verifier"
             )}
           </Button>
         )}

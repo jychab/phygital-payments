@@ -5,11 +5,11 @@ import { EmbedBoot } from "@/components/embed-error";
 import { FinishClaimApp } from "@/components/wallet-client-apps";
 
 export const metadata: Metadata = {
-  title: "Finish device claim — Phygital Pay",
-  description: "Connect wallet and confirm NFC device ownership",
+  title: "Finish Pay setup — Phygital Pay",
+  description: "Connect wallet to add your NFC device, set a spending cap, or allow a payment verifier",
 };
 
-/** Wallet in-app browser finish (step 2) — Privy via (wallet) layout. */
+/** Wallet in-app browser finish — Privy via (wallet) layout. */
 export default function FinishDevicePage() {
   return (
     <Suspense fallback={<EmbedBoot />}>

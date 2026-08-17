@@ -33,7 +33,7 @@ export function ExpiryCountdown({
   return (
     <p className={className}>
       {expired
-        ? "Tap proof expired — tap your NFC device again in Safari."
+        ? "Tap proof expired — tap your NFC device again."
         : `Finish within ${formatRemaining(remainingMs)} (~3 min from tap)`}
     </p>
   );

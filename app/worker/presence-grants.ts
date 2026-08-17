@@ -164,6 +164,22 @@ export async function resolveWalletFromApiKey(
   return row?.wallet ?? null;
 }
 
+/** True when this wallet has a non-revoked device pay key (no key material). */
+export async function walletHasActiveApiKey(
+  db: D1Database,
+  wallet: string,
+): Promise<boolean> {
+  await ensurePreauthSchema(db);
+  const row = await db
+    .prepare(
+      `SELECT wallet FROM wallet_api_keys
+       WHERE wallet = ? AND revoked_at IS NULL`,
+    )
+    .bind(wallet)
+    .first<{ wallet: string }>();
+  return row != null;
+}
+
 /**
  * Open (or replace) a spending window for `wallet`.
  * Grant binds mint + maxAmount; on-chain delegate is a second cap.

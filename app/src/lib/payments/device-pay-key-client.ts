@@ -35,11 +35,11 @@ export async function provisionDevicePayKey(args: {
     options: {
       uiOptions: {
         title: args.rotate
-          ? "Rotate Api Key"
-          : "Set Up Payment Verifier",
+          ? "Reset payment verifier"
+          : "Allow payment verifier",
         description: args.rotate
-          ? "This message issues a new api key. It does not move funds."
-          : "This message sets up a payment verifier on this phone. It does not move funds.",
+          ? "This message issues a new payment verifier for this wallet. It does not move funds."
+          : "This message sets up a payment verifier for this wallet. It does not move funds.",
       },
     },
   });
@@ -55,7 +55,7 @@ export async function provisionDevicePayKey(args: {
   });
   const body = (await res.json()) as { apiKey?: string; error?: string };
   if (!res.ok || !body.apiKey) {
-    throw new Error(body.error ?? "Couldn’t enable Pay on this device");
+    throw new Error(body.error ?? "Couldn’t allow the payment verifier");
   }
   storePreauthApiKey(body.apiKey, args.wallet);
   return body.apiKey;

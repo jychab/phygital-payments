@@ -74,7 +74,7 @@ export async function requestPreauth(args: {
   const apiKey =
     args.apiKey?.trim() || loadPreauthApiKey(args.wallet) || null;
   if (!apiKey) {
-    throw new Error("Missing preauth API key — enable Pay on this device first");
+    throw new Error("Missing preauth API key — allow the payment verifier for this wallet first");
   }
 
   const url = buildPreauthOpenUrl({
@@ -110,4 +110,21 @@ export async function cancelPreauth(args?: {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error ?? `Cancel preauth failed (${res.status})`);
   }
+}
+
+export type PreauthStatus = { enabled: boolean };
+
+/** Wallet-level payment verifier (D1). No key material. */
+export async function fetchPreauthStatus(wallet: string): Promise<PreauthStatus> {
+  const res = await fetch(
+    `/api/preauth/status?wallet=${encodeURIComponent(wallet)}`,
+    { cache: "no-store" },
+  );
+  const body = (await res.json().catch(() => ({}))) as PreauthStatus & {
+    error?: string;
+  };
+  if (!res.ok) {
+    throw new Error(body.error ?? "Couldn’t check payment verifier");
+  }
+  return { enabled: Boolean(body.enabled) };
 }

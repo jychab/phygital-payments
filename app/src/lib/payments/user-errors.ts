@@ -56,8 +56,8 @@ const RULES: Rule[] = [
     message: "Too many attempts — wait a moment and try again.",
   },
   {
-    test: /missing preauth api key|enable Pay on this device/i,
-    message: "Turn on Pay on this phone first.",
+    test: /missing preauth api key|enable Pay on this device|allow the payment verifier for this wallet/i,
+    message: "Allow the payment verifier for this wallet first.",
   },
   {
     test: /user rejected|rejected the request|transaction cancelled|signing was cancelled/i,
@@ -73,7 +73,7 @@ const RULES: Rule[] = [
   },
   {
     test: /tap proof expired|slot hash no longer valid/i,
-    message: "Tap proof expired. Tap your NFC device again in Safari.",
+    message: "Tap proof expired. Tap your NFC device again in Safari or Chrome.",
   },
   {
     test: /slot hashes|slot hash/i,

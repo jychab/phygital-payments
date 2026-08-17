@@ -32,7 +32,6 @@ import { useTokenHoldings } from "@/hooks/use-verified-tokens";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
 import { getDefaultMint } from "@/lib/payments/payment-token";
 import type { PaymentTokenHolding } from "@/lib/payments/payment-token";
-import { isDelegateEnabled } from "@/lib/payments/mint-delegate";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { shortAddress } from "@/lib/utils";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
@@ -40,8 +39,8 @@ import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 type HomeTab = "pay" | "devices" | "history";
 
 /**
- * Home — Connect wallet for Pay (limit + ready), Devices list, and Activity.
- * NFC devices are added only by tapping a tag (opens /device); no deep links.
+ * Home — Connect wallet for Pay (Get Ready), Devices list, and Activity.
+ * NFC devices and first-time setup start by tapping a tag (opens /device).
  */
 export function PayHomeApp() {
   const embedded = useIsEmbedded();
@@ -75,7 +74,7 @@ export function PayHomeApp() {
           <GateMessage
             icon={<Wallet className="size-5 text-muted-foreground" />}
             title="Connect your wallet"
-            body="Use Connect above to set a spending limit, see your devices, and pay."
+            body="Use Connect above to see your devices, activity, and Get Ready."
           />
         </AppCard>
       ) : (
@@ -154,16 +153,15 @@ function HomePayTab({ owner }: { owner: string }) {
     null,
   );
 
-  const usdcMint = String(getDefaultMint());
-  const usdcStatus = statuses.data?.get(usdcMint);
   const hasAnyLimit = statuses.enabledMints.length > 0;
   const deviceCount = assetsQuery.data?.length ?? 0;
-  const payReady = hasAnyLimit && deviceCount > 0;
+  const setupReady = hasAnyLimit && deviceCount > 0;
   const loading =
     holdings.isLoading ||
     !holdingsReady ||
     (mints.length > 0 && statuses.isLoading) ||
-    statuses.isPending;
+    statuses.isPending ||
+    assetsQuery.isPending;
 
   if (loading) {
     return (
@@ -185,30 +183,12 @@ function HomePayTab({ owner }: { owner: string }) {
     );
   }
 
-  if (!hasAnyLimit) {
-    return (
-      <LimitPanel expectedOwner={owner} mint={getDefaultMint()} />
-    );
-  }
-
-  if (assetsQuery.isPending) {
-    return (
-      <CenteredStatus>
-        <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading devices…</p>
-      </CenteredStatus>
-    );
-  }
-
-  if (!payReady) {
-    const limitHint = isDelegateEnabled(usdcStatus)
-      ? `up to ${usdcStatus?.delegatedAmountUi ?? "—"} USDC`
-      : `${statuses.enabledMints.length} token${statuses.enabledMints.length === 1 ? "" : "s"} enabled`;
+  if (!setupReady) {
     return (
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
-        title="Add an NFC device"
-        body={`Spending is allowed (${limitHint}). Hold an NFC device to this phone to claim it, then come back here to pay.`}
+        title="Hold your NFC device to set up Pay"
+        body="Tap your NFC device to this phone. You’ll set a spending cap and a payment verifier for this wallet there."
       />
     );
   }

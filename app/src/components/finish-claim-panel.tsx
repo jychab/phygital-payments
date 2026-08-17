@@ -8,10 +8,12 @@ import Link from "next/link";
 
 import { AppCard, AppShell } from "@/components/app-shell";
 import { CenteredStatus, GateMessage, SuccessStatus } from "@/components/gate-message";
+import { DeviceFinishSetup } from "@/components/device-finish-setup";
 import { ExpiryCountdown } from "@/components/expiry-countdown";
 import { NfcHoldStatus } from "@/components/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { consumePendingClaim } from "@/lib/claim/pending-claim-client";
+import { tryParseAddress } from "@/lib/payments/payment-request";
 import { usePendingClaim } from "@/hooks/use-pending-claim";
 import { usePhygitalAssetByAddress } from "@/hooks/use-phygital-asset";
 import { assertClaimReady, finishClaim } from "@/lib/payments/claim";
@@ -96,7 +98,7 @@ export function FinishClaimPanel() {
       <GateMessage
         icon={<Wallet className="size-5 text-destructive" />}
         title="Can’t finish claim"
-        body="Missing finish link. Tap your NFC device again in Safari."
+        body="Missing finish link. Tap your NFC device again in Safari or Chrome."
         destructive
       />
     );
@@ -113,19 +115,22 @@ export function FinishClaimPanel() {
   }
 
   if (phase === "done") {
-    return (
-      <div className="flex flex-1 flex-col gap-5 py-2">
-        <SuccessStatus
-          icon={<CheckCircle2 className="size-7" />}
-          title="Device added"
-          body="Next, open Home to set a spending limit and pay with this wallet."
-          bodyClassName="max-w-64"
-        />
-        <Button type="button" size="lg" className="w-full" asChild>
-          <Link href="/">Open Home</Link>
-        </Button>
-      </div>
-    );
+    if (!address) {
+      return (
+        <div className="flex flex-1 flex-col gap-5 py-2">
+          <SuccessStatus
+            icon={<CheckCircle2 className="size-7" />}
+            title="Device added"
+            body="Connect this wallet again to finish Pay setup."
+            bodyClassName="max-w-64"
+          />
+          <Button type="button" size="lg" className="w-full" asChild>
+            <Link href="/">Open Home</Link>
+          </Button>
+        </div>
+      );
+    }
+    return <DeviceFinishSetup owner={address} />;
   }
 
   if (pendingQuery.isPending) {
@@ -144,7 +149,7 @@ export function FinishClaimPanel() {
         title="Can’t finish claim"
         body={toUserErrorMessage(
           pendingQuery.error,
-          "Tap proof expired. Tap your NFC device again in Safari.",
+          "Tap proof expired. Tap your NFC device again in Safari or Chrome.",
         )}
         destructive
       />
@@ -213,8 +218,32 @@ export function FinishClaimApp() {
   return (
     <AppShell walletActions="full" modeLabel="Device">
       <AppCard>
-        <FinishClaimPanel />
+        <FinishDeviceRouter />
       </AppCard>
     </AppShell>
+  );
+}
+
+function FinishDeviceRouter() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token")?.trim() ?? "";
+  const intent = searchParams.get("intent")?.trim();
+  const owner = tryParseAddress(searchParams.get("owner")?.trim() ?? "");
+
+  if (token) {
+    return <FinishClaimPanel />;
+  }
+
+  if ((intent === "limit" || intent === "verifier") && owner) {
+    return <DeviceFinishSetup owner={String(owner)} />;
+  }
+
+  return (
+    <GateMessage
+      icon={<Wallet className="size-5 text-destructive" />}
+      title="Can’t finish setup"
+      body="Missing finish link. Tap your NFC device again."
+      destructive
+    />
   );
 }

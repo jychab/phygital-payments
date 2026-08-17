@@ -1,32 +1,26 @@
 "use client";
 
 import { type ReactNode } from "react";
-import Link from "next/link";
 import {
   LoaderCircle,
-  Lock,
   Nfc,
   ShieldAlert,
-  ShieldCheck,
-  Unlock,
 } from "lucide-react";
 
 import { AppCard, AppShell } from "@/components/app-shell";
 import { ClaimPanel } from "@/components/claim-panel";
-import { CopyableAddress } from "@/components/copyable-address";
+import { DeviceSetupStatus } from "@/components/device-setup-status";
 import { EmbedBoot, EmbedError } from "@/components/embed-error";
-import { CenteredStatus, GateMessage, SuccessStatus } from "@/components/gate-message";
-import { Button } from "@/components/ui/button";
+import { CenteredStatus, GateMessage } from "@/components/gate-message";
 import { useIsEmbedded } from "@/hooks/use-is-embedded";
 import { usePhygitalAsset } from "@/hooks/use-phygital-asset";
 import { useTapVerify } from "@/hooks/use-tap-verify";
-import { isUnclaimedAsset, type PhygitalAsset } from "@/lib/phygital/asset";
+import { isUnclaimedAsset } from "@/lib/phygital/asset";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
-import { shortAddress } from "@/lib/utils";
 
 /**
- * NFC tap → verify → Safari NFC claim handoff → owner status.
- * Everyday Pay and spending limits live on Home.
+ * NFC tap → verify → claim handoff or Pay setup status (no Privy).
+ * Everyday Get Ready lives on Home.
  */
 export function AssetApp() {
   const embedded = useIsEmbedded();
@@ -136,55 +130,5 @@ function AssetFlow({ pk }: { pk: string | null }) {
     );
   }
 
-  return <DeviceStatus asset={asset} />;
-}
-
-function DeviceStatus({ asset }: { asset: PhygitalAsset }) {
-  return (
-    <div className="flex flex-1 flex-col gap-5 py-2">
-      <SuccessStatus
-        icon={<ShieldCheck className="size-7" />}
-        title="Verified"
-        body="This NFC tap checked out. Spending limits and Ready to pay are on Home."
-        bodyClassName="max-w-64"
-      />
-
-      <div className="flex flex-col gap-2 rounded-xl border border-border/50 bg-muted/25 px-4 py-3 text-xs">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground">Owner</span>
-          <CopyableAddress
-            address={asset.currentOwner.toString()}
-            length={6}
-            label="owner wallet"
-          />
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground">Status</span>
-          <span className="inline-flex items-center gap-1.5 text-foreground">
-            {asset.isLocked ? (
-              <Lock className="size-3.5 text-muted-foreground" />
-            ) : (
-              <Unlock className="size-3.5 text-muted-foreground" />
-            )}
-            {asset.isLocked ? "Locked" : "Unlocked"}
-          </span>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground">Device</span>
-          <span className="font-mono text-foreground">
-            {shortAddress(asset.secp256r1PublicKey, 4)}
-          </span>
-        </div>
-      </div>
-
-      <div className="mt-auto flex flex-col gap-2">
-        <Button type="button" size="lg" className="w-full" asChild>
-          <Link href="/">Open Home</Link>
-        </Button>
-        <p className="text-center text-[11px] text-muted-foreground">
-          On Home: set a spending limit, then Ready to pay.
-        </p>
-      </div>
-    </div>
-  );
+  return <DeviceSetupStatus asset={asset} />;
 }
