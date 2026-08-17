@@ -182,7 +182,7 @@ export function LimitPanel({
         <Button
           type="button"
           size="lg"
-          className="h-11 w-full text-[0.9375rem]"
+          className="w-full"
           onClick={() => void runEnable()}
           disabled={busy || !amount || !matched}
         >

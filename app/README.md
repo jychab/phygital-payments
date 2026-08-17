@@ -78,11 +78,11 @@ Embeds cannot use `/setup` (error screen).
 
 1. Verify tap (silent) — chip counter must be **greater than** the last value in the shared `revibase_counter` KV; the same counter may remount briefly, then needs a fresh tap
 2. Hold NFC device for ownership transfer challenge (WebAuthn tap)
-3. Handoff — **Open in Phantom** or copy the finish link. Tap proof expires in ~3 minutes (Solana SlotHashes window)
+3. Handoff — **Continue** to the finish screen, then connect with Privy. Tap proof expires in ~3 minutes (Solana SlotHashes window)
 
-**Step 2 — wallet app browser (`/device/finish?token=…`):** Privy connect required.
+**Step 2 — finish screen (`/device/finish?token=…`):** Privy wallet connect.
 
-1. Connect the wallet that should own the device
+1. **Connect wallet** — Privy picker (Phantom, Solflare, etc.)
 2. Confirm transaction — recipient wallet pays the network fee
 3. **Open Home** — set a spending limit and Ready to pay
 

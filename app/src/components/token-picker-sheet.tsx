@@ -6,6 +6,7 @@ import { LoaderCircle, Search, X } from "lucide-react";
 
 import { TokenListRow } from "@/components/token-chip";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useVerifiedTokens } from "@/hooks/use-verified-tokens";
 import {
   filterPaymentTokens,
@@ -88,16 +89,14 @@ export function TokenPickerSheet({
 
         <div className="shrink-0 px-4 pt-3">
           <label className="relative block">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
+            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              variant="muted"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search verified tokens"
               autoFocus
-              className={cn(
-                "h-10 w-full rounded-xl border border-border/60 bg-muted/30 pr-3 pl-9 text-sm",
-                "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40",
-              )}
+              className="pl-10"
             />
           </label>
           <p className="mt-2 text-[11px] text-muted-foreground">

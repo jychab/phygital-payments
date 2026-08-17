@@ -178,7 +178,7 @@ function DeviceStatus({ asset }: { asset: PhygitalAsset }) {
       </div>
 
       <div className="mt-auto flex flex-col gap-2">
-        <Button type="button" className="w-full" asChild>
+        <Button type="button" size="lg" className="w-full" asChild>
           <Link href="/">Open Home</Link>
         </Button>
         <p className="text-center text-[11px] text-muted-foreground">

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Copy, ExternalLink, Nfc } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, Copy, Nfc } from "lucide-react";
 
 import { GateMessage, SuccessStatus } from "@/components/gate-message";
 import { ExpiryCountdown } from "@/components/expiry-countdown";
@@ -17,12 +18,8 @@ import { toast } from "sonner";
 
 type Stage = "ready" | "reading";
 
-function phantomBrowseUrl(finishUrl: string): string {
-  return `https://phantom.app/ul/browse/${encodeURIComponent(finishUrl)}`;
-}
-
 /**
- * Safari step 1: NFC tap only, then hand off to wallet in-app browser.
+ * Safari step 1: NFC tap only, then hand off to wallet finish (Privy connect).
  */
 export function ClaimPanel({
   asset,
@@ -31,11 +28,13 @@ export function ClaimPanel({
   asset: PhygitalAsset;
   unclaimed?: boolean;
 }) {
+  const router = useRouter();
   const inApp = useIsInAppBrowser();
 
   const [stage, setStage] = useState<Stage>("ready");
   const [error, setError] = useState<string | null>(null);
   const [handoff, setHandoff] = useState<{
+    token: string;
     finishUrl: string;
     expiresAtMs: number;
   } | null>(null);
@@ -71,6 +70,7 @@ export function ClaimPanel({
       });
 
       setHandoff({
+        token: pending.token,
         finishUrl: pending.finishUrl,
         expiresAtMs: pending.expiresAtMs,
       });
@@ -83,6 +83,11 @@ export function ClaimPanel({
         ),
       );
     }
+  }
+
+  function onContinue() {
+    if (!handoff) return;
+    router.push(`/device/finish?token=${encodeURIComponent(handoff.token)}`);
   }
 
   async function onCopyLink() {
@@ -107,7 +112,7 @@ export function ClaimPanel({
         <SuccessStatus
           icon={<CheckCircle2 className="size-7" />}
           title="NFC tap verified"
-          body="Open the finish link in your wallet app to connect and confirm. You’ll pay a small network fee."
+          body="Continue to connect your wallet and confirm. You’ll pay a small network fee."
         />
 
         <ExpiryCountdown
@@ -115,16 +120,14 @@ export function ClaimPanel({
           className="text-center text-xs text-muted-foreground"
         />
 
-        <div className="flex flex-col gap-2">
-          <Button type="button" className="w-full" asChild>
-            <a href={phantomBrowseUrl(handoff.finishUrl)}>
-              <ExternalLink className="size-4" />
-              Open in Phantom
-            </a>
+        <div className="flex flex-col gap-2.5">
+          <Button type="button" size="lg" className="w-full" onClick={onContinue}>
+            Continue
           </Button>
           <Button
             type="button"
             variant="outline"
+            size="lg"
             className="w-full"
             onClick={() => void onCopyLink()}
           >
@@ -134,8 +137,7 @@ export function ClaimPanel({
         </div>
 
         <p className="text-center text-[11px] text-muted-foreground">
-          Use Safari for the NFC tap. Finish in Phantom, Solflare, or another wallet
-          app browser.
+          Tap Continue, then choose your wallet in the connect screen.
         </p>
       </div>
     );

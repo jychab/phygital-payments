@@ -290,7 +290,7 @@ export function CollectPanel({
         <Button
           type="button"
           size="lg"
-          className="h-11 w-full max-w-xs"
+          className="w-full max-w-xs"
           onClick={() => {
             const usdc = String(getDefaultMint());
             setMint(usdc);
@@ -408,7 +408,7 @@ export function CollectPanel({
         <Button
           type="button"
           size="lg"
-          className="h-11 w-full text-[0.9375rem]"
+          className="w-full"
           onClick={onReceive}
           disabled={
             busy ||

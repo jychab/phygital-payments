@@ -1,6 +1,7 @@
 "use client";
 
 import { TokenIcon } from "@/components/token-chip";
+import { Input } from "@/components/ui/input";
 import type { PaymentToken } from "@/lib/payments/payment-token";
 import { cn } from "@/lib/utils";
 
@@ -35,8 +36,9 @@ export function AmountField({
         Amount in {label}
       </label>
       <div className="flex w-full items-baseline justify-center gap-2">
-        <input
+        <Input
           id={id}
+          variant="hero"
           inputMode="decimal"
           autoComplete="off"
           autoFocus={autoFocus}
@@ -52,12 +54,6 @@ export function AmountField({
                 : `${parts[0]}.${parts.slice(1).join("").slice(0, fracCap)}`;
             onChange(cleaned);
           }}
-          className={cn(
-            "w-full min-w-0 bg-transparent text-center font-[family-name:var(--font-display)]",
-            "text-[2.75rem] leading-none tracking-tight tabular-nums md:text-5xl",
-            "outline-none placeholder:text-muted-foreground/40",
-            "disabled:opacity-50",
-          )}
         />
       </div>
       <span className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">

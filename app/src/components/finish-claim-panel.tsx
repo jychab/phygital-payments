@@ -28,7 +28,7 @@ export function FinishClaimPanel() {
   const queryClient = useQueryClient();
   const token = searchParams.get("token")?.trim() ?? "";
 
-  const { address, isConnected, ready } = useSolanaAddress();
+  const { address, isConnected, ready, connect } = useSolanaAddress();
   const signer = useWalletKitSigner();
 
   const pendingQuery = usePendingClaim(token || null);
@@ -126,7 +126,7 @@ export function FinishClaimPanel() {
           body="Next, open Home to set a spending limit and pay with this wallet."
           bodyClassName="max-w-64"
         />
-        <Button type="button" className="w-full" asChild>
+        <Button type="button" size="lg" className="w-full" asChild>
           <Link href="/">Open Home</Link>
         </Button>
       </div>
@@ -180,7 +180,17 @@ export function FinishClaimPanel() {
         <GateMessage
           icon={<Wallet className="size-5 text-muted-foreground" />}
           title="Connect your wallet"
-          body="Use Connect above. This wallet will own the device."
+          body="This wallet will be linked to the device."
+          action={
+            <Button
+              type="button"
+              size="lg"
+              className="w-full max-w-64"
+              onClick={connect}
+            >
+              Connect wallet
+            </Button>
+          }
         />
       ) : (
         <div className="flex flex-col gap-3">

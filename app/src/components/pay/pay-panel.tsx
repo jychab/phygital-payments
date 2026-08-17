@@ -223,7 +223,7 @@ export function PayPanel({
         <Button
           type="button"
           size="lg"
-          className="h-11 w-full max-w-xs text-[0.9375rem]"
+          className="w-full max-w-xs"
           onClick={() => setPhase("idle")}
         >
           Done
@@ -289,7 +289,7 @@ export function PayPanel({
         <Button
           type="button"
           size="lg"
-          className="h-11 w-full text-[0.9375rem]"
+          className="w-full"
           onClick={onReady}
           disabled={manageBusy}
         >

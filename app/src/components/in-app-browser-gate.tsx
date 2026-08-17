@@ -21,21 +21,21 @@ export function InAppBrowserGate({
       title="Open in Safari or Chrome"
       body={body}
       action={
-        <div className="flex w-full max-w-64 flex-col gap-2">
+        <div className="flex w-full max-w-64 flex-col gap-2.5">
           <Button
             type="button"
-            size="sm"
+            size="lg"
             className="w-full"
             onClick={() => {
               window.location.href = safariOpenHintUrl(href);
             }}
           >
-            <ExternalLink className="size-3.5" />
+            <ExternalLink className="size-4" />
             Open in Safari
           </Button>
           <Button
             type="button"
-            size="sm"
+            size="lg"
             variant="outline"
             className="w-full"
             onClick={() => {

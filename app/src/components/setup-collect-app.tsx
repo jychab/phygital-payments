@@ -164,7 +164,7 @@ export function SetupCollectApp({
                     label="recipient"
                   />
                 </div>
-                <Button type="button" size="sm" className="w-full" onClick={connect}>
+                <Button type="button" size="lg" className="w-full" onClick={connect}>
                   Connect wallet
                 </Button>
               </div>
@@ -178,7 +178,7 @@ export function SetupCollectApp({
             action={
               <Button
                 type="button"
-                size="sm"
+                size="lg"
                 variant="outline"
                 onClick={() => void disconnect()}
               >
@@ -215,6 +215,7 @@ export function SetupCollectApp({
 
             <Button
               type="button"
+              size="lg"
               className="w-full gap-1.5"
               disabled={createAta.isPending || !signer}
               onClick={() => void onCreate()}
