@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useIsRestoring } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Check, ChevronLeft, LoaderCircle, Lock } from "lucide-react";
 import { address, type Address } from "@solana/kit";
@@ -235,11 +236,12 @@ export function ManagePayTokens({
   owner: string;
   onEditLimit: (holding: PaymentTokenHolding) => void;
 }) {
+  const isRestoring = useIsRestoring();
   const holdings = useTokenHoldings(owner);
   const mints = holdings.data?.map((h: PaymentTokenHolding) => h.mint) ?? [];
   const statuses = useDelegateStatuses(owner, mints);
 
-  if (holdings.isLoading || statuses.isLoading) {
+  if (isRestoring || holdings.isLoading || statuses.isLoading) {
     return (
       <div className="flex justify-center py-6 text-muted-foreground">
         <LoaderCircle className="size-4 animate-spin" />

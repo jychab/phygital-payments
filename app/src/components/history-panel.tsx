@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsRestoring } from "@tanstack/react-query";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -63,10 +64,11 @@ function formatPaymentAmountUi(
 }
 
 export function HistoryPanel({ recipient }: { recipient: string }) {
+  const isRestoring = useIsRestoring();
   const query = usePaymentHistory(recipient);
   const verified = useVerifiedTokens();
 
-  const loading = query.isLoading;
+  const loading = isRestoring || query.isLoading;
   const error = query.error as Error | null;
   const rows = query.data ? toRows(query.data, recipient) : [];
 

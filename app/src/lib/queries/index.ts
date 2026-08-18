@@ -42,8 +42,6 @@ export const queryKeys = {
       [...queryKeys.delegateStatus.all(), owner] as const,
     byOwnerMint: (owner: string | null, mint: string | null) =>
       [...queryKeys.delegateStatus.byOwner(owner), mint] as const,
-    byOwnerMints: (owner: string | null, mintsKey: string) =>
-      [...queryKeys.delegateStatus.byOwner(owner), "batch", mintsKey] as const,
   },
 
   holdings: {

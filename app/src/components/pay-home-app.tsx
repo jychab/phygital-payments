@@ -156,9 +156,6 @@ function HomePayTab({ owner }: { owner: string }) {
   );
   const [manageOpen, setManageOpen] = useState(false);
 
-  const hasAnyLimit = statuses.enabledMints.length > 0;
-  const deviceCount = assetsQuery.data?.length ?? 0;
-  const setupReady = hasAnyLimit && deviceCount > 0;
   const loading =
     isRestoring ||
     holdings.isLoading ||
@@ -191,21 +188,6 @@ function HomePayTab({ owner }: { owner: string }) {
         owner={owner}
         onBack={() => setManageOpen(false)}
         onEditTokenLimit={(holding) => setEditHolding(holding)}
-      />
-    );
-  }
-
-  if (!setupReady) {
-    const hasDevices = deviceCount > 0;
-    return (
-      <GateMessage
-        icon={<Nfc className="size-5 text-muted-foreground" />}
-        title={hasDevices ? "Pay is off." : "No NFC devices yet"}
-        body={
-          hasDevices
-            ? "Set Up Pay when you're ready — hold your NFC device to this phone, or set a spending limit here."
-            : "Hold an NFC device to this phone to add it. The tag opens a claim page."
-        }
       />
     );
   }

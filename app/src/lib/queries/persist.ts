@@ -26,6 +26,15 @@ const MAP_TAG = "$map" as const;
 type TaggedBigInt = { [BIGINT_TAG]: string };
 type TaggedMap = { [MAP_TAG]: [unknown, unknown][] };
 
+/** Roots worth instant paint. Must match `queryKeys` in `./index.ts`. */
+const PERSISTED_QUERY_ROOTS = new Set([
+  "holdings",
+  "delegateStatus",
+  "assets",
+  "preauthStatus",
+  "verifiedTokens",
+]);
+
 function isTaggedBigInt(value: object): value is TaggedBigInt {
   return BIGINT_TAG in value && typeof (value as TaggedBigInt)[BIGINT_TAG] === "string";
 }
@@ -57,6 +66,15 @@ export function deserializeQueryCache(cached: string): PersistedClient {
   }) as PersistedClient;
 }
 
+export function isPersistedQueryKey(queryKey: readonly unknown[]): boolean {
+  const root = queryKey[0];
+  return typeof root === "string" && PERSISTED_QUERY_ROOTS.has(root);
+}
+
+export function shouldDehydrateQuery(query: Query): boolean {
+  return defaultShouldDehydrateQuery(query) && isPersistedQueryKey(query.queryKey);
+}
+
 /**
  * Sync localStorage persister. No-op during SSR (Next may evaluate providers
  * on the server; PersistQueryClientProvider still needs a Persister object).
@@ -76,8 +94,4 @@ export function createQueryPersister(): Persister {
     serialize: serializeQueryCache,
     deserialize: deserializeQueryCache,
   });
-}
-
-export function shouldDehydrateQuery(query: Query): boolean {
-  return defaultShouldDehydrateQuery(query);
 }
