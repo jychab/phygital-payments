@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useIsRestoring } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   History,
@@ -138,6 +139,7 @@ export function PayHomeApp() {
 }
 
 function HomePayTab({ owner }: { owner: string }) {
+  const isRestoring = useIsRestoring();
   const holdings = useTokenHoldings(owner);
   const holdingsReady = holdings.isSuccess || holdings.isError;
   const mints =
@@ -158,11 +160,10 @@ function HomePayTab({ owner }: { owner: string }) {
   const deviceCount = assetsQuery.data?.length ?? 0;
   const setupReady = hasAnyLimit && deviceCount > 0;
   const loading =
+    isRestoring ||
     holdings.isLoading ||
-    !holdingsReady ||
-    (mints.length > 0 && statuses.isLoading) ||
-    statuses.isPending ||
-    assetsQuery.isPending;
+    statuses.isLoading ||
+    assetsQuery.isLoading;
 
   if (loading) {
     return (
@@ -215,11 +216,12 @@ function HomePayTab({ owner }: { owner: string }) {
 }
 
 function OwnedAssetsList({ owner }: { owner: string }) {
+  const isRestoring = useIsRestoring();
   const assetsQuery = usePhygitalAssetsByOwner(owner);
   const setLock = useSetLockStateMutation(owner);
   const removeOwnership = useRemoveOwnershipMutation(owner);
 
-  if (assetsQuery.isPending) {
+  if (isRestoring || assetsQuery.isLoading) {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />

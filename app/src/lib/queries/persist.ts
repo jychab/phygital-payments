@@ -1,6 +1,6 @@
 /** React Query ↔ localStorage persistence (browser only). */
 
-import { type Persister } from "@tanstack/react-query-persist-client";
+import { type Persister, type PersistedClient } from "@tanstack/react-query-persist-client";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import {
   defaultShouldDehydrateQuery,
@@ -12,10 +12,50 @@ export const QUERY_CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24; // 24h
 
 const STORAGE_KEY = "phygital-pay.react-query";
 
-/** Bump to drop incompatible cached shapes after schema changes. */
-const CACHE_BUSTER = "v1";
+/**
+ * Bump to drop incompatible cached shapes after schema changes.
+ * v2: bigint/Map tagged JSON (v1 `JSON.stringify` threw on bigint and never saved).
+ */
+const CACHE_BUSTER = "v2";
 
 export { CACHE_BUSTER };
+
+const BIGINT_TAG = "$bigint" as const;
+const MAP_TAG = "$map" as const;
+
+type TaggedBigInt = { [BIGINT_TAG]: string };
+type TaggedMap = { [MAP_TAG]: [unknown, unknown][] };
+
+function isTaggedBigInt(value: object): value is TaggedBigInt {
+  return BIGINT_TAG in value && typeof (value as TaggedBigInt)[BIGINT_TAG] === "string";
+}
+
+function isTaggedMap(value: object): value is TaggedMap {
+  return MAP_TAG in value && Array.isArray((value as TaggedMap)[MAP_TAG]);
+}
+
+/** Default JSON.stringify throws on bigint and turns Map into `{}`. */
+export function serializeQueryCache(client: PersistedClient): string {
+  return JSON.stringify(client, (_key, value: unknown) => {
+    if (typeof value === "bigint") {
+      return { [BIGINT_TAG]: value.toString() } satisfies TaggedBigInt;
+    }
+    if (value instanceof Map) {
+      return { [MAP_TAG]: [...value.entries()] } satisfies TaggedMap;
+    }
+    return value;
+  });
+}
+
+export function deserializeQueryCache(cached: string): PersistedClient {
+  return JSON.parse(cached, (_key, value: unknown) => {
+    if (value && typeof value === "object") {
+      if (isTaggedBigInt(value)) return BigInt(value[BIGINT_TAG]);
+      if (isTaggedMap(value)) return new Map(value[MAP_TAG]);
+    }
+    return value;
+  }) as PersistedClient;
+}
 
 /**
  * Sync localStorage persister. No-op during SSR (Next may evaluate providers
@@ -33,12 +73,11 @@ export function createQueryPersister(): Persister {
   return createSyncStoragePersister({
     storage: window.localStorage,
     key: STORAGE_KEY,
+    serialize: serializeQueryCache,
+    deserialize: deserializeQueryCache,
   });
 }
 
-/** Skip non-JSON-safe values (e.g. `Map` from batch delegate status). */
 export function shouldDehydrateQuery(query: Query): boolean {
-  if (!defaultShouldDehydrateQuery(query)) return false;
-  if (query.state.data instanceof Map) return false;
-  return true;
+  return defaultShouldDehydrateQuery(query);
 }

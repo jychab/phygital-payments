@@ -239,7 +239,7 @@ export function ManagePayTokens({
   const mints = holdings.data?.map((h: PaymentTokenHolding) => h.mint) ?? [];
   const statuses = useDelegateStatuses(owner, mints);
 
-  if (holdings.isLoading || (mints.length > 0 && statuses.isLoading)) {
+  if (holdings.isLoading || statuses.isLoading) {
     return (
       <div className="flex justify-center py-6 text-muted-foreground">
         <LoaderCircle className="size-4 animate-spin" />

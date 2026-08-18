@@ -1,5 +1,7 @@
 "use client";
 
+import { useIsRestoring } from "@tanstack/react-query";
+
 import { useDelegateStatus } from "@/hooks/use-delegate-status";
 import { usePreauthStatus } from "@/hooks/use-preauth-status";
 import {
@@ -20,6 +22,7 @@ export function usePaySetupSnapshot(owner: string): {
   next: PaySetupStep | null;
   snapshot: PaySetupSnapshot;
 } {
+  const isRestoring = useIsRestoring();
   const capQuery = useDelegateStatus(owner, getDefaultMint());
   const verifierQuery = usePreauthStatus(owner);
 
@@ -28,7 +31,8 @@ export function usePaySetupSnapshot(owner: string): {
   const snapshot = { capSet, verifierSet };
 
   return {
-    isPending: capQuery.isPending || verifierQuery.isPending,
+    isPending:
+      isRestoring || capQuery.isLoading || verifierQuery.isLoading,
     isError: capQuery.isError || verifierQuery.isError,
     error: capQuery.error ?? verifierQuery.error,
     capSet,

@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
+import { useIsRestoring } from "@tanstack/react-query";
 import {
   LoaderCircle,
   Nfc,
@@ -93,9 +94,10 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 function AssetFlow({ pk }: { pk: string | null }) {
+  const isRestoring = useIsRestoring();
   const assetQuery = usePhygitalAsset(pk);
 
-  if (assetQuery.isPending) {
+  if (isRestoring || assetQuery.isLoading) {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
