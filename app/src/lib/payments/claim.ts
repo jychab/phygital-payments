@@ -72,9 +72,10 @@ export async function finishClaim(
 
   const instructions = await completeTransfer(session, args.auth, args.recipient);
 
-  const { signature } = await sendTransaction({
+  const { signature, confirmed } = await sendTransaction({
     instructions,
     feePayer: args.recipient,
   });
+  await confirmed;
   return { signature };
 }

@@ -8,11 +8,9 @@ import { buildCreateRecipientAtaInstructions } from "@/lib/payments/collect-sett
 import { sendTransaction } from "@/lib/solana/tx";
 import { useWalletKitSigner } from "@/lib/wallet/wallet-kit-signer";
 
-type OptimisticContext = { previous?: RecipientAtaStatus };
-
 /**
- * Create the recipient's USDC token account (connected wallet pays rent). The
- * status flips to "ready" optimistically; rolls back if the tx fails.
+ * Create the recipient's USDC token account (connected wallet pays rent).
+ * Status flips to ready after broadcast; confirm refreshes or rolls back.
  */
 export function useCreateAtaMutation(
   mint: Address,
@@ -21,7 +19,7 @@ export function useCreateAtaMutation(
   const signer = useWalletKitSigner();
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, { recipient: Address }, OptimisticContext>({
+  return useMutation<void, Error, { recipient: Address }>({
     mutationFn: async ({ recipient }) => {
       if (!signer) throw new Error("Connect your wallet");
       const { instructions } = await buildCreateRecipientAtaInstructions({
@@ -29,26 +27,21 @@ export function useCreateAtaMutation(
         mint,
         owner: recipient,
       });
-      if (instructions.length > 0) {
-        await sendTransaction({ instructions, feePayer: signer });
-      }
-    },
-    onMutate: async ({ recipient }) => {
+      if (instructions.length === 0) return;
+
       const key = queryKeys.ataStatus.byOwnerMint(recipient, mint);
-      await queryClient.cancelQueries({ queryKey: key });
+      const sent = await sendTransaction({ instructions, feePayer: signer });
       const previous = queryClient.getQueryData<RecipientAtaStatus>(key);
       queryClient.setQueryData<RecipientAtaStatus>(key, (prev) =>
         prev ? { ...prev, exists: true } : prev,
       );
-      return { previous };
-    },
-    onError: (_error, { recipient }, context) => {
-      if (context?.previous !== undefined) {
-        queryClient.setQueryData(
-          queryKeys.ataStatus.byOwnerMint(recipient, mint),
-          context.previous,
-        );
+      try {
+        await sent.confirmed;
+      } catch (error) {
+        if (previous !== undefined) queryClient.setQueryData(key, previous);
+        throw error;
       }
+      void queryClient.invalidateQueries({ queryKey: key });
     },
     onSuccess: () => options?.onSuccess?.(),
   });

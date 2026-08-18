@@ -4,32 +4,82 @@ import {
   createTransactionMessage,
   getSignatureFromTransaction,
   pipe,
-  sendAndConfirmTransactionFactory,
+  sendTransactionWithoutConfirmingFactory,
   setTransactionMessageFeePayerSigner,
   setTransactionMessageLifetimeUsingBlockhash,
   signTransactionMessageWithSigners,
   type Instruction,
   type TransactionSigner,
 } from "@solana/kit";
+import {
+  createBlockHeightExceedencePromiseFactory,
+  createRecentSignatureConfirmationPromiseFactory,
+  waitForRecentTransactionConfirmation,
+} from "@solana/transaction-confirmation";
 
 import { getSolanaRpc, getSolanaRpcSubscriptions } from "./rpc";
 
-let _sendAndConfirm:
-  | ReturnType<typeof sendAndConfirmTransactionFactory>
+const CONFIRM_TIMEOUT_MS = 60_000;
+
+let _sendWithoutConfirming:
+  | ReturnType<typeof sendTransactionWithoutConfirmingFactory>
   | null = null;
 
-function sendAndConfirm() {
-  _sendAndConfirm ??= sendAndConfirmTransactionFactory({
+function sendWithoutConfirming() {
+  _sendWithoutConfirming ??= sendTransactionWithoutConfirmingFactory({
     rpc: getSolanaRpc(),
-    rpcSubscriptions: getSolanaRpcSubscriptions(),
   });
-  return _sendAndConfirm;
+  return _sendWithoutConfirming;
 }
 
+type ConfirmableTransaction = Parameters<
+  typeof waitForRecentTransactionConfirmation
+>[0]["transaction"];
+
+let _confirmRecent: ((transaction: ConfirmableTransaction) => Promise<void>) | null =
+  null;
+
+function confirmRecentTransaction() {
+  if (_confirmRecent) return _confirmRecent;
+
+  const rpc = getSolanaRpc();
+  const rpcSubscriptions = getSolanaRpcSubscriptions();
+  const getBlockHeightExceedencePromise = createBlockHeightExceedencePromiseFactory({
+    rpc,
+    rpcSubscriptions,
+  } as Parameters<typeof createBlockHeightExceedencePromiseFactory>[0]);
+  const getRecentSignatureConfirmationPromise =
+    createRecentSignatureConfirmationPromiseFactory({
+      rpc,
+      rpcSubscriptions,
+    } as Parameters<typeof createRecentSignatureConfirmationPromiseFactory>[0]);
+
+  _confirmRecent = (transaction) =>
+    waitForRecentTransactionConfirmation({
+      abortSignal: AbortSignal.timeout(CONFIRM_TIMEOUT_MS),
+      commitment: "confirmed",
+      getBlockHeightExceedencePromise,
+      getRecentSignatureConfirmationPromise,
+      transaction,
+    });
+  return _confirmRecent;
+}
+
+export type SentTransaction = {
+  signature: string;
+  /** Resolves at `confirmed`; rejects if the tx fails or the blockhash expires. */
+  confirmed: Promise<void>;
+};
+
+/**
+ * Sign and broadcast. Returns as soon as the RPC accepts the tx so callers can
+ * update UI without waiting for `confirmed`. Await `confirmed` when the next
+ * step must not run until the tx has landed (e.g. claim).
+ */
 export async function sendTransaction(params: {
   instructions: Instruction[];
   feePayer: TransactionSigner;
-}): Promise<{ signature: string }> {
+}): Promise<SentTransaction> {
   const { instructions, feePayer } = params;
 
   const { value: latestBlockhash } = await getSolanaRpc()
@@ -44,7 +94,11 @@ export async function sendTransaction(params: {
   );
   const signedTransaction = await signTransactionMessageWithSigners(unsigned);
   assertIsTransactionWithBlockhashLifetime(signedTransaction);
-  await sendAndConfirm()(signedTransaction, { commitment: "confirmed" });
 
-  return { signature: getSignatureFromTransaction(signedTransaction) };
+  await sendWithoutConfirming()(signedTransaction, { commitment: "confirmed" });
+
+  return {
+    signature: getSignatureFromTransaction(signedTransaction),
+    confirmed: confirmRecentTransaction()(signedTransaction),
+  };
 }

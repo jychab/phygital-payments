@@ -12,23 +12,16 @@ import { queryKeys } from "@/lib/queries";
 import { sendTransaction } from "@/lib/solana/tx";
 import { useWalletKitSigner } from "@/lib/wallet/wallet-kit-signer";
 
-type AssetsContext = { previous?: PhygitalAsset[] };
-
 /**
- * Toggle lock on a Lockable phygital asset. Optimistically updates the owner's
- * device list, then confirms on-chain (rolls back on failure).
+ * Toggle lock on a Lockable phygital asset. The row flips after broadcast;
+ * confirm refreshes the list, or a failed land rolls the lock state back.
  */
 export function useSetLockStateMutation(owner: string | null) {
   const signer = useWalletKitSigner();
   const queryClient = useQueryClient();
   const key = queryKeys.asset.byOwner(owner);
 
-  return useMutation<
-    string,
-    Error,
-    { asset: Address; isLocked: boolean },
-    AssetsContext
-  >({
+  return useMutation<string, Error, { asset: Address; isLocked: boolean }>({
     mutationFn: async ({ asset, isLocked }) => {
       if (!signer) throw new Error("Connect your wallet");
       const instruction = getSetLockStateInstruction({
@@ -36,64 +29,66 @@ export function useSetLockStateMutation(owner: string | null) {
         asset,
         isLocked,
       });
-      const { signature } = await sendTransaction({
+      const sent = await sendTransaction({
         instructions: [instruction],
         feePayer: signer,
       });
-      return signature;
-    },
-    onMutate: async ({ asset, isLocked }) => {
-      await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<PhygitalAsset[]>(key);
       queryClient.setQueryData<PhygitalAsset[]>(key, (prev) =>
         prev?.map((row) =>
           row.asset === asset ? { ...row, isLocked } : row,
         ),
       );
-      return { previous };
-    },
-    onError: (_error, _vars, context) => {
-      if (context?.previous !== undefined) {
-        queryClient.setQueryData(key, context.previous);
+      try {
+        await sent.confirmed;
+      } catch (error) {
+        if (previous !== undefined) queryClient.setQueryData(key, previous);
+        throw error;
       }
+      void queryClient.invalidateQueries({ queryKey: key });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.asset.byAddress(String(asset)),
+      });
+      return sent.signature;
     },
   });
 }
 
 /**
- * Forfeit ownership of an asset. Optimistically removes it from the owner's
- * device list, then confirms on-chain (rolls back on failure).
+ * Forfeit ownership of an asset. The row drops after broadcast; a failed land
+ * puts it back.
  */
 export function useRemoveOwnershipMutation(owner: string | null) {
   const signer = useWalletKitSigner();
   const queryClient = useQueryClient();
   const key = queryKeys.asset.byOwner(owner);
 
-  return useMutation<string, Error, { asset: Address }, AssetsContext>({
+  return useMutation<string, Error, { asset: Address }>({
     mutationFn: async ({ asset }) => {
       if (!signer) throw new Error("Connect your wallet");
       const instruction = getRemoveOwnershipInstruction({
         owner: signer,
         asset,
       });
-      const { signature } = await sendTransaction({
+      const sent = await sendTransaction({
         instructions: [instruction],
         feePayer: signer,
       });
-      return signature;
-    },
-    onMutate: async ({ asset }) => {
-      await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<PhygitalAsset[]>(key);
       queryClient.setQueryData<PhygitalAsset[]>(key, (prev) =>
         prev?.filter((row) => row.asset !== asset),
       );
-      return { previous };
-    },
-    onError: (_error, _vars, context) => {
-      if (context?.previous !== undefined) {
-        queryClient.setQueryData(key, context.previous);
+      try {
+        await sent.confirmed;
+      } catch (error) {
+        if (previous !== undefined) queryClient.setQueryData(key, previous);
+        throw error;
       }
+      void queryClient.invalidateQueries({ queryKey: key });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.asset.byAddress(String(asset)),
+      });
+      return sent.signature;
     },
   });
 }
