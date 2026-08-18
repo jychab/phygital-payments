@@ -55,13 +55,27 @@ export function isDefaultMint(mint: string | Address): boolean {
 export const PAY_AMOUNT_PRESETS = ["20", "50", "100"] as const;
 export const DEFAULT_PAY_AMOUNT_UI = "100";
 
-/** Default tap / Shortcuts amount: min(spending limit, $100). */
-export function defaultTapAmountUi(limitUi?: string | null): string {
-  const cap = Number(DEFAULT_PAY_AMOUNT_UI);
-  const limit = limitUi != null && limitUi !== "" ? Number(limitUi) : cap;
-  if (!Number.isFinite(limit) || limit <= 0) return DEFAULT_PAY_AMOUNT_UI;
-  const n = Math.min(limit, cap);
+function formatUiAmount(n: number): string {
   return Number.isInteger(n) ? String(n) : String(n);
+}
+
+function parsePositiveUi(value?: string | null): number | null {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
+/** Pay $X / Shortcuts cap: min(max tap, spending limit). Defaults max tap to $100. */
+export function defaultTapAmountUi(
+  limitUi?: string | null,
+  maxTapUi?: string | null,
+): string {
+  const maxTap =
+    parsePositiveUi(maxTapUi) ?? parsePositiveUi(DEFAULT_PAY_AMOUNT_UI) ?? 100;
+  const limit = parsePositiveUi(limitUi);
+  if (limit == null) return formatUiAmount(maxTap);
+  return formatUiAmount(Math.min(limit, maxTap));
 }
 
 /** Resolve mint metadata from a catalog (USDC / short address fallback). */

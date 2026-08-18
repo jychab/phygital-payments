@@ -10,6 +10,7 @@ import { AmountField } from "@/components/amount-field";
 import { NfcHoldStatus } from "@/components/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus } from "@/hooks/use-delegate-status";
+import { useMaxTapAmountUi } from "@/hooks/use-max-tap-amount";
 import { useMintProgram } from "@/hooks/use-mint-program";
 import { useVerifiedTokens } from "@/hooks/use-verified-tokens";
 import { hasLocalPayKey } from "@/lib/payments/device-setup-state";
@@ -40,8 +41,9 @@ export type PayFlowPanelProps = {
 function defaultPayAmount(
   limitUi?: string | null,
   balanceUi?: string | null,
+  maxTapUi?: string | null,
 ): string {
-  const fromLimit = defaultTapAmountUi(limitUi);
+  const fromLimit = defaultTapAmountUi(limitUi, maxTapUi);
   const bal = balanceUi != null && balanceUi !== "" ? Number(balanceUi) : NaN;
   if (!Number.isFinite(bal) || bal <= 0) return fromLimit;
   const cap = Number(fromLimit);
@@ -90,9 +92,16 @@ export function PayFlowPanel({
   const token = resolvePaymentToken(mint, verified.data);
   const tokenEnabled = isDelegateEnabled(capQuery.data);
   const limitUi = tokenEnabled ? capQuery.data?.delegatedAmountUi : null;
-  const amount = amountDraft ?? defaultPayAmount(limitUi, capQuery.data?.balanceUi);
+  const maxTapUi = useMaxTapAmountUi(owner);
+  const tapCapUi = defaultTapAmountUi(limitUi, maxTapUi);
+  const amount = amountDraft ?? defaultPayAmount(
+    limitUi,
+    capQuery.data?.balanceUi,
+    maxTapUi,
+  );
   const decimals = mintQuery.data?.decimals ?? token.decimals;
   const rawAmount = tryUiAmountToRaw(amount, decimals);
+  const tapCapRaw = tryUiAmountToRaw(tapCapUi, decimals);
 
   const insufficientBalance =
     rawAmount != null &&
@@ -103,6 +112,11 @@ export function PayFlowPanel({
     capQuery.data?.delegatedAmountRaw != null &&
     tokenEnabled &&
     rawAmount > capQuery.data.delegatedAmountRaw;
+  const overMaxTap =
+    !overLimit &&
+    rawAmount != null &&
+    tapCapRaw != null &&
+    rawAmount > tapCapRaw;
 
   const windowOpen = phase === "window";
   const secondsLeft =
@@ -126,6 +140,7 @@ export function PayFlowPanel({
   function formatPayLabel(): string {
     if (insufficientBalance) return `Not Enough ${token.symbol}`;
     if (overLimit) return "Over Limit";
+    if (overMaxTap) return "Over max tap";
     const n = parseFloat(amount);
     if (!Number.isFinite(n) || n <= 0) return "Pay";
     const formatted =
@@ -158,6 +173,10 @@ export function PayFlowPanel({
     }
     if (overLimit) {
       toast.error(`Over your $${limitUi ?? "—"} limit.`);
+      return;
+    }
+    if (overMaxTap) {
+      toast.error(`Over your $${tapCapUi} max tap.`);
       return;
     }
     try {
@@ -295,7 +314,13 @@ export function PayFlowPanel({
     );
   }
 
-  const payBlocked = busy || !amount || rawAmount == null || insufficientBalance || overLimit;
+  const payBlocked =
+    busy ||
+    !amount ||
+    rawAmount == null ||
+    insufficientBalance ||
+    overLimit ||
+    overMaxTap;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -320,12 +345,22 @@ export function PayFlowPanel({
           <span className="text-destructive">
             Over your ${limitUi} limit
           </span>
+        ) : overMaxTap ? (
+          <span className="text-destructive">
+            Over your ${tapCapUi} max tap
+          </span>
         ) : (
           <>
             {limitUi ? `Limit $${limitUi}` : null}
-            {capQuery.data?.balanceUi ? (
+            {tapCapUi ? (
               <>
                 {limitUi ? " · " : null}
+                Max tap ${tapCapUi}
+              </>
+            ) : null}
+            {capQuery.data?.balanceUi ? (
+              <>
+                {limitUi || tapCapUi ? " · " : null}
                 {capQuery.data.balanceUi} {token.symbol}
               </>
             ) : null}

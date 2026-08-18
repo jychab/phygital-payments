@@ -7,8 +7,10 @@ import { Check, ChevronLeft, Settings2 } from "lucide-react";
 import { PayFlowPanel } from "@/components/pay/pay-flow-panel";
 import { AllowVerifierPanel } from "@/components/pay/allow-verifier-panel";
 import { ManagePayTokens } from "@/components/pay/pay-limit-panel";
+import { TokenIcon } from "@/components/token-chip";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus, useDelegateStatuses } from "@/hooks/use-delegate-status";
+import { useMaxTapAmountUi } from "@/hooks/use-max-tap-amount";
 import { usePayTokenContext } from "@/hooks/use-verified-tokens";
 import { useDevicePayKeyHelpers } from "@/lib/payments/device-pay-key-client";
 import { isDelegateEnabled, uiAmountToRaw } from "@/lib/payments/mint-delegate";
@@ -87,10 +89,12 @@ export function ManagePayPanel({
   owner,
   onBack,
   onEditTokenLimit,
+  onEditMaxTap,
 }: {
   owner: string;
   onBack: () => void;
   onEditTokenLimit: (holding: PaymentTokenHolding) => void;
+  onEditMaxTap: () => void;
 }) {
   const { provisionKey } = useDevicePayKeyHelpers();
   const [keyBusy, setKeyBusy] = useState(false);
@@ -105,6 +109,9 @@ export function ManagePayPanel({
   const limitUi = isDelegateEnabled(capQuery.data)
     ? capQuery.data?.delegatedAmountUi
     : null;
+  const maxTapUi = useMaxTapAmountUi(owner);
+  const tapCapUi = defaultTapAmountUi(limitUi, maxTapUi);
+  const usdc = defaultUsdcToken();
 
   async function onRotateKey() {
     try {
@@ -121,11 +128,10 @@ export function ManagePayPanel({
   async function onAddToShortcuts() {
     try {
       setKeyBusy(true);
-      const usdc = defaultUsdcToken();
       await copyPayShortcutLink({
         wallet: owner,
         amount: uiAmountToRaw(
-          defaultTapAmountUi(limitUi),
+          defaultTapAmountUi(limitUi, maxTapUi),
           usdc.decimals,
         ).toString(),
         mint: String(getDefaultMint()),
@@ -154,8 +160,31 @@ export function ManagePayPanel({
           Manage Pay
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Spending limits, Shortcuts, and this phone’s Pay key.
+          Spending limits, max tap amount, Shortcuts, and this phone’s Pay key.
         </p>
+      </div>
+
+      <div className="space-y-1">
+        <p className="px-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          This phone
+        </p>
+        <button
+          type="button"
+          onClick={onEditMaxTap}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+        >
+          <TokenIcon token={usdc} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">
+              Max tap amount
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              ${tapCapUi}
+              {limitUi ? ` · Limit $${limitUi}` : ""}
+            </p>
+          </div>
+          <span className="text-[11px] font-medium text-primary">Edit</span>
+        </button>
       </div>
 
       <div className="space-y-1">

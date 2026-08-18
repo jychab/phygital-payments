@@ -10,6 +10,7 @@ import { LimitPanel } from "@/components/pay/pay-limit-panel";
 import { AllowVerifierPanel } from "@/components/pay/allow-verifier-panel";
 import { Button } from "@/components/ui/button";
 import { usePaySetupSnapshot } from "@/hooks/use-pay-setup-snapshot";
+import { useMaxTapAmountUi } from "@/hooks/use-max-tap-amount";
 import { uiAmountToRaw } from "@/lib/payments/mint-delegate";
 import {
   defaultTapAmountUi,
@@ -81,13 +82,14 @@ function SetupComplete({
   limitUi: string | null;
   onDismiss?: () => void;
 }) {
+  const maxTapUi = useMaxTapAmountUi(owner);
   async function onAddToShortcuts() {
     try {
       const usdc = defaultUsdcToken();
       await copyPayShortcutLink({
         wallet: owner,
         amount: uiAmountToRaw(
-          defaultTapAmountUi(limitUi),
+          defaultTapAmountUi(limitUi, maxTapUi),
           usdc.decimals,
         ).toString(),
       });
