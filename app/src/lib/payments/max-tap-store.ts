@@ -1,6 +1,6 @@
 /**
  * Max tap amount in localStorage (this phone).
- * Pay $X and Shortcuts cannot exceed min(max tap, spending limit).
+ * Silent Pay grants and Shortcuts cannot exceed min(max tap, spending limit).
  */
 
 import { DEFAULT_PAY_AMOUNT_UI } from "@/lib/payments/payment-token";

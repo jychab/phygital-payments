@@ -18,7 +18,6 @@ import { AppCard, AppShell, homeCollectModeNav } from "@/components/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/embed-error";
 import { CenteredStatus, GateMessage } from "@/components/gate-message";
 import { LimitPanel } from "@/components/pay/pay-limit-panel";
-import { MaxTapPanel } from "@/components/pay/pay-max-tap-panel";
 import { ManagePayPanel, PayPanel } from "@/components/pay/pay-panel";
 import { HistoryPanel } from "@/components/history-panel";
 import { Button } from "@/components/ui/button";
@@ -158,7 +157,6 @@ function HomePayTab({ owner }: { owner: string }) {
   const [editHolding, setEditHolding] = useState<PaymentTokenHolding | null>(
     null,
   );
-  const [editMaxTap, setEditMaxTap] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
 
   const loading =
@@ -187,23 +185,12 @@ function HomePayTab({ owner }: { owner: string }) {
     );
   }
 
-  if (editMaxTap) {
-    return (
-      <MaxTapPanel
-        owner={owner}
-        onSaved={() => setEditMaxTap(false)}
-        onBack={() => setEditMaxTap(false)}
-      />
-    );
-  }
-
   if (manageOpen) {
     return (
       <ManagePayPanel
         owner={owner}
         onBack={() => setManageOpen(false)}
         onEditTokenLimit={(holding) => setEditHolding(holding)}
-        onEditMaxTap={() => setEditMaxTap(true)}
       />
     );
   }

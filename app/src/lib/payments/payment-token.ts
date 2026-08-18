@@ -66,7 +66,7 @@ function parsePositiveUi(value?: string | null): number | null {
   return n;
 }
 
-/** Pay $X / Shortcuts cap: min(max tap, spending limit). Defaults max tap to $100. */
+/** Silent Pay / Shortcuts cap: min(max tap, spending limit). Defaults max tap to $100. */
 export function defaultTapAmountUi(
   limitUi?: string | null,
   maxTapUi?: string | null,

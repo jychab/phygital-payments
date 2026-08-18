@@ -15,6 +15,8 @@ type AmountFieldProps = {
   decimals?: number;
   autoFocus?: boolean;
   className?: string;
+  /** Visible caption above the field (e.g. Spending limit). */
+  caption?: string;
 };
 
 /** Large, Wallet-style currency amount entry. */
@@ -27,14 +29,24 @@ export function AmountField({
   decimals,
   autoFocus,
   className,
+  caption,
 }: AmountFieldProps) {
   const label = token.symbol;
   const fracCap = Math.max(0, Math.min(decimals ?? token.decimals, 18));
   return (
     <div className={cn("relative flex flex-col items-center gap-1 py-2", className)}>
-      <label htmlFor={id} className="sr-only">
-        Amount in {label}
-      </label>
+      {caption ? (
+        <label
+          htmlFor={id}
+          className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+        >
+          {caption}
+        </label>
+      ) : (
+        <label htmlFor={id} className="sr-only">
+          Amount in {label}
+        </label>
+      )}
       <div className="flex w-full items-baseline justify-center gap-2">
         <Input
           id={id}

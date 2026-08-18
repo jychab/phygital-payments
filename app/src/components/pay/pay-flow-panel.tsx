@@ -6,7 +6,6 @@ import { LoaderCircle, X } from "lucide-react";
 import { address } from "@solana/kit";
 import Link from "next/link";
 
-import { AmountField } from "@/components/amount-field";
 import { NfcHoldStatus } from "@/components/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus } from "@/hooks/use-delegate-status";
@@ -38,7 +37,7 @@ export type PayFlowPanelProps = {
   onSetLimit?: () => void;
 };
 
-function defaultPayAmount(
+function silentGrantAmountUi(
   limitUi?: string | null,
   balanceUi?: string | null,
   maxTapUi?: string | null,
@@ -68,7 +67,7 @@ function formatCountdown(seconds: number): string {
 }
 
 /**
- * Shared Pay $X → Hold to Pay flow (stored localStorage key + preauth window).
+ * Pay → Hold to Pay. Opens a silent grant up to min(max tap, spending limit).
  * Works without Privy when `owner` is known (e.g. `/device`).
  */
 export function PayFlowPanel({
@@ -79,7 +78,6 @@ export function PayFlowPanel({
 }: PayFlowPanelProps) {
   const mint = String(getDefaultMint());
   const mintAddress = useMemo(() => address(mint), [mint]);
-  const [amountDraft, setAmountDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
@@ -93,30 +91,15 @@ export function PayFlowPanel({
   const tokenEnabled = isDelegateEnabled(capQuery.data);
   const limitUi = tokenEnabled ? capQuery.data?.delegatedAmountUi : null;
   const maxTapUi = useMaxTapAmountUi(owner);
-  const tapCapUi = defaultTapAmountUi(limitUi, maxTapUi);
-  const amount = amountDraft ?? defaultPayAmount(
+  const grantUi = silentGrantAmountUi(
     limitUi,
     capQuery.data?.balanceUi,
     maxTapUi,
   );
   const decimals = mintQuery.data?.decimals ?? token.decimals;
-  const rawAmount = tryUiAmountToRaw(amount, decimals);
-  const tapCapRaw = tryUiAmountToRaw(tapCapUi, decimals);
+  const rawAmount = tryUiAmountToRaw(grantUi, decimals);
 
-  const insufficientBalance =
-    rawAmount != null &&
-    capQuery.data != null &&
-    capQuery.data.balanceRaw < rawAmount;
-  const overLimit =
-    rawAmount != null &&
-    capQuery.data?.delegatedAmountRaw != null &&
-    tokenEnabled &&
-    rawAmount > capQuery.data.delegatedAmountRaw;
-  const overMaxTap =
-    !overLimit &&
-    rawAmount != null &&
-    tapCapRaw != null &&
-    rawAmount > tapCapRaw;
+
 
   const windowOpen = phase === "window";
   const secondsLeft =
@@ -137,19 +120,6 @@ export function PayFlowPanel({
     return () => window.clearInterval(id);
   }, [windowOpen, expiresAt]);
 
-  function formatPayLabel(): string {
-    if (insufficientBalance) return `Not Enough ${token.symbol}`;
-    if (overLimit) return "Over Limit";
-    if (overMaxTap) return "Over max tap";
-    const n = parseFloat(amount);
-    if (!Number.isFinite(n) || n <= 0) return "Pay";
-    const formatted =
-      amount.includes(".") && !amount.endsWith(".")
-        ? `$${amount}`
-        : `$${Math.round(n)}`;
-    return `Pay ${formatted}`;
-  }
-
   async function onPay() {
     if (!hasKey) {
       toast.error("Turn on Pay on this phone first.");
@@ -163,20 +133,8 @@ export function PayFlowPanel({
       toast.error("Still loading. Try again in a moment.");
       return;
     }
-    if (!amount || rawAmount == null) {
-      toast.error("Enter an amount.");
-      return;
-    }
-    if (insufficientBalance) {
-      toast.error(`Not enough ${token.symbol}.`);
-      return;
-    }
-    if (overLimit) {
-      toast.error(`Over your $${limitUi ?? "—"} limit.`);
-      return;
-    }
-    if (overMaxTap) {
-      toast.error(`Over your $${tapCapUi} max tap.`);
+    if (rawAmount == null) {
+      toast.error("Couldn’t start Pay. Check your spending limit.");
       return;
     }
     try {
@@ -215,7 +173,7 @@ export function PayFlowPanel({
         <div className="max-w-60 space-y-1.5">
           <p className="text-base font-medium text-foreground">Time Expired</p>
           <p className="text-sm text-muted-foreground">
-            Enable Pay again to continue.
+            Tap Pay again to continue.
           </p>
         </div>
         <Button
@@ -231,18 +189,11 @@ export function PayFlowPanel({
   }
 
   if (windowOpen) {
-    const n = parseFloat(amount);
-    const amountLabel =
-      Number.isFinite(n) && amount.includes(".") && !amount.endsWith(".")
-        ? `$${amount}`
-        : Number.isFinite(n)
-          ? `$${Math.round(n)}`
-          : `$${amount}`;
     return (
       <NfcHoldStatus
         size="lg"
         title="Hold to Pay"
-        body={`${amountLabel} · ${formatCountdown(secondsLeft)} remaining`}
+        body={`${formatCountdown(secondsLeft)} remaining`}
         pulsing
         action={
           <Button
@@ -314,59 +265,17 @@ export function PayFlowPanel({
     );
   }
 
-  const payBlocked =
-    busy ||
-    !amount ||
-    rawAmount == null ||
-    insufficientBalance ||
-    overLimit ||
-    overMaxTap;
+  const payBlocked = busy || rawAmount == null;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <AmountField
-        id={`pay-amount-${variant}`}
-        value={amount}
-        onChange={setAmountDraft}
-        token={token}
-        decimals={decimals}
-        disabled={busy}
-      />
-
-      <p className="text-center text-[11px] tabular-nums text-muted-foreground">
-        {insufficientBalance ? (
-          <span className="text-destructive">
-            Not enough {token.symbol}
-            {capQuery.data?.balanceUi
-              ? ` · ${capQuery.data.balanceUi} available`
-              : ""}
-          </span>
-        ) : overLimit ? (
-          <span className="text-destructive">
-            Over your ${limitUi} limit
-          </span>
-        ) : overMaxTap ? (
-          <span className="text-destructive">
-            Over your ${tapCapUi} max tap
-          </span>
-        ) : (
-          <>
-            {limitUi ? `Limit $${limitUi}` : null}
-            {tapCapUi ? (
-              <>
-                {limitUi ? " · " : null}
-                Max tap ${tapCapUi}
-              </>
-            ) : null}
-            {capQuery.data?.balanceUi ? (
-              <>
-                {limitUi || tapCapUi ? " · " : null}
-                {capQuery.data.balanceUi} {token.symbol}
-              </>
-            ) : null}
-          </>
-        )}
-      </p>
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        
+          <p className="max-w-64 text-sm text-muted-foreground">
+            Tap Pay, then hold your device at the receiver phone.
+          </p>
+        
+      </div>
 
       <div className="mt-auto flex flex-col gap-2.5">
         <Button
@@ -379,7 +288,7 @@ export function PayFlowPanel({
           {busy ? (
             <LoaderCircle className="size-4 animate-spin" />
           ) : (
-            formatPayLabel()
+            "Pay"
           )}
         </Button>
         {variant === "device" ? (
