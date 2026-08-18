@@ -28,8 +28,10 @@ import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
  */
 export function PayPanel({
   onManage,
+  onSetLimit,
 }: {
   onManage: () => void;
+  onSetLimit?: () => void;
 }) {
   const { address: walletAddress } = useSolanaAddress();
   const [payFlowKey, setPayFlowKey] = useState(0);
@@ -62,6 +64,7 @@ export function PayPanel({
         owner={walletAddress}
         variant="home"
         assumeKeyReady
+        onSetLimit={onSetLimit}
       />
 
       <div className="mt-auto border-t border-border/40 pt-4">
@@ -107,9 +110,9 @@ export function ManagePayPanel({
     try {
       setKeyBusy(true);
       await provisionKey(owner, { rotate: true });
-      toast.success("Pay key rotated — update any saved shortcuts");
+      toast.success("Pay key updated. Update any saved Shortcuts.");
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn't rotate Pay key"));
+      toast.error(toUserErrorMessage(error, "Couldn’t update Pay key"));
     } finally {
       setKeyBusy(false);
     }
@@ -129,7 +132,7 @@ export function ManagePayPanel({
       });
       toast.success("Shortcut link copied");
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn't copy link"));
+      toast.error(toUserErrorMessage(error, "Couldn’t copy link"));
     } finally {
       setKeyBusy(false);
     }
@@ -151,7 +154,7 @@ export function ManagePayPanel({
           Manage Pay
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Spending limits, Shortcuts, and this phone&apos;s Pay key.
+          Spending limits, Shortcuts, and this phone’s Pay key.
         </p>
       </div>
 

@@ -78,7 +78,7 @@ export function LimitPanel({
   async function runEnable() {
     if (!walletAddress || walletAddress !== expectedOwner) return;
     if (!mintQuery.data) {
-      toast.error("Still loading — try again in a moment");
+      toast.error("Still loading. Try again in a moment.");
       return;
     }
     try {
@@ -101,7 +101,7 @@ export function LimitPanel({
       toast.success("Spending limit removed");
       onEnabled?.();
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn't remove spending limit"));
+      toast.error(toUserErrorMessage(error, "Couldn’t remove spending limit"));
     }
   }
 
@@ -129,14 +129,14 @@ export function LimitPanel({
           Set Spending Limit
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          This wallet can spend up to this much{" "}
+          Payments from your devices can use up to this much{" "}
           <TokenSymbol
             token={token}
             size="xs"
             className="mx-0.5"
             symbolClassName="font-medium text-foreground"
-          />{" "}
-          when any of your NFC devices tap to pay. Change it anytime.
+          />
+          . You can change it anytime.
         </p>
       </div>
 
@@ -247,7 +247,7 @@ export function ManagePayTokens({
   if (list.length === 0) {
     return (
       <p className="px-2 py-4 text-center text-xs text-muted-foreground">
-        No verified tokens found for this wallet.
+        No verified tokens in this wallet.
       </p>
     );
   }
@@ -263,13 +263,13 @@ export function ManagePayTokens({
               token={h}
               subtitle={
                 enabled
-                  ? `Limit ${status?.delegatedAmountUi ?? "—"} · bal ${h.balanceUi}`
-                  : `Not enabled · bal ${h.balanceUi}`
+                  ? `Limit ${status?.delegatedAmountUi ?? "—"} · ${h.balanceUi} available`
+                  : `Off · ${h.balanceUi} available`
               }
               onSelect={() => onEditLimit(h)}
               trailing={
                 <span className="text-[11px] font-medium text-primary">
-                  {enabled ? "Edit" : "Enable"}
+                  {enabled ? "Edit" : "Turn On"}
                 </span>
               }
             />

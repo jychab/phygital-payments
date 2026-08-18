@@ -115,7 +115,7 @@ export function HistoryPanel({ recipient }: { recipient: string }) {
             <History className="size-5 text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground">
-            Payments for this wallet will show up here.
+            Payments for this wallet will appear here.
           </p>
         </div>
       ) : (

@@ -24,11 +24,3 @@ export function nextPaySetupStep(
 export function hasLocalPayKey(wallet: string): boolean {
   return hasStoredPayApiKey(wallet);
 }
-
-/** Ready to show Pay $X on `/device` (server + local key). */
-export function canPayFromDevice(
-  s: PaySetupSnapshot,
-  wallet: string,
-): boolean {
-  return isPayConfigured(s) && hasLocalPayKey(wallet);
-}

@@ -229,17 +229,13 @@ async function buildReceiveTransfer(args: {
   ]);
 
   if (!funding.isProgramAuthorityDelegate) {
-    throw new Error(
-      "Program authority is not the SPL delegate on the sender token account.",
-    );
+    throw new Error("They haven't enabled this token for Pay.");
   }
-  if (
-    funding.delegatedAmountRaw < rawAmount ||
-    funding.balanceRaw < rawAmount
-  ) {
-    throw new Error(
-      "Delegated amount is insufficient for this payment. Ask them to enable this token for Pay or raise the limit.",
-    );
+  if (funding.balanceRaw < rawAmount) {
+    throw new Error("They don't have enough balance for this payment.");
+  }
+  if (funding.delegatedAmountRaw < rawAmount) {
+    throw new Error("This is more than their spending limit.");
   }
 
   let ownerVerifierRoute: OwnerVerifierRoute = { kind: "revi" };

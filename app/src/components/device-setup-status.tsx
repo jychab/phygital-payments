@@ -4,16 +4,14 @@ import { useRouter } from "next/navigation";
 import { LoaderCircle, Nfc } from "lucide-react";
 
 import { DeviceWalletReady } from "@/components/device-wallet-ready";
-import { PayFlowPanel } from "@/components/pay/pay-flow-panel";
 import { CenteredStatus, GateMessage } from "@/components/gate-message";
 import { usePaySetupSnapshot } from "@/hooks/use-pay-setup-snapshot";
-import { canPayFromDevice } from "@/lib/payments/device-setup-state";
 import { deviceFinishHrefForStep } from "@/lib/payments/device-finish";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
 
 /**
- * Locked, owned device after NFC tap — no Privy.
+ * Locked, owned device after NFC tap — linked wallet, optional Pay setup.
  */
 export function DeviceSetupStatus({ asset }: { asset: PhygitalAsset }) {
   const router = useRouter();
@@ -43,16 +41,11 @@ export function DeviceSetupStatus({ asset }: { asset: PhygitalAsset }) {
     );
   }
 
-  if (canPayFromDevice(snap.snapshot, owner)) {
-    return <PayFlowPanel owner={owner} variant="device" assumeKeyReady />;
-  }
-
   return (
     <DeviceWalletReady
       owner={owner}
       capSet={snap.capSet}
       verifierSet={snap.verifierSet}
-      limitUi={snap.limitUi}
       onSetUpPay={
         snap.next
           ? () => router.push(deviceFinishHrefForStep(snap.next!, owner))

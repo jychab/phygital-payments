@@ -36,7 +36,7 @@ export function AllowVerifierPanel({
       onAllowed();
       toast.success("Pay is on");
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn't enable Pay"));
+      toast.error(toUserErrorMessage(error, "Couldn’t turn on Pay"));
     } finally {
       setBusy(false);
     }
@@ -55,7 +55,7 @@ export function AllowVerifierPanel({
       <GateMessage
         icon={<Wallet className="size-5 text-muted-foreground" />}
         title="Connect your wallet"
-        body={`Connect ${shortAddress(expectedOwner, 4)} to enable Pay.`}
+        body={`Connect ${shortAddress(expectedOwner, 4)} to turn on Pay.`}
         action={
           <Button
             type="button"
@@ -87,9 +87,9 @@ export function AllowVerifierPanel({
         <div className="mx-auto flex size-11 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
           <Smartphone className="size-5 text-muted-foreground" />
         </div>
-        <p className="text-sm font-medium text-foreground">Enable Pay</p>
+        <p className="text-sm font-medium text-foreground">Turn On Pay</p>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Your wallet will ask you to sign. It does not move funds.
+          Your wallet will ask you to sign. Nothing is charged.
         </p>
       </div>
       <div className="mt-auto flex flex-col gap-2.5">
@@ -103,10 +103,10 @@ export function AllowVerifierPanel({
           {busy ? (
             <>
               <LoaderCircle className="size-4 animate-spin" />
-              Enable Pay…
+              Turn On Pay…
             </>
           ) : (
-            "Enable Pay"
+            "Turn On Pay"
           )}
         </Button>
         {onSkip ? (

@@ -8,7 +8,6 @@ import Link from "next/link";
 
 import { AmountField } from "@/components/amount-field";
 import { NfcHoldStatus } from "@/components/nfc-hold-status";
-import { TokenSymbol } from "@/components/token-chip";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus } from "@/hooks/use-delegate-status";
 import { useMintProgram } from "@/hooks/use-mint-program";
@@ -34,7 +33,37 @@ export type PayFlowPanelProps = {
   variant?: "home" | "device";
   /** Parent already verified a local key (skips missing-key gate). */
   assumeKeyReady?: boolean;
+  /** Open spending-limit setup for the Pay token. */
+  onSetLimit?: () => void;
 };
+
+function defaultPayAmount(
+  limitUi?: string | null,
+  balanceUi?: string | null,
+): string {
+  const fromLimit = defaultTapAmountUi(limitUi);
+  const bal = balanceUi != null && balanceUi !== "" ? Number(balanceUi) : NaN;
+  if (!Number.isFinite(bal) || bal <= 0) return fromLimit;
+  const cap = Number(fromLimit);
+  if (!Number.isFinite(cap) || cap <= 0) return fromLimit;
+  const n = Math.min(cap, bal);
+  return Number.isInteger(n) ? String(n) : String(n);
+}
+
+function tryUiAmountToRaw(amount: string, decimals: number): bigint | null {
+  try {
+    return uiAmountToRaw(amount, decimals);
+  } catch {
+    return null;
+  }
+}
+
+function formatCountdown(seconds: number): string {
+  const s = Math.max(0, seconds);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, "0")}`;
+}
 
 /**
  * Shared Pay $X → Hold to Pay flow (stored localStorage key + preauth window).
@@ -44,6 +73,7 @@ export function PayFlowPanel({
   owner,
   variant = "home",
   assumeKeyReady = false,
+  onSetLimit,
 }: PayFlowPanelProps) {
   const mint = String(getDefaultMint());
   const mintAddress = useMemo(() => address(mint), [mint]);
@@ -58,10 +88,21 @@ export function PayFlowPanel({
   const mintQuery = useMintProgram(mintAddress);
   const verified = useVerifiedTokens();
   const token = resolvePaymentToken(mint, verified.data);
-  const limitUi = isDelegateEnabled(capQuery.data)
-    ? capQuery.data?.delegatedAmountUi
-    : null;
-  const amount = amountDraft ?? defaultTapAmountUi(limitUi);
+  const tokenEnabled = isDelegateEnabled(capQuery.data);
+  const limitUi = tokenEnabled ? capQuery.data?.delegatedAmountUi : null;
+  const amount = amountDraft ?? defaultPayAmount(limitUi, capQuery.data?.balanceUi);
+  const decimals = mintQuery.data?.decimals ?? token.decimals;
+  const rawAmount = tryUiAmountToRaw(amount, decimals);
+
+  const insufficientBalance =
+    rawAmount != null &&
+    capQuery.data != null &&
+    capQuery.data.balanceRaw < rawAmount;
+  const overLimit =
+    rawAmount != null &&
+    capQuery.data?.delegatedAmountRaw != null &&
+    tokenEnabled &&
+    rawAmount > capQuery.data.delegatedAmountRaw;
 
   const windowOpen = phase === "window";
   const secondsLeft =
@@ -83,6 +124,8 @@ export function PayFlowPanel({
   }, [windowOpen, expiresAt]);
 
   function formatPayLabel(): string {
+    if (insufficientBalance) return `Not Enough ${token.symbol}`;
+    if (overLimit) return "Over Limit";
     const n = parseFloat(amount);
     if (!Number.isFinite(n) || n <= 0) return "Pay";
     const formatted =
@@ -94,27 +137,31 @@ export function PayFlowPanel({
 
   async function onPay() {
     if (!hasKey) {
-      toast.error("Pay isn't set up on this phone yet.");
+      toast.error("Turn on Pay on this phone first.");
+      return;
+    }
+    if (!tokenEnabled) {
+      toast.error(`Turn on ${token.symbol} for Pay first.`);
       return;
     }
     if (!mintQuery.data) {
-      toast.error("Still loading — try again in a moment");
+      toast.error("Still loading. Try again in a moment.");
       return;
     }
-    if (!amount) {
-      toast.error("Choose an amount");
+    if (!amount || rawAmount == null) {
+      toast.error("Enter an amount.");
+      return;
+    }
+    if (insufficientBalance) {
+      toast.error(`Not enough ${token.symbol}.`);
+      return;
+    }
+    if (overLimit) {
+      toast.error(`Over your $${limitUi ?? "—"} limit.`);
       return;
     }
     try {
       setBusy(true);
-      const rawAmount = uiAmountToRaw(amount, mintQuery.data.decimals);
-      if (
-        capQuery.data?.delegatedAmountRaw != null &&
-        rawAmount > capQuery.data.delegatedAmountRaw
-      ) {
-        toast.error(`Amount exceeds your $${limitUi ?? "—"} limit`);
-        return;
-      }
       const grant = await requestPreauthForWallet({
         wallet: owner,
         amount: rawAmount.toString(),
@@ -124,7 +171,7 @@ export function PayFlowPanel({
       setExpiresAt(grant.expiresAt);
       setPhase("window");
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn't pay"));
+      toast.error(toUserErrorMessage(error, "Couldn’t enable this payment."));
     } finally {
       setBusy(false);
     }
@@ -136,7 +183,7 @@ export function PayFlowPanel({
     try {
       await cancelPreauthForWallet({ wallet: owner });
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn't cancel"));
+      toast.error(toUserErrorMessage(error, "Couldn’t cancel."));
     }
   }
 
@@ -147,8 +194,10 @@ export function PayFlowPanel({
           <X className="size-6" strokeWidth={2} />
         </div>
         <div className="max-w-60 space-y-1.5">
-          <p className="text-base font-medium text-foreground">Window Ended</p>
-          <p className="text-sm text-muted-foreground">Tap Pay to try again.</p>
+          <p className="text-base font-medium text-foreground">Time Expired</p>
+          <p className="text-sm text-muted-foreground">
+            Enable Pay again to continue.
+          </p>
         </div>
         <Button
           type="button"
@@ -156,18 +205,25 @@ export function PayFlowPanel({
           className="w-full max-w-xs"
           onClick={() => setPhase("idle")}
         >
-          Done
+          Pay Again
         </Button>
       </div>
     );
   }
 
   if (windowOpen) {
+    const n = parseFloat(amount);
+    const amountLabel =
+      Number.isFinite(n) && amount.includes(".") && !amount.endsWith(".")
+        ? `$${amount}`
+        : Number.isFinite(n)
+          ? `$${Math.round(n)}`
+          : `$${amount}`;
     return (
       <NfcHoldStatus
         size="lg"
         title="Hold to Pay"
-        body={`Up to $${amount} · ${secondsLeft}s left`}
+        body={`${amountLabel} · ${formatCountdown(secondsLeft)} remaining`}
         pulsing
         action={
           <Button
@@ -183,77 +239,115 @@ export function PayFlowPanel({
     );
   }
 
-  return (
-    <div className="flex flex-1 flex-col gap-6">
-      <div className="space-y-1 text-center">
-        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-          Pay
-        </p>
-        <p className="text-sm font-medium text-foreground">Choose amount</p>
+  if (!hasKey) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 py-8 text-center">
+        <div className="max-w-64 space-y-1.5">
+          <p className="text-base font-medium text-foreground">Pay Isn’t Set Up</p>
+          <p className="text-sm text-muted-foreground">
+            Turn on Pay on this phone, then come back to pay.
+          </p>
+        </div>
         {variant === "device" ? (
-          <p className="text-xs text-muted-foreground">
-            Hold this device near their phone after you pay.
+          <Button type="button" size="lg" className="w-full max-w-xs" asChild>
+            <Link href="/">Set Up Pay</Link>
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (capQuery.isLoading || mintQuery.isLoading) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-center">
+        <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Loading Pay…</p>
+      </div>
+    );
+  }
+
+  if (!tokenEnabled) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 py-8 text-center">
+        <div className="max-w-64 space-y-1.5">
+          <p className="text-base font-medium text-foreground">
+            Turn On {token.symbol}
           </p>
+          <p className="text-sm text-muted-foreground">
+            Set a spending limit to pay with {token.symbol}.
+          </p>
+        </div>
+        {onSetLimit ? (
+          <Button
+            type="button"
+            size="lg"
+            className="w-full max-w-xs"
+            onClick={onSetLimit}
+          >
+            Set Spending Limit
+          </Button>
         ) : (
-          <p className="text-xs text-muted-foreground">
-            Then hold your NFC device to their phone.
-          </p>
+          <Button type="button" size="lg" className="w-full max-w-xs" asChild>
+            <Link href="/">Set Up on Home</Link>
+          </Button>
         )}
       </div>
+    );
+  }
 
-      {!hasKey ? (
-        <p className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2 text-center text-xs text-muted-foreground">
-          Pay isn&apos;t set up on this phone yet.{" "}
-          <Link href="/" className="text-primary underline-offset-2 hover:underline">
-            Set Up Pay on Home
-          </Link>
-          .
-        </p>
-      ) : (
-        <>
-          <AmountField
-            id={`pay-amount-${variant}`}
-            value={amount}
-            onChange={setAmountDraft}
-            token={token}
-            decimals={mintQuery.data?.decimals ?? token.decimals}
-            disabled={busy}
-          />
+  const payBlocked = busy || !amount || rawAmount == null || insufficientBalance || overLimit;
 
-          {limitUi ? (
-            <p className="text-center text-[11px] text-muted-foreground">
-              Spending limit ${limitUi} ${token.symbol}
-            </p>
-          ) : null}
-        </>
-      )}
+  return (
+    <div className="flex flex-1 flex-col gap-6">
+      <AmountField
+        id={`pay-amount-${variant}`}
+        value={amount}
+        onChange={setAmountDraft}
+        token={token}
+        decimals={decimals}
+        disabled={busy}
+      />
 
-      <div className="mt-auto flex flex-col gap-2.5">
-        {hasKey ? (
+      <p className="text-center text-[11px] tabular-nums text-muted-foreground">
+        {insufficientBalance ? (
+          <span className="text-destructive">
+            Not enough {token.symbol}
+            {capQuery.data?.balanceUi
+              ? ` · ${capQuery.data.balanceUi} available`
+              : ""}
+          </span>
+        ) : overLimit ? (
+          <span className="text-destructive">
+            Over your ${limitUi} limit
+          </span>
+        ) : (
           <>
-            <Button
-              type="button"
-              size="lg"
-              className="w-full"
-              onClick={() => void onPay()}
-              disabled={busy || !amount || !mintQuery.data}
-            >
-              {busy ? (
-                <>
-                  <LoaderCircle className="size-4 animate-spin" />
-                  Pay…
-                </>
-              ) : (
-                formatPayLabel()
-              )}
-            </Button>
-            {variant === "device" ? (
-              <Button type="button" variant="ghost" size="lg" className="w-full" asChild>
-                <Link href="/">Done</Link>
-              </Button>
+            {limitUi ? `Limit $${limitUi}` : null}
+            {capQuery.data?.balanceUi ? (
+              <>
+                {limitUi ? " · " : null}
+                {capQuery.data.balanceUi} {token.symbol}
+              </>
             ) : null}
           </>
-        ) : variant === "device" ? (
+        )}
+      </p>
+
+      <div className="mt-auto flex flex-col gap-2.5">
+        <Button
+          type="button"
+          size="lg"
+          className="w-full"
+          onClick={() => void onPay()}
+          disabled={payBlocked || !mintQuery.data}
+        >
+          {busy ? (
+            <LoaderCircle className="size-4 animate-spin" />
+          ) : (
+            formatPayLabel()
+          )}
+        </Button>
+        {variant === "device" ? (
           <Button type="button" variant="ghost" size="lg" className="w-full" asChild>
             <Link href="/">Done</Link>
           </Button>

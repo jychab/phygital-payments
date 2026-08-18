@@ -25,17 +25,6 @@ export function InAppBrowserGate({
           <Button
             type="button"
             size="lg"
-            className="w-full"
-            onClick={() => {
-              window.location.href = safariOpenHintUrl(href);
-            }}
-          >
-            <ExternalLink className="size-4" />
-            Open in Safari
-          </Button>
-          <Button
-            type="button"
-            size="lg"
             variant="outline"
             className="w-full"
             onClick={() => {

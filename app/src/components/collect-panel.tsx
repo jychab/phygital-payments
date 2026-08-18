@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 import {
   AlertCircle,
   Check,
@@ -9,6 +8,7 @@ import {
   LoaderCircle,
   Nfc,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import { address, type Address } from "@solana/kit";
 
@@ -21,7 +21,6 @@ import { TokenPickerSheet } from "@/components/token-picker-sheet";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/use-is-in-app-browser";
 import { useVerifiedTokens } from "@/hooks/use-verified-tokens";
-import { explorerTxUrl } from "@/lib/solana/cluster";
 import { uiAmountToRaw } from "@/lib/payments/mint-delegate";
 import {
   collectHref,
@@ -40,14 +39,14 @@ import {
 import {
   getRawPaymentError,
   logPaymentError,
-  toUserErrorMessage,
+  toUserFacingError,
 } from "@/lib/payments/user-errors";
 import { useMintProgram } from "@/hooks/use-mint-program";
 import { useRecipientAtaStatus } from "@/hooks/use-recipient-ata-status";
 import { useCollectMutation } from "@/hooks/use-collect-mutation";
 import { cn } from "@/lib/utils";
 
-type Phase = "idle" | "awaiting-tap" | "confirming" | "success";
+type Phase = "idle" | "awaiting-tap" | "confirming" | "success" | "failed";
 
 const SUCCESS_HOLD_MS = 3200;
 
@@ -82,6 +81,7 @@ export function CollectPanel({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [settledAmount, setSettledAmount] = useState("");
+  const [failTitle, setFailTitle] = useState<string | null>(null);
   const [failMessage, setFailMessage] = useState<string | null>(null);
   const [failDebug, setFailDebug] = useState<string | null>(null);
 
@@ -111,22 +111,7 @@ export function CollectPanel({
   const missingAta = ataStatus != null && !ataStatus.exists;
   const mintProgramError = mintQuery.isError;
 
-  const receive = useCollectMutation({
-    onSuccess: (signature) => {
-      toast.success("Payment received", {
-        description: (
-          <a
-            className="underline"
-            href={explorerTxUrl(signature)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            View on Explorer
-          </a>
-        ),
-      });
-    },
-  });
+  const receive = useCollectMutation();
 
   const busy = phase !== "idle";
   const setupUrl = receiveSetupHref({
@@ -143,26 +128,35 @@ export function CollectPanel({
     });
   }, [mint, recipient, amount, amountLocked, paymentRequest.amount]);
 
+  function clearFail() {
+    setFailTitle(null);
+    setFailMessage(null);
+    setFailDebug(null);
+  }
+
   async function onReceive() {
     if (inApp) {
-      setFailMessage("Open this page in Safari or Chrome to collect.");
+      setFailTitle("Open in Safari or Chrome");
+      setFailMessage("Collecting needs Safari or Chrome so the NFC device can be read.");
       return;
     }
     if (!sponsoredAvailable) {
-      setFailMessage("Payments aren’t available right now.");
+      setFailTitle("Payments Unavailable");
+      setFailMessage("Payments aren’t available right now. Try again later.");
       return;
     }
     if (!mintSupported || mintProgramError) {
+      setFailTitle("Token Not Supported");
       setFailMessage("This token isn’t supported. Switch to USDC.");
       return;
     }
     if (!readyToReceive || !ataStatus || !mintQuery.data) {
-      setFailMessage("Finish one-time setup before collecting.");
+      setFailTitle("Finish Setup");
+      setFailMessage("Set up a receive account before collecting.");
       return;
     }
     const paidAmount = amount;
-    setFailMessage(null);
-    setFailDebug(null);
+    clearFail();
     setPhase("awaiting-tap");
     try {
       const rawAmount = uiAmountToRaw(amount, mintQuery.data.decimals);
@@ -195,18 +189,24 @@ export function CollectPanel({
       window.setTimeout(() => setPhase("idle"), SUCCESS_HOLD_MS);
     } catch (error) {
       logPaymentError("collect", error);
-      const userMessage = toUserErrorMessage(
-        error,
-        "Payment didn’t go through. Try again.",
-      );
+      const facing = toUserFacingError(error, {
+        title: "Payment Not Completed",
+        body: "Try again.",
+      });
       const raw = getRawPaymentError(error);
-      setFailMessage(userMessage);
+      setFailTitle(facing.title);
+      setFailMessage(facing.body);
       setFailDebug(
-        raw && raw !== userMessage && process.env.NODE_ENV === "development"
+        raw && raw !== facing.body && process.env.NODE_ENV === "development"
           ? raw
           : null,
       );
-      setPhase("idle");
+      try {
+        navigator.vibrate?.(40);
+      } catch {
+        /* ignore */
+      }
+      setPhase("failed");
     }
   }
 
@@ -232,7 +232,7 @@ export function CollectPanel({
           </div>
         </div>
         <div className="space-y-1">
-          <p className="text-xl font-semibold tracking-tight">Received</p>
+          <p className="text-xl font-semibold tracking-tight">Done</p>
           <p className="font-(family-name:--font-display) text-[2.5rem] leading-none tracking-tight tabular-nums">
             {settledAmount || amount || "0"}
             <span className="ml-2 inline-flex align-middle text-lg font-medium text-muted-foreground">
@@ -246,12 +246,48 @@ export function CollectPanel({
         </div>
         <Button
           type="button"
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground"
+          size="lg"
+          className="w-full max-w-xs"
           onClick={() => setPhase("idle")}
         >
           Done
+        </Button>
+      </div>
+    );
+  }
+
+  if (phase === "failed") {
+    return (
+      <div
+        className="flex flex-1 flex-col items-center justify-center gap-5 py-10 text-center"
+        aria-live="assertive"
+      >
+        <div className="flex size-14 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-muted-foreground">
+          <X className="size-6" strokeWidth={2} />
+        </div>
+        <div className="max-w-64 space-y-1.5">
+          <p className="text-base font-medium text-foreground">
+            {failTitle ?? "Payment Not Completed"}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {failMessage ?? "Try again."}
+          </p>
+        </div>
+        {failDebug ? (
+          <pre className="max-h-32 max-w-xs overflow-auto whitespace-pre-wrap wrap-break-word text-left text-[10px] leading-snug text-muted-foreground">
+            {failDebug}
+          </pre>
+        ) : null}
+        <Button
+          type="button"
+          size="lg"
+          className="w-full max-w-xs"
+          onClick={() => {
+            clearFail();
+            setPhase("idle");
+          }}
+        >
+          Try Again
         </Button>
       </div>
     );
@@ -261,9 +297,6 @@ export function CollectPanel({
     return (
       <div className="flex flex-1 flex-col py-6 text-center">
         <div className="space-y-1">
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            Receiving
-          </p>
           <p className="font-(family-name:--font-display) text-[2.75rem] leading-none tracking-tight tabular-nums">
             {amount || "0"}
             <span className="ml-2 inline-flex align-middle text-xl font-medium text-muted-foreground">
@@ -277,8 +310,11 @@ export function CollectPanel({
         </div>
         <NfcHoldStatus
           size="lg"
-          title={
-            phase === "confirming" ? "Confirming…" : "Hold their NFC device close"
+          title={phase === "confirming" ? "Processing" : "Hold Near Device"}
+          body={
+            phase === "confirming"
+              ? "Just a moment."
+              : "Keep holding until it reads."
           }
           pulsing={phase === "awaiting-tap"}
           busy={phase === "confirming"}
@@ -295,11 +331,10 @@ export function CollectPanel({
         </div>
         <div className="max-w-64 space-y-1.5">
           <p className="text-base font-medium text-foreground">
-            Token not supported
+            Token Not Supported
           </p>
           <p className="text-sm text-muted-foreground">
-            Only Jupiter verified classic SPL tokens can be collected. Switch to
-            USDC to continue.
+            Only verified tokens can be collected. Switch to USDC to continue.
           </p>
         </div>
         <Button
@@ -309,8 +344,7 @@ export function CollectPanel({
           onClick={() => {
             const usdc = String(getDefaultMint());
             setMint(usdc);
-            setFailMessage(null);
-            setFailDebug(null);
+            clearFail();
           }}
         >
           Switch to USDC
@@ -324,7 +358,7 @@ export function CollectPanel({
       <div className="space-y-1 text-center">
         <p className="text-sm font-medium text-foreground">Collect</p>
         <p className="text-xs text-muted-foreground">
-          Choose a token and amount, then hold their NFC device to your phone.
+          Enter an amount, then hold their device to this phone.
         </p>
       </div>
 
@@ -341,8 +375,7 @@ export function CollectPanel({
           id="receive-amount"
           value={amount}
           onChange={(next) => {
-            setFailMessage(null);
-            setFailDebug(null);
+            clearFail();
             setAmount(next);
           }}
           token={token}
@@ -382,7 +415,7 @@ export function CollectPanel({
           </div>
           <div className="min-w-0 flex-1 space-y-2">
             <p className="text-sm font-medium text-foreground">
-              {ataLoading ? "Checking…" : "Receive account needed"}
+              {ataLoading ? "Checking…" : "Receive Account Needed"}
             </p>
             {missingAta && !ataLoading ? (
               <>
@@ -394,8 +427,7 @@ export function CollectPanel({
                     className="mx-0.5"
                     symbolClassName="font-medium text-foreground"
                   />{" "}
-                  receive account before you can collect. Set it up, then open
-                  Collect again.
+                  receive account. Set it up, then come back to collect.
                 </p>
                 <Button
                   type="button"
@@ -415,11 +447,14 @@ export function CollectPanel({
         </div>
       ) : null}
 
-      {failMessage ? (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-center">
-          <p className="text-xs text-destructive">{failMessage}</p>
+      {failMessage && phase === "idle" ? (
+        <div className="rounded-xl border border-border/60 bg-muted/25 px-4 py-3 text-center">
+          {failTitle ? (
+            <p className="text-sm font-medium text-foreground">{failTitle}</p>
+          ) : null}
+          <p className="text-xs text-muted-foreground">{failMessage}</p>
           {failDebug ? (
-            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap wrap-break-word text-left text-[10px] leading-snug text-destructive/80">
+            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap wrap-break-word text-left text-[10px] leading-snug text-muted-foreground">
               {failDebug}
             </pre>
           ) : null}
@@ -441,7 +476,7 @@ export function CollectPanel({
           }
         >
           <Nfc className="size-4" />
-          Hold NFC to receive
+          Hold to Receive
         </Button>
         {sponsoredAvailable ? (
           <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
@@ -461,8 +496,7 @@ export function CollectPanel({
         selectedMint={mint}
         onSelect={(next) => {
           setMint(next.mint);
-          setFailMessage(null);
-          setFailDebug(null);
+          clearFail();
         }}
       />
     </div>

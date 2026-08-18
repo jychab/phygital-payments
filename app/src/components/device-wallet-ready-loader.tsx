@@ -10,13 +10,11 @@ import { toUserErrorMessage } from "@/lib/payments/user-errors";
 export function DeviceWalletReadyLoader({
   owner,
   onSetUpPay,
-  showNotNow = true,
 }: {
   owner: string;
   onSetUpPay?: () => void;
-  showNotNow?: boolean;
 }) {
-  const { isPending, isError, error, capSet, verifierSet, limitUi, next } =
+  const { isPending, isError, error, capSet, verifierSet, next } =
     usePaySetupSnapshot(owner);
 
   if (isPending) {
@@ -47,9 +45,7 @@ export function DeviceWalletReadyLoader({
       owner={owner}
       capSet={capSet}
       verifierSet={verifierSet}
-      limitUi={limitUi}
       onSetUpPay={next ? onSetUpPay : undefined}
-      showNotNow={showNotNow}
     />
   );
 }

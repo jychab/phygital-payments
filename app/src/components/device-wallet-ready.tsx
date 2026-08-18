@@ -11,25 +11,23 @@ import {
   isPayConfigured,
   type PaySetupSnapshot,
 } from "@/lib/payments/device-setup-state";
+import { collectHref } from "@/lib/payments/payment-request";
 
 export function DeviceWalletReady({
   owner,
   capSet,
   verifierSet,
-  limitUi,
   onSetUpPay,
-  showNotNow = true,
 }: {
   owner: string;
   capSet: boolean;
   verifierSet: boolean;
-  /** Human spending limit when set, e.g. "100". */
-  limitUi?: string | null;
   onSetUpPay?: () => void;
-  showNotNow?: boolean;
 }) {
   const setup: PaySetupSnapshot = { capSet, verifierSet };
   const payOn = isPayConfigured(setup);
+  const showSetup = !payOn && Boolean(onSetUpPay);
+  const collectUrl = collectHref({ recipient: owner });
 
   return (
     <div className="flex flex-1 flex-col gap-5 py-2">
@@ -44,39 +42,23 @@ export function DeviceWalletReady({
         <StatusRow label="Wallet">
           <CopyableAddress address={owner} length={4} label="wallet" />
         </StatusRow>
-        <StatusRow label="Pay">
-          <span className={payOn ? "text-foreground" : "text-muted-foreground"}>
-            {payOn ? "On" : "Off"}
-          </span>
-        </StatusRow>
-        <StatusRow label="Spending Limit">
-          <span
-            className={
-              capSet && limitUi ? "text-foreground" : "text-muted-foreground"
-            }
-          >
-            {capSet && limitUi ? `$${limitUi}` : "Not set"}
-          </span>
-        </StatusRow>
       </div>
 
       <div className="mt-auto flex flex-col gap-2.5">
-        {!payOn && onSetUpPay ? (
-          <>
-            <Button type="button" size="lg" className="w-full" onClick={onSetUpPay}>
-              Set Up Pay
-            </Button>
-            {showNotNow ? (
-              <Button type="button" variant="ghost" size="lg" className="w-full" asChild>
-                <Link href="/">Not Now</Link>
-              </Button>
-            ) : null}
-          </>
-        ) : (
-          <Button type="button" size="lg" className="w-full" asChild>
-            <Link href="/">Done</Link>
+        <Button type="button" size="lg" className="w-full" asChild>
+          <Link href={collectUrl}>Collect</Link>
+        </Button>
+        {showSetup ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="w-full"
+            onClick={onSetUpPay}
+          >
+            Set Up Pay
           </Button>
-        )}
+        ) : null}
       </div>
     </div>
   );

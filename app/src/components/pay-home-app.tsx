@@ -31,8 +31,11 @@ import { useIsEmbedded } from "@/hooks/use-is-embedded";
 import { usePhygitalAssetsByOwner } from "@/hooks/use-phygital-assets-by-owner";
 import { usePayTokenContext } from "@/hooks/use-verified-tokens";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
-import { getDefaultMint } from "@/lib/payments/payment-token";
-import type { PaymentTokenHolding } from "@/lib/payments/payment-token";
+import {
+  defaultUsdcToken,
+  getDefaultMint,
+  type PaymentTokenHolding,
+} from "@/lib/payments/payment-token";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { shortAddress } from "@/lib/utils";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
@@ -75,7 +78,7 @@ export function PayHomeApp() {
           <GateMessage
             icon={<Wallet className="size-5 text-muted-foreground" />}
             title="Connect your wallet"
-            body="Use Connect above to see your devices, activity, and Pay."
+            body="Connect to pay, see your devices, and review activity."
           />
         </AppCard>
       ) : (
@@ -193,7 +196,21 @@ function HomePayTab({ owner }: { owner: string }) {
   }
 
   return (
-    <PayPanel onManage={() => setManageOpen(true)} />
+    <PayPanel
+      onManage={() => setManageOpen(true)}
+      onSetLimit={() => {
+        const mint = String(getDefaultMint());
+        const holding = payContext.data?.holdings.find((h) => h.mint === mint);
+        setEditHolding(
+          holding ?? {
+            ...defaultUsdcToken(),
+            mint,
+            balanceRaw: "0",
+            balanceUi: "0",
+          },
+        );
+      }}
+    />
   );
 }
 
@@ -233,7 +250,7 @@ function OwnedAssetsList({ owner }: { owner: string }) {
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
         title="No NFC devices yet"
-        body="Hold an NFC device to this phone to add it. The tag opens a claim page — there’s nothing to tap here."
+        body="Hold a device to this phone to add it. Nothing to tap on this screen."
       />
     );
   }
@@ -243,8 +260,7 @@ function OwnedAssetsList({ owner }: { owner: string }) {
       <div className="space-y-1">
         <p className="text-sm font-medium text-foreground">Your NFC devices</p>
         <p className="text-sm text-muted-foreground">
-          Lock a device before paying. Remove returns it so someone else can
-          claim it. Hold a tag to this phone to add another.
+          Lock a device to pay with it. Remove lets someone else claim it.
         </p>
       </div>
       <ul className="flex flex-col gap-2">
