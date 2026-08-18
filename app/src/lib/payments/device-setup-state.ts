@@ -1,4 +1,4 @@
-import { hasEncryptedPreauthApiKey } from "@/lib/crypto/prf-key-vault";
+import { hasStoredPayApiKey } from "@/lib/payments/pay-key-store";
 
 export type PaySetupSnapshot = {
   capSet: boolean;
@@ -20,9 +20,9 @@ export function nextPaySetupStep(
   return null;
 }
 
-/** This phone has a Face ID–sealed payment key for `wallet`. */
+/** This phone has a stored payment key for `wallet`. */
 export function hasLocalPayKey(wallet: string): boolean {
-  return hasEncryptedPreauthApiKey(wallet);
+  return hasStoredPayApiKey(wallet);
 }
 
 /** Ready to show Pay $X on `/device` (server + local key). */

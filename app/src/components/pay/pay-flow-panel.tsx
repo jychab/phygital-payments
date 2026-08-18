@@ -21,8 +21,8 @@ import {
   resolvePaymentToken,
 } from "@/lib/payments/payment-token";
 import {
-  cancelPreauthWithVault,
-  requestPreauthWithVault,
+  cancelPreauthForWallet,
+  requestPreauthForWallet,
 } from "@/lib/payments/presence-grant-client";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 
@@ -37,7 +37,7 @@ export type PayFlowPanelProps = {
 };
 
 /**
- * Shared Pay $X → Hold to Pay flow (Face ID unlock + preauth window).
+ * Shared Pay $X → Hold to Pay flow (stored localStorage key + preauth window).
  * Works without Privy when `owner` is known (e.g. `/device`).
  */
 export function PayFlowPanel({
@@ -115,7 +115,7 @@ export function PayFlowPanel({
         toast.error(`Amount exceeds your $${limitUi ?? "—"} limit`);
         return;
       }
-      const grant = await requestPreauthWithVault({
+      const grant = await requestPreauthForWallet({
         wallet: owner,
         amountUi: amount,
         mint,
@@ -134,7 +134,7 @@ export function PayFlowPanel({
     setPhase("expired");
     setExpiresAt(null);
     try {
-      await cancelPreauthWithVault({ wallet: owner });
+      await cancelPreauthForWallet({ wallet: owner });
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn't cancel"));
     }

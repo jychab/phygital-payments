@@ -39,11 +39,11 @@ Configure the Privy app for Solana external wallet connectors. Login method: wal
 
 Connect a wallet via Privy, then use tabs:
 
-- **Pay** — **Pay $X** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC device. If Pay isn't configured, the tab offers **Enable Pay** (wallet sign + Face ID seal on this phone).
+- **Pay** — **Pay $X** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC device. If Pay isn't configured, the tab offers **Enable Pay** (wallet sign; the pay key is stored in localStorage on this phone).
 - **Devices** — list of NFC devices for this wallet. Add a device by holding a tag (opens `/device`).
 - **Activity** — recent payments for the connected wallet.
 
-Pay settings (spending limits, token management) live on Home. The Pay key is sealed with **Face ID** (WebAuthn PRF) on this phone after Enable Pay.
+Pay settings (spending limits, token management) live on Home. The Pay key is stored in **localStorage** on this phone after Enable Pay.
 
 Legacy collect query params on `/` (`?recipient=` / `?amount=`) redirect to `/collect`.
 
@@ -78,19 +78,19 @@ After an NFC tap. `/device` has **no Privy / Connect**. Wallet linking is a **su
 2. **Unclaimed / unlocked** — WebAuthn tap, then link wallet on `/device/finish`
 3. **Locked and owned** — **Your wallet is ready.** Status: Wallet, Pay (On/Off), Spending Limit
    - **Set Up Pay** / **Not Now** when Pay is off
-   - **Pay $X** → Face ID → **Hold to Pay** when Pay is on and this phone has a sealed key
+   - **Pay $X** → **Hold to Pay** when Pay is on and this phone has a stored key
 
 **Step 2 — finish (`/device/finish`):** Privy wallet connect.
 
 - `?token=` — claim device, then **Your wallet is ready.** (optional Set Up Pay; no forced wizard)
 - `?intent=limit&owner=` — set spending limit
-- `?intent=verifier&owner=` — **Enable Pay** (sign + Face ID seal)
+- `?intent=verifier&owner=` — **Enable Pay** (sign + store key in localStorage)
 
-Pay keys are encrypted with WebAuthn PRF (platform Face ID). **Manage Pay → Add to Shortcuts** copies an open URL after Face ID unlock.
+Pay keys live in localStorage on this phone. **Manage Pay → Add to Shortcuts** copies an open URL.
 
 ### Open a spending window (API key)
 
-After Enable Pay, use **Manage Pay → Add to Shortcuts** (Face ID unlock). Any client can open a ~45s grant without NFC:
+After Enable Pay, use **Manage Pay → Add to Shortcuts**. Any client can open a ~45s grant without NFC:
 
 ```
 GET /api/preauth/open?apiKey=<ppk_…>&amountUi=100
@@ -111,7 +111,7 @@ A **200 from `/open` only means the spending window is open** — not that payme
 
 Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey>`.
 
-Keys in query strings may appear in CDN/proxy logs — use **Rotate API Key** in Manage Pay if leaked, and update saved Shortcut URLs.
+The pay key is stored in plaintext in localStorage on this phone. Keys in query strings may also appear in CDN/proxy logs — use **Rotate API Key** in Manage Pay if leaked, and update saved Shortcut URLs.
 
 ```bash
 curl "https://<host>/api/preauth/open?apiKey=ppk_…&amountUi=100"
@@ -119,7 +119,7 @@ curl "https://<host>/api/preauth/open?apiKey=ppk_…&amountUi=100"
 
 #### Set up iOS Shortcuts
 
-1. Enable Pay on Home or `/device/finish`, then **Manage Pay → Add to Shortcuts** (Face ID).
+1. Enable Pay on Home or `/device/finish`, then **Manage Pay → Add to Shortcuts**.
 2. Shortcuts → New Shortcut → **Get Contents of URL**.
 3. Method **GET**. URL:
 
@@ -134,7 +134,7 @@ curl "https://<host>/api/preauth/open?apiKey=ppk_…&amountUi=100"
 
 Android has no single first-party Shortcuts equivalent; use an HTTP automation app (e.g. **Tasker**):
 
-1. Enable Pay, then **Manage Pay → Add to Shortcuts** (Face ID) to copy the open URL.
+1. Enable Pay, then **Manage Pay → Add to Shortcuts** to copy the open URL.
 2. New task → **HTTP Request** (or Net → HTTP Get).
 3. Method **GET**, URL:
 

@@ -5,15 +5,15 @@ import {
   useWallets,
 } from "@privy-io/react-auth/solana";
 
-import {
-  hasEncryptedPreauthApiKey,
-  sealPreauthApiKey,
-} from "@/lib/crypto/prf-key-vault";
 import { bytesToBase64 } from "@/lib/crypto/base64";
+import {
+  hasStoredPayApiKey,
+  storePayApiKey,
+} from "@/lib/payments/pay-key-store";
 
 /**
  * Issue a Pay key for `wallet` via wallet sign-message (server provision).
- * Does not seal — call sealPreauthApiKey after, or use provisionAndSealPayKey.
+ * Does not persist — call storePayApiKey after, or use provisionAndStorePayKey.
  */
 export async function provisionDevicePayKey(args: {
   wallet: string;
@@ -51,18 +51,18 @@ export async function provisionDevicePayKey(args: {
   return body.apiKey;
 }
 
-/** Sign message → server key → Face ID seal. */
-export async function provisionAndSealPayKey(args: {
+/** Sign message → server key → localStorage. */
+export async function provisionAndStorePayKey(args: {
   wallet: string;
   signMessage: ReturnType<typeof useSignMessage>["signMessage"];
   solanaWallet: NonNullable<ReturnType<typeof useWallets>["wallets"][number]>;
   rotate?: boolean;
 }): Promise<void> {
-  if (!args.rotate && hasEncryptedPreauthApiKey(args.wallet)) {
+  if (!args.rotate && hasStoredPayApiKey(args.wallet)) {
     return;
   }
   const apiKey = await provisionDevicePayKey(args);
-  await sealPreauthApiKey(args.wallet, apiKey);
+  storePayApiKey(args.wallet, apiKey);
 }
 
 export function useDevicePayKeyHelpers() {
@@ -74,7 +74,7 @@ export function useDevicePayKeyHelpers() {
     solanaWallet,
     async provisionKey(wallet: string, opts?: { rotate?: boolean }) {
       if (!solanaWallet) throw new Error("Connect your wallet first");
-      await provisionAndSealPayKey({
+      await provisionAndStorePayKey({
         wallet,
         signMessage,
         solanaWallet,

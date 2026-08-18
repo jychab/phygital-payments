@@ -10,7 +10,7 @@ import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { shortAddress } from "@/lib/utils";
 
-/** Enable Pay on this phone (wallet sign + Face ID seal). */
+/** Enable Pay on this phone (wallet sign + store key in localStorage). */
 export function AllowVerifierPanel({
   expectedOwner,
   onAllowed,
@@ -89,8 +89,7 @@ export function AllowVerifierPanel({
         </div>
         <p className="text-sm font-medium text-foreground">Enable Pay</p>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Your wallet will ask you to sign, then Face ID secures Pay on this
-          phone. It does not move funds.
+          Your wallet will ask you to sign. It does not move funds.
         </p>
       </div>
       <div className="mt-auto flex flex-col gap-2.5">
