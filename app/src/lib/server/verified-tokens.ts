@@ -9,6 +9,7 @@ import {
 import { isMainnet } from "@/lib/solana/cluster";
 
 const JUPITER_TAG_URL = "https://api.jup.ag/tokens/v2/tag?query=verified";
+const CATALOG_TTL_MS = 15 * 60 * 1000;
 
 type JupiterToken = {
   id?: string;
@@ -18,6 +19,9 @@ type JupiterToken = {
   decimals?: number;
   tokenProgram?: string;
 };
+
+let catalogCache: { tokens: PaymentToken[]; fetchedAt: number } | null = null;
+let catalogInflight: Promise<PaymentToken[]> | null = null;
 
 function jupiterApiKey(): string | null {
   return process.env.JUPITER_API_KEY?.trim() || null;
@@ -47,7 +51,6 @@ function pinUsdc(tokens: PaymentToken[]): PaymentToken[] {
   const fromCatalog = tokens.find((t) => t.mint === usdc.mint);
   const pinned: PaymentToken = {
     ...usdc,
-    // Prefer Jupiter name/decimals; always use vendored USDC icon.
     name: fromCatalog?.name || usdc.name,
     icon: usdc.icon,
     decimals: fromCatalog?.decimals ?? usdc.decimals,
@@ -56,11 +59,7 @@ function pinUsdc(tokens: PaymentToken[]): PaymentToken[] {
   return [pinned, ...rest];
 }
 
-/**
- * Jupiter verified classic-SPL tokens. Falls back to USDC-only when offline /
- * no API key / non-mainnet.
- */
-export async function fetchVerifiedTokens(): Promise<PaymentToken[]> {
+async function fetchVerifiedTokensFromNetwork(): Promise<PaymentToken[]> {
   if (!isMainnet()) {
     return [defaultUsdcToken()];
   }
@@ -89,4 +88,28 @@ export async function fetchVerifiedTokens(): Promise<PaymentToken[]> {
     console.error("Jupiter verified tag error", error);
     return [defaultUsdcToken()];
   }
+}
+
+/**
+ * Jupiter verified classic-SPL tokens. Isolate-level cache (15 min) shared by
+ * `/api/tokens/verified`, `/api/tokens/holdings`, and `/api/tokens/pay-context`.
+ */
+export async function fetchVerifiedTokens(): Promise<PaymentToken[]> {
+  const now = Date.now();
+  if (catalogCache && now - catalogCache.fetchedAt < CATALOG_TTL_MS) {
+    return catalogCache.tokens;
+  }
+
+  if (!catalogInflight) {
+    catalogInflight = fetchVerifiedTokensFromNetwork()
+      .then((tokens) => {
+        catalogCache = { tokens, fetchedAt: Date.now() };
+        return tokens;
+      })
+      .finally(() => {
+        catalogInflight = null;
+      });
+  }
+
+  return catalogInflight;
 }

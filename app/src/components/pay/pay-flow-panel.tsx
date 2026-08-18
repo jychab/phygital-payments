@@ -23,7 +23,7 @@ import {
 import {
   cancelPreauthForWallet,
   requestPreauthForWallet,
-} from "@/lib/payments/presence-grant-client";
+} from "@/lib/payments/preauth-client";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 
 type Phase = "idle" | "window" | "expired";
@@ -117,7 +117,7 @@ export function PayFlowPanel({
       }
       const grant = await requestPreauthForWallet({
         wallet: owner,
-        amountUi: amount,
+        amount: rawAmount.toString(),
         mint,
       });
       setNowMs(Date.now());

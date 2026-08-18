@@ -3,7 +3,7 @@ import { address, getAddressEncoder } from "@solana/kit";
 import { ed25519 } from "@noble/curves/ed25519.js";
 
 import { base64ToBytes } from "@/lib/crypto/base64";
-import { getPreauthDb, issueWalletApiKey } from "@/lib/server/presence-grants-db";
+import { getWalletApiKeysDb, issueWalletApiKey } from "@/lib/server/wallet-api-keys-db";
 
 const MESSAGE_PREFIX = "phygital-pay:provision:";
 const MAX_AGE_MS = 5 * 60 * 1000;
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Bad signature" }, { status: 401 });
     }
 
-    const { apiKey } = await issueWalletApiKey(getPreauthDb(), wallet);
+    const { apiKey } = await issueWalletApiKey(getWalletApiKeysDb(), wallet);
     return NextResponse.json({ wallet, apiKey });
   } catch (error) {
     const errMessage = error instanceof Error ? error.message : "Internal error";

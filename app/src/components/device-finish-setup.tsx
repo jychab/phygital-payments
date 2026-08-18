@@ -10,8 +10,13 @@ import { LimitPanel } from "@/components/pay/pay-limit-panel";
 import { AllowVerifierPanel } from "@/components/pay/allow-verifier-panel";
 import { Button } from "@/components/ui/button";
 import { usePaySetupSnapshot } from "@/hooks/use-pay-setup-snapshot";
-import { getDefaultMint, defaultTapAmountUi } from "@/lib/payments/payment-token";
-import { copyPayShortcutLink } from "@/lib/payments/presence-grant-client";
+import { uiAmountToRaw } from "@/lib/payments/mint-delegate";
+import {
+  defaultTapAmountUi,
+  defaultUsdcToken,
+  getDefaultMint,
+} from "@/lib/payments/payment-token";
+import { copyPayShortcutLink } from "@/lib/payments/preauth-client";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { queryKeys } from "@/lib/queries";
 
@@ -84,9 +89,13 @@ function SetupComplete({
 }) {
   async function onAddToShortcuts() {
     try {
+      const usdc = defaultUsdcToken();
       await copyPayShortcutLink({
         wallet: owner,
-        amountUi: defaultTapAmountUi(limitUi),
+        amount: uiAmountToRaw(
+          defaultTapAmountUi(limitUi),
+          usdc.decimals,
+        ).toString(),
       });
       toast.success("Shortcut link copied");
     } catch (error) {

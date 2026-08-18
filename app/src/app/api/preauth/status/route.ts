@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { tryParseAddress } from "@/lib/payments/payment-request";
 import {
-  getPreauthDb,
+  getWalletApiKeysDb,
   walletHasActiveApiKey,
-} from "@/lib/server/presence-grants-db";
+} from "@/lib/server/wallet-api-keys-db";
 
 /**
  * GET /api/preauth/status?wallet=
@@ -22,7 +22,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const enabled = await walletHasActiveApiKey(getPreauthDb(), String(wallet));
+    const enabled = await walletHasActiveApiKey(
+      getWalletApiKeysDb(),
+      String(wallet),
+    );
     return NextResponse.json(
       { enabled },
       { headers: { "Cache-Control": "no-store" } },

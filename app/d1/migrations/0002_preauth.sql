@@ -1,5 +1,5 @@
--- Wallet API keys (raw key shared out of band; only hash stored) and
--- short-lived single-use presence grants (wallet only; spend caps are on-chain).
+-- Wallet API keys (raw key shared out of band; only hash stored).
+-- Preauth grant lifecycle lives in PreauthGrantsDO (see migration 0005).
 
 CREATE TABLE IF NOT EXISTS wallet_api_keys (
   wallet      TEXT    NOT NULL PRIMARY KEY,

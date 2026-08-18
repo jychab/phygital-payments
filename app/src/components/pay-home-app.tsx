@@ -29,7 +29,7 @@ import {
 import { useDelegateStatuses } from "@/hooks/use-delegate-status";
 import { useIsEmbedded } from "@/hooks/use-is-embedded";
 import { usePhygitalAssetsByOwner } from "@/hooks/use-phygital-assets-by-owner";
-import { useTokenHoldings } from "@/hooks/use-verified-tokens";
+import { usePayTokenContext } from "@/hooks/use-verified-tokens";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
 import { getDefaultMint } from "@/lib/payments/payment-token";
 import type { PaymentTokenHolding } from "@/lib/payments/payment-token";
@@ -140,11 +140,11 @@ export function PayHomeApp() {
 
 function HomePayTab({ owner }: { owner: string }) {
   const isRestoring = useIsRestoring();
-  const holdings = useTokenHoldings(owner);
-  const holdingsReady = holdings.isSuccess || holdings.isError;
+  const payContext = usePayTokenContext(owner);
+  const holdingsReady = payContext.isSuccess || payContext.isError;
   const mints =
-    holdings.data && holdings.data.length > 0
-      ? holdings.data.map((h) => h.mint)
+    payContext.data?.holdings && payContext.data.holdings.length > 0
+      ? payContext.data.holdings.map((h) => h.mint)
       : [String(getDefaultMint())];
   const statuses = useDelegateStatuses(
     holdingsReady ? owner : null,
@@ -158,7 +158,7 @@ function HomePayTab({ owner }: { owner: string }) {
 
   const loading =
     isRestoring ||
-    holdings.isLoading ||
+    payContext.isLoading ||
     statuses.isLoading ||
     assetsQuery.isLoading;
 

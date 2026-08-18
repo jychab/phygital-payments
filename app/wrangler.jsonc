@@ -19,6 +19,10 @@
       {
         "name": "TRANSFER_SUBMITTER",
         "class_name": "TransferSubmitterDO"
+      },
+      {
+        "name": "PREAUTH_GRANTS",
+        "class_name": "PreauthGrantsDO"
       }
     ]
   },
@@ -26,6 +30,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["TransferSubmitterDO"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["PreauthGrantsDO"]
     }
   ],
   "d1_databases": [

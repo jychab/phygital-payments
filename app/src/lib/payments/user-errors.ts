@@ -144,6 +144,23 @@ function rawMessage(error: unknown): string {
   return "";
 }
 
+/** Technical error text before user-facing sanitization (for logs / dev UI). */
+export function getRawPaymentError(error: unknown): string {
+  return rawMessage(error).trim();
+}
+
+/** Write full payment error detail to the console (raw message is stripped in UI). */
+export function logPaymentError(scope: string, error: unknown): void {
+  const raw = getRawPaymentError(error);
+  if (raw) {
+    console.error(`[payment:${scope}]`, raw, error);
+    return;
+  }
+  if (error != null) {
+    console.error(`[payment:${scope}]`, error);
+  }
+}
+
 /** Human-readable message for UI (toasts, banners). */
 export function toUserErrorMessage(
   error: unknown,
@@ -155,9 +172,11 @@ export function toUserErrorMessage(
   for (const rule of RULES) {
     if (typeof rule.test === "string") {
       if (raw.toLowerCase().includes(rule.test.toLowerCase())) {
+        if (rule.message !== raw) logPaymentError("sanitized", error);
         return rule.message;
       }
     } else if (rule.test.test(raw)) {
+      if (rule.message !== raw) logPaymentError("sanitized", error);
       return rule.message;
     }
   }
@@ -171,5 +190,6 @@ export function toUserErrorMessage(
     return raw;
   }
 
+  if (raw !== fallback) logPaymentError("sanitized", error);
   return fallback;
 }

@@ -5,6 +5,7 @@ import {
   CLASSIC_TOKEN_PROGRAM,
   defaultUsdcToken,
   isClassicTokenProgram,
+  type PaymentToken,
   type PaymentTokenHolding,
 } from "@/lib/payments/payment-token";
 import { fetchVerifiedTokens } from "@/lib/server/verified-tokens";
@@ -69,34 +70,16 @@ async function fetchAssetsByOwner(owner: string): Promise<DasAsset[]> {
   return Array.isArray(items) ? items : [];
 }
 
-/**
- * Wallet fungible holdings ∩ Jupiter verified (classic SPL).
- * Always includes USDC so Pay can enable the default instrument.
- */
-export async function fetchVerifiedHoldings(
-  owner: string,
-): Promise<PaymentTokenHolding[]> {
-  const [verified, assetsResult] = await Promise.all([
-    fetchVerifiedTokens(),
-    fetchAssetsByOwner(owner).then(
-      (assets) => ({ ok: true as const, assets }),
-      (error: unknown) => {
-        console.error("getAssetsByOwner failed", error);
-        return { ok: false as const, assets: [] as DasAsset[] };
-      },
-    ),
-  ]);
-
-  if (!assetsResult.ok) {
-    return [zeroUsdcHolding()];
-  }
-
+function buildVerifiedHoldings(
+  verified: PaymentToken[],
+  assets: DasAsset[],
+): PaymentTokenHolding[] {
   const verifiedByMint = new Map(verified.map((t) => [t.mint, t]));
   const usdc = defaultUsdcToken();
   const holdings: PaymentTokenHolding[] = [];
   const seen = new Set<string>();
 
-  for (const asset of assetsResult.assets) {
+  for (const asset of assets) {
     const iface = asset.interface ?? "";
     if (iface && iface !== "FungibleToken" && iface !== "FungibleAsset") {
       continue;
@@ -146,4 +129,52 @@ export async function fetchVerifiedHoldings(
   }
 
   return holdings;
+}
+
+/**
+ * Wallet fungible holdings ∩ Jupiter verified (classic SPL).
+ * Pass `verifiedCatalog` when the caller already loaded the catalog (e.g. pay-context).
+ */
+export async function fetchVerifiedHoldings(
+  owner: string,
+  verifiedCatalog?: PaymentToken[],
+): Promise<PaymentTokenHolding[]> {
+  const [verified, assetsResult] = await Promise.all([
+    verifiedCatalog ? Promise.resolve(verifiedCatalog) : fetchVerifiedTokens(),
+    fetchAssetsByOwner(owner).then(
+      (assets) => ({ ok: true as const, assets }),
+      (error: unknown) => {
+        console.error("getAssetsByOwner failed", error);
+        return { ok: false as const, assets: [] as DasAsset[] };
+      },
+    ),
+  ]);
+
+  if (!assetsResult.ok) {
+    return [zeroUsdcHolding()];
+  }
+
+  return buildVerifiedHoldings(verified, assetsResult.assets);
+}
+
+/** Catalog + holdings with Jupiter and DAS fetched in parallel. */
+export async function fetchPayTokenContext(
+  owner: string,
+): Promise<{ tokens: PaymentToken[]; holdings: PaymentTokenHolding[] }> {
+  const [tokens, assetsResult] = await Promise.all([
+    fetchVerifiedTokens(),
+    fetchAssetsByOwner(owner).then(
+      (assets) => ({ ok: true as const, assets }),
+      (error: unknown) => {
+        console.error("getAssetsByOwner failed", error);
+        return { ok: false as const, assets: [] as DasAsset[] };
+      },
+    ),
+  ]);
+
+  const holdings = assetsResult.ok
+    ? buildVerifiedHoldings(tokens, assetsResult.assets)
+    : [zeroUsdcHolding()];
+
+  return { tokens, holdings };
 }

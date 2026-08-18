@@ -37,7 +37,11 @@ import {
   isSponsoredSubmitAvailable,
   type ReceiveTransferContext,
 } from "@/lib/payments/collect-settle";
-import { toUserErrorMessage } from "@/lib/payments/user-errors";
+import {
+  getRawPaymentError,
+  logPaymentError,
+  toUserErrorMessage,
+} from "@/lib/payments/user-errors";
 import { useMintProgram } from "@/hooks/use-mint-program";
 import { useRecipientAtaStatus } from "@/hooks/use-recipient-ata-status";
 import { useCollectMutation } from "@/hooks/use-collect-mutation";
@@ -79,6 +83,7 @@ export function CollectPanel({
   const [phase, setPhase] = useState<Phase>("idle");
   const [settledAmount, setSettledAmount] = useState("");
   const [failMessage, setFailMessage] = useState<string | null>(null);
+  const [failDebug, setFailDebug] = useState<string | null>(null);
 
   const sponsoredAvailable = isSponsoredSubmitAvailable();
   const amountLocked = Boolean(paymentRequest.amount);
@@ -157,6 +162,7 @@ export function CollectPanel({
     }
     const paidAmount = amount;
     setFailMessage(null);
+    setFailDebug(null);
     setPhase("awaiting-tap");
     try {
       const rawAmount = uiAmountToRaw(amount, mintQuery.data.decimals);
@@ -188,8 +194,17 @@ export function CollectPanel({
       if (!amountLocked) setAmount("");
       window.setTimeout(() => setPhase("idle"), SUCCESS_HOLD_MS);
     } catch (error) {
-      setFailMessage(
-        toUserErrorMessage(error, "Payment didn’t go through. Try again."),
+      logPaymentError("collect", error);
+      const userMessage = toUserErrorMessage(
+        error,
+        "Payment didn’t go through. Try again.",
+      );
+      const raw = getRawPaymentError(error);
+      setFailMessage(userMessage);
+      setFailDebug(
+        raw && raw !== userMessage && process.env.NODE_ENV === "development"
+          ? raw
+          : null,
       );
       setPhase("idle");
     }
@@ -295,6 +310,7 @@ export function CollectPanel({
             const usdc = String(getDefaultMint());
             setMint(usdc);
             setFailMessage(null);
+            setFailDebug(null);
           }}
         >
           Switch to USDC
@@ -326,6 +342,7 @@ export function CollectPanel({
           value={amount}
           onChange={(next) => {
             setFailMessage(null);
+            setFailDebug(null);
             setAmount(next);
           }}
           token={token}
@@ -401,6 +418,11 @@ export function CollectPanel({
       {failMessage ? (
         <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-center">
           <p className="text-xs text-destructive">{failMessage}</p>
+          {failDebug ? (
+            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap wrap-break-word text-left text-[10px] leading-snug text-destructive/80">
+              {failDebug}
+            </pre>
+          ) : null}
         </div>
       ) : null}
 
@@ -440,6 +462,7 @@ export function CollectPanel({
         onSelect={(next) => {
           setMint(next.mint);
           setFailMessage(null);
+          setFailDebug(null);
         }}
       />
     </div>

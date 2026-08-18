@@ -58,7 +58,12 @@ export function getPaymentsDb(): D1Database {
 // manual step. Cached per isolate so it runs at most once per worker instance.
 let schemaReady: Promise<void> | null = null;
 
+function paymentsSchemaManagedExternally(): boolean {
+  return process.env.NEXTJS_ENV === "production";
+}
+
 export function ensurePaymentsSchema(db: D1Database): Promise<void> {
+  if (paymentsSchemaManagedExternally()) return Promise.resolve();
   if (!schemaReady) {
     schemaReady = (async () => {
       await db.batch([
@@ -96,7 +101,9 @@ export function ensurePaymentsSchema(db: D1Database): Promise<void> {
   return schemaReady;
 }
 
-/** Idempotent bulk insert (ignores rows already indexed). */
+const D1_BATCH_CHUNK = 100;
+
+/** Idempotent bulk insert (ignores rows already indexed). Chunked for D1 batch limits. */
 export async function insertPayments(
   db: D1Database,
   rows: PaymentRecord[],
@@ -108,22 +115,25 @@ export async function insertPayments(
         sender_owner, recipient_owner, sender_token_account, recipient_token_account)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
-  await db.batch(
-    rows.map((r) =>
-      stmt.bind(
-        r.signature,
-        r.transferIndex,
-        r.slot,
-        r.blockTime,
-        r.mint,
-        r.amount,
-        r.senderOwner,
-        r.recipientOwner,
-        r.senderTokenAccount,
-        r.recipientTokenAccount,
+  for (let i = 0; i < rows.length; i += D1_BATCH_CHUNK) {
+    const chunk = rows.slice(i, i + D1_BATCH_CHUNK);
+    await db.batch(
+      chunk.map((r) =>
+        stmt.bind(
+          r.signature,
+          r.transferIndex,
+          r.slot,
+          r.blockTime,
+          r.mint,
+          r.amount,
+          r.senderOwner,
+          r.recipientOwner,
+          r.senderTokenAccount,
+          r.recipientTokenAccount,
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /** Payments where `owner` is the recipient or sender, newest first. */

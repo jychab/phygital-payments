@@ -40,3 +40,25 @@ export async function fetchHoldingsClient(
   );
   return body.holdings ?? [];
 }
+
+export type PayTokenContext = {
+  tokens: PaymentToken[];
+  holdings: PaymentTokenHolding[];
+};
+
+/** Verified catalog + holdings in one browser round trip. */
+export async function fetchPayContextClient(
+  owner: string,
+): Promise<PayTokenContext> {
+  const res = await fetch(
+    `/api/tokens/pay-context?owner=${encodeURIComponent(owner)}`,
+    { cache: "default" },
+  );
+  const body = await readJson<
+    PayTokenContext & { error?: string }
+  >(res, "Couldn’t load pay context");
+  return {
+    tokens: body.tokens ?? [],
+    holdings: body.holdings ?? [],
+  };
+}

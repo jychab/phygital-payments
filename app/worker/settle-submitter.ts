@@ -14,12 +14,8 @@ import {
   type BlockhashLifetime,
   type SendContext,
 } from "./solana";
-import {
-  claimGrantForTransfer,
-  consumeGrants,
-  releaseGrantClaims,
-  type D1Database,
-} from "./presence-grants";
+import type { GrantClaim } from "./preauth-grant-types";
+import type { PreauthGrantsDO } from "./preauth-grants-do";
 import {
   BATCH_ACTIVITY_WINDOW_MS,
   BATCH_WINDOW_MS,
@@ -297,14 +293,14 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     batch: TransferJob[],
     ctx: SendContext,
   ): Promise<void> {
-    let grantIds: string[] = [];
+    let grantClaims: GrantClaim[] = [];
     try {
-      grantIds = await this.authorizeBatch(batch);
+      grantClaims = await this.authorizeBatch(batch);
       const signature = await sendSponsoredBatch(this.env, batch, ctx);
       for (const job of batch) {
         await this.finish(job, "confirmed", { signature });
       }
-      void this.consumeGrants(grantIds).catch((error) => {
+      void this.consumeGrants(grantClaims).catch((error) => {
         console.error("Failed to consume preauth grants", error);
       });
     } catch (error) {
@@ -313,7 +309,7 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
         error instanceof Error ? error.message : error,
       );
       // Free claims so isolate/retry can re-claim (or the payer can open a new window).
-      await this.releaseGrants(grantIds);
+      await this.releaseGrants(grantClaims);
       const { transient, message } = classify(error);
 
       if (!transient && batch.length > 1) {
@@ -353,52 +349,61 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
    * peers lose the claim race. Verifier gating happens in {@link flush}
    * (external → fail; only Revi-eligible jobs reach this method).
    */
-  private async authorizeBatch(batch: TransferJob[]): Promise<string[]> {
-    const db = this.preauthDb();
-    const settled = await Promise.allSettled(
-      batch.map(async (job) => {
-        const { owner } = job.transfer;
-        const { grantId } = await claimGrantForTransfer(db, {
-          wallet: owner,
+  private async authorizeBatch(batch: TransferJob[]): Promise<GrantClaim[]> {
+    const claims: GrantClaim[] = [];
+    try {
+      for (const job of batch) {
+        const stub = this.preauthGrantsStub(job.transfer.owner);
+        const { grantId } = await stub.claim({
+          wallet: job.transfer.owner,
           amount: job.transfer.amount,
           mint: job.transfer.mint,
           jobId: job.id,
         });
-        return grantId;
-      }),
-    );
-
-    const grantIds: string[] = [];
-    let failure: unknown;
-    for (const result of settled) {
-      if (result.status === "fulfilled") {
-        grantIds.push(result.value);
-      } else if (!failure) {
-        failure = result.reason;
+        claims.push({ grantId, wallet: job.transfer.owner });
       }
-    }
-
-    if (failure) {
-      await this.releaseGrants(grantIds);
+      return claims;
+    } catch (error) {
+      await this.releaseGrants(claims);
       throw new SubmitError(
-        failure instanceof Error ? failure.message : "Preauth grant check failed",
+        error instanceof Error ? error.message : "Preauth grant check failed",
         false,
       );
     }
-    return grantIds;
   }
 
-  private async consumeGrants(grantIds: string[]): Promise<void> {
-    await consumeGrants(this.preauthDb(), grantIds);
+  private async consumeGrants(claims: GrantClaim[]): Promise<void> {
+    await Promise.all(
+      claims.map((claim) =>
+        this.preauthGrantsStub(claim.wallet).consume({ grantId: claim.grantId }),
+      ),
+    );
   }
 
-  private async releaseGrants(grantIds: string[]): Promise<void> {
-    if (grantIds.length === 0) return;
+  private async releaseGrants(claims: GrantClaim[]): Promise<void> {
+    if (claims.length === 0) return;
     try {
-      await releaseGrantClaims(this.preauthDb(), grantIds);
+      await Promise.all(
+        claims.map((claim) =>
+          this.preauthGrantsStub(claim.wallet).releaseClaim({
+            grantId: claim.grantId,
+          }),
+        ),
+      );
     } catch (error) {
       console.error("Failed to release preauth claims", error);
     }
+  }
+
+  private preauthGrantsStub(wallet: string) {
+    const ns = this.env.PREAUTH_GRANTS;
+    if (!ns) {
+      throw new SubmitError(
+        "PREAUTH_GRANTS Durable Object binding is not configured",
+        false,
+      );
+    }
+    return ns.get(ns.idFromName(wallet)) as DurableObjectStub<PreauthGrantsDO>;
   }
 
   /**
@@ -420,14 +425,6 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     const verifier = maybe.exists ? maybe.data.verifier : feePayer;
     cache?.set(key, verifier);
     return verifier;
-  }
-
-  private preauthDb(): D1Database {
-    const db = this.env.phygital_payments;
-    if (!db) {
-      throw new SubmitError("D1 binding phygital_payments is not configured", false);
-    }
-    return db as unknown as D1Database;
   }
 
   /** Persist a terminal status and wake any long-poll waiters. */

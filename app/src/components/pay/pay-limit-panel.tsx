@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useDelegateStatus, useDelegateStatuses } from "@/hooks/use-delegate-status";
 import { useMintProgram } from "@/hooks/use-mint-program";
 import { useSetDelegateMutation, useRevokeDelegateMutation } from "@/hooks/use-delegate-mutations";
-import { useTokenHoldings, useVerifiedTokens } from "@/hooks/use-verified-tokens";
+import { usePayTokenContext, useTokenHoldings, useVerifiedTokens } from "@/hooks/use-verified-tokens";
 import {
   isDelegateEnabled,
   uiAmountToRaw,
@@ -200,12 +200,6 @@ export function LimitPanel({
             cta
           )}
         </Button>
-        {matched ? (
-          <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground/80">
-            <Lock className="size-3" strokeWidth={2.25} />
-            You&apos;ll confirm in your wallet
-          </p>
-        ) : null}
         {hasDelegate && matched ? (
           <Button
             type="button"
@@ -237,11 +231,11 @@ export function ManagePayTokens({
   onEditLimit: (holding: PaymentTokenHolding) => void;
 }) {
   const isRestoring = useIsRestoring();
-  const holdings = useTokenHoldings(owner);
-  const mints = holdings.data?.map((h: PaymentTokenHolding) => h.mint) ?? [];
+  const payContext = usePayTokenContext(owner);
+  const mints = payContext.data?.holdings.map((h) => h.mint) ?? [];
   const statuses = useDelegateStatuses(owner, mints);
 
-  if (isRestoring || holdings.isLoading || statuses.isLoading) {
+  if (isRestoring || payContext.isLoading || statuses.isLoading) {
     return (
       <div className="flex justify-center py-6 text-muted-foreground">
         <LoaderCircle className="size-4 animate-spin" />
@@ -249,7 +243,7 @@ export function ManagePayTokens({
     );
   }
 
-  const list = holdings.data ?? [];
+  const list = payContext.data?.holdings ?? [];
   if (list.length === 0) {
     return (
       <p className="px-2 py-4 text-center text-xs text-muted-foreground">

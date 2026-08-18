@@ -9,5 +9,6 @@
 import { default as handler } from "./.open-next/worker.js";
 
 export { TransferSubmitterDO } from "./worker/settle-submitter";
+export { PreauthGrantsDO } from "./worker/preauth-grants-do";
 
 export default handler;

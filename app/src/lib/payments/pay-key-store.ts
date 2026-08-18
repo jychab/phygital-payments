@@ -8,19 +8,6 @@ const STORAGE = {
   wallet: "phygital.preauth.wallet",
 } as const;
 
-/** Leftover Face ID PRF vault keys from older clients. */
-const LEGACY_VAULT_KEYS = [
-  "phygital.preauth.encrypted",
-  "phygital.preauth.credentialId",
-  "phygital.preauth.prfSalt",
-] as const;
-
-function clearLegacyVaultKeys(): void {
-  for (const key of LEGACY_VAULT_KEYS) {
-    localStorage.removeItem(key);
-  }
-}
-
 /** Sync check: plaintext pay key exists for `wallet`. */
 export function hasStoredPayApiKey(wallet?: string): boolean {
   if (typeof window === "undefined") return false;
@@ -39,7 +26,6 @@ export function storePayApiKey(wallet: string, apiKey: string): void {
   }
   localStorage.setItem(STORAGE.apiKey, trimmed);
   localStorage.setItem(STORAGE.wallet, wallet);
-  clearLegacyVaultKeys();
 }
 
 /** Read the stored pay key for `wallet`. */

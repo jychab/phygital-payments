@@ -63,11 +63,14 @@ export async function simulateSponsoredInstructions(
     .send();
 
   if (sim.value.err) {
-    const logs = sim.value.logs?.slice(-8).join("\n") ?? "";
-    throw new Error(
-      logs
-        ? `Transaction would fail on-chain:\n${logs}`
-        : `Transaction would fail on-chain: ${JSON.stringify(sim.value.err)}`,
-    );
+    const logs = sim.value.logs?.join("\n") ?? "";
+    const detail = logs
+      ? `Transaction would fail on-chain:\n${logs}`
+      : `Transaction would fail on-chain: ${JSON.stringify(sim.value.err)}`;
+    console.error("[payment:simulate]", {
+      err: sim.value.err,
+      logs: sim.value.logs,
+    });
+    throw new Error(detail);
   }
 }

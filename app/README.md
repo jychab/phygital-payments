@@ -93,19 +93,18 @@ Pay keys live in localStorage on this phone. **Manage Pay → Add to Shortcuts**
 After Enable Pay, use **Manage Pay → Add to Shortcuts**. Any client can open a ~45s grant without NFC:
 
 ```
-GET /api/preauth/open?apiKey=<ppk_…>&amountUi=100
+GET /api/preauth/open?apiKey=<ppk_…>&amount=100000000
 ```
 
 Query params:
 
 | Param | Required | Description |
 |-------|----------|-------------|
-| `apiKey` | Yes | Device pay key (`ppk_…`) |
-| `amountUi` | One of | Human amount, e.g. `100` |
-| `amount` | One of | Raw u64 decimal (smallest units) |
+| `apiKey` | Yes | Device pay key (`ppk_<wallet>_<secret>`) |
+| `amount` | Yes | Raw u64 decimal (smallest units), e.g. `100000000` for $100 USDC |
 | `mint` | No | Token mint (defaults to USDC) |
 
-Provide **exactly one** of `amountUi` or `amount`. Response: `{ grantId, expiresAt, wallet, maxAmount, mint }`. Responses use `Cache-Control: no-store`.
+Response: `{ grantId, expiresAt, wallet, maxAmount, mint }` (grant stored in a per-wallet Durable Object). Responses use `Cache-Control: no-store`.
 
 A **200 from `/open` only means the spending window is open** — not that payment completed. Settlement happens when you hold NFC to the merchant Collect phone; the merchant UI is the receipt. In-app Pay and Shortcuts both stop after opening the window (countdown / toast only). They do **not** poll for `paid`.
 
@@ -114,7 +113,7 @@ Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey
 The pay key is stored in plaintext in localStorage on this phone. Keys in query strings may also appear in CDN/proxy logs — use **Rotate API Key** in Manage Pay if leaked, and update saved Shortcut URLs.
 
 ```bash
-curl "https://<host>/api/preauth/open?apiKey=ppk_…&amountUi=100"
+curl "https://<host>/api/preauth/open?apiKey=ppk_…&amount=100000000"
 ```
 
 #### Set up iOS Shortcuts
@@ -123,9 +122,9 @@ curl "https://<host>/api/preauth/open?apiKey=ppk_…&amountUi=100"
 2. Shortcuts → New Shortcut → **Get Contents of URL**.
 3. Method **GET**. URL:
 
-   `https://<host>/api/preauth/open?apiKey=<pasted ppk_…>&amountUi=100`
+   `https://<host>/api/preauth/open?apiKey=<pasted ppk_…>&amount=100000000`
 
-   Optional: use Ask Each Time / Text actions to change `amountUi`, and add `&mint=` for a non-USDC token.
+   Optional: add `&mint=` for a non-USDC token. **Add to Shortcuts** copies a URL with the correct raw `amount`.
 4. Optional: **Show Notification** when the GET succeeds — **window opened** (e.g. “Hold to Pay”), not that you were charged.
 5. Run the Shortcut → within ~45 seconds hold your NFC device to the merchant Collect phone.
 6. After **Rotate API Key**, update the Shortcut URL.
@@ -138,7 +137,7 @@ Android has no single first-party Shortcuts equivalent; use an HTTP automation a
 2. New task → **HTTP Request** (or Net → HTTP Get).
 3. Method **GET**, URL:
 
-   `https://<host>/api/preauth/open?apiKey=<pasted ppk_…>&amountUi=100`
+   `https://<host>/api/preauth/open?apiKey=<pasted ppk_…>&amount=100000000`
 4. Optional: toast when the GET succeeds (**window opened**, not payment settled).
 5. Run the task → within ~45 seconds hold NFC to the merchant Collect phone.
 6. After rotating the key, update `apiKey` in the saved URL.

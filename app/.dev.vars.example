@@ -14,7 +14,6 @@ NEXT_PUBLIC_PRIVY_APP_ID=
 # Worker secrets (Wrangler / OpenNext)
 # FEE_PAYER_SECRET_KEY=
 # HELIUS_WEBHOOK_AUTH=
-# PREAUTH_OPS_SECRET=
 
 # Token catalog (optional — without these, Collect falls back to USDC-only)
 # JUPITER_API_KEY=

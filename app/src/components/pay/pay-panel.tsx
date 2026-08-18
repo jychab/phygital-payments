@@ -10,16 +10,17 @@ import { AllowVerifierPanel } from "@/components/pay/allow-verifier-panel";
 import { ManagePayTokens } from "@/components/pay/pay-limit-panel";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus, useDelegateStatuses } from "@/hooks/use-delegate-status";
-import { useTokenHoldings } from "@/hooks/use-verified-tokens";
+import { usePayTokenContext } from "@/hooks/use-verified-tokens";
 import { useDevicePayKeyHelpers } from "@/lib/payments/device-pay-key-client";
-import { isDelegateEnabled } from "@/lib/payments/mint-delegate";
+import { isDelegateEnabled, uiAmountToRaw } from "@/lib/payments/mint-delegate";
 import { hasLocalPayKey } from "@/lib/payments/device-setup-state";
 import {
   defaultTapAmountUi,
+  defaultUsdcToken,
   getDefaultMint,
   type PaymentTokenHolding,
 } from "@/lib/payments/payment-token";
-import { copyPayShortcutLink } from "@/lib/payments/presence-grant-client";
+import { copyPayShortcutLink } from "@/lib/payments/preauth-client";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { queryKeys } from "@/lib/queries";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
@@ -94,10 +95,10 @@ export function ManagePayPanel({
   const queryClient = useQueryClient();
   const [keyBusy, setKeyBusy] = useState(false);
 
-  const holdings = useTokenHoldings(owner);
+  const payContext = usePayTokenContext(owner);
   const mints =
-    holdings.data && holdings.data.length > 0
-      ? holdings.data.map((h) => h.mint)
+    payContext.data?.holdings && payContext.data.holdings.length > 0
+      ? payContext.data.holdings.map((h) => h.mint)
       : [String(getDefaultMint())];
   const statuses = useDelegateStatuses(owner, mints);
   const capQuery = useDelegateStatus(owner, getDefaultMint());
@@ -123,9 +124,13 @@ export function ManagePayPanel({
   async function onAddToShortcuts() {
     try {
       setKeyBusy(true);
+      const usdc = defaultUsdcToken();
       await copyPayShortcutLink({
         wallet: owner,
-        amountUi: defaultTapAmountUi(limitUi),
+        amount: uiAmountToRaw(
+          defaultTapAmountUi(limitUi),
+          usdc.decimals,
+        ).toString(),
         mint: String(getDefaultMint()),
       });
       toast.success("Shortcut link copied");

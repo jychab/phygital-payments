@@ -22,14 +22,16 @@ import {
 } from "@/lib/payments/history-client";
 import {
   fetchHoldingsClient,
+  fetchPayContextClient,
   fetchVerifiedTokensClient,
   type PaymentToken,
   type PaymentTokenHolding,
+  type PayTokenContext,
 } from "@/lib/payments/verified-tokens-client";
 import {
   fetchPreauthStatus,
   type PreauthStatus,
-} from "@/lib/payments/presence-grant-client";
+} from "@/lib/payments/preauth-client";
 
 // ============================================================================
 // Query keys
@@ -52,6 +54,12 @@ export const queryKeys = {
 
   verifiedTokens: {
     all: () => ["verifiedTokens"] as const,
+  },
+
+  payContext: {
+    all: () => ["payContext"] as const,
+    byOwner: (owner: string | null) =>
+      [...queryKeys.payContext.all(), owner] as const,
   },
 
   ataStatus: {
@@ -158,8 +166,12 @@ export function fetchHoldings(owner: string): Promise<PaymentTokenHolding[]> {
   return fetchHoldingsClient(owner);
 }
 
+export function fetchPayContext(owner: string): Promise<PayTokenContext> {
+  return fetchPayContextClient(owner);
+}
+
 export { fetchPreauthStatus };
-export type { PreauthStatus };
+export type { PreauthStatus, PayTokenContext };
 
 export type {
   MintDelegateStatus,
