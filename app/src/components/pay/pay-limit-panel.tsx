@@ -18,14 +18,13 @@ import {
   uiAmountToRaw,
 } from "@/lib/payments/mint-delegate";
 import {
+  PAY_AMOUNT_PRESETS,
   resolvePaymentToken,
   type PaymentTokenHolding,
 } from "@/lib/payments/payment-token";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { shortAddress } from "@/lib/utils";
-
-const PRESETS = ["20", "50", "100"] as const;
 
 /**
  * Pick a spending limit for a mint (program-authority delegate).
@@ -35,11 +34,13 @@ export function LimitPanel({
   mint: mintProp,
   onEnabled,
   onBack,
+  onSkip,
 }: {
   expectedOwner: string;
   mint: Address | string;
   onEnabled?: () => void;
   onBack?: () => void;
+  onSkip?: () => void;
 }) {
   const { address: walletAddress, isConnected } = useSolanaAddress();
   const mint = String(mintProp);
@@ -81,7 +82,7 @@ export function LimitPanel({
         rawAmount,
         decimals: mintQuery.data.decimals,
       });
-      toast.success("Spending limit saved");
+      toast.success("Spending limit set");
       onEnabled?.();
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn’t save spending limit"));
@@ -90,8 +91,8 @@ export function LimitPanel({
 
   const cta = (() => {
     if (setAllowance.isPending) return null;
-    if (hasDelegate) return "Update limit";
-    return "Allow spending";
+    if (hasDelegate) return "Update Limit";
+    return "Set Limit";
   })();
 
   return (
@@ -109,7 +110,7 @@ export function LimitPanel({
 
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
-          Allow up to how much?
+          Set Spending Limit
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
           This wallet can spend up to this much{" "}
@@ -136,7 +137,7 @@ export function LimitPanel({
       <AmountPresets
         value={amount}
         onChange={setAmount}
-        presets={PRESETS}
+        presets={PAY_AMOUNT_PRESETS}
         disabled={busy || !matched}
       />
 
@@ -186,8 +187,13 @@ export function LimitPanel({
         {matched ? (
           <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground/80">
             <Lock className="size-3" strokeWidth={2.25} />
-            You’ll confirm a spending-limit transaction in your wallet
+            You&apos;ll confirm in your wallet
           </p>
+        ) : null}
+        {onSkip ? (
+          <Button type="button" variant="ghost" size="lg" className="w-full" onClick={onSkip}>
+            Not Now
+          </Button>
         ) : null}
       </div>
     </div>

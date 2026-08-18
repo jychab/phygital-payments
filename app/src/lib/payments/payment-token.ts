@@ -52,6 +52,13 @@ export function isDefaultMint(mint: string | Address): boolean {
   return String(mint) === String(getUsdcMint());
 }
 
+export const PAY_AMOUNT_PRESETS = ["20", "50", "100"] as const;
+export const DEFAULT_PAY_AMOUNT_UI = "100";
+
+export function defaultPayAmountUi(mint: string | Address): string {
+  return isDefaultMint(mint) ? DEFAULT_PAY_AMOUNT_UI : "";
+}
+
 /** Resolve mint metadata from a catalog (USDC / short address fallback). */
 export function resolvePaymentToken(
   mint: string | Address,

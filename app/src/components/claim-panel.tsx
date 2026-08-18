@@ -110,8 +110,8 @@ export function ClaimPanel({
       <div className="flex flex-1 flex-col gap-5 py-2">
         <SuccessStatus
           icon={<CheckCircle2 className="size-7" />}
-          title="NFC tap verified"
-          body="Continue to connect your wallet and confirm. You’ll pay a small network fee."
+          title="Device verified"
+          body="Link your wallet to continue."
         />
 
         <ExpiryCountdown

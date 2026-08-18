@@ -19,8 +19,7 @@ import { isUnclaimedAsset } from "@/lib/phygital/asset";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 
 /**
- * NFC tap → verify → claim handoff or Pay setup status (no Privy).
- * Everyday Get Ready lives on Home.
+ * NFC tap → verify → claim handoff or device status (no Privy).
  */
 export function AssetApp() {
   const embedded = useIsEmbedded();

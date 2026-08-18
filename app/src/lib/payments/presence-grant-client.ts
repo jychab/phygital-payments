@@ -1,7 +1,9 @@
 /** Client helpers for the payer-side preauth spending window. */
 
-const API_KEY_STORAGE = "phygital.preauth.apiKey";
-const API_KEY_WALLET_STORAGE = "phygital.preauth.wallet";
+import {
+  collectPreauthVaultUnlock,
+  unlockPreauthApiKey,
+} from "@/lib/crypto/prf-key-vault";
 
 export type PreauthResponse = {
   expiresAt: number;
@@ -11,29 +13,7 @@ export type PreauthResponse = {
   mint: string | null;
 };
 
-/** Load the device pay key only when it belongs to `wallet`. */
-export function loadPreauthApiKey(wallet?: string): string | null {
-  if (typeof window === "undefined") return null;
-  const key = localStorage.getItem(API_KEY_STORAGE);
-  if (!key) return null;
-  const storedWallet = localStorage.getItem(API_KEY_WALLET_STORAGE);
-  if (wallet) {
-    if (!storedWallet || storedWallet !== wallet) return null;
-  }
-  return key;
-}
-
-export function storePreauthApiKey(apiKey: string, wallet: string): void {
-  localStorage.setItem(API_KEY_STORAGE, apiKey.trim());
-  localStorage.setItem(API_KEY_WALLET_STORAGE, wallet);
-}
-
-export function clearPreauthApiKey(): void {
-  localStorage.removeItem(API_KEY_STORAGE);
-  localStorage.removeItem(API_KEY_WALLET_STORAGE);
-}
-
-/** Build the integrator / in-app open URL (relative or absolute). */
+/** Build the integrator / Shortcuts open URL (apiKey in query string). */
 export function buildPreauthOpenUrl(args: {
   apiKey: string;
   amountUi?: string;
@@ -57,24 +37,16 @@ export function buildPreauthOpenUrl(args: {
   return origin ? `${origin}${path}` : path;
 }
 
-/**
- * Open a short-lived spending window via GET /api/preauth/open.
- * Call this on the payer phone *before* tapping the merchant NFC device.
- * Provide exactly one of `amount` (raw) or `amountUi` (human). Mint defaults to USDC.
- */
+/** Shortcuts — GET with apiKey query param. */
 export async function requestPreauth(args: {
-  apiKey?: string;
-  wallet?: string;
-  /** Raw u64 amount (smallest units) as decimal string. */
+  apiKey: string;
   amount?: string;
-  /** Human amount, e.g. "100". */
   amountUi?: string;
   mint?: string;
 }): Promise<PreauthResponse> {
-  const apiKey =
-    args.apiKey?.trim() || loadPreauthApiKey(args.wallet) || null;
+  const apiKey = args.apiKey.trim();
   if (!apiKey) {
-    throw new Error("Missing preauth API key — allow the payment verifier for this wallet first");
+    throw new Error("Pay isn't set up on this phone yet.");
   }
 
   const url = buildPreauthOpenUrl({
@@ -93,13 +65,61 @@ export async function requestPreauth(args: {
   return body;
 }
 
-/** Invalidate the open grant for this device key (Cancel / dismiss). */
-export async function cancelPreauth(args?: {
-  apiKey?: string;
-  wallet?: string;
+/** In-app Pay — Face ID → POST vault material; server decrypts. */
+export async function requestPreauthWithVault(args: {
+  wallet: string;
+  amount?: string;
+  amountUi?: string;
+  mint?: string;
+}): Promise<PreauthResponse> {
+  const vault = await collectPreauthVaultUnlock(args.wallet);
+  const res = await fetch("/api/preauth/open", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({
+      ...vault,
+      amount: args.amount,
+      amountUi: args.amountUi,
+      mint: args.mint,
+    }),
+  });
+  const body = (await res.json()) as PreauthResponse & { error?: string };
+  if (!res.ok) {
+    throw new Error(body.error ?? `Preauth failed (${res.status})`);
+  }
+  return body;
+}
+
+/** Shortcuts — decrypt locally to build URL with apiKey. */
+export async function unlockAndBuildOpenUrl(args: {
+  wallet: string;
+  amountUi: string;
+  mint?: string;
+  origin?: string;
+}): Promise<string> {
+  const apiKey = await unlockPreauthApiKey(args.wallet);
+  return buildPreauthOpenUrl({
+    apiKey,
+    amountUi: args.amountUi,
+    mint: args.mint,
+    origin: args.origin,
+  });
+}
+
+/** Face ID unlock → copy a Shortcuts open URL to the clipboard. */
+export async function copyPayShortcutLink(args: {
+  wallet: string;
+  amountUi: string;
+  mint?: string;
 }): Promise<void> {
-  const apiKey =
-    args?.apiKey?.trim() || loadPreauthApiKey(args?.wallet) || null;
+  const url = await unlockAndBuildOpenUrl(args);
+  await navigator.clipboard.writeText(url);
+}
+
+/** Shortcuts cancel — Bearer apiKey. */
+export async function cancelPreauth(args: { apiKey: string }): Promise<void> {
+  const apiKey = args.apiKey.trim();
   if (!apiKey) return;
 
   const res = await fetch("/api/preauth", {
@@ -112,9 +132,25 @@ export async function cancelPreauth(args?: {
   }
 }
 
+/** In-app cancel — server decrypts vault material. */
+export async function cancelPreauthWithVault(args: {
+  wallet: string;
+}): Promise<void> {
+  const vault = await collectPreauthVaultUnlock(args.wallet);
+  const res = await fetch("/api/preauth/cancel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(vault),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `Cancel preauth failed (${res.status})`);
+  }
+}
+
 export type PreauthStatus = { enabled: boolean };
 
-/** Wallet-level payment verifier (D1). No key material. */
+/** Wallet-level Pay enabled (D1). No key material. */
 export async function fetchPreauthStatus(wallet: string): Promise<PreauthStatus> {
   const res = await fetch(
     `/api/preauth/status?wallet=${encodeURIComponent(wallet)}`,
@@ -124,7 +160,7 @@ export async function fetchPreauthStatus(wallet: string): Promise<PreauthStatus>
     error?: string;
   };
   if (!res.ok) {
-    throw new Error(body.error ?? "Couldn’t check payment verifier");
+    throw new Error(body.error ?? "Couldn't check Pay status");
   }
   return { enabled: Boolean(body.enabled) };
 }

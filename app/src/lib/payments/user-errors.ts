@@ -29,17 +29,17 @@ const RULES: Rule[] = [
   },
   {
     test: /no active preauth grant|preauth grant already used|missing preauth/i,
-    message: "Ask them to tap Ready to pay again, then hold their NFC device here.",
+    message: "Ask them to pay again, then hold their NFC device here.",
   },
   {
     test: /preauth grant mint mismatch/i,
     message:
-      "They opened a window for a different token. Ask them to Ready to pay again.",
+      "They opened a window for a different token. Ask them to pay again.",
   },
   {
     test: /exceeds preauth maxAmount/i,
     message:
-      "That amount is more than they authorized. Ask them to raise the max and Ready to pay again.",
+      "That amount is more than they authorized. Ask them to raise the limit and pay again.",
   },
   {
     test: /not the SPL delegate|enable this token for Pay|Delegated amount is insufficient/i,
@@ -56,8 +56,8 @@ const RULES: Rule[] = [
     message: "Too many attempts — wait a moment and try again.",
   },
   {
-    test: /missing preauth api key|enable Pay on this device|allow the payment verifier for this wallet/i,
-    message: "Allow the payment verifier for this wallet first.",
+    test: /missing preauth api key|enable Pay on this device|Pay isn't set up on this phone/i,
+    message: "Enable Pay on this phone first.",
   },
   {
     test: /user rejected|rejected the request|transaction cancelled|signing was cancelled/i,

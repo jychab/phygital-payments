@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { LoaderCircle, Smartphone, Wallet } from "lucide-react";
-
 import { GateMessage } from "@/components/gate-message";
 import { Button } from "@/components/ui/button";
 import { useDevicePayKeyHelpers } from "@/lib/payments/device-pay-key-client";
@@ -11,15 +10,15 @@ import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 import { shortAddress } from "@/lib/utils";
 
-/**
- * Sign-message provision for a payment verifier. Wallet must match `expectedOwner`.
- */
+/** Enable Pay on this phone (wallet sign + Face ID seal). */
 export function AllowVerifierPanel({
   expectedOwner,
   onAllowed,
+  onSkip,
 }: {
   expectedOwner: string;
-  onAllowed: (apiKey: string) => void;
+  onAllowed: () => void;
+  onSkip?: () => void;
 }) {
   const { address, isConnected, ready, connect } = useSolanaAddress();
   const { provisionKey } = useDevicePayKeyHelpers();
@@ -29,17 +28,15 @@ export function AllowVerifierPanel({
     isConnected && address != null && address !== expectedOwner;
   const matched = isConnected && address === expectedOwner;
 
-  async function onAllow() {
+  async function onEnable() {
     if (!matched) return;
     try {
       setBusy(true);
-      const apiKey = await provisionKey(expectedOwner);
-      onAllowed(apiKey);
-      toast.success("Payment verifier enabled for this wallet");
+      await provisionKey(expectedOwner);
+      onAllowed();
+      toast.success("Pay is on");
     } catch (error) {
-      toast.error(
-        toUserErrorMessage(error, "Couldn’t allow the payment verifier"),
-      );
+      toast.error(toUserErrorMessage(error, "Couldn't enable Pay"));
     } finally {
       setBusy(false);
     }
@@ -58,7 +55,7 @@ export function AllowVerifierPanel({
       <GateMessage
         icon={<Wallet className="size-5 text-muted-foreground" />}
         title="Connect your wallet"
-        body={`Connect ${shortAddress(expectedOwner, 4)} to allow the payment verifier.`}
+        body={`Connect ${shortAddress(expectedOwner, 4)} to enable Pay.`}
         action={
           <Button
             type="button"
@@ -90,31 +87,40 @@ export function AllowVerifierPanel({
         <div className="mx-auto flex size-11 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
           <Smartphone className="size-5 text-muted-foreground" />
         </div>
-        <p className="text-sm font-medium text-foreground">
-          Allow payment verifier
-        </p>
+        <p className="text-sm font-medium text-foreground">Enable Pay</p>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Your wallet will ask you to sign. That sets up a payment verifier for
-          this wallet. It is not a transaction and does not move funds.
+          Your wallet will ask you to sign, then Face ID secures Pay on this
+          phone. It does not move funds.
         </p>
       </div>
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col gap-2.5">
         <Button
           type="button"
           size="lg"
           className="w-full"
-          onClick={() => void onAllow()}
+          onClick={() => void onEnable()}
           disabled={busy}
         >
           {busy ? (
             <>
               <LoaderCircle className="size-4 animate-spin" />
-              Sign in your wallet…
+              Enable Pay…
             </>
           ) : (
-            "Allow payment verifier"
+            "Enable Pay"
           )}
         </Button>
+        {onSkip ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="w-full"
+            onClick={onSkip}
+          >
+            Not Now
+          </Button>
+        ) : null}
       </div>
     </div>
   );

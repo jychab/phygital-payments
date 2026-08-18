@@ -39,7 +39,7 @@ import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 type HomeTab = "pay" | "devices" | "history";
 
 /**
- * Home — Connect wallet for Pay (Get Ready), Devices list, and Activity.
+ * Home — Connect wallet for Pay, Devices list, and Activity.
  * NFC devices and first-time setup start by tapping a tag (opens /device).
  */
 export function PayHomeApp() {
@@ -74,7 +74,7 @@ export function PayHomeApp() {
           <GateMessage
             icon={<Wallet className="size-5 text-muted-foreground" />}
             title="Connect your wallet"
-            body="Use Connect above to see your devices, activity, and Get Ready."
+            body="Use Connect above to see your devices, activity, and Pay."
           />
         </AppCard>
       ) : (
@@ -184,11 +184,16 @@ function HomePayTab({ owner }: { owner: string }) {
   }
 
   if (!setupReady) {
+    const hasDevices = deviceCount > 0;
     return (
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
-        title="Hold your NFC device to set up Pay"
-        body="Tap your NFC device to this phone. You’ll set a spending cap and a payment verifier for this wallet there."
+        title={hasDevices ? "Pay is off." : "No NFC devices yet"}
+        body={
+          hasDevices
+            ? "Set Up Pay when you're ready — hold your NFC device to this phone, or set a spending limit here."
+            : "Hold an NFC device to this phone to add it. The tag opens a claim page."
+        }
       />
     );
   }

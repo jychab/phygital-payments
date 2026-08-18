@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Copy, LoaderCircle } from "lucide-react";
 import Link from "next/link";
@@ -10,85 +9,86 @@ import { CenteredStatus, SuccessStatus } from "@/components/gate-message";
 import { LimitPanel } from "@/components/pay/pay-limit-panel";
 import { AllowVerifierPanel } from "@/components/pay/allow-verifier-panel";
 import { Button } from "@/components/ui/button";
-import { useDelegateStatus } from "@/hooks/use-delegate-status";
-import { usePreauthStatus } from "@/hooks/use-preauth-status";
-import { isDelegateEnabled } from "@/lib/payments/mint-delegate";
-import { getDefaultMint } from "@/lib/payments/payment-token";
-import { buildPreauthOpenUrl } from "@/lib/payments/presence-grant-client";
+import { usePaySetupSnapshot } from "@/hooks/use-pay-setup-snapshot";
+import { getDefaultMint, DEFAULT_PAY_AMOUNT_UI } from "@/lib/payments/payment-token";
+import { copyPayShortcutLink } from "@/lib/payments/presence-grant-client";
+import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { queryKeys } from "@/lib/queries";
 
-const DEFAULT_PAY_LINK_AMOUNT_UI = "100";
-
 /**
- * After claim (or from /device status handoff): spending cap, then payment verifier.
+ * Optional Pay setup: spending limit, then Enable Pay.
  */
-export function DeviceFinishSetup({ owner }: { owner: string }) {
+export function DeviceFinishSetup({
+  owner,
+  onDismiss,
+}: {
+  owner: string;
+  onDismiss?: () => void;
+}) {
   const queryClient = useQueryClient();
-  const capQuery = useDelegateStatus(owner, getDefaultMint());
-  const verifierQuery = usePreauthStatus(owner);
-  const [issuedKey, setIssuedKey] = useState<string | null>(null);
-
-  const loading = capQuery.isPending || verifierQuery.isPending;
-  const capSet = isDelegateEnabled(capQuery.data);
-  const verifierSet = Boolean(verifierQuery.data?.enabled) || issuedKey != null;
+  const snap = usePaySetupSnapshot(owner);
 
   async function onCapEnabled() {
     await queryClient.invalidateQueries({
       queryKey: queryKeys.delegateStatus.byOwner(owner),
     });
-    await capQuery.refetch();
   }
 
-  async function onVerifierAllowed(apiKey: string) {
-    setIssuedKey(apiKey);
+  async function onPayEnabled() {
     await queryClient.invalidateQueries({
       queryKey: queryKeys.preauthStatus.byWallet(owner),
     });
   }
 
-  if (loading) {
+  if (snap.isPending) {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading setup…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </CenteredStatus>
     );
   }
 
-  if (!capSet) {
+  if (!snap.capSet) {
     return (
       <LimitPanel
         expectedOwner={owner}
         mint={getDefaultMint()}
         onEnabled={() => void onCapEnabled()}
+        onSkip={onDismiss}
       />
     );
   }
 
-  if (!verifierSet) {
+  if (!snap.verifierSet) {
     return (
       <AllowVerifierPanel
         expectedOwner={owner}
-        onAllowed={(key) => void onVerifierAllowed(key)}
+        onAllowed={() => void onPayEnabled()}
+        onSkip={onDismiss}
       />
     );
   }
 
-  return <SetupComplete apiKey={issuedKey} />;
+  return <SetupComplete owner={owner} onDismiss={onDismiss} />;
 }
 
-function SetupComplete({ apiKey }: { apiKey: string | null }) {
-  async function onCopyPayLink() {
-    if (!apiKey) return;
+function SetupComplete({
+  owner,
+  onDismiss,
+}: {
+  owner: string;
+  onDismiss?: () => void;
+}) {
+  async function onAddToShortcuts() {
     try {
-      const url = buildPreauthOpenUrl({
-        apiKey,
-        amountUi: DEFAULT_PAY_LINK_AMOUNT_UI,
+      await copyPayShortcutLink({
+        wallet: owner,
+        amountUi: DEFAULT_PAY_AMOUNT_UI,
       });
-      await navigator.clipboard.writeText(url);
-      toast.success("Pay link copied");
-    } catch {
-      toast.error("Couldn’t copy pay link");
+      toast.success("Shortcut link copied");
+    } catch (error) {
+      toast.error(toUserErrorMessage(error, "Couldn't copy link"));
     }
   }
 
@@ -96,30 +96,33 @@ function SetupComplete({ apiKey }: { apiKey: string | null }) {
     <div className="flex flex-1 flex-col gap-5 py-2">
       <SuccessStatus
         icon={<CheckCircle2 className="size-7" />}
-        title="Pay is ready"
-        body="Get Ready on Home, then hold your NFC device to their phone. You are not charged until that tap."
+        title="Pay is on"
+        body="Pay from Home or tap this device again."
         bodyClassName="max-w-64"
       />
-      {apiKey ? (
+      <Button
+        type="button"
+        variant="outline"
+        size="lg"
+        className="w-full"
+        onClick={() => void onAddToShortcuts()}
+      >
+        <Copy className="size-4" />
+        Add to Shortcuts
+      </Button>
+      <Button type="button" size="lg" className="w-full" asChild>
+        <Link href="/">Done</Link>
+      </Button>
+      {onDismiss ? (
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="lg"
           className="w-full"
-          onClick={() => void onCopyPayLink()}
+          onClick={onDismiss}
         >
-          <Copy className="size-4" />
-          Copy pay link
+          Not Now
         </Button>
-      ) : null}
-      <Button type="button" size="lg" className="w-full" asChild>
-        <Link href="/">Open Home</Link>
-      </Button>
-      {apiKey ? (
-        <p className="text-center text-[11px] text-muted-foreground">
-          Save the pay link as a shortcut on your phone to Get Ready without
-          opening this app.
-        </p>
       ) : null}
     </div>
   );

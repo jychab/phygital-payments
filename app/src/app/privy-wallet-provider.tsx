@@ -4,6 +4,9 @@ import { useState, type ReactNode } from "react";
 import { PrivyClientConfig, PrivyProvider } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 
+import { GateMessage } from "@/components/gate-message";
+import { Wallet } from "lucide-react";
+
 const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "";
 
 /** Stable config — recreate only when connectors singleton is ready. */
@@ -21,7 +24,6 @@ function getPrivyConfig(): PrivyClientConfig {
         "wallet_connect_qr_solana",
       ],
     },
-    // Wallet connect only — no email/social login or embedded-wallet creation.
     loginMethods: ["wallet"],
     externalWallets: {
       solana: { connectors: toSolanaWalletConnectors() },
@@ -35,6 +37,17 @@ function getPrivyConfig(): PrivyClientConfig {
  */
 export function PrivyWalletProvider({ children }: { children: ReactNode }) {
   const [config] = useState(() => getPrivyConfig());
+
+  if (!privyAppId) {
+    return (
+      <GateMessage
+        icon={<Wallet className="size-5 text-destructive" />}
+        title="Wallet connect isn't configured"
+        body="Set NEXT_PUBLIC_PRIVY_APP_ID in .dev.vars and restart the dev server."
+        destructive
+      />
+    );
+  }
 
   return (
     <PrivyProvider appId={privyAppId} config={config}>

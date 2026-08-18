@@ -1,3 +1,5 @@
+import type { PaySetupStep } from "@/lib/payments/device-setup-state";
+
 export type DeviceFinishIntent = "limit" | "verifier";
 
 /** Wallet finish URL for spending cap or payment verifier (no tap-proof token). */
@@ -12,14 +14,9 @@ export function deviceFinishHref(args: {
   return `/device/finish?${params.toString()}`;
 }
 
-export function absoluteDeviceFinishUrl(args: {
-  intent: DeviceFinishIntent;
-  owner: string;
-  origin?: string;
-}): string {
-  const origin =
-    args.origin ??
-    (typeof window !== "undefined" ? window.location.origin : "");
-  const path = deviceFinishHref(args);
-  return origin ? `${origin}${path}` : path;
+export function deviceFinishHrefForStep(step: PaySetupStep, owner: string): string {
+  return deviceFinishHref({
+    intent: step === "enable" ? "verifier" : "limit",
+    owner,
+  });
 }

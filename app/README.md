@@ -31,7 +31,7 @@ Local config lives in **`.dev.vars`** only (not `.env` / `.env.local`). `next.co
 | `NEXT_PUBLIC_SOLANA_CLUSTER` | No | `devnet` (default) or `mainnet` |
 | `NEXT_PUBLIC_SOLANA_RPC_URL` | No | Solana RPC HTTP URL |
 
-Configure the Privy app for Solana (embedded wallets + external connectors). Login methods used by this app: email and wallet.
+Configure the Privy app for Solana external wallet connectors. Login method: wallet connect only.
 
 ## Modes
 
@@ -39,13 +39,11 @@ Configure the Privy app for Solana (embedded wallets + external connectors). Log
 
 Connect a wallet via Privy, then use tabs:
 
-- **Pay** — Get Ready (open a spending window) when setup is complete. If spending cap or NFC device is missing, Home asks you to hold your NFC device — first-time setup is on **`/device`**. If this wallet has no payment verifier yet (or this browser has no key), Pay offers **Allow payment verifier**.
-- **Devices** — informational list of NFC devices claimed by this wallet (no deep links). Add a device by holding an NFC tag to the phone (opens `/device`).
+- **Pay** — **Pay $X** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC device. If Pay isn't configured, the tab offers **Enable Pay** (wallet sign + Face ID seal on this phone).
+- **Devices** — list of NFC devices for this wallet. Add a device by holding a tag (opens `/device`).
 - **Activity** — recent payments for the connected wallet.
 
-Header mode dropdown: **Home** | **Collect** (`/collect?recipient=<connected-wallet>`). Collect is disabled until connected.
-
-**Pay is ready** on Home when the spending cap is set and this wallet owns at least one NFC device. Everyday Get Ready uses the payment verifier issued to **this wallet**.
+Pay settings (spending limits, token management) live on Home. The Pay key is sealed with **Face ID** (WebAuthn PRF) on this phone after Enable Pay.
 
 Legacy collect query params on `/` (`?recipient=` / `?amount=`) redirect to `/collect`.
 
@@ -72,33 +70,27 @@ Embeds cannot use `/setup` (error screen).
 
 ### Device / claim (`/device?pk=&s=&c=&n=`)
 
-**Setup always starts here** after an NFC tap. `/device` has **no Privy / Connect**. Status (linked wallet, spending cap set/not set, payment verifier enabled/not set) is read from chain + D1. Acting on a prompt hands off to `/device/finish` (wallet connect), the same Continue / Copy finish link pattern as claiming.
+After an NFC tap. `/device` has **no Privy / Connect**. Wallet linking is a **successful end state**; Pay setup is **optional**.
 
-No in-app links to `/device` (tag URL only). Bare `?pk=` without tap proof shows “Hold NFC device.”
+**Step 1 — Safari or Chrome (`/device`):**
 
-**Step 1 — Safari or Chrome (`/device`):** no wallet connect.
+1. Verify tap (silent)
+2. **Unclaimed / unlocked** — WebAuthn tap, then link wallet on `/device/finish`
+3. **Locked and owned** — **Your wallet is ready.** Status: Wallet, Pay (On/Off), Spending Limit
+   - **Set Up Pay** / **Not Now** when Pay is off
+   - **Pay $X** → Face ID → **Hold to Pay** when Pay is on and this phone has a sealed key
 
-1. Verify tap (silent) — chip counter must be **greater than** the last value in the shared `revibase_counter` KV; the same counter may remount briefly, then needs a fresh tap
-2. **Unclaimed / unlocked** — Hold NFC device for ownership transfer challenge (WebAuthn tap), then Continue / Copy finish link
-3. **Locked and owned** — status card:
-   - Linked wallet (address only)
-   - Spending cap: Set / Not set (amount is never shown)
-   - Payment verifier: Enabled / Not set
-   - Primary CTA is the next gap (Set spending cap or Allow payment verifier), or **Open Home** when all three are done
+**Step 2 — finish (`/device/finish`):** Privy wallet connect.
 
-**Step 2 — finish screen (`/device/finish`):** Privy wallet connect.
+- `?token=` — claim device, then **Your wallet is ready.** (optional Set Up Pay; no forced wizard)
+- `?intent=limit&owner=` — set spending limit
+- `?intent=verifier&owner=` — **Enable Pay** (sign + Face ID seal)
 
-- `?token=` — pending claim (tap proof expires in ~3 minutes, Solana SlotHashes window). Confirm the claim tx, then **stay here** for spending cap and payment verifier if those are still missing.
-- `?intent=limit&owner=` — set spending cap (no tap-proof expiry)
-- `?intent=verifier&owner=` — allow payment verifier (sign message; not a transfer). After success, **Copy pay link** for Shortcuts / phone automation.
-
-Wrong wallet: disconnect, then connect the linked owner. The payment verifier is issued to the **wallet**, not the phone or NFC device. After it is allowed, copy the pay link from this screen so Get Ready works from a shortcut.
-
-Pending tap proofs are stored in the `pending_claim` KV namespace with TTL aligned to the SlotHashes validity window (~512 slots, ~3m 25s).
+Pay keys are encrypted with WebAuthn PRF (platform Face ID). **Add to Shortcuts** copies an open URL after Face ID unlock.
 
 ### Open a spending window (API key)
 
-After Enable Pay, Manage Pay can **Copy API key** or **Copy open URL**. Any client can open a ~45s grant without NFC. The grant binds **mint** and **max tap amount**; Collect’s charge must match that mint and stay at or below the max. On-chain delegates are a second cap:
+After Enable Pay, use **Add to Shortcuts** or **Show Payment Key** (Face ID unlock). Any client can open a ~45s grant without NFC:
 
 ```
 GET /api/preauth/open?apiKey=<ppk_…>&amountUi=100
@@ -127,16 +119,16 @@ curl "https://<host>/api/preauth/open?apiKey=ppk_…&amountUi=100"
 
 #### Set up iOS Shortcuts
 
-1. Enable Pay once via NFC → **Manage Pay** → **Copy API key** (or **Copy open URL**).
+1. Enable Pay on Home or `/device/finish`, then **Add to Shortcuts** (Face ID).
 2. Shortcuts → New Shortcut → **Get Contents of URL**.
 3. Method **GET**. URL:
 
    `https://<host>/api/preauth/open?apiKey=<pasted ppk_…>&amountUi=100`
 
    Optional: use Ask Each Time / Text actions to change `amountUi`, and add `&mint=` for a non-USDC token.
-4. Optional: **Show Notification** when the GET succeeds — that means **window opened** (e.g. “Ready — hold NFC to merchant”), not that you were charged.
+4. Optional: **Show Notification** when the GET succeeds — **window opened** (e.g. “Hold to Pay”), not that you were charged.
 5. Run the Shortcut → within ~45 seconds hold your NFC device to the merchant Collect phone.
-6. After **Rotate API key**, update `apiKey` in the Shortcut URL.
+6. After **Reset Pay on This Phone**, update the Shortcut URL.
 
 #### Set up Android (Tasker or similar)
 
