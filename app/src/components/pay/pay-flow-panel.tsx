@@ -211,10 +211,6 @@ export function PayFlowPanel({
         </p>
       ) : (
         <>
-          <div className="flex justify-center">
-            <TokenSymbol token={token} size="sm" />
-          </div>
-
           <AmountField
             id={`pay-amount-${variant}`}
             value={amount}
@@ -226,7 +222,7 @@ export function PayFlowPanel({
 
           {limitUi ? (
             <p className="text-center text-[11px] text-muted-foreground">
-              Spending limit ${limitUi}
+              Spending limit ${limitUi} ${token.symbol}
             </p>
           ) : null}
         </>
