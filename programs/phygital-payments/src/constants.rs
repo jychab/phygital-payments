@@ -20,6 +20,6 @@ pub const PHYGITAL_TOKEN_PROGRAM_ID: Pubkey =
 
 /// The WebAuthn `rpId` allowed to authorize transfers.
 /// Passed to `verify_asset` as `expected_rp_id` (no scheme).
-pub const WHITELISTED_RPID: &str = "payments.revibase.com";
+pub const WHITELISTED_RPID: &str = "app.revibase.com";
 
-pub const WHITELISTED_ORIGIN: &str = "https://payments.revibase.com";
+pub const WHITELISTED_ORIGIN: &str = "https://app.revibase.com";
