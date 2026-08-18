@@ -31,7 +31,6 @@ const PERSISTED_QUERY_ROOTS = new Set([
   "holdings",
   "delegateStatus",
   "assets",
-  "preauthStatus",
   "verifiedTokens",
 ]);
 

@@ -6,8 +6,10 @@ import type { PreauthGrant } from "../../../worker/preauth-grant-types";
 
 /** RPC surface of PreauthGrantsDO — keep in sync with the worker. */
 export type PreauthGrantsStub = {
+  rotate(): Promise<{ gen: number }>;
   open(args: {
     wallet: string;
+    gen: number;
     maxAmount: string;
     mint: string | null;
   }): Promise<PreauthGrant>;

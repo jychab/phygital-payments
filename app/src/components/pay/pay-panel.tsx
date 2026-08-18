@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Check, ChevronLeft, Settings2 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 
 import { PayFlowPanel } from "@/components/pay/pay-flow-panel";
 import { AllowVerifierPanel } from "@/components/pay/allow-verifier-panel";
@@ -22,7 +21,6 @@ import {
 } from "@/lib/payments/payment-token";
 import { copyPayShortcutLink } from "@/lib/payments/preauth-client";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
-import { queryKeys } from "@/lib/queries";
 import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
 
 /**
@@ -92,7 +90,6 @@ export function ManagePayPanel({
   onEditTokenLimit: (holding: PaymentTokenHolding) => void;
 }) {
   const { provisionKey } = useDevicePayKeyHelpers();
-  const queryClient = useQueryClient();
   const [keyBusy, setKeyBusy] = useState(false);
 
   const payContext = usePayTokenContext(owner);
@@ -110,12 +107,9 @@ export function ManagePayPanel({
     try {
       setKeyBusy(true);
       await provisionKey(owner, { rotate: true });
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.preauthStatus.byWallet(owner),
-      });
-      toast.success("API key rotated — update any saved shortcuts");
+      toast.success("Pay key rotated — update any saved shortcuts");
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn't rotate API key"));
+      toast.error(toUserErrorMessage(error, "Couldn't rotate Pay key"));
     } finally {
       setKeyBusy(false);
     }
@@ -192,7 +186,7 @@ export function ManagePayPanel({
           onClick={() => void onRotateKey()}
           disabled={keyBusy}
         >
-          Rotate API Key
+          Rotate Pay Key
         </Button>
       </div>
     </div>

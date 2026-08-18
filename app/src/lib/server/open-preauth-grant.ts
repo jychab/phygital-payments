@@ -7,12 +7,15 @@ import { getDefaultMint } from "@/lib/payments/payment-token";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { getErrorMessage } from "@/lib/utils";
 import { getPreauthGrantsStub } from "@/lib/server/preauth-grants-do";
-import {
-  getWalletApiKeysDb,
-  verifyPayApiKey,
-} from "@/lib/server/wallet-api-keys-db";
+import { verifyPayKey } from "../../../worker/pay-hmac";
 
 const NO_STORE = { "Cache-Control": "no-store" } as const;
+
+function getHmacSecret(): string {
+  const secret = process.env.PAY_HMAC_SECRET?.trim();
+  if (!secret) throw new Error("PAY_HMAC_SECRET is not configured");
+  return secret;
+}
 
 export type OpenPreauthParams = {
   apiKey: string;
@@ -21,8 +24,8 @@ export type OpenPreauthParams = {
 };
 
 /**
- * Verify API key + raw amount/mint and create a preauth grant in the payer's DO.
- * Mint defaults to USDC. Mint validity and delegate caps are enforced at collect.
+ * Verify the HMAC pay key from the `apiKey` query param, then open a preauth
+ * grant in the payer's DO. Mint defaults to USDC.
  */
 export async function openPreauthGrant(
   params: OpenPreauthParams,
@@ -62,16 +65,17 @@ export async function openPreauthGrant(
   const mint = String(mintAddress);
 
   try {
-    const wallet = await verifyPayApiKey(getWalletApiKeysDb(), apiKey);
-    if (!wallet) {
+    const parsed = await verifyPayKey(getHmacSecret(), apiKey);
+    if (!parsed) {
       return NextResponse.json(
-        { error: "Invalid or revoked API key" },
+        { error: "Invalid or revoked Pay key" },
         { status: 401, headers: NO_STORE },
       );
     }
 
-    const grant = await getPreauthGrantsStub(wallet).open({
-      wallet,
+    const grant = await getPreauthGrantsStub(parsed.wallet).open({
+      wallet: parsed.wallet,
+      gen: parsed.gen,
       maxAmount,
       mint,
     });
@@ -88,7 +92,10 @@ export async function openPreauthGrant(
     );
   } catch (error) {
     const message = getErrorMessage(error, "Internal error");
-    if (message.includes("Invalid or revoked API key")) {
+    if (
+      message.includes("Invalid or revoked Pay key") ||
+      message.includes("Key has been revoked")
+    ) {
       return NextResponse.json(
         { error: message },
         { status: 401, headers: NO_STORE },

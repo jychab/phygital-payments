@@ -39,12 +39,6 @@ export function DeviceFinishSetup({
     });
   }
 
-  async function onPayEnabled() {
-    await queryClient.invalidateQueries({
-      queryKey: queryKeys.preauthStatus.byWallet(owner),
-    });
-  }
-
   if (snap.isPending) {
     return (
       <CenteredStatus>
@@ -69,7 +63,7 @@ export function DeviceFinishSetup({
     return (
       <AllowVerifierPanel
         expectedOwner={owner}
-        onAllowed={() => void onPayEnabled()}
+        onAllowed={() => {}}
         onSkip={onDismiss}
       />
     );

@@ -88,7 +88,7 @@ After an NFC tap. `/device` has **no Privy / Connect**. Wallet linking is a **su
 
 Pay keys live in localStorage on this phone. **Manage Pay → Add to Shortcuts** copies an open URL.
 
-### Open a spending window (API key)
+### Open a spending window (Pay key)
 
 After Enable Pay, use **Manage Pay → Add to Shortcuts**. Any client can open a ~45s grant without NFC:
 
@@ -100,7 +100,7 @@ Query params:
 
 | Param | Required | Description |
 |-------|----------|-------------|
-| `apiKey` | Yes | Device pay key (`ppk_<wallet>_<secret>`) |
+| `apiKey` | Yes | Device pay key (`ppk_<wallet>_<gen>_<hmac>`) |
 | `amount` | Yes | Raw u64 decimal (smallest units), e.g. `100000000` for $100 USDC |
 | `mint` | No | Token mint (defaults to USDC) |
 
@@ -110,7 +110,7 @@ A **200 from `/open` only means the spending window is open** — not that payme
 
 Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey>`.
 
-The pay key is stored in plaintext in localStorage on this phone. Keys in query strings may also appear in CDN/proxy logs — use **Rotate API Key** in Manage Pay if leaked, and update saved Shortcut URLs.
+The pay key is stored in plaintext in localStorage on this phone. Keys in query strings may also appear in CDN/proxy logs — use **Rotate Pay Key** in Manage Pay if leaked, and update saved Shortcut URLs.
 
 ```bash
 curl "https://<host>/api/preauth/open?apiKey=ppk_…&amount=100000000"
@@ -127,7 +127,7 @@ curl "https://<host>/api/preauth/open?apiKey=ppk_…&amount=100000000"
    Optional: add `&mint=` for a non-USDC token. **Add to Shortcuts** copies a URL with the correct raw `amount`.
 4. Optional: **Show Notification** when the GET succeeds — **window opened** (e.g. “Hold to Pay”), not that you were charged.
 5. Run the Shortcut → within ~45 seconds hold your NFC device to the merchant Collect phone.
-6. After **Rotate API Key**, update the Shortcut URL.
+6. After **Rotate Pay Key**, update the Shortcut URL.
 
 #### Set up Android (Tasker or similar)
 

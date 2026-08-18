@@ -10,7 +10,7 @@ export type PreauthResponse = {
   mint: string | null;
 };
 
-/** Build the integrator / Shortcuts open URL (apiKey in query string). */
+/** Build the integrator / Shortcuts open URL (`apiKey` query param carries the pay key). */
 export function buildPreauthOpenUrl(args: {
   apiKey: string;
   amount: string;
@@ -29,7 +29,7 @@ export function buildPreauthOpenUrl(args: {
   return origin ? `${origin}${path}` : path;
 }
 
-/** GET with apiKey query param (in-app Pay and Shortcuts). */
+/** GET with pay key in the `apiKey` query param (in-app Pay and Shortcuts). */
 export async function requestPreauth(args: {
   apiKey: string;
   amount: string;
@@ -55,7 +55,7 @@ export async function requestPreauth(args: {
   return body;
 }
 
-/** In-app Pay — stored localStorage key → GET open. */
+/** In-app Pay — stored local pay key → GET open. */
 export async function requestPreauthForWallet(args: {
   wallet: string;
   amount: string;
@@ -68,7 +68,7 @@ export async function requestPreauthForWallet(args: {
   });
 }
 
-/** Build a Shortcuts open URL from the stored localStorage key. */
+/** Build a Shortcuts open URL from the stored local pay key. */
 export function buildOpenUrlForWallet(args: {
   wallet: string;
   amount: string;
@@ -92,7 +92,7 @@ export async function copyPayShortcutLink(args: {
   await navigator.clipboard.writeText(buildOpenUrlForWallet(args));
 }
 
-/** Cancel — Bearer apiKey. */
+/** Cancel — Bearer pay key. */
 export async function cancelPreauth(args: { apiKey: string }): Promise<void> {
   const apiKey = args.apiKey.trim();
   if (!apiKey) return;
@@ -107,26 +107,10 @@ export async function cancelPreauth(args: { apiKey: string }): Promise<void> {
   }
 }
 
-/** In-app cancel — stored localStorage key → Bearer DELETE. */
+/** In-app cancel — stored local pay key → Bearer DELETE. */
 export async function cancelPreauthForWallet(args: {
   wallet: string;
 }): Promise<void> {
   await cancelPreauth({ apiKey: readPayApiKey(args.wallet) });
 }
 
-export type PreauthStatus = { enabled: boolean };
-
-/** Whether this wallet has a provisioned device pay key. */
-export async function fetchPreauthStatus(wallet: string): Promise<PreauthStatus> {
-  const res = await fetch(
-    `/api/preauth/status?wallet=${encodeURIComponent(wallet)}`,
-    { cache: "no-store" },
-  );
-  const body = (await res.json().catch(() => ({}))) as PreauthStatus & {
-    error?: string;
-  };
-  if (!res.ok) {
-    throw new Error(body.error ?? "Couldn't check Pay status");
-  }
-  return { enabled: Boolean(body.enabled) };
-}

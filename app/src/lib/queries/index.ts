@@ -28,11 +28,6 @@ import {
   type PaymentTokenHolding,
   type PayTokenContext,
 } from "@/lib/payments/verified-tokens-client";
-import {
-  fetchPreauthStatus,
-  type PreauthStatus,
-} from "@/lib/payments/preauth-client";
-
 // ============================================================================
 // Query keys
 // ============================================================================
@@ -90,12 +85,6 @@ export const queryKeys = {
     all: () => ["pendingClaim"] as const,
     byToken: (token: string | null) =>
       [...queryKeys.pendingClaim.all(), token] as const,
-  },
-
-  preauthStatus: {
-    all: () => ["preauthStatus"] as const,
-    byWallet: (wallet: string | null) =>
-      [...queryKeys.preauthStatus.all(), wallet] as const,
   },
 
   asset: {
@@ -170,8 +159,7 @@ export function fetchPayContext(owner: string): Promise<PayTokenContext> {
   return fetchPayContextClient(owner);
 }
 
-export { fetchPreauthStatus };
-export type { PreauthStatus, PayTokenContext };
+export type { PayTokenContext };
 
 export type {
   MintDelegateStatus,

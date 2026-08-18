@@ -1,5 +1,5 @@
 /**
- * Device pay API key in localStorage (plaintext).
+ * Device pay key in localStorage (plaintext).
  * Used for in-app Pay and Shortcuts open URLs.
  */
 

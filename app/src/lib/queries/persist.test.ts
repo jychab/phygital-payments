@@ -41,7 +41,6 @@ describe("isPersistedQueryKey", () => {
     expect(isPersistedQueryKey(["holdings", "owner"])).toBe(true);
     expect(isPersistedQueryKey(["delegateStatus", "owner", "mint"])).toBe(true);
     expect(isPersistedQueryKey(["assets", "owner", "owner"])).toBe(true);
-    expect(isPersistedQueryKey(["preauthStatus", "wallet"])).toBe(true);
     expect(isPersistedQueryKey(["verifiedTokens"])).toBe(true);
   });
 

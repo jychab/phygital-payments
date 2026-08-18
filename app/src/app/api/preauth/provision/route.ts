@@ -3,15 +3,22 @@ import { address, getAddressEncoder } from "@solana/kit";
 import { ed25519 } from "@noble/curves/ed25519.js";
 
 import { base64ToBytes } from "@/lib/crypto/base64";
-import { getWalletApiKeysDb, issueWalletApiKey } from "@/lib/server/wallet-api-keys-db";
+import { getPreauthGrantsStub } from "@/lib/server/preauth-grants-do";
+import { signPayKey } from "../../../../../worker/pay-hmac";
 
 const MESSAGE_PREFIX = "phygital-pay:provision:";
 const MAX_AGE_MS = 5 * 60 * 1000;
 
+function getHmacSecret(): string {
+  const secret = process.env.PAY_HMAC_SECRET?.trim();
+  if (!secret) throw new Error("PAY_HMAC_SECRET is not configured");
+  return secret;
+}
+
 /**
  * POST /api/preauth/provision
  * Body: { wallet, message, signature } — signature is base64 ed25519 over `message`.
- * Issues (or rotates) a device pay key for the signing wallet. Raw key returned once.
+ * Issues (or rotates) a device pay key for the signing wallet.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -70,8 +77,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Bad signature" }, { status: 401 });
     }
 
-    const { apiKey } = await issueWalletApiKey(getWalletApiKeysDb(), wallet);
-    return NextResponse.json({ wallet, apiKey });
+    const { gen } = await getPreauthGrantsStub(wallet).rotate();
+    const payKey = await signPayKey(getHmacSecret(), wallet, gen);
+    return NextResponse.json({ wallet, apiKey: payKey });
   } catch (error) {
     const errMessage = error instanceof Error ? error.message : "Internal error";
     return NextResponse.json({ error: errMessage }, { status: 500 });

@@ -8,6 +8,7 @@ import {
 
 const GRANT_KEY = "grant";
 const LAST_OPEN_AT_KEY = "lastOpenAt";
+const GENERATION_KEY = "generation";
 
 type StoredGrant = {
   id: string;
@@ -22,12 +23,29 @@ type StoredGrant = {
 
 /** One DO instance per payer wallet — holds the latest single-use spending window. */
 export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
+  /** Bump key generation and return the new value. Called by `/provision`. */
+  async rotate(): Promise<{ gen: number }> {
+    const current =
+      (await this.ctx.storage.get<number>(GENERATION_KEY)) ?? 0;
+    const next = current + 1;
+    await this.ctx.storage.put(GENERATION_KEY, next);
+    return { gen: next };
+  }
+
   async open(args: {
     wallet: string;
+    gen: number;
     maxAmount: string;
     mint: string | null;
   }): Promise<PreauthGrant> {
     const now = Math.floor(Date.now() / 1000);
+
+    const generation =
+      (await this.ctx.storage.get<number>(GENERATION_KEY)) ?? 0;
+    if (args.gen < generation) {
+      throw new Error("Key has been revoked — re-provision to get a new key");
+    }
+
     const lastOpen = await this.ctx.storage.get<number>(LAST_OPEN_AT_KEY);
     if (
       lastOpen != null &&

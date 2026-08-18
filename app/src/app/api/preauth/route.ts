@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  getWalletApiKeysDb,
-  verifyPayApiKey,
-} from "@/lib/server/wallet-api-keys-db";
 import { getPreauthGrantsStub } from "@/lib/server/preauth-grants-do";
+import { verifyPayKey } from "../../../../worker/pay-hmac";
 import { getErrorMessage } from "@/lib/utils";
+
+function getHmacSecret(): string {
+  const secret = process.env.PAY_HMAC_SECRET?.trim();
+  if (!secret) throw new Error("PAY_HMAC_SECRET is not configured");
+  return secret;
+}
 
 /**
  * DELETE /api/preauth
- * Authorization: Bearer <wallet api key>
+ * Authorization: Bearer <HMAC pay key>
  *
  * Cancels any open spending window for the wallet (Pay panel Cancel).
  */
@@ -24,15 +27,15 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const wallet = await verifyPayApiKey(getWalletApiKeysDb(), match[1].trim());
-    if (!wallet) {
+    const parsed = await verifyPayKey(getHmacSecret(), match[1].trim());
+    if (!parsed) {
       return NextResponse.json(
-        { error: "Invalid or revoked API key" },
+        { error: "Invalid or revoked Pay key" },
         { status: 401 },
       );
     }
 
-    await getPreauthGrantsStub(wallet).cancel();
+    await getPreauthGrantsStub(parsed.wallet).cancel();
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(
