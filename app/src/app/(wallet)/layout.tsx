@@ -13,5 +13,11 @@ const PrivyWalletProvider = dynamic(
 
 /** Home + setup + device/finish — Privy / wallet connect, browser-only. */
 export default function WalletLayout({ children }: { children: ReactNode }) {
-  return <PrivyWalletProvider>{children}</PrivyWalletProvider>;
+  return (
+    <>
+      <link rel="preconnect" href="https://auth.privy.io" />
+      <link rel="preconnect" href="https://api.privy.io" />
+      <PrivyWalletProvider>{children}</PrivyWalletProvider>
+    </>
+  );
 }

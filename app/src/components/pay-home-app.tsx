@@ -17,7 +17,7 @@ import { AppCard, AppShell, homeCollectModeNav } from "@/components/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/embed-error";
 import { CenteredStatus, GateMessage } from "@/components/gate-message";
 import { LimitPanel } from "@/components/pay/pay-limit-panel";
-import { PayPanel } from "@/components/pay/pay-panel";
+import { ManagePayPanel, PayPanel } from "@/components/pay/pay-panel";
 import { HistoryPanel } from "@/components/history-panel";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -152,6 +152,7 @@ function HomePayTab({ owner }: { owner: string }) {
   const [editHolding, setEditHolding] = useState<PaymentTokenHolding | null>(
     null,
   );
+  const [manageOpen, setManageOpen] = useState(false);
 
   const hasAnyLimit = statuses.enabledMints.length > 0;
   const deviceCount = assetsQuery.data?.length ?? 0;
@@ -183,6 +184,16 @@ function HomePayTab({ owner }: { owner: string }) {
     );
   }
 
+  if (manageOpen) {
+    return (
+      <ManagePayPanel
+        owner={owner}
+        onBack={() => setManageOpen(false)}
+        onEditTokenLimit={(holding) => setEditHolding(holding)}
+      />
+    );
+  }
+
   if (!setupReady) {
     const hasDevices = deviceCount > 0;
     return (
@@ -199,7 +210,7 @@ function HomePayTab({ owner }: { owner: string }) {
   }
 
   return (
-    <PayPanel onEditTokenLimit={(holding) => setEditHolding(holding)} />
+    <PayPanel onManage={() => setManageOpen(true)} />
   );
 }
 

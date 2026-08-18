@@ -81,7 +81,7 @@ export function useSolanaAddress(): {
     if (walletAddress && !cleared) return;
 
     setSessionCleared(false);
-    connectWallet({ walletChainType: "solana-only" });
+    void connectWallet();
   }, [embedded, privyReady, walletAddress, cleared, connectWallet]);
 
   const disconnect = useCallback(async () => {

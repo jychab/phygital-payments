@@ -27,9 +27,10 @@ export async function provisionDevicePayKey(args: {
     wallet: args.solanaWallet,
     options: {
       uiOptions: {
-        title: args.rotate ? "Reset Pay" : "Enable Pay",
-        description:
-          "This message turns on Pay for this wallet. It does not move funds.",
+        title: args.rotate ? "Rotate API Key" : "Enable Pay",
+        description: args.rotate
+          ? "This message issues a new Pay key for this wallet. It does not move funds."
+          : "This message turns on Pay for this wallet. It does not move funds.",
       },
     },
   });

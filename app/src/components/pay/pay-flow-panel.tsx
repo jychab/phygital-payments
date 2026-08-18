@@ -7,25 +7,21 @@ import { address } from "@solana/kit";
 import Link from "next/link";
 
 import { AmountField } from "@/components/amount-field";
-import { AmountPresets } from "@/components/amount-presets";
 import { NfcHoldStatus } from "@/components/nfc-hold-status";
 import { TokenSymbol } from "@/components/token-chip";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus } from "@/hooks/use-delegate-status";
 import { useMintProgram } from "@/hooks/use-mint-program";
 import { useVerifiedTokens } from "@/hooks/use-verified-tokens";
-import { unlockPreauthApiKey } from "@/lib/crypto/prf-key-vault";
 import { hasLocalPayKey } from "@/lib/payments/device-setup-state";
 import { isDelegateEnabled, uiAmountToRaw } from "@/lib/payments/mint-delegate";
 import {
-  defaultPayAmountUi,
+  defaultTapAmountUi,
   getDefaultMint,
-  PAY_AMOUNT_PRESETS,
   resolvePaymentToken,
 } from "@/lib/payments/payment-token";
 import {
   cancelPreauthWithVault,
-  copyPayShortcutLink,
   requestPreauthWithVault,
 } from "@/lib/payments/presence-grant-client";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
@@ -62,10 +58,10 @@ export function PayFlowPanel({
   const mintQuery = useMintProgram(mintAddress);
   const verified = useVerifiedTokens();
   const token = resolvePaymentToken(mint, verified.data);
-  const amount = amountDraft ?? defaultPayAmountUi(mint);
   const limitUi = isDelegateEnabled(capQuery.data)
     ? capQuery.data?.delegatedAmountUi
     : null;
+  const amount = amountDraft ?? defaultTapAmountUi(limitUi);
 
   const windowOpen = phase === "window";
   const secondsLeft =
@@ -141,35 +137,6 @@ export function PayFlowPanel({
       await cancelPreauthWithVault({ wallet: owner });
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn't cancel"));
-    }
-  }
-
-  async function onAddToShortcuts() {
-    if (!amount) {
-      toast.error("Choose an amount");
-      return;
-    }
-    try {
-      setBusy(true);
-      await copyPayShortcutLink({ wallet: owner, amountUi: amount, mint });
-      toast.success("Shortcut link copied");
-    } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn't copy link"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onShowPaymentKey() {
-    try {
-      setBusy(true);
-      const key = await unlockPreauthApiKey(owner);
-      await navigator.clipboard.writeText(key);
-      toast.success("Payment key copied");
-    } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn't show payment key"));
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -257,13 +224,6 @@ export function PayFlowPanel({
             disabled={busy}
           />
 
-          <AmountPresets
-            value={amount}
-            onChange={setAmountDraft}
-            presets={PAY_AMOUNT_PRESETS}
-            disabled={busy}
-          />
-
           {limitUi ? (
             <p className="text-center text-[11px] text-muted-foreground">
               Spending limit ${limitUi}
@@ -291,31 +251,9 @@ export function PayFlowPanel({
                 formatPayLabel()
               )}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              className="w-full"
-              onClick={() => void onAddToShortcuts()}
-              disabled={busy || !amount}
-            >
-              Add to Shortcuts
-            </Button>
             {variant === "device" ? (
               <Button type="button" variant="ghost" size="lg" className="w-full" asChild>
                 <Link href="/">Done</Link>
-              </Button>
-            ) : null}
-            {variant === "home" ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground"
-                onClick={() => void onShowPaymentKey()}
-                disabled={busy}
-              >
-                Show Payment Key
               </Button>
             ) : null}
           </>

@@ -1,43 +1,43 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { PrivyClientConfig, PrivyProvider } from "@privy-io/react-auth";
+import { type ReactNode } from "react";
+import { type PrivyClientConfig, PrivyProvider } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
+import { Wallet } from "lucide-react";
 
 import { GateMessage } from "@/components/gate-message";
-import { Wallet } from "lucide-react";
 
 const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "";
 
-/** Stable config — recreate only when connectors singleton is ready. */
-function getPrivyConfig(): PrivyClientConfig {
-  return {
-    appearance: {
-      theme: "dark",
-      walletChainType: "solana-only",
-      showWalletLoginFirst: true,
-      walletList: [
-        "phantom",
-        "solflare",
-        "backpack",
-        "detected_solana_wallets",
-        "wallet_connect_qr_solana",
-      ],
-    },
-    loginMethods: ["wallet"],
-    externalWallets: {
-      solana: { connectors: toSolanaWalletConnectors() },
-    },
-  };
-}
+/**
+ * Create connectors once at module load so wallet-standard detection starts
+ * before the user taps Connect — not on first modal open.
+ */
+const solanaConnectors = toSolanaWalletConnectors();
+
+const privyConfig: PrivyClientConfig = {
+  appearance: {
+    theme: "dark",
+    walletChainType: "solana-only",
+    showWalletLoginFirst: true,
+    walletList: [
+      "phantom",
+      "solflare",
+      "backpack",
+      "detected_solana_wallets",
+    ],
+  },
+  loginMethods: ["wallet"],
+  externalWallets: {
+    solana: { connectors: solanaConnectors },
+  },
+};
 
 /**
  * Wallet routes (`/`, `/setup`, `/device/finish`). Do not wrap `/collect` or `/device`.
  * Loaded via `next/dynamic({ ssr: false })` so `@privy-io/react-auth` never runs on the server.
  */
 export function PrivyWalletProvider({ children }: { children: ReactNode }) {
-  const [config] = useState(() => getPrivyConfig());
-
   if (!privyAppId) {
     return (
       <GateMessage
@@ -50,7 +50,7 @@ export function PrivyWalletProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <PrivyProvider appId={privyAppId} config={config}>
+    <PrivyProvider appId={privyAppId} config={privyConfig}>
       {children}
     </PrivyProvider>
   );

@@ -55,8 +55,13 @@ export function isDefaultMint(mint: string | Address): boolean {
 export const PAY_AMOUNT_PRESETS = ["20", "50", "100"] as const;
 export const DEFAULT_PAY_AMOUNT_UI = "100";
 
-export function defaultPayAmountUi(mint: string | Address): string {
-  return isDefaultMint(mint) ? DEFAULT_PAY_AMOUNT_UI : "";
+/** Default tap / Shortcuts amount: min(spending limit, $100). */
+export function defaultTapAmountUi(limitUi?: string | null): string {
+  const cap = Number(DEFAULT_PAY_AMOUNT_UI);
+  const limit = limitUi != null && limitUi !== "" ? Number(limitUi) : cap;
+  if (!Number.isFinite(limit) || limit <= 0) return DEFAULT_PAY_AMOUNT_UI;
+  const n = Math.min(limit, cap);
+  return Number.isInteger(n) ? String(n) : String(n);
 }
 
 /** Resolve mint metadata from a catalog (USDC / short address fallback). */

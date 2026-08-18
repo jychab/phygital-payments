@@ -235,7 +235,7 @@ export async function collectPreauthVaultUnlock(
 }
 
 /**
- * Face ID unlock → plaintext key (Shortcuts / Show Payment Key only).
+ * Face ID unlock → plaintext key (Shortcuts open URL only).
  */
 export async function unlockPreauthApiKey(wallet: string): Promise<string> {
   const payload = await collectPreauthVaultUnlock(wallet);

@@ -11,7 +11,7 @@ import { TokenListRow, TokenSymbol } from "@/components/token-chip";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus, useDelegateStatuses } from "@/hooks/use-delegate-status";
 import { useMintProgram } from "@/hooks/use-mint-program";
-import { useSetDelegateMutation } from "@/hooks/use-delegate-mutations";
+import { useSetDelegateMutation, useRevokeDelegateMutation } from "@/hooks/use-delegate-mutations";
 import { useTokenHoldings, useVerifiedTokens } from "@/hooks/use-verified-tokens";
 import {
   isDelegateEnabled,
@@ -63,12 +63,16 @@ export function LimitPanel({
     walletAddress === expectedOwner ? walletAddress : null,
     { mint: mintAddress },
   );
+  const revoke = useRevokeDelegateMutation(
+    walletAddress === expectedOwner ? walletAddress : null,
+    { mint: mintAddress },
+  );
 
   const hasDelegate = isDelegateEnabled(status);
   const wrongWallet =
     isConnected && walletAddress != null && walletAddress !== expectedOwner;
   const matched = isConnected && walletAddress === expectedOwner;
-  const busy = setAllowance.isPending || statusQuery.isLoading;
+  const busy = setAllowance.isPending || revoke.isPending || statusQuery.isLoading;
 
   async function runEnable() {
     if (!walletAddress || walletAddress !== expectedOwner) return;
@@ -86,6 +90,17 @@ export function LimitPanel({
       onEnabled?.();
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn’t save spending limit"));
+    }
+  }
+
+  async function runRemove() {
+    if (!walletAddress || walletAddress !== expectedOwner) return;
+    try {
+      await revoke.mutateAsync();
+      toast.success("Spending limit removed");
+      onEnabled?.();
+    } catch (error) {
+      toast.error(toUserErrorMessage(error, "Couldn't remove spending limit"));
     }
   }
 
@@ -189,6 +204,18 @@ export function LimitPanel({
             <Lock className="size-3" strokeWidth={2.25} />
             You&apos;ll confirm in your wallet
           </p>
+        ) : null}
+        {hasDelegate && matched ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="w-full text-muted-foreground hover:text-destructive"
+            onClick={() => void runRemove()}
+            disabled={busy}
+          >
+            {revoke.isPending ? "Removing…" : "Remove spending limit"}
+          </Button>
         ) : null}
         {onSkip ? (
           <Button type="button" variant="ghost" size="lg" className="w-full" onClick={onSkip}>

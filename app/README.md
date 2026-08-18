@@ -86,11 +86,11 @@ After an NFC tap. `/device` has **no Privy / Connect**. Wallet linking is a **su
 - `?intent=limit&owner=` — set spending limit
 - `?intent=verifier&owner=` — **Enable Pay** (sign + Face ID seal)
 
-Pay keys are encrypted with WebAuthn PRF (platform Face ID). **Add to Shortcuts** copies an open URL after Face ID unlock.
+Pay keys are encrypted with WebAuthn PRF (platform Face ID). **Manage Pay → Add to Shortcuts** copies an open URL after Face ID unlock.
 
 ### Open a spending window (API key)
 
-After Enable Pay, use **Add to Shortcuts** or **Show Payment Key** (Face ID unlock). Any client can open a ~45s grant without NFC:
+After Enable Pay, use **Manage Pay → Add to Shortcuts** (Face ID unlock). Any client can open a ~45s grant without NFC:
 
 ```
 GET /api/preauth/open?apiKey=<ppk_…>&amountUi=100
@@ -111,7 +111,7 @@ A **200 from `/open` only means the spending window is open** — not that payme
 
 Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey>`.
 
-Keys in query strings may appear in CDN/proxy logs — use **Rotate API key** in Manage Pay if leaked, and update saved Shortcut URLs.
+Keys in query strings may appear in CDN/proxy logs — use **Rotate API Key** in Manage Pay if leaked, and update saved Shortcut URLs.
 
 ```bash
 curl "https://<host>/api/preauth/open?apiKey=ppk_…&amountUi=100"
@@ -119,7 +119,7 @@ curl "https://<host>/api/preauth/open?apiKey=ppk_…&amountUi=100"
 
 #### Set up iOS Shortcuts
 
-1. Enable Pay on Home or `/device/finish`, then **Add to Shortcuts** (Face ID).
+1. Enable Pay on Home or `/device/finish`, then **Manage Pay → Add to Shortcuts** (Face ID).
 2. Shortcuts → New Shortcut → **Get Contents of URL**.
 3. Method **GET**. URL:
 
@@ -128,13 +128,13 @@ curl "https://<host>/api/preauth/open?apiKey=ppk_…&amountUi=100"
    Optional: use Ask Each Time / Text actions to change `amountUi`, and add `&mint=` for a non-USDC token.
 4. Optional: **Show Notification** when the GET succeeds — **window opened** (e.g. “Hold to Pay”), not that you were charged.
 5. Run the Shortcut → within ~45 seconds hold your NFC device to the merchant Collect phone.
-6. After **Reset Pay on This Phone**, update the Shortcut URL.
+6. After **Rotate API Key**, update the Shortcut URL.
 
 #### Set up Android (Tasker or similar)
 
 Android has no single first-party Shortcuts equivalent; use an HTTP automation app (e.g. **Tasker**):
 
-1. Enable Pay once via NFC → **Manage Pay** → **Copy API key** / **Copy open URL**.
+1. Enable Pay, then **Manage Pay → Add to Shortcuts** (Face ID) to copy the open URL.
 2. New task → **HTTP Request** (or Net → HTTP Get).
 3. Method **GET**, URL:
 

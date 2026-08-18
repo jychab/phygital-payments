@@ -10,7 +10,7 @@ import { LimitPanel } from "@/components/pay/pay-limit-panel";
 import { AllowVerifierPanel } from "@/components/pay/allow-verifier-panel";
 import { Button } from "@/components/ui/button";
 import { usePaySetupSnapshot } from "@/hooks/use-pay-setup-snapshot";
-import { getDefaultMint, DEFAULT_PAY_AMOUNT_UI } from "@/lib/payments/payment-token";
+import { getDefaultMint, defaultTapAmountUi } from "@/lib/payments/payment-token";
 import { copyPayShortcutLink } from "@/lib/payments/presence-grant-client";
 import { toUserErrorMessage } from "@/lib/payments/user-errors";
 import { queryKeys } from "@/lib/queries";
@@ -70,21 +70,23 @@ export function DeviceFinishSetup({
     );
   }
 
-  return <SetupComplete owner={owner} onDismiss={onDismiss} />;
+  return <SetupComplete owner={owner} limitUi={snap.limitUi} onDismiss={onDismiss} />;
 }
 
 function SetupComplete({
   owner,
+  limitUi,
   onDismiss,
 }: {
   owner: string;
+  limitUi: string | null;
   onDismiss?: () => void;
 }) {
   async function onAddToShortcuts() {
     try {
       await copyPayShortcutLink({
         wallet: owner,
-        amountUi: DEFAULT_PAY_AMOUNT_UI,
+        amountUi: defaultTapAmountUi(limitUi),
       });
       toast.success("Shortcut link copied");
     } catch (error) {
