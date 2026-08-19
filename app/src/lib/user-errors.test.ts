@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { toUserErrorMessage, toUserFacingError } from "./user-errors";
+import {
+  toUserErrorMessage,
+  toUserFacingBody,
+  toUserFacingError,
+} from "./user-errors";
 
 describe("toUserFacingError", () => {
   it("tells the collector when Pay is not enabled", () => {
@@ -72,5 +76,31 @@ describe("toUserErrorMessage", () => {
     expect(
       toUserErrorMessage(new Error("Error: insufficient funds")),
     ).toBe("Not Enough Money");
+  });
+});
+
+describe("toUserFacingBody", () => {
+  it("folds rate-limit copy into one Shortcuts line", () => {
+    expect(
+      toUserFacingBody(new Error("Preauth rate limited — try again in a moment")),
+    ).toBe("Try Again Shortly. Too many attempts. Wait a moment and try again.");
+  });
+
+  it("folds an invalid API key into one Shortcuts line", () => {
+    expect(toUserFacingBody("Invalid or revoked API key")).toBe(
+      "Invalid API Key. Check the key and try again.",
+    );
+  });
+
+  it("folds a missing grant into one Shortcuts line", () => {
+    expect(toUserFacingBody("Preauth grant not found")).toBe(
+      "Payment Not Found. Tap Pay again to continue.",
+    );
+  });
+
+  it("folds a missing apiKey query into one Shortcuts line", () => {
+    expect(toUserFacingBody("Query param apiKey is required")).toBe(
+      "Pay Isn’t Set Up. Turn on Pay on this phone first.",
+    );
   });
 });

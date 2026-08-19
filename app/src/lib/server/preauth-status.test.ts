@@ -62,6 +62,16 @@ describe("resolvePreauthStatus", () => {
     });
   });
 
+  it("returns replaced when a newer payment window takes over", () => {
+    expect(
+      resolvePreauthStatus(grant({ closedReason: "replaced" })),
+    ).toEqual({
+      status: "replaced",
+      grantId: "grant-a",
+      body: "Replaced. A new payment started.",
+    });
+  });
+
   it("returns pending until the waiter deadline", () => {
     expect(resolvePreauthStatus(grant())).toBe("pending");
   });
@@ -105,22 +115,25 @@ describe("expiredPreauthStatus", () => {
 describe("openedPreauthCopy", () => {
   it("matches the Hold to Pay window for the default TTL", () => {
     expect(openedPreauthCopy(PREAUTH_TTL_SECONDS)).toEqual({
-      body: "Hold to Pay. 2 minutes remaining",
+      body: "Tap to Pay. 2 minutes remaining",
     });
   });
 
   it("singularizes a one-minute window", () => {
     expect(openedPreauthCopy(60)).toEqual({
-      body: "Hold to Pay. 1 minute remaining",
+      body: "Tap to Pay. 1 minute remaining",
     });
   });
 });
 
 describe("remainingWaitMs", () => {
-  it("is zero for success and cancelled", () => {
+  it("is zero for success, cancelled, and replaced", () => {
     expect(remainingWaitMs(grant({ payment }), 1_000_000)).toBe(0);
     expect(
       remainingWaitMs(grant({ closedReason: "cancelled" }), 1_000_000),
+    ).toBe(0);
+    expect(
+      remainingWaitMs(grant({ closedReason: "replaced" }), 1_000_000),
     ).toBe(0);
   });
 
@@ -143,11 +156,18 @@ describe("remainingWaitMs", () => {
 });
 
 describe("closeGrantForReplacement", () => {
-  it("cancels an unpaid current grant", () => {
+  it("marks an unpaid current grant as replaced", () => {
     const current = grant();
     expect(closeGrantForReplacement(current, 1_050)).toBe(true);
-    expect(current.closedReason).toBe("cancelled");
+    expect(current.closedReason).toBe("replaced");
     expect(current.consumedAt).toBe(1_050);
+  });
+
+  it("does not overwrite an explicit cancel", () => {
+    const current = grant({ closedReason: "cancelled", consumedAt: 1_040 });
+    expect(closeGrantForReplacement(current, 1_050)).toBe(false);
+    expect(current.closedReason).toBe("cancelled");
+    expect(current.consumedAt).toBe(1_040);
   });
 
   it("leaves a stamped payment as success", () => {
@@ -172,6 +192,9 @@ describe("shouldStampPayment", () => {
     expect(
       shouldStampPayment(grant({ closedReason: "cancelled" }), 1_060),
     ).toBe(false);
+    expect(
+      shouldStampPayment(grant({ closedReason: "replaced" }), 1_060),
+    ).toBe(false);
     expect(shouldStampPayment(grant({ payment }), 1_060)).toBe(false);
     expect(shouldStampPayment(undefined, 1_060)).toBe(false);
   });
@@ -189,6 +212,7 @@ describe("grant ring", () => {
 
   it("hides cancelled and expired grants from claim/cancel", () => {
     expect(currentActiveGrant([grant({ closedReason: "cancelled" })], 1_010)).toBeNull();
+    expect(currentActiveGrant([grant({ closedReason: "replaced" })], 1_010)).toBeNull();
     expect(currentActiveGrant([grant({ expiresAt: 1_000 })], 1_001)).toBeNull();
     expect(currentActiveGrant([grant()], 1_010)?.id).toBe("grant-a");
   });

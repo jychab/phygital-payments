@@ -130,7 +130,7 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
   }
 
   /**
-   * Block until this grant is cancelled, expired, or webhook-stamped.
+   * Block until this grant is cancelled, replaced, expired, or webhook-stamped.
    * Uses scheduler.wait so cancel / open / recordPayment can run concurrently.
    */
   async status(args: {

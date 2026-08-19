@@ -23,7 +23,7 @@ export type StoredGrant = {
   consumedAt: number | null;
   claimedAt: number | null;
   claimedBy: string | null;
-  closedReason: "cancelled" | null;
+  closedReason: "cancelled" | "replaced" | null;
   payment: GrantPayment | null;
 };
 
@@ -35,6 +35,7 @@ export type PreauthStatusCopy = {
 export type PreauthStatusResult = PreauthStatusCopy &
   (
     | { status: "cancelled"; grantId: string }
+    | { status: "replaced"; grantId: string }
     | { status: "expired"; grantId: string }
     | {
         status: "success";
@@ -98,6 +99,14 @@ export function cancelledPreauthStatus(grantId: string): PreauthStatusResult {
   };
 }
 
+export function replacedPreauthStatus(grantId: string): PreauthStatusResult {
+  return {
+    status: "replaced",
+    grantId,
+    body: "Replaced. A new payment started.",
+  };
+}
+
 export function expiredPreauthStatus(grantId: string): PreauthStatusResult {
   return {
     status: "expired",
@@ -145,8 +154,8 @@ export function closeGrantForReplacement(
   now: number,
 ): boolean {
   if (grant.payment) return false;
-  if (grant.closedReason === "cancelled") return false;
-  grant.closedReason = "cancelled";
+  if (grant.closedReason != null) return false;
+  grant.closedReason = "replaced";
   grant.consumedAt = now;
   return true;
 }
@@ -210,16 +219,20 @@ export function resolvePreauthStatus(
   if (grant.closedReason === "cancelled") {
     return cancelledPreauthStatus(grant.id);
   }
+  if (grant.closedReason === "replaced") {
+    return replacedPreauthStatus(grant.id);
+  }
   return "pending";
 }
 
 /**
  * Remaining wall-clock wait. Zero means return a terminal status now
- * (`success` / `cancelled` from {@link resolvePreauthStatus}, else `expired`).
- * Grace applies only when the grant was claimed (submit started).
+ * (`success` / `cancelled` / `replaced` from {@link resolvePreauthStatus},
+ * else `expired`). Grace applies only when the grant was claimed (submit
+ * started).
  */
 export function remainingWaitMs(grant: StoredGrant, nowMs: number): number {
-  if (grant.payment || grant.closedReason === "cancelled") return 0;
+  if (grant.payment || grant.closedReason != null) return 0;
   const graceMs =
     grant.claimedAt != null ? PREAUTH_WEBHOOK_GRACE_SECONDS * 1000 : 0;
   return Math.max(0, grant.expiresAt * 1000 + graceMs - nowMs);

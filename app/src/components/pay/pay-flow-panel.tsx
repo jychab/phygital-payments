@@ -24,7 +24,13 @@ import { resolvePaymentToken } from "@/lib/tokens/payment-token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { shortAddress } from "@/lib/utils";
 
-type Phase = "idle" | "window" | "expired" | "cancelled" | "success";
+type Phase =
+  | "idle"
+  | "window"
+  | "expired"
+  | "cancelled"
+  | "replaced"
+  | "success";
 
 function formatCountdown(seconds: number): string {
   const s = Math.max(0, seconds);
@@ -41,7 +47,7 @@ function isAbortError(error: unknown): boolean {
 
 /**
  * Pay → Hold to Pay. Opens a spending window, then waits on `/api/preauth/status`
- * for cancelled, expired, or webhook success. Mint and amount are chosen by
+ * for cancelled, replaced, expired, or webhook success. Mint and amount are chosen by
  * Collect and capped on-chain by the token's spending limit.
  */
 export function PayFlowPanel({
@@ -103,7 +109,7 @@ export function PayFlowPanel({
           return;
         }
         setPaid(null);
-        setPhase(result.status === "cancelled" ? "cancelled" : "expired");
+        setPhase(result.status);
       })
       .catch((error) => {
         if (isAbortError(error) || ac.signal.aborted) return;
@@ -198,8 +204,19 @@ export function PayFlowPanel({
     );
   }
 
-  if (phase === "expired" || phase === "cancelled") {
-    const cancelled = phase === "cancelled";
+  if (phase === "expired" || phase === "cancelled" || phase === "replaced") {
+    const heading =
+      phase === "cancelled"
+        ? "Cancelled"
+        : phase === "replaced"
+          ? "Replaced"
+          : "Time Expired";
+    const detail =
+      phase === "cancelled"
+        ? "Nothing was charged."
+        : phase === "replaced"
+          ? "A new payment started."
+          : "Tap Pay again to continue.";
     return (
       <div className="flex flex-1 flex-col gap-5">
         {onBack ? <BackLink onClick={onBack} /> : null}
@@ -208,14 +225,8 @@ export function PayFlowPanel({
             <X className="size-6" strokeWidth={2} />
           </div>
           <div className="max-w-60 space-y-1.5">
-            <p className="text-base font-medium text-foreground">
-              {cancelled ? "Cancelled" : "Time Expired"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {cancelled
-                ? "Nothing was charged."
-                : "Tap Pay again to continue."}
-            </p>
+            <p className="text-base font-medium text-foreground">{heading}</p>
+            <p className="text-sm text-muted-foreground">{detail}</p>
           </div>
           <Button
             type="button"

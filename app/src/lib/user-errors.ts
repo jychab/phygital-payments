@@ -97,9 +97,14 @@ const RULES: Rule[] = [
     body: "Check the key and try again.",
   },
   {
-    test: /missing preauth api key|enable Pay on this device|Pay isn't set up on this phone/i,
+    test: /query param apikey is required|missing preauth api key|enable Pay on this device|Pay isn't set up on this phone/i,
     title: "Pay Isn’t Set Up",
     body: "Turn on Pay on this phone first.",
+  },
+  {
+    test: /query param grantid is required|preauth grant not found/i,
+    title: "Payment Not Found",
+    body: "Tap Pay again to continue.",
   },
   {
     test: /user rejected|rejected the request|transaction cancelled|signing was cancelled/i,
@@ -107,7 +112,7 @@ const RULES: Rule[] = [
     body: "Nothing was charged.",
   },
   {
-    test: /sponsored submit is not configured|fee-free|fee_payer|fee payer/i,
+    test: /sponsored submit is not configured|fee-free|fee_payer|fee payer|PAY_HMAC_SECRET|PREAUTH_GRANTS Durable Object/i,
     title: "Payments Unavailable",
     body: "Payments aren’t available right now. Try again later.",
   },
@@ -284,4 +289,20 @@ export function toUserErrorMessage(
 
   if (raw !== fallback) logPaymentError("sanitized", error);
   return fallback;
+}
+
+/** Single Shortcuts / notification line: title folded into body. */
+export function toUserFacingBody(
+  error: unknown,
+  fallback: UserFacingError | string = FALLBACK_BODY,
+): string {
+  const facing = toUserFacingError(error, fallback);
+  if (
+    facing.body === facing.title ||
+    facing.body.startsWith(`${facing.title}.`) ||
+    facing.body.startsWith(`${facing.title} `)
+  ) {
+    return facing.body;
+  }
+  return `${facing.title}. ${facing.body}`;
 }

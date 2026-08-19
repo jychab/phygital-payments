@@ -2,40 +2,53 @@ import "server-only";
 
 import { resolvePaymentToken } from "@/lib/tokens/payment-token";
 import { fetchVerifiedTokens } from "@/lib/server/verified-tokens";
+import { toUserFacingBody } from "@/lib/user-errors";
 import {
   successPreauthCopy,
   type PreauthStatusResult,
 } from "../../../shared/preauth-status";
 
+function jsonResponse(
+  payload: unknown,
+  status: number,
+  headers: Headers,
+): Response {
+  return new Response(JSON.stringify(payload), { status, headers });
+}
+
 /**
- * Overlay catalog decimals/symbol onto a terminal success status so Shortcuts
- * notifications don't assume USDC. Cancelled / expired copy is already final.
+ * Overlay Shortcuts `body` on every preauth status payload.
+ * Success uses catalog decimals/symbol; errors use user-facing copy.
  */
 export async function withMintDisplayCopy(res: Response): Promise<Response> {
-  if (res.status !== 200) return res;
+  const payload = (await res.json()) as Record<string, unknown>;
 
-  const result = (await res.json()) as PreauthStatusResult;
+  if (res.status !== 200) {
+    const error =
+      typeof payload.error === "string"
+        ? payload.error
+        : "Something went wrong. Try again.";
+    return jsonResponse(
+      { ...payload, body: toUserFacingBody(error) },
+      res.status,
+      res.headers,
+    );
+  }
+
+  const result = payload as unknown as PreauthStatusResult;
   if (result.status !== "success") {
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: res.headers,
-    });
+    return jsonResponse(result, 200, res.headers);
   }
 
   try {
     const catalog = await fetchVerifiedTokens();
     const token = resolvePaymentToken(result.mint, catalog);
-    return new Response(
-      JSON.stringify({
-        ...result,
-        ...successPreauthCopy(result, token),
-      }),
-      { status: 200, headers: res.headers },
+    return jsonResponse(
+      { ...result, ...successPreauthCopy(result, token) },
+      200,
+      res.headers,
     );
   } catch {
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: res.headers,
-    });
+    return jsonResponse(result, 200, res.headers);
   }
 }
