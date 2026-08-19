@@ -1,6 +1,7 @@
 /** Client helpers for the payer-side preauth spending window. */
 
 import { API_KEY_NOT_SET_UP, readApiKey } from "@/lib/pay/api-key-store";
+import { queryFetch } from "@/lib/queries/http";
 
 export type PreauthResponse = {
   expiresAt: number;
@@ -20,9 +21,8 @@ export async function requestPreauthForWallet(args: {
   const params = new URLSearchParams();
   params.set("apiKey", storedApiKey(args.wallet));
 
-  const res = await fetch(`/api/preauth/open?${params.toString()}`, {
+  const res = await queryFetch(`/api/preauth/open?${params.toString()}`, {
     method: "GET",
-    cache: "no-store",
   });
   const body = (await res.json()) as PreauthResponse & { error?: string };
   if (!res.ok) {
@@ -34,7 +34,7 @@ export async function requestPreauthForWallet(args: {
 export async function cancelPreauthForWallet(args: {
   wallet: string;
 }): Promise<void> {
-  const res = await fetch("/api/preauth", {
+  const res = await queryFetch("/api/preauth", {
     method: "DELETE",
     headers: { Authorization: `Bearer ${storedApiKey(args.wallet)}` },
   });

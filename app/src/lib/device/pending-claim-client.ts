@@ -1,3 +1,4 @@
+import { queryFetch } from "@/lib/queries/http";
 import type {
   CreatePendingClaimResponse,
   PendingClaimRecord,
@@ -16,7 +17,7 @@ async function readJson<T>(res: Response, fallback: string): Promise<T> {
 export async function createPendingClaim(
   body: Omit<PendingClaimRecord, "createdAtMs">,
 ): Promise<CreatePendingClaimResponse> {
-  const res = await fetch("/api/claim/pending", {
+  const res = await queryFetch("/api/claim/pending", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -27,14 +28,14 @@ export async function createPendingClaim(
 export async function fetchPendingClaim(
   token: string,
 ): Promise<PendingClaimView> {
-  const res = await fetch(
+  const res = await queryFetch(
     `/api/claim/pending?token=${encodeURIComponent(token)}`,
   );
   return readJson<PendingClaimView>(res, "Couldn’t load your tap proof.");
 }
 
 export async function consumePendingClaim(token: string): Promise<void> {
-  const res = await fetch(
+  const res = await queryFetch(
     `/api/claim/pending?token=${encodeURIComponent(token)}`,
     { method: "DELETE" },
   );

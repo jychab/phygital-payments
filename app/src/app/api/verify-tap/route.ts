@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { QUERY_NO_STORE } from "@/lib/queries/http";
 import {
   evaluateCounter,
   TAP_SESSION_TTL_MS,
@@ -10,6 +11,10 @@ import {
 } from "@/lib/device/tap/counter-store";
 import { verifyDynamicUrlWithoutCounterCheck } from "@/lib/device/tap/verify-dynamic-url";
 import { toUserErrorMessage } from "@/lib/user-errors";
+
+function json(body: unknown, status = 200) {
+  return NextResponse.json(body, { status, headers: QUERY_NO_STORE });
+}
 
 /**
  * Verify an NFC dynamic-URL tap (`pk`/`s`/`c`/`n`) for Enable Pay.
@@ -23,9 +28,9 @@ export async function GET(req: Request) {
   try {
     const params = new URL(req.url).searchParams;
     if (!["pk", "s", "c", "n"].every((k) => params.get(k))) {
-      return NextResponse.json(
+      return json(
         { isVerified: false, error: "Missing tap parameters" },
-        { status: 400 },
+        400,
       );
     }
 
@@ -33,10 +38,7 @@ export async function GET(req: Request) {
       verifyDynamicUrlWithoutCounterCheck(params);
 
     if (!isVerified) {
-      return NextResponse.json(
-        { isVerified: false, error: "Invalid signature" },
-        { status: 400 },
-      );
+      return json({ isVerified: false, error: "Invalid signature" }, 400);
     }
 
     const now = Date.now();
@@ -44,12 +46,12 @@ export async function GET(req: Request) {
     const verdict = evaluateCounter(state, counter, now, TAP_SESSION_TTL_MS);
 
     if (verdict === "replay") {
-      return NextResponse.json(
+      return json(
         {
           isVerified: false,
           error: "This tap was already used. Tap your NFC device again to continue.",
         },
-        { status: 409 },
+        409,
       );
     }
 
@@ -57,14 +59,14 @@ export async function GET(req: Request) {
       await writeCounterSession(secp256r1PublicKey, { c: counter, t: now });
     }
 
-    return NextResponse.json({
+    return json({
       isVerified: true,
       secp256r1PublicKey,
       counter,
       reentry: verdict === "reentry",
     });
   } catch (err) {
-    return NextResponse.json(
+    return json(
       {
         isVerified: false,
         error: toUserErrorMessage(
@@ -72,7 +74,7 @@ export async function GET(req: Request) {
           "Hold flat against the back of your phone and try again.",
         ),
       },
-      { status: 400 },
+      400,
     );
   }
 }

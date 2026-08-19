@@ -1,3 +1,4 @@
+import { queryFetch } from "@/lib/queries/http";
 import type {
   SubmitTransferRequest,
   TransferJob,
@@ -59,7 +60,7 @@ async function submitAndWaitOnce(args: {
   body: unknown;
   label: string;
 }): Promise<{ signature: string; job: SponsoredJob }> {
-  const res = await fetch(args.submitUrl, {
+  const res = await queryFetch(args.submitUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(args.body),
@@ -119,7 +120,7 @@ async function pollJob(jobUrl: string, label: string): Promise<SponsoredJob> {
 
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(jobUrl);
+      const res = await queryFetch(jobUrl);
       const data = (await res.json()) as { job?: SponsoredJob; error?: string };
       if (!res.ok || !data.job) {
         throw statusError(

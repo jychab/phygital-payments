@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { QUERY_NO_STORE } from "@/lib/queries/http";
 import { tryParseAddress } from "@/lib/solana/address";
 import {
   isApiKeyAuthError,
   requireLiveApiKey,
 } from "@/lib/server/preauth-grants-do";
 import { getErrorMessage } from "@/lib/utils";
-
-const NO_STORE = { "Cache-Control": "no-store" } as const;
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,13 +20,13 @@ export async function POST(req: NextRequest) {
     if (!apiKey || !owner) {
       return NextResponse.json(
         { error: "apiKey and owner are required" },
-        { status: 400, headers: NO_STORE },
+        { status: 400, headers: QUERY_NO_STORE },
       );
     }
     if (!tryParseAddress(owner)) {
       return NextResponse.json(
         { error: "owner must be a valid Solana address" },
-        { status: 400, headers: NO_STORE },
+        { status: 400, headers: QUERY_NO_STORE },
       );
     }
 
@@ -35,13 +34,13 @@ export async function POST(req: NextRequest) {
     if (parsed.wallet !== owner) {
       return NextResponse.json(
         { error: "This API key is for a different wallet" },
-        { status: 403, headers: NO_STORE },
+        { status: 403, headers: QUERY_NO_STORE },
       );
     }
 
     return NextResponse.json(
       { ok: true, wallet: parsed.wallet },
-      { headers: NO_STORE },
+      { headers: QUERY_NO_STORE },
     );
   } catch (error) {
     const message = getErrorMessage(error, "Internal error");
@@ -49,7 +48,7 @@ export async function POST(req: NextRequest) {
       { error: message },
       {
         status: isApiKeyAuthError(message) ? 401 : 500,
-        headers: NO_STORE,
+        headers: QUERY_NO_STORE,
       },
     );
   }

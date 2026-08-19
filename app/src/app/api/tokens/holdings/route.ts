@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { QUERY_NO_STORE } from "@/lib/queries/http";
 import { tryParseAddress } from "@/lib/solana/address";
 import { fetchVerifiedHoldings } from "@/lib/server/token-holdings";
 
@@ -18,14 +19,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const holdings = await fetchVerifiedHoldings(owner);
-    return NextResponse.json(
-      { holdings },
-      {
-        headers: {
-          "Cache-Control": "private, no-store",
-        },
-      },
-    );
+    return NextResponse.json({ holdings }, { headers: QUERY_NO_STORE });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to load holdings";

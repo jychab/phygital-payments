@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { queryKeys, queryOptions } from "@/lib/queries";
+import { queryFetch } from "@/lib/queries/http";
 
 export type TapVerifyStatus = "pending" | "verified" | "failed";
 
@@ -22,7 +23,7 @@ async function fetchTapVerification(
     throw new Error("Missing tap parameters");
   }
 
-  const res = await fetch(`/api/verify-tap?${params.toString()}`);
+  const res = await queryFetch(`/api/verify-tap?${params.toString()}`);
   const body = (await res.json().catch(() => ({}))) as {
     isVerified?: boolean;
     secp256r1PublicKey?: string;

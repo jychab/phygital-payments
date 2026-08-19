@@ -1,6 +1,10 @@
 /**
  * React Query keys, fetchers, and staleTime presets.
  *
+ * Browser HTTP always goes through `queryFetch` (`cache: "no-store"`).
+ * React Query is the only client cache; API GET routes send
+ * `Cache-Control: private, no-store`.
+ *
  * Domain code lives next to the matching UI folder:
  *   lib/pay + hooks/pay         Enable Pay, API keys, Hold to Pay, limits
  *   lib/collect + hooks/collect `/collect` receive + `/setup` ATA
@@ -38,6 +42,9 @@ import {
   type PaymentTokenHolding,
   type PayTokenContext,
 } from "@/lib/tokens/verified-tokens-client";
+
+export { queryFetch } from "./http";
+
 // ============================================================================
 // Query keys
 // ============================================================================
@@ -176,7 +183,7 @@ export const queryOptions = {
   },
   /** Changes after user actions; mutations already invalidate. */
   default: { refetchOnWindowFocus: false, staleTime: 5 * MINUTE },
-  /** Catalog — rarely changes between deploys. */
+  /** Catalog / rarely changing metadata. */
   stable: { refetchOnWindowFocus: false, staleTime: 15 * MINUTE },
   /** One-shot proofs / immutable chain metadata — never refetch. */
   immutable: { refetchOnWindowFocus: false, staleTime: Infinity },

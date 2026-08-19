@@ -2,6 +2,7 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 
+import { QUERY_NO_STORE } from "@/lib/queries/http";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { getErrorMessage } from "@/lib/utils";
 import {
@@ -11,8 +12,6 @@ import {
 } from "@/lib/server/preauth-grants-do";
 import { INVALID_API_KEY, parseApiKey } from "../../../worker/api-key-hmac";
 
-const NO_STORE = { "Cache-Control": "no-store" } as const;
-
 /** GET /api/preauth/open — HMAC-parse key, open a spending window on the DO. */
 export async function openPreauthGrant(params: {
   apiKey: string;
@@ -21,7 +20,7 @@ export async function openPreauthGrant(params: {
   if (!apiKey) {
     return NextResponse.json(
       { error: "Query param apiKey is required" },
-      { status: 400, headers: NO_STORE },
+      { status: 400, headers: QUERY_NO_STORE },
     );
   }
 
@@ -30,7 +29,7 @@ export async function openPreauthGrant(params: {
     if (!parsed) {
       return NextResponse.json(
         { error: INVALID_API_KEY },
-        { status: 401, headers: NO_STORE },
+        { status: 401, headers: QUERY_NO_STORE },
       );
     }
 
@@ -44,20 +43,20 @@ export async function openPreauthGrant(params: {
         grantId: grant.id,
         wallet: parsed.wallet,
       },
-      { headers: NO_STORE },
+      { headers: QUERY_NO_STORE },
     );
   } catch (error) {
     const message = getErrorMessage(error, "Internal error");
     if (isApiKeyAuthError(message)) {
       return NextResponse.json(
         { error: message },
-        { status: 401, headers: NO_STORE },
+        { status: 401, headers: QUERY_NO_STORE },
       );
     }
     const status = message.includes("rate limited") ? 429 : 500;
     return NextResponse.json(
       { error: toUserErrorMessage(error, message) },
-      { status, headers: NO_STORE },
+      { status, headers: QUERY_NO_STORE },
     );
   }
 }

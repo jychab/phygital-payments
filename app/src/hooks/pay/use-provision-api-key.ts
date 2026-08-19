@@ -8,6 +8,7 @@ import {
 import { bytesToBase64 } from "@/lib/crypto/base64";
 import { verifyStoredApiKey } from "@/lib/pay/api-key-client";
 import { storeApiKey } from "@/lib/pay/api-key-store";
+import { queryFetch } from "@/lib/queries/http";
 
 type ProvisionArgs = {
   wallet: string;
@@ -31,7 +32,7 @@ async function provisionApiKey(args: ProvisionArgs): Promise<string> {
     },
   });
 
-  const res = await fetch("/api/preauth/provision", {
+  const res = await queryFetch("/api/preauth/provision", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

@@ -14,7 +14,7 @@ import {
 import { queryOptions } from "@/lib/queries";
 
 /**
- * Shared by all routes: React Query (localStorage-persisted) + toasts.
+ * Shared by all routes: React Query (localStorage-persisted, only browser cache) + toasts.
  * No Privy / WalletConnect — those live in `privy-wallet-provider.tsx` and are
  * loaded client-only from the `(wallet)` layout.
  */

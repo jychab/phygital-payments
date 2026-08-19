@@ -3,6 +3,7 @@ import {
   readApiKey,
   storeApiKey,
 } from "@/lib/pay/api-key-store";
+import { queryFetch } from "@/lib/queries/http";
 
 export async function verifyApiKey(
   wallet: string,
@@ -12,7 +13,7 @@ export async function verifyApiKey(
   if (!trimmed) {
     throw new Error("Paste an API key first.");
   }
-  const res = await fetch("/api/preauth/verify", {
+  const res = await queryFetch("/api/preauth/verify", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ apiKey: trimmed, owner: wallet }),

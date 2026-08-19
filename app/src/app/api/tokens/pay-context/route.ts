@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { QUERY_NO_STORE } from "@/lib/queries/http";
 import { tryParseAddress } from "@/lib/solana/address";
 import { fetchPayTokenContext } from "@/lib/server/token-holdings";
-
-const CACHE = {
-  "Cache-Control": "private, no-store",
-} as const;
 
 /**
  * GET /api/tokens/pay-context?owner=
@@ -23,7 +20,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const { tokens, holdings } = await fetchPayTokenContext(String(owner));
-    return NextResponse.json({ tokens, holdings }, { headers: CACHE });
+    return NextResponse.json({ tokens, holdings }, { headers: QUERY_NO_STORE });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to load pay context";

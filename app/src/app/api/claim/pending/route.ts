@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { QUERY_NO_STORE } from "@/lib/queries/http";
 import {
   consumePendingClaim,
   readPendingClaim,
@@ -65,7 +66,10 @@ export async function GET(req: Request) {
   try {
     const token = tokenFromRequest(req);
     if (!token) {
-      return NextResponse.json({ error: "Missing token" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing token" },
+        { status: 400, headers: QUERY_NO_STORE },
+      );
     }
 
     const record = await readPendingClaim(token);
@@ -75,11 +79,11 @@ export async function GET(req: Request) {
           error:
             "This tap proof expired or was already used. Tap your NFC device again in Safari or Chrome.",
         },
-        { status: 410 },
+        { status: 410, headers: QUERY_NO_STORE },
       );
     }
 
-    return NextResponse.json(record);
+    return NextResponse.json(record, { headers: QUERY_NO_STORE });
   } catch (err) {
     return NextResponse.json(
       {
@@ -88,7 +92,7 @@ export async function GET(req: Request) {
           "Couldn’t load your tap proof. Try again.",
         ),
       },
-      { status: 500 },
+      { status: 500, headers: QUERY_NO_STORE },
     );
   }
 }

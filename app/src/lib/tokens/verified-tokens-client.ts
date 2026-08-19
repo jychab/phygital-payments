@@ -1,5 +1,6 @@
 /** Client helpers for verified token catalog + wallet holdings. */
 
+import { queryFetch } from "@/lib/queries/http";
 import type {
   PaymentToken,
   PaymentTokenHolding,
@@ -19,7 +20,7 @@ async function readJson<T extends { error?: string }>(
 }
 
 export async function fetchVerifiedTokensClient(): Promise<PaymentToken[]> {
-  const res = await fetch("/api/tokens/verified", { cache: "force-cache" });
+  const res = await queryFetch("/api/tokens/verified");
   const body = await readJson<{ tokens?: PaymentToken[]; error?: string }>(
     res,
     "Couldn’t load tokens",
@@ -30,9 +31,8 @@ export async function fetchVerifiedTokensClient(): Promise<PaymentToken[]> {
 export async function fetchHoldingsClient(
   owner: string,
 ): Promise<PaymentTokenHolding[]> {
-  const res = await fetch(
+  const res = await queryFetch(
     `/api/tokens/holdings?owner=${encodeURIComponent(owner)}`,
-    { cache: "no-store" },
   );
   const body = await readJson<{ holdings?: PaymentTokenHolding[]; error?: string }>(
     res,
@@ -50,9 +50,8 @@ export type PayTokenContext = {
 export async function fetchPayContextClient(
   owner: string,
 ): Promise<PayTokenContext> {
-  const res = await fetch(
+  const res = await queryFetch(
     `/api/tokens/pay-context?owner=${encodeURIComponent(owner)}`,
-    { cache: "no-store" },
   );
   const body = await readJson<
     PayTokenContext & { error?: string }

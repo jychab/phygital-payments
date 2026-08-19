@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { QUERY_NO_STORE } from "@/lib/queries/http";
 import {
   ensurePaymentsSchema,
   getPaymentsDb,
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(
       { address, payments },
-      { headers: { "Cache-Control": "private, no-store" } },
+      { headers: QUERY_NO_STORE },
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal error";

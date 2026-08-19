@@ -15,8 +15,9 @@ const STORAGE_KEY = "phygital-pay.react-query";
 /**
  * Bump to drop incompatible cached shapes after schema changes.
  * v2: bigint/Map tagged JSON (v1 `JSON.stringify` threw on bigint and never saved).
+ * v3: React Query is the only browser cache (no HTTP cache); drop stale persist.
  */
-const CACHE_BUSTER = "v2";
+const CACHE_BUSTER = "v3";
 
 export { CACHE_BUSTER };
 

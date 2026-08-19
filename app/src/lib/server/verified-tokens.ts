@@ -65,7 +65,7 @@ async function fetchVerifiedTokensFromNetwork(): Promise<PaymentToken[]> {
   try {
     const res = await fetch(JUPITER_TAG_URL, {
       headers: { "x-api-key": apiKey },
-      cache: "force-cache",
+      cache: "no-store",
     });
     if (!res.ok) {
       console.error("Jupiter verified tag failed", res.status);
@@ -84,8 +84,9 @@ async function fetchVerifiedTokensFromNetwork(): Promise<PaymentToken[]> {
 }
 
 /**
- * Jupiter verified classic-SPL tokens. Isolate-level cache (15 min) shared by
- * `/api/tokens/verified`, `/api/tokens/holdings`, and `/api/tokens/pay-context`.
+ * Jupiter verified classic-SPL tokens. Isolate-level cache (15 min) coalesces
+ * Jupiter calls across `/api/tokens/verified`, `/holdings`, and `/pay-context`.
+ * Browser cache is React Query only — this is not an HTTP cache.
  */
 export async function fetchVerifiedTokens(): Promise<PaymentToken[]> {
   const now = Date.now();

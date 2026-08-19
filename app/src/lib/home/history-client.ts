@@ -3,6 +3,8 @@
  * (see the history route for how it is gated server-side).
  */
 
+import { queryFetch } from "@/lib/queries/http";
+
 export type PaymentRecord = {
   signature: string;
   transferIndex: number;
@@ -32,9 +34,8 @@ export async function fetchPaymentHistory(
     params.set("before", String(opts.beforeBlockTime));
   }
 
-  const res = await fetch(`/api/payments/history?${params.toString()}`, {
+  const res = await queryFetch(`/api/payments/history?${params.toString()}`, {
     credentials: "include",
-    cache: "no-store",
   });
   const data = (await res.json()) as HistoryResponse;
   if (!res.ok) {
