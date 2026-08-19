@@ -1,10 +1,10 @@
 import { getAddressEncoder, getProgramDerivedAddress } from "@solana/kit";
 import { sha256 } from "@noble/hashes/sha2.js";
 export const PROGRAM_AUTHORITY_SEED = new TextEncoder().encode("program_authority");
-export async function findProgramAuthorityPda(owner, programAddress) {
+export async function findProgramAuthorityPda(asset, programAddress) {
     const [pda] = await getProgramDerivedAddress({
         programAddress,
-        seeds: [PROGRAM_AUTHORITY_SEED, getAddressEncoder().encode(owner)],
+        seeds: [PROGRAM_AUTHORITY_SEED, getAddressEncoder().encode(asset)],
     });
     return pda;
 }

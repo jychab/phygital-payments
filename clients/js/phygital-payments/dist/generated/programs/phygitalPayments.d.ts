@@ -2,7 +2,7 @@ import { type Address, type ClientWithRpc, type ClientWithTransactionPlanning, t
 import { type SelfFetchFunctions, type SelfPlanAndSendFunctions } from "@solana/kit/program-client-core";
 import { getConfigCodec, getOwnerVerifierCodec, type Config, type ConfigArgs, type OwnerVerifier, type OwnerVerifierArgs } from "../accounts/index.js";
 import { getAddVerifierInstructionAsync, getClearOwnerVerifierInstructionAsync, getInitializeConfigInstructionAsync, getRemoveVerifierInstructionAsync, getSetOwnerVerifierInstructionAsync, getTransferInstructionAsync, type AddVerifierAsyncInput, type ClearOwnerVerifierAsyncInput, type InitializeConfigAsyncInput, type ParsedAddVerifierInstruction, type ParsedClearOwnerVerifierInstruction, type ParsedInitializeConfigInstruction, type ParsedRemoveVerifierInstruction, type ParsedSetOwnerVerifierInstruction, type ParsedTransferInstruction, type RemoveVerifierAsyncInput, type SetOwnerVerifierAsyncInput, type TransferAsyncInput } from "../instructions/index.js";
-import { findConfigPda, findOwnerVerifierPda } from "../pdas/index.js";
+import { findConfigPda, findOwnerVerifierPda, findProgramAuthorityPda } from "../pdas/index.js";
 export declare const PHYGITAL_PAYMENTS_PROGRAM_ADDRESS: Address<"EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH">;
 export declare enum PhygitalPaymentsAccount {
     Config = 0,
@@ -59,6 +59,7 @@ export type PhygitalPaymentsPluginInstructions = {
 export type PhygitalPaymentsPluginPdas = {
     config: typeof findConfigPda;
     ownerVerifier: typeof findOwnerVerifierPda;
+    programAuthority: typeof findProgramAuthorityPda;
 };
 export type PhygitalPaymentsPluginRequirements = ClientWithRpc<GetAccountInfoApi & GetMultipleAccountsApi> & ClientWithTransactionPlanning & ClientWithTransactionSending;
 export declare function phygitalPaymentsProgram(): <T extends PhygitalPaymentsPluginRequirements>(client: T) => ExtendedClient<T, {

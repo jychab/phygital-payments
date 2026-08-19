@@ -74,7 +74,7 @@ pub struct ExecuteTransfer<'info> {
 
     /// CHECK: PDA that signs as the SPL delegate for the sender token account
     #[account(
-        seeds = [PROGRAM_AUTHORITY_SEED, asset.owner.key().as_ref()],
+        seeds = [PROGRAM_AUTHORITY_SEED, asset.key().as_ref()],
         bump,
     )]
     pub program_authority: UncheckedAccount<'info>,
@@ -125,11 +125,11 @@ pub fn handler(
     )?;
 
     let program_authority_bump = ctx.bumps.program_authority;
-    let owner = ctx.accounts.asset.owner.key();
+    let asset_key = ctx.accounts.asset.key();
     let bump_seed = [program_authority_bump];
     let authority_seeds = [
         PROGRAM_AUTHORITY_SEED,
-        owner.as_ref(),
+        asset_key.as_ref(),
         bump_seed.as_ref(),
     ];
     let signer_seeds: &[&[&[u8]]] = &[&authority_seeds];

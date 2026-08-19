@@ -4,12 +4,12 @@ import { sha256 } from "@noble/hashes/sha2.js";
 export const PROGRAM_AUTHORITY_SEED = new TextEncoder().encode("program_authority");
 
 export async function findProgramAuthorityPda(
-  owner: Address,
+  asset: Address,
   programAddress: Address,
 ): Promise<Address> {
   const [pda] = await getProgramDerivedAddress({
     programAddress,
-    seeds: [PROGRAM_AUTHORITY_SEED, getAddressEncoder().encode(owner)],
+    seeds: [PROGRAM_AUTHORITY_SEED, getAddressEncoder().encode(asset)],
   });
   return pda;
 }

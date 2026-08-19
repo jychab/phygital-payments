@@ -8,15 +8,16 @@ use anchor_lang::prelude::Pubkey;
 fn setup_delegated_payment(
     ctx: &mut TestContext,
     owner: &Keypair,
+    asset: Pubkey,
     recipient: Pubkey,
     amount: u64,
 ) -> (Pubkey, Pubkey, Pubkey) {
-    ctx.fund_program_authority(owner.pubkey());
+    ctx.fund_program_authority(asset);
     let payment_mint = ctx.create_payment_mint();
     let sender_token = ctx.create_token_account(owner.pubkey(), payment_mint);
     let recipient_token = ctx.create_token_account(recipient, payment_mint);
     ctx.mint_tokens(payment_mint, sender_token, amount);
-    ctx.approve_delegate(owner, payment_mint, sender_token, amount, 6);
+    ctx.approve_delegate(owner, asset, payment_mint, sender_token, amount, 6);
     (payment_mint, sender_token, recipient_token)
 }
 
@@ -46,7 +47,7 @@ fn setup_locked_transfer(
         0,
     );
     let (payment_mint, sender_token, recipient_token) =
-        setup_delegated_payment(ctx, &owner, recipient, amount);
+        setup_delegated_payment(ctx, &owner, asset, recipient, amount);
 
     (
         passkey,

@@ -8,15 +8,16 @@ use anchor_lang::prelude::Pubkey;
 fn setup_delegated_payment(
     ctx: &mut TestContext,
     owner: &Keypair,
+    asset: Pubkey,
     recipient: Pubkey,
     amount: u64,
 ) -> (Pubkey, Pubkey, Pubkey) {
-    ctx.fund_program_authority(owner.pubkey());
+    ctx.fund_program_authority(asset);
     let payment_mint = ctx.create_payment_mint();
     let sender_token = ctx.create_token_account(owner.pubkey(), payment_mint);
     let recipient_token = ctx.create_token_account(recipient, payment_mint);
     ctx.mint_tokens(payment_mint, sender_token, amount);
-    ctx.approve_delegate(owner, payment_mint, sender_token, amount, 6);
+    ctx.approve_delegate(owner, asset, payment_mint, sender_token, amount, 6);
     (payment_mint, sender_token, recipient_token)
 }
 
@@ -38,7 +39,7 @@ fn transfer_succeeds_and_moves_tokens() {
         0,
     );
     let (payment_mint, sender_token, recipient_token) =
-        setup_delegated_payment(&mut ctx, &owner, recipient, amount);
+        setup_delegated_payment(&mut ctx, &owner, asset, recipient, amount);
 
     ctx.send_transfer(
         asset,
@@ -76,7 +77,7 @@ fn transfer_rejects_wrong_rp_id() {
         0,
     );
     let (payment_mint, sender_token, recipient_token) =
-        setup_delegated_payment(&mut ctx, &owner, recipient, amount);
+        setup_delegated_payment(&mut ctx, &owner, asset, recipient, amount);
 
     let err = ctx
         .send_transfer_with_rp_id(
@@ -121,7 +122,7 @@ fn transfer_rejects_unlocked_asset() {
         passkey.compressed_pubkey,
     );
     let (payment_mint, sender_token, recipient_token) =
-        setup_delegated_payment(&mut ctx, &owner, recipient, amount);
+        setup_delegated_payment(&mut ctx, &owner, asset, recipient, amount);
 
     let err = ctx
         .send_transfer(
@@ -162,7 +163,7 @@ fn transfer_requires_preceding_secp256r1_instruction() {
         0,
     );
     let (payment_mint, sender_token, recipient_token) =
-        setup_delegated_payment(&mut ctx, &owner, recipient, amount);
+        setup_delegated_payment(&mut ctx, &owner, asset, recipient, amount);
 
     let err = ctx
         .send_transfer(
@@ -208,7 +209,7 @@ fn transfer_rejects_wrong_passkey() {
         0,
     );
     let (payment_mint, sender_token, recipient_token) =
-        setup_delegated_payment(&mut ctx, &owner, recipient, amount);
+        setup_delegated_payment(&mut ctx, &owner, asset, recipient, amount);
 
     let err = ctx
         .send_transfer(

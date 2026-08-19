@@ -43,7 +43,7 @@ export type TransferAsyncInput<TAccountVerifier extends string = string, TAccoun
     asset: Address<TAccountAsset>;
     mint: Address<TAccountMint>;
     recipient: Address<TAccountRecipient>;
-    programAuthority: Address<TAccountProgramAuthority>;
+    programAuthority?: Address<TAccountProgramAuthority>;
     senderTokenAccount: Address<TAccountSenderTokenAccount>;
     recipientTokenAccount: Address<TAccountRecipientTokenAccount>;
     slotHashes?: Address<TAccountSlotHashes>;

@@ -44,9 +44,10 @@ import {
 } from "@solana/kit";
 import {
   getAccountMetaFactory,
+  getAddressFromResolvedInstructionAccount,
   type ResolvedInstructionAccount,
 } from "@solana/kit/program-client-core";
-import { findConfigPda } from "../pdas/index.js";
+import { findConfigPda, findProgramAuthorityPda } from "../pdas/index.js";
 import { PHYGITAL_PAYMENTS_PROGRAM_ADDRESS } from "../programs/index.js";
 
 export const TRANSFER_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([
@@ -210,7 +211,7 @@ export type TransferAsyncInput<
   asset: Address<TAccountAsset>;
   mint: Address<TAccountMint>;
   recipient: Address<TAccountRecipient>;
-  programAuthority: Address<TAccountProgramAuthority>;
+  programAuthority?: Address<TAccountProgramAuthority>;
   senderTokenAccount: Address<TAccountSenderTokenAccount>;
   recipientTokenAccount: Address<TAccountRecipientTokenAccount>;
   slotHashes?: Address<TAccountSlotHashes>;
@@ -320,6 +321,14 @@ export async function getTransferInstructionAsync<
   // Resolve default values.
   if (!accounts.config.value) {
     accounts.config.value = await findConfigPda();
+  }
+  if (!accounts.programAuthority.value) {
+    accounts.programAuthority.value = await findProgramAuthorityPda({
+      asset: getAddressFromResolvedInstructionAccount(
+        "asset",
+        accounts.asset.value,
+      ),
+    });
   }
   if (!accounts.slotHashes.value) {
     accounts.slotHashes.value =

@@ -8,3 +8,4 @@
 
 export * from "./config.js";
 export * from "./ownerVerifier.js";
+export * from "./programAuthority.js";

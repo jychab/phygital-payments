@@ -383,8 +383,7 @@
               },
               {
                 "kind": "account",
-                "path": "asset.owner",
-                "account": "Asset"
+                "path": "asset"
               }
             ]
           }

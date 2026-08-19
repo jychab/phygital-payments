@@ -172,8 +172,8 @@ impl TestContext {
             .unwrap_or_else(|err| panic!("deploy {name}: {err:?}"));
     }
 
-    pub fn program_authority(&self, owner: Pubkey) -> Pubkey {
-        Pubkey::find_program_address(&[PROGRAM_AUTHORITY_SEED, owner.as_ref()], &self.program_id).0
+    pub fn program_authority(&self, asset: Pubkey) -> Pubkey {
+        Pubkey::find_program_address(&[PROGRAM_AUTHORITY_SEED, asset.as_ref()], &self.program_id).0
     }
 
     /// Derive the asset PDA from the compressed secp256r1 passkey public key.
@@ -266,12 +266,13 @@ impl TestContext {
     pub fn approve_delegate(
         &mut self,
         owner: &Keypair,
+        asset: Pubkey,
         mint: Pubkey,
         token_account: Pubkey,
         amount: u64,
         decimals: u8,
     ) {
-        let delegate = self.program_authority(owner.pubkey());
+        let delegate = self.program_authority(asset);
         let ix = approve_checked(
             &TOKEN_2022_ID,
             &token_account,
@@ -286,8 +287,8 @@ impl TestContext {
         Self::send_instruction(&mut self.svm, ix, &[&self.payer, owner]).expect("approve delegate");
     }
 
-    pub fn fund_program_authority(&mut self, owner: Pubkey) {
-        let authority = self.program_authority(owner);
+    pub fn fund_program_authority(&mut self, asset: Pubkey) {
+        let authority = self.program_authority(asset);
         self.svm
             .airdrop(&authority, LAMPORTS_PER_SOL)
             .expect("airdrop program authority");
@@ -396,7 +397,7 @@ impl TestContext {
                 asset,
                 mint,
                 recipient,
-                program_authority: self.program_authority(owner),
+                program_authority: self.program_authority(asset),
                 sender_token_account,
                 recipient_token_account,
                 slot_hashes: SLOT_HASHES_SYSVAR_ID,

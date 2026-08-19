@@ -2,7 +2,7 @@ import { assertIsInstructionWithAccounts, containsBytes, extendClient, fixEncode
 import { addSelfFetchFunctions, addSelfPlanAndSendFunctions, } from "@solana/kit/program-client-core";
 import { getConfigCodec, getOwnerVerifierCodec, } from "../accounts/index.js";
 import { getAddVerifierInstructionAsync, getClearOwnerVerifierInstructionAsync, getInitializeConfigInstructionAsync, getRemoveVerifierInstructionAsync, getSetOwnerVerifierInstructionAsync, getTransferInstructionAsync, parseAddVerifierInstruction, parseClearOwnerVerifierInstruction, parseInitializeConfigInstruction, parseRemoveVerifierInstruction, parseSetOwnerVerifierInstruction, parseTransferInstruction, } from "../instructions/index.js";
-import { findConfigPda, findOwnerVerifierPda } from "../pdas/index.js";
+import { findConfigPda, findOwnerVerifierPda, findProgramAuthorityPda, } from "../pdas/index.js";
 export const PHYGITAL_PAYMENTS_PROGRAM_ADDRESS = "EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH";
 export var PhygitalPaymentsAccount;
 (function (PhygitalPaymentsAccount) {
@@ -118,7 +118,11 @@ export function phygitalPaymentsProgram() {
                     setOwnerVerifier: (input) => addSelfPlanAndSendFunctions(client, getSetOwnerVerifierInstructionAsync(input)),
                     transfer: (input) => addSelfPlanAndSendFunctions(client, getTransferInstructionAsync(input)),
                 },
-                pdas: { config: findConfigPda, ownerVerifier: findOwnerVerifierPda },
+                pdas: {
+                    config: findConfigPda,
+                    ownerVerifier: findOwnerVerifierPda,
+                    programAuthority: findProgramAuthorityPda,
+                },
                 identifyAccount: identifyPhygitalPaymentsAccount,
                 identifyInstruction: identifyPhygitalPaymentsInstruction,
                 parseInstruction: parsePhygitalPaymentsInstruction,

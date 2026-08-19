@@ -67,7 +67,11 @@ import {
   type SetOwnerVerifierAsyncInput,
   type TransferAsyncInput,
 } from "../instructions/index.js";
-import { findConfigPda, findOwnerVerifierPda } from "../pdas/index.js";
+import {
+  findConfigPda,
+  findOwnerVerifierPda,
+  findProgramAuthorityPda,
+} from "../pdas/index.js";
 
 export const PHYGITAL_PAYMENTS_PROGRAM_ADDRESS =
   "EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH" as Address<"EMxvE5xxqXTWwTt391NsULydeT2QyG2UdN45VHpFxeVH">;
@@ -320,6 +324,7 @@ export type PhygitalPaymentsPluginInstructions = {
 export type PhygitalPaymentsPluginPdas = {
   config: typeof findConfigPda;
   ownerVerifier: typeof findOwnerVerifierPda;
+  programAuthority: typeof findProgramAuthorityPda;
 };
 
 export type PhygitalPaymentsPluginRequirements = ClientWithRpc<
@@ -370,7 +375,11 @@ export function phygitalPaymentsProgram() {
               getTransferInstructionAsync(input),
             ),
         },
-        pdas: { config: findConfigPda, ownerVerifier: findOwnerVerifierPda },
+        pdas: {
+          config: findConfigPda,
+          ownerVerifier: findOwnerVerifierPda,
+          programAuthority: findProgramAuthorityPda,
+        },
         identifyAccount: identifyPhygitalPaymentsAccount,
         identifyInstruction: identifyPhygitalPaymentsInstruction,
         parseInstruction: parsePhygitalPaymentsInstruction,

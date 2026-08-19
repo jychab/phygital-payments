@@ -1,6 +1,6 @@
 import { addDecoderSizePrefix, addEncoderSizePrefix, combineCodec, fixDecoderSize, fixEncoderSize, getBytesDecoder, getBytesEncoder, getI64Decoder, getI64Encoder, getStructDecoder, getStructEncoder, getU32Decoder, getU32Encoder, getU64Decoder, getU64Encoder, getU8Decoder, getU8Encoder, SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS, SolanaError, transformEncoder, } from "@solana/kit";
-import { getAccountMetaFactory, } from "@solana/kit/program-client-core";
-import { findConfigPda } from "../pdas/index.js";
+import { getAccountMetaFactory, getAddressFromResolvedInstructionAccount, } from "@solana/kit/program-client-core";
+import { findConfigPda, findProgramAuthorityPda } from "../pdas/index.js";
 import { PHYGITAL_PAYMENTS_PROGRAM_ADDRESS } from "../programs/index.js";
 export const TRANSFER_DISCRIMINATOR = new Uint8Array([
     163, 52, 200, 231, 140, 3, 69, 186,
@@ -73,6 +73,11 @@ export async function getTransferInstructionAsync(input, config) {
     const args = { ...input };
     if (!accounts.config.value) {
         accounts.config.value = await findConfigPda();
+    }
+    if (!accounts.programAuthority.value) {
+        accounts.programAuthority.value = await findProgramAuthorityPda({
+            asset: getAddressFromResolvedInstructionAccount("asset", accounts.asset.value),
+        });
     }
     if (!accounts.slotHashes.value) {
         accounts.slotHashes.value =
