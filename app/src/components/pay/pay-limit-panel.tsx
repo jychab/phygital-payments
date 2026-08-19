@@ -7,7 +7,6 @@ import { Check, ChevronLeft, LoaderCircle } from "lucide-react";
 import { address, type Address } from "@solana/kit";
 
 import { AmountField } from "@/components/shared/amount-field";
-import { AmountPresets } from "@/components/shared/amount-presets";
 import { TokenListRow, TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus, useDelegateStatuses } from "@/hooks/pay/use-delegate-status";
@@ -214,13 +213,7 @@ export function LimitPanel({
         className={showMaxTap ? "py-1" : undefined}
       />
 
-      <AmountPresets
-        value={amount}
-        onChange={setAmount}
-        presets={PAY_AMOUNT_PRESETS}
-        disabled={busy || !matched}
-      />
-
+  
       {showMaxTap ? (
         <>
           <AmountField
@@ -232,12 +225,6 @@ export function LimitPanel({
             disabled={busy || !matched}
             caption="Max tap amount"
             className="py-1"
-          />
-          <AmountPresets
-            value={maxTap}
-            onChange={setMaxTap}
-            presets={PAY_AMOUNT_PRESETS}
-            disabled={busy || !matched}
           />
           {maxTapOverLimit ? (
             <p className="text-center text-[11px] text-destructive">

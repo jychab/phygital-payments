@@ -167,17 +167,7 @@ export function ManagePayPanel({
           onClick={() => setReveal(true)}
           disabled={keyBusy}
         >
-          Reveal API key
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="lg"
-          className="w-full text-muted-foreground"
-          onClick={() => void onRotateKey()}
-          disabled={keyBusy}
-        >
-          Rotate API key
+          Manage API Key
         </Button>
       </div>
     </div>

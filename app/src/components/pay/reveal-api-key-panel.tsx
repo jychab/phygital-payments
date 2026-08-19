@@ -79,26 +79,6 @@ export function RevealApiKeyPanel({
           <Copy className="size-4" />
           Copy
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="w-full"
-          onClick={() => setVisible((v) => !v)}
-          disabled={!apiKey || extraBusy}
-        >
-          {visible ? (
-            <>
-              <EyeOff className="size-4" />
-              Hide
-            </>
-          ) : (
-            <>
-              <Eye className="size-4" />
-              Reveal
-            </>
-          )}
-        </Button>
         {extraAction ? (
           <Button
             type="button"

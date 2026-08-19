@@ -55,7 +55,7 @@ export function DeviceSetupStatus({ asset }: { asset: PhygitalAsset }) {
         owner={owner}
         variant="device"
         onSetLimit={limitHref}
-        onRevealKey={() => setView("reveal")}
+        onManageApiKey={() => setView("reveal")}
         onBack={() => setView("home")}
       />
     );

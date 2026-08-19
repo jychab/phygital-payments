@@ -33,10 +33,9 @@ export function DeviceWalletReady({
   } else {
     if (apiKeyReady && onPay) {
       actions.push({ label: "Pay", onClick: onPay });
-    }
-    if (onAddApiKey) {
+    }else if (!apiKeyReady && onAddApiKey) {
       actions.push({
-        label: apiKeyReady ? "Replace API key" : "Add API key",
+        label: "Add API key",
         onClick: onAddApiKey,
       });
     } else if (!apiKeyReady && onSetUpPay) {

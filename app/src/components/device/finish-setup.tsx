@@ -8,7 +8,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CenteredStatus, SuccessStatus } from "@/components/layout/gate-message";
 import { EnablePayPanel } from "@/components/pay/enable-pay-panel";
 import { LimitPanel } from "@/components/pay/pay-limit-panel";
-import { RevealApiKeyPanel } from "@/components/pay/reveal-api-key-panel";
 import { Button } from "@/components/ui/button";
 import { usePaySetupSnapshot } from "@/hooks/pay/use-pay-setup-snapshot";
 import { markApiKeyVerified } from "@/hooks/pay/use-verified-api-key";
@@ -62,24 +61,14 @@ export function DeviceFinishSetup({
     );
   }
 
-  return <SetupComplete owner={owner} onDismiss={onDismiss} />;
+  return <SetupComplete onDismiss={onDismiss} />;
 }
 
 function SetupComplete({
-  owner,
   onDismiss,
 }: {
-  owner: string;
   onDismiss?: () => void;
 }) {
-  const [reveal, setReveal] = useState(false);
-
-  if (reveal) {
-    return (
-      <RevealApiKeyPanel owner={owner} onBack={() => setReveal(false)} />
-    );
-  }
-
   return (
     <div className="flex flex-1 flex-col gap-5 py-2">
       <SuccessStatus
@@ -88,15 +77,6 @@ function SetupComplete({
         body="Pay from Home or tap this device again."
         bodyClassName="max-w-64"
       />
-      <Button
-        type="button"
-        variant="outline"
-        size="lg"
-        className="w-full"
-        onClick={() => setReveal(true)}
-      >
-        Reveal API key
-      </Button>
       <Button type="button" size="lg" className="w-full" asChild>
         <Link href="/">Done</Link>
       </Button>

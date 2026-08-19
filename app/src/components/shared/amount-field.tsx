@@ -1,6 +1,6 @@
 "use client";
 
-import { TokenIcon } from "@/components/shared/token-chip";
+import { TokenSymbol } from "@/components/shared/token-chip";
 import { Input } from "@/components/ui/input";
 import type { PaymentToken } from "@/lib/tokens/payment-token";
 import { cn } from "@/lib/utils";
@@ -33,8 +33,10 @@ export function AmountField({
 }: AmountFieldProps) {
   const label = token.symbol;
   const fracCap = Math.max(0, Math.min(decimals ?? token.decimals, 18));
+  const chars = Math.max((value || "0").length, 1);
+
   return (
-    <div className={cn("relative flex flex-col items-center gap-1 py-2", className)}>
+    <div className={cn("relative flex flex-col items-center gap-1.5 py-2", className)}>
       {caption ? (
         <label
           htmlFor={id}
@@ -47,7 +49,15 @@ export function AmountField({
           Amount in {label}
         </label>
       )}
-      <div className="flex w-full items-baseline justify-center gap-2">
+      <div
+        className="flex max-w-full cursor-text items-center justify-center gap-2.5"
+        onMouseDown={(e) => {
+          if (e.target instanceof HTMLInputElement) return;
+          e.preventDefault();
+          const el = document.getElementById(id);
+          if (el instanceof HTMLInputElement) el.focus();
+        }}
+      >
         <Input
           id={id}
           variant="hero"
@@ -57,6 +67,9 @@ export function AmountField({
           disabled={disabled}
           placeholder="0"
           value={value}
+          aria-label={caption ? `${caption} in ${label}` : undefined}
+          className="max-w-[min(100%,16ch)] min-w-[1ch] text-left"
+          style={{ width: `${chars}ch` }}
           onChange={(e) => {
             const next = e.target.value.replace(/[^0-9.]/g, "");
             const parts = next.split(".");
@@ -67,11 +80,18 @@ export function AmountField({
             onChange(cleaned);
           }}
         />
+        <span aria-hidden>
+          <TokenSymbol
+            token={token}
+            size="xs"
+            className={cn(
+              "pointer-events-none shrink-0 select-none rounded-full bg-muted/55 py-1 pl-1 pr-2.5",
+              disabled && "opacity-50",
+            )}
+            symbolClassName="text-[13px] font-medium tracking-tight text-muted-foreground"
+          />
+        </span>
       </div>
-      <span className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-        <TokenIcon token={token} size="xs" />
-        {label}
-      </span>
     </div>
   );
 }

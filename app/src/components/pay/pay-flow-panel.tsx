@@ -63,13 +63,13 @@ export function PayFlowPanel({
   owner,
   variant = "home",
   onSetLimit,
-  onRevealKey,
+  onManageApiKey,
   onBack,
 }: {
   owner: string;
   variant?: "home" | "device";
   onSetLimit?: () => void;
-  onRevealKey?: () => void;
+  onManageApiKey?: () => void;
   onBack?: () => void;
 }) {
   const mint = String(getDefaultMint());
@@ -271,15 +271,15 @@ export function PayFlowPanel({
             "Pay"
           )}
         </Button>
-        {onRevealKey ? (
+        {onManageApiKey ? (
           <Button
             type="button"
             variant="outline"
             size="lg"
             className="w-full"
-            onClick={onRevealKey}
+            onClick={onManageApiKey}
           >
-            Reveal API key
+            Manage API key
           </Button>
         ) : null}
         {onBack ? (
