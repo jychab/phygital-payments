@@ -103,9 +103,25 @@ Query params:
 |-------|----------|-------------|
 | `apiKey` | Yes | HMAC API key (`ppk_<wallet>_<gen>_<hmac>`) |
 
-Response: `{ grantId, expiresAt, wallet }` (grant stored in a per-wallet Durable Object). Responses use `Cache-Control: no-store`.
+Response: `{ grantId, expiresAt, wallet }` (grant stored in a per-wallet Durable Object). Responses use `Cache-Control: no-store`. Opening a new window **immediately cancels** any previous unpaid grant for that wallet.
 
-A **200 from `/open` only means the spending window is open** — not that payment completed. Settlement happens when you hold NFC to the merchant Collect phone; the merchant UI is the receipt. In-app Pay stops after opening the window (countdown only). It does **not** poll for `paid`. Mint and amount are chosen by Collect and capped on-chain by the payer's spending limit for that token.
+A **200 from `/open` only means the spending window is open** — not that payment completed. Settlement happens when you hold NFC to the merchant Collect phone. In-app Pay then waits on `GET /api/preauth/status` (one request, no polling) and shows cancelled, expired, or paid (recipient and amount). Mint and amount are chosen by Collect and capped on-chain by the payer's spending limit for that token.
+
+Wait for the result of that window (one request, no polling):
+
+```
+GET /api/preauth/status?apiKey=<ppk_…>&grantId=<uuid>
+```
+
+The response is held until a terminal status:
+
+| `status` | Meaning |
+|----------|---------|
+| `cancelled` | Caller cancelled (`DELETE /api/preauth`) or a newer `/open` replaced this grant |
+| `expired` | Window TTL elapsed with no webhook |
+| `success` | Helius webhook indexed the transfer — includes `recipient`, `amount` (raw u64), `mint`, `signature` |
+
+Keep the HTTP connection open for the full window. Example: `curl --max-time 150 "https://<host>/api/preauth/status?apiKey=ppk_…&grantId=…"`.
 
 Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey>` (rejects rotated keys).
 
@@ -113,6 +129,7 @@ The API key is stored in plaintext in localStorage on this phone. Keys in query 
 
 ```bash
 curl "https://<host>/api/preauth/open?apiKey=ppk_…"
+curl --max-time 150 "https://<host>/api/preauth/status?apiKey=ppk_…&grantId=…"
 ```
 
 ### Payment link (`/collect?recipient=<solana-address>`)

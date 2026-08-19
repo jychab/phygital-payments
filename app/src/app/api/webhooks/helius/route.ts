@@ -5,7 +5,10 @@ import {
   ensurePaymentsSchema,
   getPaymentsDb,
   insertPayments,
+  type PaymentRecord,
 } from "@/lib/server/payments-db";
+import { getPreauthGrantsStub } from "@/lib/server/preauth-grants-do";
+import type { GrantPaymentStamp } from "../../../../../worker/preauth-grant-types";
 
 /** Strip an optional `Bearer ` prefix so dashboard vs API authHeader both match. */
 function authToken(value: string): string {
@@ -55,7 +58,10 @@ export async function POST(req: NextRequest) {
   try {
     const db = getPaymentsDb();
     await ensurePaymentsSchema(db);
-    await insertPayments(db, records);
+    await Promise.all([
+      insertPayments(db, records),
+      stampPreauthGrants(records),
+    ]);
   } catch (error) {
     // Return 5xx so Helius retries delivery.
     const message = error instanceof Error ? error.message : "Indexing failed";
@@ -63,4 +69,39 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ indexed: records.length });
+}
+
+/** One DO RPC per unique payer. Failure must 500 so Helius retries the stamp. */
+async function stampPreauthGrants(records: PaymentRecord[]): Promise<void> {
+  const stamps = uniqueSenderStamps(records);
+  if (stamps.length === 0) return;
+  await Promise.all(
+    stamps.map(({ wallet, stamp }) =>
+      getPreauthGrantsStub(wallet).recordPayment(stamp),
+    ),
+  );
+}
+
+function uniqueSenderStamps(
+  records: PaymentRecord[],
+): { wallet: string; stamp: GrantPaymentStamp }[] {
+  const seen = new Set<string>();
+  const stamps: { wallet: string; stamp: GrantPaymentStamp }[] = [];
+  for (const row of records) {
+    const wallet = row.senderOwner;
+    if (!wallet || !row.recipientOwner) continue;
+    if (seen.has(wallet)) continue;
+    seen.add(wallet);
+    stamps.push({
+      wallet,
+      stamp: {
+        blockTime: row.blockTime,
+        recipient: row.recipientOwner,
+        amount: row.amount,
+        mint: row.mint,
+        signature: row.signature,
+      },
+    });
+  }
+  return stamps;
 }

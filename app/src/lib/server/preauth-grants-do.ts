@@ -2,7 +2,11 @@ import "server-only";
 
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-import type { PreauthGrant } from "../../../worker/preauth-grant-types";
+import type {
+  GrantPaymentStamp,
+  PreauthGrant,
+} from "../../../worker/preauth-grant-types";
+import type { PreauthStatusResult } from "../../../shared/preauth-status";
 import {
   INVALID_API_KEY,
   REVOKED_API_KEY,
@@ -19,6 +23,8 @@ export type PreauthGrantsStub = {
   claim(args: { jobId: string }): Promise<{ grantId: string }>;
   consume(args: { grantId: string }): Promise<void>;
   releaseClaim(args: { grantId: string }): Promise<void>;
+  status(args: { grantId: string; gen: number }): Promise<PreauthStatusResult>;
+  recordPayment(args: GrantPaymentStamp): Promise<void>;
 };
 
 export function getHmacSecret(): string {

@@ -11,3 +11,11 @@ export type GrantClaim = {
   grantId: string;
   wallet: string;
 };
+
+export type GrantPaymentStamp = {
+  blockTime: number | null;
+  recipient: string;
+  amount: string;
+  mint: string;
+  signature: string;
+};
