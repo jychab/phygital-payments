@@ -26,7 +26,7 @@ export function useTokenHoldings(owner: string | null) {
     queryKey: queryKeys.holdings.byOwner(owner),
     queryFn: () => fetchHoldings(owner!),
     enabled: Boolean(owner),
-    ...queryOptions.frequent,
+    ...queryOptions.live,
   });
 }
 
@@ -36,6 +36,6 @@ export function usePayTokenContext(owner: string | null) {
     queryKey: queryKeys.payContext.byOwner(owner),
     queryFn: () => fetchPayContext(owner!),
     enabled: Boolean(owner),
-    ...queryOptions.frequent,
+    ...queryOptions.live,
   });
 }

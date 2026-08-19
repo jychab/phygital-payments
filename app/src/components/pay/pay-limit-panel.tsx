@@ -8,6 +8,7 @@ import { address, type Address } from "@solana/kit";
 
 import { AmountField } from "@/components/shared/amount-field";
 import { BackLink } from "@/components/shared/back-link";
+import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenListRow, TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus, useDelegateStatuses } from "@/hooks/pay/use-delegate-status";
@@ -175,7 +176,10 @@ export function LimitPanel({
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      {onBack ? <BackLink onClick={onBack} /> : null}
+      <div className="flex items-center gap-2">
+        {onBack ? <BackLink onClick={onBack} /> : null}
+        <QueryRefreshButton owner={expectedOwner} className="ml-auto" />
+      </div>
 
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">

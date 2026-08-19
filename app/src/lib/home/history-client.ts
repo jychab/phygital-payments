@@ -34,6 +34,7 @@ export async function fetchPaymentHistory(
 
   const res = await fetch(`/api/payments/history?${params.toString()}`, {
     credentials: "include",
+    cache: "no-store",
   });
   const data = (await res.json()) as HistoryResponse;
   if (!res.ok) {

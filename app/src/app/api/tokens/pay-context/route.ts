@@ -4,7 +4,7 @@ import { tryParseAddress } from "@/lib/solana/address";
 import { fetchPayTokenContext } from "@/lib/server/token-holdings";
 
 const CACHE = {
-  "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+  "Cache-Control": "private, no-store",
 } as const;
 
 /**

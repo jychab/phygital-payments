@@ -13,6 +13,7 @@
  */
 
 import type { Address } from "@solana/kit";
+import type { QueryClient } from "@tanstack/react-query";
 
 import {
   fetchMintDelegateStatus,
@@ -113,17 +114,72 @@ export const queryKeys = {
   },
 };
 
+/** Owner-scoped reads the user can force-refresh while staleTime hasn't elapsed. */
+export function isOwnerDataQuery(
+  queryKey: readonly unknown[],
+  owner: string,
+): boolean {
+  const root = queryKey[0];
+  if (
+    root === "holdings" ||
+    root === "payContext" ||
+    root === "delegateStatus" ||
+    root === "history"
+  ) {
+    return queryKey[1] === owner;
+  }
+  if (root === "assets") {
+    return queryKey[1] === "owner" && queryKey[2] === owner;
+  }
+  return false;
+}
+
+export function invalidateOwnerQueries(
+  queryClient: QueryClient,
+  owner: string,
+): void {
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.holdings.byOwner(owner),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.payContext.byOwner(owner),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.delegateStatus.byOwner(owner),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.history.byAddress(owner),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.asset.byOwner(owner),
+  });
+}
+
 // ============================================================================
 // Option presets (staleTime tuned per data volatility)
 // ============================================================================
 
+const SECOND = 1000;
+const MINUTE = 60 * SECOND;
+
 export const queryOptions = {
-  /** General reads — spending limit, balances. */
-  default: { refetchOnWindowFocus: false, staleTime: 1000 * 60 },
-  /** Updates as payments confirm on-chain. */
-  frequent: { refetchOnWindowFocus: false, staleTime: 1000 * 30 },
-  /** Effectively immutable — a mint's program + decimals. */
-  stable: { refetchOnWindowFocus: false, staleTime: 1000 * 60 * 5 },
+  /**
+   * Balances, remaining limits, recent activity.
+   * Always stale so mount/focus/reconnect refetch; poll while the screen is
+   * open (NFC taps happen off-app and cannot invalidate the cache).
+   */
+  live: {
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 60 * SECOND,
+  },
+  /** Changes after user actions; mutations already invalidate. */
+  default: { refetchOnWindowFocus: false, staleTime: 5 * MINUTE },
+  /** Catalog — rarely changes between deploys. */
+  stable: { refetchOnWindowFocus: false, staleTime: 15 * MINUTE },
+  /** One-shot proofs / immutable chain metadata — never refetch. */
+  immutable: { refetchOnWindowFocus: false, staleTime: Infinity },
 } as const;
 
 // ============================================================================

@@ -9,13 +9,13 @@ import {
   type PaymentRecord,
 } from "@/lib/queries";
 
-/** Indexed on-chain payments to/from an address. Refreshes as they confirm. */
+/** Indexed on-chain payments to/from an address. Polls every 60s while Activity is open. */
 export function usePaymentHistory(address: string | null) {
   return useQuery<PaymentRecord[]>({
     queryKey: queryKeys.history.byAddress(address),
     queryFn: () => fetchHistory(address!),
     enabled: Boolean(address),
     placeholderData: keepPreviousData,
-    ...queryOptions.frequent,
+    ...queryOptions.live,
   });
 }

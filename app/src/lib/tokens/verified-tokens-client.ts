@@ -32,7 +32,7 @@ export async function fetchHoldingsClient(
 ): Promise<PaymentTokenHolding[]> {
   const res = await fetch(
     `/api/tokens/holdings?owner=${encodeURIComponent(owner)}`,
-    { cache: "default" },
+    { cache: "no-store" },
   );
   const body = await readJson<{ holdings?: PaymentTokenHolding[]; error?: string }>(
     res,
@@ -52,7 +52,7 @@ export async function fetchPayContextClient(
 ): Promise<PayTokenContext> {
   const res = await fetch(
     `/api/tokens/pay-context?owner=${encodeURIComponent(owner)}`,
-    { cache: "default" },
+    { cache: "no-store" },
   );
   const body = await readJson<
     PayTokenContext & { error?: string }

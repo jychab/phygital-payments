@@ -6,6 +6,7 @@ import { LoaderCircle, Lock, LockOpen, Nfc, Trash2 } from "lucide-react";
 import { AssetType } from "phygital-token-sdk";
 
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
+import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import {
   useRemoveOwnershipMutation,
@@ -23,6 +24,13 @@ export function DevicesPanel({ owner }: { owner: string }) {
   const setLock = useSetLockStateMutation(owner);
   const removeOwnership = useRemoveOwnershipMutation(owner);
 
+  const header = (
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-sm font-medium text-foreground">Your NFC devices</p>
+      <QueryRefreshButton owner={owner} />
+    </div>
+  );
+
   if (isRestoring || assetsQuery.isLoading) {
     return (
       <CenteredStatus>
@@ -34,15 +42,29 @@ export function DevicesPanel({ owner }: { owner: string }) {
 
   if (assetsQuery.isError) {
     return (
-      <GateMessage
-        icon={<Nfc className="size-5 text-destructive" />}
-        title="Couldn’t load devices"
-        body={toUserErrorMessage(
-          assetsQuery.error,
-          "Check your connection and try again.",
-        )}
-        destructive
-      />
+      <div className="flex flex-1 flex-col gap-3">
+        {header}
+        <GateMessage
+          icon={<Nfc className="size-5 text-destructive" />}
+          title="Couldn’t load devices"
+          body={toUserErrorMessage(
+            assetsQuery.error,
+            "Check your connection and try again.",
+          )}
+          destructive
+          action={
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void assetsQuery.refetch()}
+              disabled={assetsQuery.isFetching}
+            >
+              Try again
+            </Button>
+          }
+        />
+      </div>
     );
   }
 
@@ -50,22 +72,23 @@ export function DevicesPanel({ owner }: { owner: string }) {
 
   if (assets.length === 0) {
     return (
-      <GateMessage
-        icon={<Nfc className="size-5 text-muted-foreground" />}
-        title="No NFC devices yet"
-        body="Hold a device to this phone to add it. Nothing to tap on this screen."
-      />
+      <div className="flex flex-1 flex-col gap-3">
+        {header}
+        <GateMessage
+          icon={<Nfc className="size-5 text-muted-foreground" />}
+          title="No NFC devices yet"
+          body="Hold a device to this phone to add it. Nothing to tap on this screen."
+        />
+      </div>
     );
   }
 
   return (
     <div className="flex flex-1 flex-col gap-3">
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-foreground">Your NFC devices</p>
-        <p className="text-sm text-muted-foreground">
-          Lock a device to pay with it. Remove lets someone else claim it.
-        </p>
-      </div>
+      {header}
+      <p className="text-sm text-muted-foreground">
+        Lock a device to pay with it. Remove lets someone else claim it.
+      </p>
       <ul className="flex flex-col gap-2">
         {assets.map((asset) => (
           <li key={asset.asset}>

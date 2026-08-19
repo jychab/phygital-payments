@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
-import { queryKeys } from "@/lib/queries";
+import { queryKeys, queryOptions } from "@/lib/queries";
 
 export type TapVerifyStatus = "pending" | "verified" | "failed";
 
@@ -72,9 +72,8 @@ export function useTapVerify() {
     queryKey: queryKeys.tapVerify.byParams(tapParamsString),
     queryFn: () => fetchTapVerification(new URLSearchParams(tapParamsString)),
     enabled: hasTapProof,
-    refetchOnWindowFocus: false,
     // Server allows same-counter reentry briefly; cache the successful result.
-    staleTime: Infinity,
+    ...queryOptions.immutable,
   });
 
   const verify: TapVerifyStatus =

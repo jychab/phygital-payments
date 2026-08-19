@@ -20,7 +20,7 @@ export function usePhygitalAsset(identifier: string | null) {
       return fetchPhygitalAssetByIdentifier(getSolanaRpc(), identifier);
     },
     enabled: Boolean(identifier),
-    ...queryOptions.frequent,
+    ...queryOptions.default,
   });
 }
 
@@ -33,6 +33,6 @@ export function usePhygitalAssetByAddress(assetAddress: string | null) {
       return fetchPhygitalAsset(getSolanaRpc(), address(assetAddress));
     },
     enabled: Boolean(assetAddress),
-    ...queryOptions.frequent,
+    ...queryOptions.default,
   });
 }

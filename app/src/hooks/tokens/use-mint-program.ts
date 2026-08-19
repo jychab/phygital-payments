@@ -10,11 +10,11 @@ import {
   type MintProgramInfo,
 } from "@/lib/queries";
 
-/** A mint's token program + decimals. Effectively immutable, so cached long. */
+/** A mint's token program + decimals. Immutable on-chain, so never refetched. */
 export function useMintProgram(mint: Address) {
   return useQuery<MintProgramInfo>({
     queryKey: queryKeys.mintProgram.byMint(mint),
     queryFn: () => fetchMintProgram(mint),
-    ...queryOptions.stable,
+    ...queryOptions.immutable,
   });
 }

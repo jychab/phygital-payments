@@ -6,6 +6,7 @@ import {
   isPersistedQueryKey,
   serializeQueryCache,
 } from "./persist";
+import { isOwnerDataQuery } from "./index";
 
 function roundTrip(value: unknown): unknown {
   const client = { payload: value } as unknown as PersistedClient;
@@ -39,6 +40,7 @@ describe("serializeQueryCache / deserializeQueryCache", () => {
 describe("isPersistedQueryKey", () => {
   it("allows instant-paint roots", () => {
     expect(isPersistedQueryKey(["holdings", "owner"])).toBe(true);
+    expect(isPersistedQueryKey(["payContext", "owner"])).toBe(true);
     expect(isPersistedQueryKey(["delegateStatus", "owner", "mint"])).toBe(true);
     expect(isPersistedQueryKey(["assets", "owner", "owner"])).toBe(true);
     expect(isPersistedQueryKey(["verifiedTokens"])).toBe(true);
@@ -50,5 +52,26 @@ describe("isPersistedQueryKey", () => {
     expect(isPersistedQueryKey(["pendingClaim", "token"])).toBe(false);
     expect(isPersistedQueryKey(["ataStatus", "owner", "mint"])).toBe(false);
     expect(isPersistedQueryKey(["mintProgram", "mint"])).toBe(false);
+  });
+});
+
+describe("isOwnerDataQuery", () => {
+  it("matches owner-scoped live and default reads", () => {
+    expect(isOwnerDataQuery(["holdings", "owner"], "owner")).toBe(true);
+    expect(isOwnerDataQuery(["payContext", "owner"], "owner")).toBe(true);
+    expect(isOwnerDataQuery(["delegateStatus", "owner", "mint"], "owner")).toBe(
+      true,
+    );
+    expect(isOwnerDataQuery(["history", "owner"], "owner")).toBe(true);
+    expect(isOwnerDataQuery(["assets", "owner", "owner"], "owner")).toBe(true);
+  });
+
+  it("skips other wallets and one-shot queries", () => {
+    expect(isOwnerDataQuery(["holdings", "other"], "owner")).toBe(false);
+    expect(isOwnerDataQuery(["assets", "identifier", "pk"], "owner")).toBe(
+      false,
+    );
+    expect(isOwnerDataQuery(["tapVerify", "pk=1"], "owner")).toBe(false);
+    expect(isOwnerDataQuery(["verifiedTokens"], "owner")).toBe(false);
   });
 });

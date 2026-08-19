@@ -29,6 +29,7 @@ type TaggedMap = { [MAP_TAG]: [unknown, unknown][] };
 /** Roots worth instant paint. Must match `queryKeys` in `./index.ts`. */
 const PERSISTED_QUERY_ROOTS = new Set([
   "holdings",
+  "payContext",
   "delegateStatus",
   "assets",
   "verifiedTokens",

@@ -36,7 +36,7 @@ function delegateStatusQuery(owner: string | null, mint: string) {
     queryKey: queryKeys.delegateStatus.byOwnerMint(owner, mint),
     queryFn: () => fetchDelegateStatus(address(owner!), address(mint)),
     enabled: Boolean(owner && mint),
-    ...queryOptions.default,
+    ...queryOptions.live,
   };
 }
 

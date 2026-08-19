@@ -11,6 +11,7 @@ import { ManagePayTokens } from "@/components/pay/pay-limit-panel";
 import { PayFlowPanel } from "@/components/pay/pay-flow-panel";
 import { RevealApiKeyPanel } from "@/components/pay/reveal-api-key-panel";
 import { BackLink } from "@/components/shared/back-link";
+import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatuses } from "@/hooks/pay/use-delegate-status";
 import {
@@ -62,22 +63,12 @@ export function PayPanel({
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-2.5">
-      <PayFlowPanel
-        owner={walletAddress}
-        variant="home"
-        onSetLimit={onSetLimit}
-      />
-      <Button
-        type="button"
-        variant="ghost"
-        size="lg"
-        className="w-full text-muted-foreground"
-        onClick={onManage}
-      >
-        Manage Pay
-      </Button>
-    </div>
+    <PayFlowPanel
+      owner={walletAddress}
+      variant="home"
+      onManage={onManage}
+      onSetLimit={onSetLimit}
+    />
   );
 }
 
@@ -128,7 +119,10 @@ export function ManagePayPanel({
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <BackLink onClick={onBack} />
+      <div className="flex items-center justify-between gap-2">
+        <BackLink onClick={onBack} />
+        <QueryRefreshButton owner={owner} />
+      </div>
 
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">

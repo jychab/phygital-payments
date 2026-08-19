@@ -8,6 +8,7 @@ import Link from "next/link";
 
 import { BackLink } from "@/components/shared/back-link";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
+import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus } from "@/hooks/pay/use-delegate-status";
 import { useMaxTapAmountUi } from "@/hooks/pay/use-max-tap-amount";
@@ -64,12 +65,14 @@ export function PayFlowPanel({
   owner,
   variant = "home",
   onSetLimit,
+  onManage,
   onManageApiKey,
   onBack,
 }: {
   owner: string;
   variant?: "home" | "device";
   onSetLimit?: () => void;
+  onManage?: () => void;
   onManageApiKey?: () => void;
   onBack?: () => void;
 }) {
@@ -163,7 +166,9 @@ export function PayFlowPanel({
             <X className="size-6" strokeWidth={2} />
           </div>
           <div className="max-w-60 space-y-1.5">
-            <p className="text-base font-medium text-foreground">Time Expired</p>
+            <p className="text-base font-medium text-foreground">
+              Time Expired
+            </p>
             <p className="text-sm text-muted-foreground">
               Tap Pay again to continue.
             </p>
@@ -217,7 +222,10 @@ export function PayFlowPanel({
   if (!tokenEnabled) {
     return (
       <div className="flex flex-1 flex-col">
-        {onBack ? <BackLink onClick={onBack} /> : null}
+        <div className="flex items-center gap-2">
+          {onBack ? <BackLink onClick={onBack} /> : null}
+          <QueryRefreshButton owner={owner} className="ml-auto" />
+        </div>
         <div className="flex flex-1 flex-col items-center justify-center gap-5 py-8 text-center">
           <div className="max-w-64 space-y-1.5">
             <p className="text-base font-medium text-foreground">
@@ -250,7 +258,10 @@ export function PayFlowPanel({
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      {onBack ? <BackLink onClick={onBack} /> : null}
+      <div className="flex items-center gap-2">
+        {onBack ? <BackLink onClick={onBack} /> : null}
+        <QueryRefreshButton owner={owner} className="ml-auto" />
+      </div>
       <div className="flex flex-1 flex-col items-center justify-center text-center">
         <p className="max-w-64 text-sm text-muted-foreground">
           Tap Pay, then hold your device at the receiver phone.
@@ -265,12 +276,19 @@ export function PayFlowPanel({
           onClick={() => void onPay()}
           disabled={payBlocked || !mintQuery.data}
         >
-          {busy ? (
-            <LoaderCircle className="size-4 animate-spin" />
-          ) : (
-            "Pay"
-          )}
+          {busy ? <LoaderCircle className="size-4 animate-spin" /> : "Pay"}
         </Button>
+        {onManage ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="w-full text-muted-foreground"
+            onClick={onManage}
+          >
+            Manage Pay
+          </Button>
+        ) : null}
         {onManageApiKey ? (
           <Button
             type="button"
@@ -283,7 +301,13 @@ export function PayFlowPanel({
           </Button>
         ) : null}
         {!onBack && variant === "device" ? (
-          <Button type="button" variant="ghost" size="lg" className="w-full" asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="w-full"
+            asChild
+          >
             <Link href="/">Done</Link>
           </Button>
         ) : null}

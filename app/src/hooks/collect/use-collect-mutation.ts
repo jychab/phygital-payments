@@ -19,7 +19,7 @@ type ReceiveVars = {
 
 /**
  * Collect a tap-authorized payment (passkey + sponsored fee-payer submit).
- * On success, refresh the recipient's history so the new payment appears.
+ * On success, refresh the recipient's history and holdings.
  */
 export function useCollectMutation(options?: {
   onSuccess?: (signature: string) => void;
@@ -31,6 +31,12 @@ export function useCollectMutation(options?: {
     onSuccess: ({ signature }, { recipient }) => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.history.byAddress(recipient),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.holdings.byOwner(recipient),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.payContext.byOwner(recipient),
       });
       options?.onSuccess?.(signature);
     },

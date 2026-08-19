@@ -40,6 +40,9 @@ async function applyDelegateAfterSend(args: {
     queryKey: queryKeys.holdings.byOwner(args.owner),
   });
   void args.queryClient.invalidateQueries({
+    queryKey: queryKeys.payContext.byOwner(args.owner),
+  });
+  void args.queryClient.invalidateQueries({
     queryKey: queryKeys.delegateStatus.byOwner(args.owner),
   });
 }

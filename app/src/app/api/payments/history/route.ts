@@ -34,7 +34,10 @@ export async function GET(req: NextRequest) {
           : undefined,
     });
 
-    return NextResponse.json({ address, payments });
+    return NextResponse.json(
+      { address, payments },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });

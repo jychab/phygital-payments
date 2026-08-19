@@ -6,10 +6,10 @@ import {
   ArrowUpRight,
   History,
   LoaderCircle,
-  RefreshCw,
 } from "lucide-react";
 
 import { TokenSymbol } from "@/components/shared/token-chip";
+import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import { useVerifiedTokens } from "@/hooks/tokens/use-verified-tokens";
 import { explorerTxUrl } from "@/lib/solana/cluster";
@@ -77,19 +77,7 @@ export function HistoryPanel({ recipient }: { recipient: string }) {
     <div className="flex flex-1 flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-foreground">Activity</p>
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          className="text-muted-foreground"
-          onClick={() => query.refetch()}
-          disabled={query.isFetching}
-          aria-label="Refresh"
-        >
-          <RefreshCw
-            className={cn("size-3.5", query.isFetching && "animate-spin")}
-          />
-        </Button>
+        <QueryRefreshButton owner={recipient} />
       </div>
 
       {loading ? (

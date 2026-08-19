@@ -13,7 +13,7 @@ export async function GET() {
     {
       headers: {
         // Catalog can change with deploys (e.g. USDC icon); avoid long shared caches.
-        "Cache-Control": "private, max-age=300, stale-while-revalidate=3600",
+        "Cache-Control": "private, max-age=900, stale-while-revalidate=3600",
       },
     },
   );
