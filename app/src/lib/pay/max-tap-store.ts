@@ -1,15 +1,24 @@
 /**
- * Per-wallet max tap amount in localStorage (this phone).
+ * Per-wallet, per-mint max tap amount in localStorage (this phone).
  * Silent Pay grants cannot exceed min(max tap, spending limit).
+ * USDC defaults to $100 when unset; other mints require a manual amount.
  */
 
-import { DEFAULT_PAY_AMOUNT_UI } from "@/lib/tokens/payment-token";
+import {
+  DEFAULT_PAY_AMOUNT_UI,
+  isDefaultMint,
+} from "@/lib/tokens/payment-token";
 
 const PREFIX = "phygital.pay.maxTapAmountUi.";
 
 const listeners = new Set<() => void>();
 
-function storageKey(wallet: string): string {
+function storageKey(wallet: string, mint: string): string {
+  return `${PREFIX}${wallet}.${mint}`;
+}
+
+/** Pre-mint-keyed store: one amount per wallet (treated as USDC). */
+function legacyWalletKey(wallet: string): string {
   return `${PREFIX}${wallet}`;
 }
 
@@ -32,22 +41,38 @@ export function parseMaxTapAmountUi(value: string): string | null {
   return Number.isInteger(n) ? String(n) : String(n);
 }
 
-export function hasStoredMaxTapAmount(wallet: string): boolean {
-  if (typeof window === "undefined") return false;
-  return (
-    parseMaxTapAmountUi(localStorage.getItem(storageKey(wallet)) ?? "") != null
+function readStored(wallet: string, mint: string): string | null {
+  if (typeof window === "undefined") return null;
+  const stored = parseMaxTapAmountUi(
+    localStorage.getItem(storageKey(wallet, mint)) ?? "",
+  );
+  if (stored) return stored;
+  if (!isDefaultMint(mint)) return null;
+  return parseMaxTapAmountUi(
+    localStorage.getItem(legacyWalletKey(wallet)) ?? "",
   );
 }
 
-export function readMaxTapAmountUi(wallet: string): string {
-  if (typeof window === "undefined") return DEFAULT_PAY_AMOUNT_UI;
-  return (
-    parseMaxTapAmountUi(localStorage.getItem(storageKey(wallet)) ?? "") ??
-    DEFAULT_PAY_AMOUNT_UI
-  );
+export function hasStoredMaxTapAmount(wallet: string, mint: string): boolean {
+  return readStored(wallet, mint) != null;
 }
 
-export function storeMaxTapAmountUi(wallet: string, amountUi: string): void {
+/**
+ * Stored max tap, or the USDC $100 default. Other mints return `null`
+ * until the user sets an amount.
+ */
+export function readMaxTapAmountUi(
+  wallet: string,
+  mint: string,
+): string | null {
+  return readStored(wallet, mint) ?? (isDefaultMint(mint) ? DEFAULT_PAY_AMOUNT_UI : null);
+}
+
+export function storeMaxTapAmountUi(
+  wallet: string,
+  mint: string,
+  amountUi: string,
+): void {
   const parsed = parseMaxTapAmountUi(amountUi);
   if (!parsed) {
     throw new Error("Enter a valid amount");
@@ -55,6 +80,6 @@ export function storeMaxTapAmountUi(wallet: string, amountUi: string): void {
   if (typeof window === "undefined") {
     throw new Error("Max tap amount can only be saved on this phone.");
   }
-  localStorage.setItem(storageKey(wallet), parsed);
+  localStorage.setItem(storageKey(wallet, mint), parsed);
   emit();
 }

@@ -32,8 +32,9 @@ function silentGrantAmountUi(
   limitUi?: string | null,
   balanceUi?: string | null,
   maxTapUi?: string | null,
+  mint?: string | null,
 ): string {
-  const fromLimit = defaultTapAmountUi(limitUi, maxTapUi);
+  const fromLimit = defaultTapAmountUi(limitUi, maxTapUi, mint);
   const bal = balanceUi != null && balanceUi !== "" ? Number(balanceUi) : NaN;
   if (!Number.isFinite(bal) || bal <= 0) return fromLimit;
   const cap = Number(fromLimit);
@@ -89,11 +90,12 @@ export function PayFlowPanel({
   const token = resolvePaymentToken(mint, verified.data);
   const tokenEnabled = isDelegateEnabled(capQuery.data);
   const limitUi = tokenEnabled ? capQuery.data?.delegatedAmountUi : null;
-  const maxTapUi = useMaxTapAmountUi(owner);
+  const maxTapUi = useMaxTapAmountUi(owner, mint);
   const grantUi = silentGrantAmountUi(
     limitUi,
     capQuery.data?.balanceUi,
     maxTapUi,
+    mint,
   );
   const decimals = mintQuery.data?.decimals ?? token.decimals;
   const rawAmount = tryUiAmountToRaw(grantUi, decimals);

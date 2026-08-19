@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultTapAmountUi } from "@/lib/tokens/payment-token";
+import { defaultTapAmountUi, getDefaultMint } from "@/lib/tokens/payment-token";
+
+const OTHER = "OtherMint111111111111111111111111111111111";
 
 describe("defaultTapAmountUi", () => {
-  it("defaults to 100 when neither cap is set", () => {
+  it("defaults to 100 when neither cap is set (USDC / omitted mint)", () => {
     expect(defaultTapAmountUi()).toBe("100");
     expect(defaultTapAmountUi(null, null)).toBe("100");
+    expect(defaultTapAmountUi(null, null, getDefaultMint())).toBe("100");
+  });
+
+  it("does not default max tap for non-USDC mints", () => {
+    expect(defaultTapAmountUi(null, null, OTHER)).toBe("");
+    expect(defaultTapAmountUi("50", null, OTHER)).toBe("");
+    expect(defaultTapAmountUi("50", "10", OTHER)).toBe("10");
   });
 
   it("uses min(max tap, spending limit)", () => {

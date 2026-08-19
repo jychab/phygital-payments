@@ -11,21 +11,27 @@ import { BackLink } from "@/components/shared/back-link";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenListRow, TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
-import { useDelegateStatus, useDelegateStatuses } from "@/hooks/pay/use-delegate-status";
+import {
+  useDelegateStatus,
+  useDelegateStatuses,
+} from "@/hooks/pay/use-delegate-status";
 import { useMaxTapAmountUi } from "@/hooks/pay/use-max-tap-amount";
 import { useMintProgram } from "@/hooks/tokens/use-mint-program";
-import { useSetDelegateMutation, useRevokeDelegateMutation } from "@/hooks/pay/use-delegate-mutations";
-import { usePayTokenContext, useTokenHoldings, useVerifiedTokens } from "@/hooks/tokens/use-verified-tokens";
 import {
-  isDelegateEnabled,
-  uiAmountToRaw,
-} from "@/lib/tokens/mint-delegate";
+  useSetDelegateMutation,
+  useRevokeDelegateMutation,
+} from "@/hooks/pay/use-delegate-mutations";
+import {
+  usePayTokenContext,
+  useTokenHoldings,
+  useVerifiedTokens,
+} from "@/hooks/tokens/use-verified-tokens";
+import { isDelegateEnabled, uiAmountToRaw, type MintDelegateStatus } from "@/lib/tokens/mint-delegate";
 import {
   parseMaxTapAmountUi,
   storeMaxTapAmountUi,
 } from "@/lib/pay/max-tap-store";
 import {
-  PAY_AMOUNT_PRESETS,
   defaultTapAmountUi,
   isDefaultMint,
   resolvePaymentToken,
@@ -44,8 +50,8 @@ function tryUiAmountToRaw(amount: string, decimals: number): bigint | null {
 }
 
 /**
- * Pick a spending limit for a mint (program-authority delegate).
- * USDC also sets this phone’s max tap amount (localStorage).
+ * Pick a spending limit and max tap amount for a mint (program-authority
+ * delegate). USDC prefills max tap at $100; other mints must be set by hand.
  */
 export function LimitPanel({
   expectedOwner,
@@ -63,10 +69,10 @@ export function LimitPanel({
   const { address: walletAddress, isConnected } = useSolanaAddress();
   const mint = String(mintProp);
   const mintAddress = address(mint);
-  const showMaxTap = isDefaultMint(mint);
-  const storedMaxTap = useMaxTapAmountUi(expectedOwner);
+  const storedMaxTap = useMaxTapAmountUi(expectedOwner, mint);
   const [amount, setAmount] = useState("50");
-  const [maxTap, setMaxTap] = useState(storedMaxTap);
+  const [maxTapDraft, setMaxTapDraft] = useState<string | null>(null);
+  const maxTap = maxTapDraft ?? storedMaxTap ?? "";
 
   const statusQuery = useDelegateStatus(expectedOwner, mintAddress);
   const mintQuery = useMintProgram(mintAddress);
@@ -77,9 +83,7 @@ export function LimitPanel({
   const holding = holdings.data?.find(
     (h: PaymentTokenHolding) => h.mint === mint,
   );
-  const token =
-    holding ??
-    resolvePaymentToken(mint, verified.data);
+  const token = holding ?? resolvePaymentToken(mint, verified.data);
   const setAllowance = useSetDelegateMutation(
     walletAddress === expectedOwner ? walletAddress : null,
     { mint: mintAddress },
@@ -93,17 +97,17 @@ export function LimitPanel({
   const wrongWallet =
     isConnected && walletAddress != null && walletAddress !== expectedOwner;
   const matched = isConnected && walletAddress === expectedOwner;
-  const busy = setAllowance.isPending || revoke.isPending || statusQuery.isLoading;
+  const busy =
+    setAllowance.isPending || revoke.isPending || statusQuery.isLoading;
   const decimals = mintQuery.data?.decimals ?? token.decimals;
 
-  const parsedMaxTap = showMaxTap ? parseMaxTapAmountUi(maxTap) : null;
+  const parsedMaxTap = parseMaxTapAmountUi(maxTap);
   const limitRaw = tryUiAmountToRaw(amount, decimals);
-  const maxTapRaw = parsedMaxTap ? tryUiAmountToRaw(parsedMaxTap, decimals) : null;
+  const maxTapRaw = parsedMaxTap
+    ? tryUiAmountToRaw(parsedMaxTap, decimals)
+    : null;
   const maxTapOverLimit =
-    showMaxTap &&
-    limitRaw != null &&
-    maxTapRaw != null &&
-    maxTapRaw > limitRaw;
+    limitRaw != null && maxTapRaw != null && maxTapRaw > limitRaw;
 
   async function runEnable() {
     if (!walletAddress || walletAddress !== expectedOwner) return;
@@ -115,15 +119,9 @@ export function LimitPanel({
       toast.error("Enter a valid amount");
       return;
     }
-    if (showMaxTap) {
-      if (!parsedMaxTap || maxTapRaw == null) {
-        toast.error("Enter a valid max tap amount");
-        return;
-      }
-      if (maxTapOverLimit) {
-        toast.error("Max tap can’t be more than your spending limit.");
-        return;
-      }
+    if (!parsedMaxTap || maxTapRaw == null) {
+      toast.error("Enter a valid max tap amount");
+      return;
     }
     try {
       const limitChanged =
@@ -136,14 +134,8 @@ export function LimitPanel({
           decimals: mintQuery.data.decimals,
         });
       }
-      if (showMaxTap && parsedMaxTap) {
-        storeMaxTapAmountUi(expectedOwner, parsedMaxTap);
-      }
-      toast.success(
-        showMaxTap
-          ? "Pay limits saved."
-          : "Spending limit set",
-      );
+      storeMaxTapAmountUi(expectedOwner, mint, parsedMaxTap);
+      toast.success("Pay limits saved.");
       onEnabled?.();
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn’t save spending limit"));
@@ -172,7 +164,8 @@ export function LimitPanel({
     !amount ||
     limitRaw == null ||
     !matched ||
-    (showMaxTap && (!parsedMaxTap || maxTapOverLimit));
+    !parsedMaxTap ||
+    maxTapOverLimit;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -205,34 +198,29 @@ export function LimitPanel({
         decimals={decimals}
         disabled={busy || !matched}
         autoFocus={matched}
-        caption={showMaxTap ? "Spending limit" : undefined}
-        className={showMaxTap ? "py-1" : undefined}
+        caption="Spending limit"
+        className="py-1"
       />
 
-  
-      {showMaxTap ? (
-        <>
-          <AmountField
-            id="max-tap-amount"
-            value={maxTap}
-            onChange={setMaxTap}
-            token={token}
-            decimals={decimals}
-            disabled={busy || !matched}
-            caption="Max amount per tap"
-            className="py-1"
-          />
-          {maxTapOverLimit ? (
-            <p className="text-center text-[11px] text-destructive">
-              Max tap can’t be more than your spending limit
-            </p>
-          ) : (
-            <p className="text-center text-[11px] text-muted-foreground">
-              Each payment from this phone can be up to this much.
-            </p>
-          )}
-        </>
-      ) : null}
+      <AmountField
+        id="max-tap-amount"
+        value={maxTap}
+        onChange={setMaxTapDraft}
+        token={token}
+        decimals={decimals}
+        disabled={busy || !matched}
+        caption="Max amount per tap"
+        className="py-1"
+      />
+      {maxTapOverLimit ? (
+        <p className="text-center text-[11px] text-destructive">
+          Max tap can’t be more than your spending limit
+        </p>
+      ) : (
+        <p className="text-center text-[11px] text-muted-foreground">
+          Each payment can be up to this much.
+        </p>
+      )}
 
       <p className="flex items-center justify-center gap-1.5 text-center text-[11px] tabular-nums text-muted-foreground">
         From {shortAddress(expectedOwner, 4)}
@@ -290,7 +278,13 @@ export function LimitPanel({
           </Button>
         ) : null}
         {onSkip ? (
-          <Button type="button" variant="ghost" size="lg" className="w-full" onClick={onSkip}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="w-full"
+            onClick={onSkip}
+          >
             Not Now
           </Button>
         ) : null}
@@ -311,7 +305,6 @@ export function ManagePayTokens({
   const payContext = usePayTokenContext(owner);
   const mints = payContext.data?.holdings.map((h) => h.mint) ?? [];
   const statuses = useDelegateStatuses(owner, mints);
-  const maxTapUi = useMaxTapAmountUi(owner);
 
   if (isRestoring || payContext.isLoading || statuses.isLoading) {
     return (
@@ -332,33 +325,56 @@ export function ManagePayTokens({
 
   return (
     <ul className="flex flex-col gap-0.5">
-      {list.map((h: PaymentTokenHolding) => {
-        const status = statuses.data?.get(h.mint);
-        const enabled = isDelegateEnabled(status);
-        const usdc = isDefaultMint(h.mint);
-        const tapCap = usdc
-          ? defaultTapAmountUi(status?.delegatedAmountUi, maxTapUi)
-          : null;
-        const subtitle = enabled
-          ? usdc
-            ? `Limit $${status?.delegatedAmountUi ?? "—"} · Max tap $${tapCap} · ${h.balanceUi} available`
-            : `Limit $${status?.delegatedAmountUi ?? "—"} · ${h.balanceUi} available`
-          : `Off · ${h.balanceUi} available`;
-        return (
-          <li key={h.mint}>
-            <TokenListRow
-              token={h}
-              subtitle={subtitle}
-              onSelect={() => onEditLimit(h)}
-              trailing={
-                <span className="text-[11px] font-medium text-primary">
-                  {enabled ? "Edit" : "Turn On"}
-                </span>
-              }
-            />
-          </li>
-        );
-      })}
+      {list.map((h: PaymentTokenHolding) => (
+        <ManagePayTokenRow
+          key={h.mint}
+          owner={owner}
+          holding={h}
+          status={statuses.data?.get(h.mint)}
+          onEditLimit={onEditLimit}
+        />
+      ))}
     </ul>
+  );
+}
+
+function ManagePayTokenRow({
+  owner,
+  holding,
+  status,
+  onEditLimit,
+}: {
+  owner: string;
+  holding: PaymentTokenHolding;
+  status: MintDelegateStatus | undefined;
+  onEditLimit: (holding: PaymentTokenHolding) => void;
+}) {
+  const maxTapUi = useMaxTapAmountUi(owner, holding.mint);
+  const enabled = isDelegateEnabled(status);
+  const tapCap = defaultTapAmountUi(
+    status?.delegatedAmountUi,
+    maxTapUi,
+    holding.mint,
+  );
+  const usdc = isDefaultMint(holding.mint);
+  const subtitle = enabled
+    ? usdc
+      ? `Limit $${status?.delegatedAmountUi ?? "—"} · Max tap $${tapCap || "—"} · ${holding.balanceUi} available`
+      : `Limit ${status?.delegatedAmountUi ?? "—"} · Max tap ${tapCap || "—"} · ${holding.balanceUi} available`
+    : `Off · ${holding.balanceUi} available`;
+
+  return (
+    <li>
+      <TokenListRow
+        token={holding}
+        subtitle={subtitle}
+        onSelect={() => onEditLimit(holding)}
+        trailing={
+          <span className="text-[11px] font-medium text-primary">
+            {enabled ? "Edit" : "Turn On"}
+          </span>
+        }
+      />
+    </li>
   );
 }

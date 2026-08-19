@@ -58,5 +58,20 @@
     "NEXT_PUBLIC_SOLANA_RPC_URL": "https://rpc.revibase.com",
     "NEXT_PUBLIC_SOLANA_CLUSTER": "mainnet",
     "NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY": "2qLZosEYxN4Bp7dGySYgjWEmXR9jQ4za6hr2AFocUHxU"
+  },
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
   }
 }
