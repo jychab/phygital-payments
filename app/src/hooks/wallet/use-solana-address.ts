@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
-import { useConnectWallet, usePrivy } from "@privy-io/react-auth";
+import {
+  usePrivy,
+  type WalletWithMetadata,
+} from "@privy-io/react-auth";
 import { useWallets } from "@privy-io/react-auth/solana";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -32,9 +35,24 @@ function setSessionCleared(next: boolean): void {
   for (const listener of sessionListeners) listener();
 }
 
+function isExportablePrivySolanaWallet(
+  account: { type: string },
+  address: string,
+): account is WalletWithMetadata {
+  return (
+    account.type === "wallet" &&
+    "walletClientType" in account &&
+    account.walletClientType === "privy" &&
+    "chainType" in account &&
+    account.chainType === "solana" &&
+    "address" in account &&
+    account.address === address
+  );
+}
+
 /**
  * Connected Solana address from Privy `useWallets()`.
- * Connect / disconnect are wallet-only (`connectWallet` / `wallet.disconnect`).
+ * Connect opens Privy login (Google or wallet); disconnect logs out.
  */
 export function useSolanaAddress(): {
   address: string | null;
@@ -44,18 +62,26 @@ export function useSolanaAddress(): {
   walletIcon: string | null;
   /** Wallet-standard display name (e.g. "Phantom"). */
   walletName: string | null;
-  /** Open Privy wallet-connect modal — never logs the user into Privy. */
+  /**
+   * True when the connected address is a Privy Solana embedded wallet
+   * the user can export via `exportWallet`.
+   */
+  canExportWallet: boolean;
+  /** Open Privy login (Google or wallet). */
   connect: () => void;
-  /** Disconnect wallets + clear app storage / query cache. */
+  /** Disconnect wallets, log out of Privy, and clear app storage / query cache. */
   disconnect: () => Promise<void>;
 } {
   const embedded = useIsEmbedded();
   const queryClient = useQueryClient();
   const {
     ready: privyReady,
+    authenticated,
+    user,
+    login,
+    logout,
   } = usePrivy();
   const { wallets, ready: walletsReady } = useWallets();
-  const { connectWallet } = useConnectWallet();
   const cleared = useSyncExternalStore(
     subscribeSessionCleared,
     getSessionCleared,
@@ -74,6 +100,14 @@ export function useSolanaAddress(): {
     !cleared && wallet?.standardWallet.name
       ? wallet.standardWallet.name
       : null;
+  const canExportWallet = Boolean(
+    ready &&
+      authenticated &&
+      address &&
+      user?.linkedAccounts.some((account) =>
+        isExportablePrivySolanaWallet(account, address),
+      ),
+  );
 
   const connect = useCallback(() => {
     if (embedded) return;
@@ -81,8 +115,8 @@ export function useSolanaAddress(): {
     if (walletAddress && !cleared) return;
 
     setSessionCleared(false);
-    void connectWallet();
-  }, [embedded, privyReady, walletAddress, cleared, connectWallet]);
+    void login();
+  }, [embedded, privyReady, walletAddress, cleared, login]);
 
   const disconnect = useCallback(async () => {
     setSessionCleared(true);
@@ -98,7 +132,15 @@ export function useSolanaAddress(): {
         }
       }),
     );
-  }, [wallets, queryClient]);
+
+    if (authenticated) {
+      try {
+        await logout();
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [wallets, queryClient, authenticated, logout]);
 
   return {
     address,
@@ -106,6 +148,7 @@ export function useSolanaAddress(): {
     ready,
     walletIcon,
     walletName,
+    canExportWallet,
     connect,
     disconnect,
   };

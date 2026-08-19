@@ -29,7 +29,7 @@ export async function withMintDisplayCopy(res: Response): Promise<Response> {
         ? payload.error
         : "Something went wrong. Try again.";
     return jsonResponse(
-      { ...payload, body: toUserFacingBody(error) },
+      { ...payload, status:"error", body: toUserFacingBody(error) },
       res.status,
       res.headers,
     );

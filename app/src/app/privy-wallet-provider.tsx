@@ -28,6 +28,9 @@ const privyConfig: PrivyClientConfig = {
     ],
   },
   loginMethods: ["google", "wallet"],
+  embeddedWallets: {
+    solana: { createOnLogin: "users-without-wallets" },
+  },
   externalWallets: {
     solana: { connectors: solanaConnectors },
   },
