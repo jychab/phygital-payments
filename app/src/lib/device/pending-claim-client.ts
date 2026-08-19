@@ -13,7 +13,7 @@ async function readJson<T>(res: Response, fallback: string): Promise<T> {
   return body;
 }
 
-/** Client for `/api/claim/pending` — Safari tap handoff to `/device/finish`. */
+/** Client for `/api/claim/pending` — Safari tap handoff to `/device?token=`. */
 export async function createPendingClaim(
   body: Omit<PendingClaimRecord, "createdAtMs">,
 ): Promise<CreatePendingClaimResponse> {

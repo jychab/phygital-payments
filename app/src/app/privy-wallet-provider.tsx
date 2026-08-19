@@ -37,8 +37,9 @@ const privyConfig: PrivyClientConfig = {
 };
 
 /**
- * Wallet routes (`/`, `/setup`, `/device/finish`). Do not wrap `/collect` or `/device`.
- * Loaded via `next/dynamic({ ssr: false })` so `@privy-io/react-auth` never runs on the server.
+ * Wallet routes (`/`, `/setup`). `/device` loads Privy only for `?token=` / `?owner=&asset=`.
+ * Do not wrap `/collect`. Loaded via `next/dynamic({ ssr: false })` so `@privy-io/react-auth`
+ * never runs on the server.
  */
 export function PrivyWalletProvider({ children }: { children: ReactNode }) {
   if (!privyAppId) {

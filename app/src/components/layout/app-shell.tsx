@@ -59,7 +59,7 @@ export function AppShell({
   walletActions?: WalletActionsMode;
   /** Current mode label in the header. */
   modeLabel?: AppMode;
-  /** When set, mode label becomes a dropdown to switch Home ↔ Collect. */
+  /** When set, mode label becomes a dropdown (Home / Collect; Device stays the current label). */
   modeNav?: ModeNavItem[] | null;
 }) {
   const navItems = modeNav && modeNav.length > 0 ? modeNav : null;

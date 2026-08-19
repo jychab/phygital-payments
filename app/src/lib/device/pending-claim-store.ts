@@ -15,7 +15,7 @@ import {
 
 const KEY_PREFIX = "claim:";
 
-/** KV for pending claim sessions (Safari tap → wallet finish). */
+/** KV for pending claim sessions (Safari tap → `/device?token=`). */
 function getPendingClaimKv(): KVNamespace {
   const kv = getCloudflareContext().env.pending_claim;
   if (!kv) {

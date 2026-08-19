@@ -10,7 +10,7 @@ import { PasteApiKeyPanel } from "@/components/pay/paste-api-key-panel";
 import { PayFlowPanel } from "@/components/pay/pay-flow-panel";
 import { RevealApiKeyPanel } from "@/components/pay/reveal-api-key-panel";
 import { usePaySetupSnapshot } from "@/hooks/pay/use-pay-setup-snapshot";
-import { deviceFinishHref } from "@/lib/device/finish";
+import { devicePaySetupHref } from "@/lib/device/finish";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
 
@@ -24,8 +24,8 @@ export function DeviceSetupStatus({ asset }: { asset: PhygitalAsset }) {
   const [view, setView] = useState<View>("home");
   const snap = usePaySetupSnapshot(owner, assetAddress);
   const limitHref = () =>
-    router.push(
-      deviceFinishHref({ owner, asset: assetAddress }),
+    router.replace(
+      devicePaySetupHref({ owner, asset: assetAddress }),
     );
 
   if (view === "paste") {

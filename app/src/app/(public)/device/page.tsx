@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: "Manage tap-to-pay for your NFC device",
 };
 
-/** Safari NFC tap (step 1) — no Privy. */
+/** Safari NFC tap, or `/device?token=` / `?owner=&asset=` wallet finish. */
 export default function DevicePage() {
   return (
     <Suspense fallback={<EmbedBoot />}>

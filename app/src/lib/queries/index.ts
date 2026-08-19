@@ -8,7 +8,7 @@
  * Domain code lives next to the matching UI folder:
  *   lib/pay + hooks/pay         Enable Pay, API keys, Hold to Pay, limits
  *   lib/collect + hooks/collect `/collect` receive + `/setup` ATA
- *   lib/device + hooks/device   NFC tap, claim, `/device/finish`
+ *   lib/device + hooks/device   NFC tap, claim, `/device?token=`
  *   lib/home + hooks/home       Activity + Devices tab
  *   lib/tokens + hooks/tokens   mint catalog, holdings, spending-limit math
  *   lib/server                  API routes only (`import "server-only"`)

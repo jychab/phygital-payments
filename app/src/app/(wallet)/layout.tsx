@@ -11,7 +11,7 @@ const PrivyWalletProvider = dynamic(
   { ssr: false, loading: () => <EmbedBoot /> },
 );
 
-/** Home + setup + device/finish — Privy / wallet connect, browser-only. */
+/** Home + setup — Privy / wallet connect, browser-only. */
 export default function WalletLayout({ children }: { children: ReactNode }) {
   return (
     <>

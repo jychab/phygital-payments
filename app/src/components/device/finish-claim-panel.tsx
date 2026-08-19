@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle, Wallet } from "lucide-react";
+import { Copy, LoaderCircle, Wallet } from "lucide-react";
+import { toast } from "sonner";
 
 import { DeviceFinishSetup } from "@/components/device/finish-setup";
 import { DeviceWalletReadyLoader } from "@/components/device/wallet-ready-loader";
@@ -12,6 +13,7 @@ import { ExpiryCountdown } from "@/components/shared/expiry-countdown";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { consumePendingClaim } from "@/lib/device/pending-claim-client";
+import { deviceClaimHref } from "@/lib/device/finish";
 import { usePendingClaim } from "@/hooks/device/use-pending-claim";
 import { usePhygitalAssetByAddress } from "@/hooks/device/use-phygital-asset";
 import { assertClaimReady, finishClaim } from "@/lib/device/claim";
@@ -22,7 +24,7 @@ import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
 
 type Phase = "confirming" | "done" | null;
 
-/** `/device/finish?token=` — confirm claim in the wallet, then optional Pay setup. */
+/** `/device?token=` — confirm claim in the wallet, then optional Pay setup. */
 export function FinishClaimPanel() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -39,6 +41,18 @@ export function FinishClaimPanel() {
   const [error, setError] = useState<string | null>(null);
   const [showSetup, setShowSetup] = useState(false);
   const [claimedAsset, setClaimedAsset] = useState<string | null>(null);
+
+  async function onCopyLink() {
+    if (!token) return;
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}${deviceClaimHref(token)}`,
+      );
+      toast.success("Finish link copied");
+    } catch {
+      toast.error("Couldn’t copy link");
+    }
+  }
 
   async function onFinish() {
     if (!signer || !address || !pending) return;
@@ -184,14 +198,26 @@ export function FinishClaimPanel() {
           title="Connect your wallet"
           body="This wallet will be linked to the device."
           action={
-            <Button
-              type="button"
-              size="lg"
-              className="w-full max-w-64"
-              onClick={connect}
-            >
-              Connect wallet
-            </Button>
+            <div className="flex w-full max-w-64 flex-col gap-2.5">
+              <Button
+                type="button"
+                size="lg"
+                className="w-full"
+                onClick={connect}
+              >
+                Connect wallet
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="w-full"
+                onClick={() => void onCopyLink()}
+              >
+                <Copy className="size-4" />
+                Copy finish link
+              </Button>
+            </div>
           }
         />
       ) : (

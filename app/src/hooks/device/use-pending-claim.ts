@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchPendingClaim } from "@/lib/device/pending-claim-client";
 import { queryKeys, queryOptions } from "@/lib/queries";
 
-/** Load a Safari tap proof for wallet-browser finish. */
+/** Load a Safari tap proof for `/device?token=`. */
 export function usePendingClaim(token: string | null) {
   return useQuery({
     queryKey: queryKeys.pendingClaim.byToken(token),

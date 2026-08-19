@@ -13,7 +13,7 @@ import { markApiKeyVerified } from "@/hooks/pay/use-verified-api-key";
 import { getDefaultMint } from "@/lib/tokens/payment-token";
 import { queryKeys } from "@/lib/queries";
 
-/** Spending limit then Enable Pay — used from `/device/finish` and after claim. */
+/** Spending limit then Enable Pay — used from `/device?owner=&asset=` and after claim. */
 export function DeviceFinishSetup({
   owner,
   asset,

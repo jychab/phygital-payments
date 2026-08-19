@@ -72,20 +72,13 @@ Embeds cannot use `/setup` (error screen).
 
 ### Device / claim (`/device?pk=&s=&c=&n=`)
 
-After an NFC tap. `/device` has **no Privy / Connect**. Wallet linking is a **successful end state**; Pay setup is **optional**.
-
-**Step 1 — Safari or Chrome (`/device`):**
+After an NFC tap. NFC verify has **no Privy**. Wallet connect loads only for `?token=` or `?owner=&asset=`. Wallet linking is a **successful end state**; Pay setup is **optional**.
 
 1. Verify tap (silent)
-2. **Unclaimed / unlocked** — WebAuthn tap, then link wallet on `/device/finish`
+2. **Unclaimed / unlocked** — WebAuthn tap, then replace to `/device?token=` and connect (Google in this tab, or copy the finish link into a wallet in-app browser)
 3. **Locked and owned** — **Your wallet is ready.** Status: Wallet, Pay (On/Off), Spending Limit
-   - **Set Up Pay** / **Not Now** when Pay is off
+   - **Set Up Pay** replaces to `/device?owner=&asset=` (spending limit, then Enable Pay if needed)
    - **Pay** → **Hold to Pay** when Pay is on and this phone has a stored key
-
-**Step 2 — finish (`/device/finish`):** Privy wallet connect.
-
-- `?token=` — claim device, then **Your wallet is ready.** (optional Set Up Pay; no forced wizard)
-- `?owner=&asset=` — continue Pay setup (spending limit, then Enable Pay if needed)
 
 API keys live in localStorage on this phone, keyed by wallet. **Reveal API key** copies the key onto another phone.
 

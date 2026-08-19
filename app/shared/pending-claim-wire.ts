@@ -1,5 +1,5 @@
 /**
- * Wire types for two-step claim handoff (Safari NFC tap → wallet finish).
+ * Wire types for claim handoff (Safari NFC tap → `/device?token=`).
  */
 
 import { getBase58Decoder, getBase58Encoder } from "@solana/kit";

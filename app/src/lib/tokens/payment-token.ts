@@ -72,15 +72,9 @@ export function resolvePaymentToken(
   catalog?: PaymentToken[] | null,
 ): PaymentToken {
   const mintStr = String(mint);
-  const found = catalog?.find((t) => t.mint === mintStr);
-  if (found) {
-    if (isDefaultMint(found.mint) && !found.icon?.trim()) {
-      return { ...found, icon: USDC_ICON_URL };
-    }
-    return found;
-  }
   if (isDefaultMint(mintStr)) return defaultUsdcToken();
-  return {
+  const found = catalog?.find((t) => t.mint === mintStr);
+  return found ?? {
     mint: mintStr,
     symbol: shortAddress(mintStr, 4),
     name: "Unknown token",

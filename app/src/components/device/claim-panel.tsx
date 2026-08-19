@@ -2,28 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Copy, Nfc } from "lucide-react";
+import { Nfc } from "lucide-react";
 
-import { GateMessage, SuccessStatus } from "@/components/layout/gate-message";
-import { ExpiryCountdown } from "@/components/shared/expiry-countdown";
+import { GateMessage } from "@/components/layout/gate-message";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import { createPendingClaim } from "@/lib/device/pending-claim-client";
-import {
-  serializePendingClaimSession,
-  type CreatePendingClaimResponse,
-} from "../../../shared/pending-claim-wire";
+import { deviceClaimHref } from "@/lib/device/finish";
+import { serializePendingClaimSession } from "../../../shared/pending-claim-wire";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
 import { assertCaptureReady, captureClaimTap } from "@/lib/device/claim";
 import { toUserErrorMessage } from "@/lib/user-errors";
-import { toast } from "sonner";
 
 type Stage = "ready" | "reading";
 
 /**
- * Safari step 1: NFC tap only, then hand off to wallet finish (Privy connect).
+ * Safari NFC tap, then replace to `/device?token=` for wallet connect.
  */
 export function ClaimPanel({
   asset,
@@ -37,7 +33,6 @@ export function ClaimPanel({
 
   const [stage, setStage] = useState<Stage>("ready");
   const [error, setError] = useState<string | null>(null);
-  const [handoff, setHandoff] = useState<CreatePendingClaimResponse | null>(null);
 
   const title = unclaimed ? "Add to this phone" : "Move to this phone";
 
@@ -68,11 +63,7 @@ export function ClaimPanel({
         auth,
       });
 
-      setHandoff({
-        token: pending.token,
-        finishUrl: pending.finishUrl,
-        expiresAtMs: pending.expiresAtMs,
-      });
+      router.replace(deviceClaimHref(pending.token));
     } catch (err) {
       setStage("ready");
       setError(
@@ -84,61 +75,9 @@ export function ClaimPanel({
     }
   }
 
-  function onContinue() {
-    if (!handoff) return;
-    router.push(`/device/finish?token=${encodeURIComponent(handoff.token)}`);
-  }
-
-  async function onCopyLink() {
-    if (!handoff) return;
-    try {
-      await navigator.clipboard.writeText(handoff.finishUrl);
-      toast.success("Finish link copied");
-    } catch {
-      toast.error("Couldn’t copy link");
-    }
-  }
-
   if (inApp) {
     return (
       <InAppBrowserGate body="Adding an NFC device needs Safari or Chrome." />
-    );
-  }
-
-  if (handoff) {
-    return (
-      <div className="flex flex-1 flex-col gap-5 py-2">
-        <SuccessStatus
-          icon={<CheckCircle2 className="size-7" />}
-          title="Device verified"
-          body="Link your wallet to continue."
-        />
-
-        <ExpiryCountdown
-          expiresAtMs={handoff.expiresAtMs}
-          className="text-center text-xs text-muted-foreground"
-        />
-
-        <div className="flex flex-col gap-2.5">
-          <Button type="button" size="lg" className="w-full" onClick={onContinue}>
-            Continue
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="w-full"
-            onClick={() => void onCopyLink()}
-          >
-            <Copy className="size-4" />
-            Copy finish link
-          </Button>
-        </div>
-
-        <p className="text-center text-[11px] text-muted-foreground">
-          Tap Continue, then choose your wallet in the connect screen.
-        </p>
-      </div>
     );
   }
 
@@ -156,7 +95,7 @@ export function ClaimPanel({
     <GateMessage
       icon={<Nfc className="size-5 text-muted-foreground" />}
       title={title}
-      body="Hold your NFC device to verify, then finish in your wallet app."
+      body="Hold your NFC device to verify, then connect your wallet."
       action={
         <div className="flex w-full max-w-64 flex-col gap-3">
           {error ? (

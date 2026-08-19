@@ -7,18 +7,15 @@ import {
   writePendingClaim,
 } from "@/lib/device/pending-claim-store";
 import { toUserErrorMessage } from "@/lib/user-errors";
+import { deviceClaimHref } from "@/lib/device/finish";
 import {
   parseCreatePendingClaimRequest,
   type CreatePendingClaimResponse,
 } from "../../../../../shared/pending-claim-wire";
 
-function finishPath(token: string): string {
-  return `/device/finish?token=${encodeURIComponent(token)}`;
-}
-
 function absoluteFinishUrl(req: Request, token: string): string {
   const origin = new URL(req.url).origin;
-  return `${origin}${finishPath(token)}`;
+  return `${origin}${deviceClaimHref(token)}`;
 }
 
 function tokenFromRequest(req: Request): string | null {
@@ -61,7 +58,7 @@ export async function POST(req: Request) {
   }
 }
 
-/** Load a pending tap proof for the finish page. */
+/** Load a pending tap proof for `/device?token=`. */
 export async function GET(req: Request) {
   try {
     const token = tokenFromRequest(req);

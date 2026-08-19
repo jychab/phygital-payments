@@ -60,8 +60,13 @@ export function useSolanaAddress(): {
   ready: boolean;
   /** Wallet-standard icon (data URL) for the connected wallet, if any. */
   walletIcon: string | null;
-  /** Wallet-standard display name (e.g. "Phantom"). */
+  /** Wallet-standard display name (e.g. "Phantom"), or "Google" for embedded. */
   walletName: string | null;
+  /**
+   * True when the connected wallet is a Privy Solana embedded wallet
+   * (Google login).
+   */
+  isEmbeddedWallet: boolean;
   /**
    * True when the connected address is a Privy Solana embedded wallet
    * the user can export via `exportWallet`.
@@ -92,21 +97,27 @@ export function useSolanaAddress(): {
   const walletAddress = wallet?.address ?? null;
   const address = cleared ? null : walletAddress;
   const ready = privyReady && walletsReady;
+  const isEmbeddedWallet = Boolean(
+    !cleared &&
+      address &&
+      (wallet?.standardWallet.name === "Privy" ||
+        user?.linkedAccounts.some((account) =>
+          isExportablePrivySolanaWallet(account, address),
+        )),
+  );
   const walletIcon =
-    !cleared && wallet?.standardWallet.icon
+    !cleared && !isEmbeddedWallet && wallet?.standardWallet.icon
       ? wallet.standardWallet.icon
       : null;
-  const walletName =
-    !cleared && wallet?.standardWallet.name
-      ? wallet.standardWallet.name
-      : null;
+  const walletName = cleared
+    ? null
+    : isEmbeddedWallet
+      ? "Google"
+      : wallet?.standardWallet.name
+        ? wallet.standardWallet.name
+        : null;
   const canExportWallet = Boolean(
-    ready &&
-      authenticated &&
-      address &&
-      user?.linkedAccounts.some((account) =>
-        isExportablePrivySolanaWallet(account, address),
-      ),
+    ready && authenticated && isEmbeddedWallet,
   );
 
   const connect = useCallback(() => {
@@ -148,6 +159,7 @@ export function useSolanaAddress(): {
     ready,
     walletIcon,
     walletName,
+    isEmbeddedWallet,
     canExportWallet,
     connect,
     disconnect,
