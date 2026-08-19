@@ -48,15 +48,8 @@ function mapToken(raw: JupiterToken): PaymentToken | null {
 
 function pinUsdc(tokens: PaymentToken[]): PaymentToken[] {
   const usdc = defaultUsdcToken();
-  const fromCatalog = tokens.find((t) => t.mint === usdc.mint);
-  const pinned: PaymentToken = {
-    ...usdc,
-    name: fromCatalog?.name || usdc.name,
-    icon: usdc.icon,
-    decimals: fromCatalog?.decimals ?? usdc.decimals,
-  };
   const rest = tokens.filter((t) => t.mint !== usdc.mint);
-  return [pinned, ...rest];
+  return [usdc, ...rest];
 }
 
 async function fetchVerifiedTokensFromNetwork(): Promise<PaymentToken[]> {

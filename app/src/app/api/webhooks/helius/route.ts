@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 import { parseTransferEvents } from "@/lib/server/helius";
 import {
@@ -7,6 +6,11 @@ import {
   getPaymentsDb,
   insertPayments,
 } from "@/lib/server/payments-db";
+
+/** Strip an optional `Bearer ` prefix so dashboard vs API authHeader both match. */
+function authToken(value: string): string {
+  return value.trim().replace(/^Bearer\s+/i, "").trim();
+}
 
 /** Timing-safe string compare. */
 function safeEqual(a: string, b: string): boolean {
@@ -23,9 +27,7 @@ function safeEqual(a: string, b: string): boolean {
  * each transaction's logs and indexes the payments to D1.
  */
 export async function POST(req: NextRequest) {
-  const expected = (
-    getCloudflareContext().env as unknown as { HELIUS_WEBHOOK_AUTH?: string }
-  ).HELIUS_WEBHOOK_AUTH?.trim();
+  const expected = process.env.HELIUS_WEBHOOK_AUTH?.trim();
 
   if (!expected) {
     return NextResponse.json(
@@ -33,8 +35,8 @@ export async function POST(req: NextRequest) {
       { status: 503 },
     );
   }
-  const provided = req.headers.get("authorization")?.trim() ?? "";
-  if (!safeEqual(provided, expected)) {
+  const provided = authToken(req.headers.get("authorization") ?? "");
+  if (!safeEqual(provided, authToken(expected))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
