@@ -27,7 +27,7 @@ const privyConfig: PrivyClientConfig = {
       "detected_solana_wallets",
     ],
   },
-  loginMethods: ["wallet"],
+  loginMethods: ["google", "wallet"],
   externalWallets: {
     solana: { connectors: solanaConnectors },
   },
