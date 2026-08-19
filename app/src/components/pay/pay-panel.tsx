@@ -13,7 +13,10 @@ import { RevealApiKeyPanel } from "@/components/pay/reveal-api-key-panel";
 import { BackLink } from "@/components/shared/back-link";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatuses } from "@/hooks/pay/use-delegate-status";
-import { useVerifiedApiKey, markApiKeyVerified } from "@/hooks/pay/use-verified-api-key";
+import {
+  useVerifiedApiKey,
+  markApiKeyVerified,
+} from "@/hooks/pay/use-verified-api-key";
 import { usePayTokenContext } from "@/hooks/tokens/use-verified-tokens";
 import { useProvisionApiKey } from "@/hooks/pay/use-provision-api-key";
 import {
@@ -59,25 +62,21 @@ export function PayPanel({
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-2.5">
       <PayFlowPanel
         owner={walletAddress}
         variant="home"
         onSetLimit={onSetLimit}
       />
-
-      <div className="mt-auto border-t border-border/40 pt-4">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="w-full text-muted-foreground"
-          onClick={onManage}
-        >
-          <Settings2 className="size-3.5" />
-          Manage Pay
-        </Button>
-      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="lg"
+        className="w-full text-muted-foreground"
+        onClick={onManage}
+      >
+        Manage Pay
+      </Button>
     </div>
   );
 }

@@ -215,7 +215,7 @@ export function LimitPanel({
             token={token}
             decimals={decimals}
             disabled={busy || !matched}
-            caption="Max tap amount"
+            caption="Max amount per tap"
             className="py-1"
           />
           {maxTapOverLimit ? (
