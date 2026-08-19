@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { SetupCollectApp } from "@/components/wallet-client-apps";
-import { parsePaymentRequest } from "@/lib/payments/payment-request";
+import { parsePaymentRequest } from "@/lib/collect/payment-request";
 
 export const metadata: Metadata = {
   title: "Set up receive — Phygital Pay",

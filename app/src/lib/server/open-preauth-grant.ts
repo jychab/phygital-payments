@@ -2,34 +2,25 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 
-import { tryParseAddress } from "@/lib/payments/payment-request";
-import { getDefaultMint } from "@/lib/payments/payment-token";
-import { toUserErrorMessage } from "@/lib/payments/user-errors";
+import { tryParseAddress } from "@/lib/solana/address";
+import { getDefaultMint } from "@/lib/tokens/payment-token";
+import { toUserErrorMessage } from "@/lib/user-errors";
 import { getErrorMessage } from "@/lib/utils";
-import { getPreauthGrantsStub } from "@/lib/server/preauth-grants-do";
-import { verifyPayKey } from "../../../worker/pay-hmac";
+import {
+  getHmacSecret,
+  getPreauthGrantsStub,
+  isApiKeyAuthError,
+} from "@/lib/server/preauth-grants-do";
+import { INVALID_API_KEY, parseApiKey } from "../../../worker/api-key-hmac";
 
 const NO_STORE = { "Cache-Control": "no-store" } as const;
 
-function getHmacSecret(): string {
-  const secret = process.env.PAY_HMAC_SECRET?.trim();
-  if (!secret) throw new Error("PAY_HMAC_SECRET is not configured");
-  return secret;
-}
-
-export type OpenPreauthParams = {
+/** POST /api/preauth/open — HMAC-parse key, open a spending window on the DO. */
+export async function openPreauthGrant(params: {
   apiKey: string;
   amount?: string | null;
   mint?: string | null;
-};
-
-/**
- * Verify the HMAC pay key from the `apiKey` query param, then open a preauth
- * grant in the payer's DO. Mint defaults to USDC.
- */
-export async function openPreauthGrant(
-  params: OpenPreauthParams,
-): Promise<NextResponse> {
+}): Promise<NextResponse> {
   const apiKey = params.apiKey.trim();
   if (!apiKey) {
     return NextResponse.json(
@@ -65,10 +56,10 @@ export async function openPreauthGrant(
   const mint = String(mintAddress);
 
   try {
-    const parsed = await verifyPayKey(getHmacSecret(), apiKey);
+    const parsed = await parseApiKey(getHmacSecret(), apiKey);
     if (!parsed) {
       return NextResponse.json(
-        { error: "Invalid or revoked Pay key" },
+        { error: INVALID_API_KEY },
         { status: 401, headers: NO_STORE },
       );
     }
@@ -92,10 +83,7 @@ export async function openPreauthGrant(
     );
   } catch (error) {
     const message = getErrorMessage(error, "Internal error");
-    if (
-      message.includes("Invalid or revoked Pay key") ||
-      message.includes("Key has been revoked")
-    ) {
+    if (isApiKeyAuthError(message)) {
       return NextResponse.json(
         { error: message },
         { status: 401, headers: NO_STORE },

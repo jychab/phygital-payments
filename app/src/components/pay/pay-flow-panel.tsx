@@ -6,36 +6,25 @@ import { LoaderCircle, X } from "lucide-react";
 import { address } from "@solana/kit";
 import Link from "next/link";
 
-import { NfcHoldStatus } from "@/components/nfc-hold-status";
+import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
-import { useDelegateStatus } from "@/hooks/use-delegate-status";
-import { useMaxTapAmountUi } from "@/hooks/use-max-tap-amount";
-import { useMintProgram } from "@/hooks/use-mint-program";
-import { useVerifiedTokens } from "@/hooks/use-verified-tokens";
-import { hasLocalPayKey } from "@/lib/payments/device-setup-state";
-import { isDelegateEnabled, uiAmountToRaw } from "@/lib/payments/mint-delegate";
+import { useDelegateStatus } from "@/hooks/pay/use-delegate-status";
+import { useMaxTapAmountUi } from "@/hooks/pay/use-max-tap-amount";
+import { useMintProgram } from "@/hooks/tokens/use-mint-program";
+import { useVerifiedTokens } from "@/hooks/tokens/use-verified-tokens";
+import { isDelegateEnabled, uiAmountToRaw } from "@/lib/tokens/mint-delegate";
 import {
   defaultTapAmountUi,
   getDefaultMint,
   resolvePaymentToken,
-} from "@/lib/payments/payment-token";
+} from "@/lib/tokens/payment-token";
 import {
   cancelPreauthForWallet,
   requestPreauthForWallet,
-} from "@/lib/payments/preauth-client";
-import { toUserErrorMessage } from "@/lib/payments/user-errors";
+} from "@/lib/pay/preauth-client";
+import { toUserErrorMessage } from "@/lib/user-errors";
 
 type Phase = "idle" | "window" | "expired";
-
-export type PayFlowPanelProps = {
-  owner: string;
-  /** Device route shows Done; home omits footer actions. */
-  variant?: "home" | "device";
-  /** Parent already verified a local key (skips missing-key gate). */
-  assumeKeyReady?: boolean;
-  /** Open spending-limit setup for the Pay token. */
-  onSetLimit?: () => void;
-};
 
 function silentGrantAmountUi(
   limitUi?: string | null,
@@ -73,9 +62,16 @@ function formatCountdown(seconds: number): string {
 export function PayFlowPanel({
   owner,
   variant = "home",
-  assumeKeyReady = false,
   onSetLimit,
-}: PayFlowPanelProps) {
+  onRevealKey,
+  onBack,
+}: {
+  owner: string;
+  variant?: "home" | "device";
+  onSetLimit?: () => void;
+  onRevealKey?: () => void;
+  onBack?: () => void;
+}) {
   const mint = String(getDefaultMint());
   const mintAddress = useMemo(() => address(mint), [mint]);
   const [busy, setBusy] = useState(false);
@@ -83,7 +79,6 @@ export function PayFlowPanel({
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  const hasKey = assumeKeyReady || hasLocalPayKey(owner);
   const capQuery = useDelegateStatus(owner, mintAddress);
   const mintQuery = useMintProgram(mintAddress);
   const verified = useVerifiedTokens();
@@ -98,8 +93,6 @@ export function PayFlowPanel({
   );
   const decimals = mintQuery.data?.decimals ?? token.decimals;
   const rawAmount = tryUiAmountToRaw(grantUi, decimals);
-
-
 
   const windowOpen = phase === "window";
   const secondsLeft =
@@ -121,10 +114,6 @@ export function PayFlowPanel({
   }, [windowOpen, expiresAt]);
 
   async function onPay() {
-    if (!hasKey) {
-      toast.error("Turn on Pay on this phone first.");
-      return;
-    }
     if (!tokenEnabled) {
       toast.error(`Turn on ${token.symbol} for Pay first.`);
       return;
@@ -184,6 +173,17 @@ export function PayFlowPanel({
         >
           Pay Again
         </Button>
+        {onBack ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="w-full max-w-xs"
+            onClick={onBack}
+          >
+            Back
+          </Button>
+        ) : null}
       </div>
     );
   }
@@ -206,24 +206,6 @@ export function PayFlowPanel({
           </Button>
         }
       />
-    );
-  }
-
-  if (!hasKey) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 py-8 text-center">
-        <div className="max-w-64 space-y-1.5">
-          <p className="text-base font-medium text-foreground">Pay Isn’t Set Up</p>
-          <p className="text-sm text-muted-foreground">
-            Turn on Pay on this phone, then come back to pay.
-          </p>
-        </div>
-        {variant === "device" ? (
-          <Button type="button" size="lg" className="w-full max-w-xs" asChild>
-            <Link href="/">Set Up Pay</Link>
-          </Button>
-        ) : null}
-      </div>
     );
   }
 
@@ -270,11 +252,9 @@ export function PayFlowPanel({
   return (
     <div className="flex flex-1 flex-col gap-6">
       <div className="flex flex-1 flex-col items-center justify-center text-center">
-        
-          <p className="max-w-64 text-sm text-muted-foreground">
-            Tap Pay, then hold your device at the receiver phone.
-          </p>
-        
+        <p className="max-w-64 text-sm text-muted-foreground">
+          Tap Pay, then hold your device at the receiver phone.
+        </p>
       </div>
 
       <div className="mt-auto flex flex-col gap-2.5">
@@ -291,7 +271,28 @@ export function PayFlowPanel({
             "Pay"
           )}
         </Button>
-        {variant === "device" ? (
+        {onRevealKey ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="w-full"
+            onClick={onRevealKey}
+          >
+            Reveal API key
+          </Button>
+        ) : null}
+        {onBack ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="w-full"
+            onClick={onBack}
+          >
+            Back
+          </Button>
+        ) : variant === "device" ? (
           <Button type="button" variant="ghost" size="lg" className="w-full" asChild>
             <Link href="/">Done</Link>
           </Button>

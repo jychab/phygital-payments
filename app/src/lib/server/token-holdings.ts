@@ -1,13 +1,13 @@
 import "server-only";
 
-import { formatTokenAmount } from "@/lib/payments/mint-delegate";
+import { formatTokenAmount } from "@/lib/tokens/mint-delegate";
 import {
   CLASSIC_TOKEN_PROGRAM,
   defaultUsdcToken,
   isClassicTokenProgram,
   type PaymentToken,
   type PaymentTokenHolding,
-} from "@/lib/payments/payment-token";
+} from "@/lib/tokens/payment-token";
 import { fetchVerifiedTokens } from "@/lib/server/verified-tokens";
 import { RPC_URL } from "@/lib/solana/cluster";
 

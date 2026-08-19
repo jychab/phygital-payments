@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { EmbedBoot } from "@/components/embed-error";
-import { AssetApp } from "@/components/asset-app";
+import { EmbedBoot } from "@/components/layout/embed-gate";
+import { DeviceTapApp } from "@/components/device/tap-app";
 
 export const metadata: Metadata = {
   title: "Device — Phygital Pay",
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function DevicePage() {
   return (
     <Suspense fallback={<EmbedBoot />}>
-      <AssetApp />
+      <DeviceTapApp />
     </Suspense>
   );
 }

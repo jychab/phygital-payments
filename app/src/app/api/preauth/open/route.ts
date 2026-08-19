@@ -4,7 +4,7 @@ import { openPreauthGrant } from "@/lib/server/open-preauth-grant";
 
 /**
  * GET /api/preauth/open?apiKey=&amount=100000000
- * In-app Pay, Shortcuts, and integrators — apiKey in query string.
+ * In-app Pay and integrators — apiKey in query string.
  */
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;

@@ -2,27 +2,25 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, ChevronLeft, Settings2 } from "lucide-react";
+import { Check, ChevronLeft, LoaderCircle, Settings2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
-import { PayFlowPanel } from "@/components/pay/pay-flow-panel";
-import { AllowVerifierPanel } from "@/components/pay/allow-verifier-panel";
+import { CenteredStatus } from "@/components/layout/gate-message";
+import { EnablePayPanel } from "@/components/pay/enable-pay-panel";
 import { ManagePayTokens } from "@/components/pay/pay-limit-panel";
+import { PayFlowPanel } from "@/components/pay/pay-flow-panel";
+import { RevealApiKeyPanel } from "@/components/pay/reveal-api-key-panel";
 import { Button } from "@/components/ui/button";
-import { useDelegateStatus, useDelegateStatuses } from "@/hooks/use-delegate-status";
-import { useMaxTapAmountUi } from "@/hooks/use-max-tap-amount";
-import { usePayTokenContext } from "@/hooks/use-verified-tokens";
-import { useDevicePayKeyHelpers } from "@/lib/payments/device-pay-key-client";
-import { isDelegateEnabled, uiAmountToRaw } from "@/lib/payments/mint-delegate";
-import { hasLocalPayKey } from "@/lib/payments/device-setup-state";
+import { useDelegateStatuses } from "@/hooks/pay/use-delegate-status";
+import { useVerifiedApiKey, markApiKeyVerified } from "@/hooks/pay/use-verified-api-key";
+import { usePayTokenContext } from "@/hooks/tokens/use-verified-tokens";
+import { useProvisionApiKey } from "@/hooks/pay/use-provision-api-key";
 import {
-  defaultTapAmountUi,
-  defaultUsdcToken,
   getDefaultMint,
   type PaymentTokenHolding,
-} from "@/lib/payments/payment-token";
-import { copyPayShortcutLink } from "@/lib/payments/preauth-client";
-import { toUserErrorMessage } from "@/lib/payments/user-errors";
-import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
+} from "@/lib/tokens/payment-token";
+import { toUserErrorMessage } from "@/lib/user-errors";
+import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 
 /**
  * Home Pay tab — Enable Pay, Pay, and settings.
@@ -35,36 +33,35 @@ export function PayPanel({
   onSetLimit?: () => void;
 }) {
   const { address: walletAddress } = useSolanaAddress();
-  const [payFlowKey, setPayFlowKey] = useState(0);
-
-  const hasKey = Boolean(walletAddress && hasLocalPayKey(walletAddress));
-
-  function remountPayFlow() {
-    setPayFlowKey((n) => n + 1);
-  }
+  const queryClient = useQueryClient();
+  const keyQuery = useVerifiedApiKey(walletAddress ?? null);
 
   if (!walletAddress) {
     return null;
   }
 
-  if (!hasKey) {
+  if (keyQuery.isPending) {
     return (
-      <div className="flex flex-1 flex-col gap-6">
-        <AllowVerifierPanel
-          expectedOwner={walletAddress}
-          onAllowed={() => remountPayFlow()}
-        />
-      </div>
+      <CenteredStatus>
+        <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+      </CenteredStatus>
+    );
+  }
+
+  if (keyQuery.data !== true) {
+    return (
+      <EnablePayPanel
+        expectedOwner={walletAddress}
+        onEnabled={() => markApiKeyVerified(queryClient, walletAddress)}
+      />
     );
   }
 
   return (
     <div className="flex flex-1 flex-col gap-4">
       <PayFlowPanel
-        key={payFlowKey}
         owner={walletAddress}
         variant="home"
-        assumeKeyReady
         onSetLimit={onSetLimit}
       />
 
@@ -84,6 +81,7 @@ export function PayPanel({
   );
 }
 
+/** Home Pay → Settings: API key, extra tokens, spending limits. */
 export function ManagePayPanel({
   owner,
   onBack,
@@ -93,8 +91,10 @@ export function ManagePayPanel({
   onBack: () => void;
   onEditTokenLimit: (holding: PaymentTokenHolding) => void;
 }) {
-  const { provisionKey } = useDevicePayKeyHelpers();
+  const { provisionKey } = useProvisionApiKey();
+  const queryClient = useQueryClient();
   const [keyBusy, setKeyBusy] = useState(false);
+  const [reveal, setReveal] = useState(false);
 
   const payContext = usePayTokenContext(owner);
   const mints =
@@ -102,42 +102,28 @@ export function ManagePayPanel({
       ? payContext.data.holdings.map((h) => h.mint)
       : [String(getDefaultMint())];
   const statuses = useDelegateStatuses(owner, mints);
-  const capQuery = useDelegateStatus(owner, getDefaultMint());
-  const limitUi = isDelegateEnabled(capQuery.data)
-    ? capQuery.data?.delegatedAmountUi
-    : null;
-  const maxTapUi = useMaxTapAmountUi(owner);
-  const usdc = defaultUsdcToken();
 
   async function onRotateKey() {
     try {
       setKeyBusy(true);
       await provisionKey(owner, { rotate: true });
-      toast.success("Pay key updated. Update any saved Shortcuts.");
+      markApiKeyVerified(queryClient, owner);
+      toast.success("API key updated");
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t update Pay key"));
+      toast.error(toUserErrorMessage(error, "Couldn’t update API key"));
     } finally {
       setKeyBusy(false);
     }
   }
 
-  async function onAddToShortcuts() {
-    try {
-      setKeyBusy(true);
-      await copyPayShortcutLink({
-        wallet: owner,
-        amount: uiAmountToRaw(
-          defaultTapAmountUi(limitUi, maxTapUi),
-          usdc.decimals,
-        ).toString(),
-        mint: String(getDefaultMint()),
-      });
-      toast.success("Shortcut link copied");
-    } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t copy link"));
-    } finally {
-      setKeyBusy(false);
-    }
+  if (reveal) {
+    return (
+      <RevealApiKeyPanel
+        owner={owner}
+        onBack={() => setReveal(false)}
+        extraAction={{ label: "Rotate API key", onClick: onRotateKey }}
+      />
+    );
   }
 
   return (
@@ -156,7 +142,7 @@ export function ManagePayPanel({
           Manage Pay
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Spending limits, Shortcuts, and this phone’s Pay key.
+          Spending limits and this phone’s API key.
         </p>
       </div>
 
@@ -178,10 +164,10 @@ export function ManagePayPanel({
           variant="outline"
           size="lg"
           className="w-full"
-          onClick={() => void onAddToShortcuts()}
+          onClick={() => setReveal(true)}
           disabled={keyBusy}
         >
-          Add to Shortcuts
+          Reveal API key
         </Button>
         <Button
           type="button"
@@ -191,7 +177,7 @@ export function ManagePayPanel({
           onClick={() => void onRotateKey()}
           disabled={keyBusy}
         >
-          Rotate Pay Key
+          Rotate API key
         </Button>
       </div>
     </div>

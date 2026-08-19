@@ -39,11 +39,11 @@ Configure the Privy app for Solana external wallet connectors. Login method: wal
 
 Connect a wallet via Privy, then use tabs:
 
-- **Pay** — **Pay $X** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC device. If Pay isn't configured, the tab offers **Enable Pay** (wallet sign; the pay key is stored in localStorage on this phone).
+- **Pay** — **Pay $X** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC device. If Pay isn't configured, the tab offers **Enable Pay** (wallet sign; the API key is stored in localStorage on this phone).
 - **Devices** — list of NFC devices for this wallet. Add a device by holding a tag (opens `/device`).
 - **Activity** — recent payments for the connected wallet.
 
-Pay settings (spending limits, token management) live on Home. The Pay key is stored in **localStorage** on this phone after Enable Pay.
+Pay settings (spending limits, token management) live on Home. The API key is stored in **localStorage** on this phone after Enable Pay.
 
 Legacy collect query params on `/` (`?recipient=` / `?amount=`) redirect to `/collect`.
 
@@ -84,13 +84,13 @@ After an NFC tap. `/device` has **no Privy / Connect**. Wallet linking is a **su
 
 - `?token=` — claim device, then **Your wallet is ready.** (optional Set Up Pay; no forced wizard)
 - `?intent=limit&owner=` — set spending limit
-- `?intent=verifier&owner=` — **Enable Pay** (sign + store key in localStorage)
+- `?intent=enable&owner=` — **Enable Pay** (sign + store API key in localStorage)
 
-Pay keys live in localStorage on this phone. **Manage Pay → Add to Shortcuts** copies an open URL.
+API keys live in localStorage on this phone, keyed by wallet. **Reveal API key** copies the key onto another phone.
 
-### Open a spending window (Pay key)
+### Open a spending window (API key)
 
-After Enable Pay, use **Manage Pay → Add to Shortcuts**. Any client can open a ~45s grant without NFC:
+In-app Pay calls `GET /api/preauth/open` with the stored API key. Integrators can do the same:
 
 ```
 GET /api/preauth/open?apiKey=<ppk_…>&amount=100000000
@@ -100,47 +100,21 @@ Query params:
 
 | Param | Required | Description |
 |-------|----------|-------------|
-| `apiKey` | Yes | Device pay key (`ppk_<wallet>_<gen>_<hmac>`) |
+| `apiKey` | Yes | HMAC API key (`ppk_<wallet>_<gen>_<hmac>`) |
 | `amount` | Yes | Raw u64 decimal (smallest units), e.g. `100000000` for $100 USDC |
 | `mint` | No | Token mint (defaults to USDC) |
 
 Response: `{ grantId, expiresAt, wallet, maxAmount, mint }` (grant stored in a per-wallet Durable Object). Responses use `Cache-Control: no-store`.
 
-A **200 from `/open` only means the spending window is open** — not that payment completed. Settlement happens when you hold NFC to the merchant Collect phone; the merchant UI is the receipt. In-app Pay and Shortcuts both stop after opening the window (countdown / toast only). They do **not** poll for `paid`.
+A **200 from `/open` only means the spending window is open** — not that payment completed. Settlement happens when you hold NFC to the merchant Collect phone; the merchant UI is the receipt. In-app Pay stops after opening the window (countdown only). It does **not** poll for `paid`.
 
-Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey>`.
+Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey>` (rejects rotated keys).
 
-The pay key is stored in plaintext in localStorage on this phone. Keys in query strings may also appear in CDN/proxy logs — use **Rotate Pay Key** in Manage Pay if leaked, and update saved Shortcut URLs.
+The API key is stored in plaintext in localStorage on this phone. Keys in query strings may also appear in CDN/proxy logs — use **Rotate API key** in Manage Pay if leaked.
 
 ```bash
 curl "https://<host>/api/preauth/open?apiKey=ppk_…&amount=100000000"
 ```
-
-#### Set up iOS Shortcuts
-
-1. Enable Pay on Home or `/device/finish`, then **Manage Pay → Add to Shortcuts**.
-2. Shortcuts → New Shortcut → **Get Contents of URL**.
-3. Method **GET**. URL:
-
-   `https://<host>/api/preauth/open?apiKey=<pasted ppk_…>&amount=100000000`
-
-   Optional: add `&mint=` for a non-USDC token. **Add to Shortcuts** copies a URL with the correct raw `amount`.
-4. Optional: **Show Notification** when the GET succeeds — **window opened** (e.g. “Hold to Pay”), not that you were charged.
-5. Run the Shortcut → within ~45 seconds hold your NFC device to the merchant Collect phone.
-6. After **Rotate Pay Key**, update the Shortcut URL.
-
-#### Set up Android (Tasker or similar)
-
-Android has no single first-party Shortcuts equivalent; use an HTTP automation app (e.g. **Tasker**):
-
-1. Enable Pay, then **Manage Pay → Add to Shortcuts** to copy the open URL.
-2. New task → **HTTP Request** (or Net → HTTP Get).
-3. Method **GET**, URL:
-
-   `https://<host>/api/preauth/open?apiKey=<pasted ppk_…>&amount=100000000`
-4. Optional: toast when the GET succeeds (**window opened**, not payment settled).
-5. Run the task → within ~45 seconds hold NFC to the merchant Collect phone.
-6. After rotating the key, update `apiKey` in the saved URL.
 
 ### Payment link (`/collect?recipient=<solana-address>`)
 

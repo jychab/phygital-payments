@@ -3,13 +3,13 @@ import { NextResponse } from "next/server";
 import {
   evaluateCounter,
   TAP_SESSION_TTL_MS,
-} from "@/lib/tap/counter-session";
+} from "@/lib/device/tap/counter-session";
 import {
   readCounterSession,
   writeCounterSession,
-} from "@/lib/tap/counter-store";
-import { verifyDynamicUrlWithoutCounterCheck } from "@/lib/tap/verify-dynamic-url";
-import { toUserErrorMessage } from "@/lib/payments/user-errors";
+} from "@/lib/device/tap/counter-store";
+import { verifyDynamicUrlWithoutCounterCheck } from "@/lib/device/tap/verify-dynamic-url";
+import { toUserErrorMessage } from "@/lib/user-errors";
 
 /**
  * Verify an NFC dynamic-URL tap (`pk`/`s`/`c`/`n`) for Enable Pay.

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import type { ReactNode } from "react";
 
-import { EmbedBoot } from "@/components/embed-error";
+import { EmbedBoot } from "@/components/layout/embed-gate";
 
 const PrivyWalletProvider = dynamic(
   () =>

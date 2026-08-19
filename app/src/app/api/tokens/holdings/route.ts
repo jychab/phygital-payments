@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { tryParseAddress } from "@/lib/payments/payment-request";
+import { tryParseAddress } from "@/lib/solana/address";
 import { fetchVerifiedHoldings } from "@/lib/server/token-holdings";
 
 /**

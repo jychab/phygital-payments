@@ -49,12 +49,20 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: "/collect",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors *;",
+          },
+        ],
+      },
+      {
         source: "/:path*",
         headers: [
           {
-            // Allow merchant sites to embed the payment-link receive UI.
             key: "Content-Security-Policy",
-            value: "frame-ancestors *;",
+            value: "frame-ancestors 'self';",
           },
         ],
       },

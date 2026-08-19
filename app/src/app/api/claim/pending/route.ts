@@ -4,8 +4,8 @@ import {
   consumePendingClaim,
   readPendingClaim,
   writePendingClaim,
-} from "@/lib/claim/pending-claim-store";
-import { toUserErrorMessage } from "@/lib/payments/user-errors";
+} from "@/lib/device/pending-claim-store";
+import { toUserErrorMessage } from "@/lib/user-errors";
 import {
   parseCreatePendingClaimRequest,
   type CreatePendingClaimResponse,

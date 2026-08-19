@@ -1,6 +1,15 @@
 /**
- * Centralized React Query keys, fetchers, and option presets — the single
- * source of truth for the payment app's server state.
+ * React Query keys, fetchers, and staleTime presets.
+ *
+ * Domain code lives next to the matching UI folder:
+ *   lib/pay + hooks/pay         Enable Pay, API keys, Hold to Pay, limits
+ *   lib/collect + hooks/collect `/collect` receive + `/setup` ATA
+ *   lib/device + hooks/device   NFC tap, claim, `/device/finish`
+ *   lib/home + hooks/home       Activity + Devices tab
+ *   lib/tokens + hooks/tokens   mint catalog, holdings, spending-limit math
+ *   lib/server                  API routes only (`import "server-only"`)
+ *   hooks/wallet                Privy address + kit signer
+ *   hooks/layout                iframe / in-app browser
  */
 
 import type { Address } from "@solana/kit";
@@ -11,15 +20,15 @@ import {
   resolveMintProgram,
   type MintDelegateStatus,
   type TokenProgram,
-} from "@/lib/payments/mint-delegate";
+} from "@/lib/tokens/mint-delegate";
 import {
   fetchRecipientAtaStatus,
   type RecipientAtaStatus,
-} from "@/lib/payments/collect-settle";
+} from "@/lib/collect/collect-settle";
 import {
   fetchPaymentHistory,
   type PaymentRecord,
-} from "@/lib/payments/history-client";
+} from "@/lib/home/history-client";
 import {
   fetchHoldingsClient,
   fetchPayContextClient,
@@ -27,7 +36,7 @@ import {
   type PaymentToken,
   type PaymentTokenHolding,
   type PayTokenContext,
-} from "@/lib/payments/verified-tokens-client";
+} from "@/lib/tokens/verified-tokens-client";
 // ============================================================================
 // Query keys
 // ============================================================================
@@ -85,6 +94,12 @@ export const queryKeys = {
     all: () => ["pendingClaim"] as const,
     byToken: (token: string | null) =>
       [...queryKeys.pendingClaim.all(), token] as const,
+  },
+
+  apiKey: {
+    all: () => ["apiKey"] as const,
+    byWallet: (wallet: string | null) =>
+      [...queryKeys.apiKey.all(), wallet] as const,
   },
 
   asset: {

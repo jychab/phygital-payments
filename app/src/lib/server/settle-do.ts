@@ -5,7 +5,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type {
   SubmitTransferRequest,
   TransferJob,
-} from "@/lib/payments/settle-types";
+} from "@/lib/collect/settle-types";
 
 /** RPC surface of TransferSubmitterDO — keep in sync with the worker. */
 export type SubmitterStub = {

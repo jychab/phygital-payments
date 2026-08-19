@@ -6,32 +6,32 @@ import { toast } from "sonner";
 import { Check, ChevronLeft, LoaderCircle } from "lucide-react";
 import { address, type Address } from "@solana/kit";
 
-import { AmountField } from "@/components/amount-field";
-import { AmountPresets } from "@/components/amount-presets";
-import { TokenListRow, TokenSymbol } from "@/components/token-chip";
+import { AmountField } from "@/components/shared/amount-field";
+import { AmountPresets } from "@/components/shared/amount-presets";
+import { TokenListRow, TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
-import { useDelegateStatus, useDelegateStatuses } from "@/hooks/use-delegate-status";
-import { useMaxTapAmountUi } from "@/hooks/use-max-tap-amount";
-import { useMintProgram } from "@/hooks/use-mint-program";
-import { useSetDelegateMutation, useRevokeDelegateMutation } from "@/hooks/use-delegate-mutations";
-import { usePayTokenContext, useTokenHoldings, useVerifiedTokens } from "@/hooks/use-verified-tokens";
+import { useDelegateStatus, useDelegateStatuses } from "@/hooks/pay/use-delegate-status";
+import { useMaxTapAmountUi } from "@/hooks/pay/use-max-tap-amount";
+import { useMintProgram } from "@/hooks/tokens/use-mint-program";
+import { useSetDelegateMutation, useRevokeDelegateMutation } from "@/hooks/pay/use-delegate-mutations";
+import { usePayTokenContext, useTokenHoldings, useVerifiedTokens } from "@/hooks/tokens/use-verified-tokens";
 import {
   isDelegateEnabled,
   uiAmountToRaw,
-} from "@/lib/payments/mint-delegate";
+} from "@/lib/tokens/mint-delegate";
 import {
   parseMaxTapAmountUi,
   storeMaxTapAmountUi,
-} from "@/lib/payments/max-tap-store";
+} from "@/lib/pay/max-tap-store";
 import {
   PAY_AMOUNT_PRESETS,
   defaultTapAmountUi,
   isDefaultMint,
   resolvePaymentToken,
   type PaymentTokenHolding,
-} from "@/lib/payments/payment-token";
-import { toUserErrorMessage } from "@/lib/payments/user-errors";
-import { useSolanaAddress } from "@/lib/wallet/use-solana-address";
+} from "@/lib/tokens/payment-token";
+import { toUserErrorMessage } from "@/lib/user-errors";
+import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import { shortAddress } from "@/lib/utils";
 
 function tryUiAmountToRaw(amount: string, decimals: number): bigint | null {
@@ -140,7 +140,7 @@ export function LimitPanel({
       }
       toast.success(
         showMaxTap
-          ? "Pay limits saved. Update any saved Shortcuts."
+          ? "Pay limits saved."
           : "Spending limit set",
       );
       onEnabled?.();

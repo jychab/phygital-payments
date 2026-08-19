@@ -5,7 +5,7 @@ import {
   defaultUsdcToken,
   isClassicTokenProgram,
   type PaymentToken,
-} from "@/lib/payments/payment-token";
+} from "@/lib/tokens/payment-token";
 import { isMainnet } from "@/lib/solana/cluster";
 
 const JUPITER_TAG_URL = "https://api.jup.ag/tokens/v2/tag?query=verified";

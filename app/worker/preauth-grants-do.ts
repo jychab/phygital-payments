@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 
+import { REVOKED_API_KEY } from "./api-key-hmac";
 import {
   PREAUTH_MIN_INTERVAL_SECONDS,
   PREAUTH_TTL_SECONDS,
@@ -32,6 +33,10 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
     return { gen: next };
   }
 
+  async currentGeneration(): Promise<number> {
+    return (await this.ctx.storage.get<number>(GENERATION_KEY)) ?? 0;
+  }
+
   async open(args: {
     wallet: string;
     gen: number;
@@ -43,7 +48,7 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
     const generation =
       (await this.ctx.storage.get<number>(GENERATION_KEY)) ?? 0;
     if (args.gen < generation) {
-      throw new Error("Key has been revoked — re-provision to get a new key");
+      throw new Error(REVOKED_API_KEY);
     }
 
     const lastOpen = await this.ctx.storage.get<number>(LAST_OPEN_AT_KEY);

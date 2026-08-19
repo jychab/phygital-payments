@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import type { SubmitTransferRequest } from "@/lib/payments/settle-types";
+import type { SubmitTransferRequest } from "@/lib/collect/settle-types";
 import { getSubmitterStub } from "@/lib/server/settle-do";
 import { jsonForSponsoredJob } from "@/lib/server/sponsored-job-response";
 

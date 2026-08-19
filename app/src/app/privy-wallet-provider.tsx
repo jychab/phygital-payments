@@ -5,7 +5,7 @@ import { type PrivyClientConfig, PrivyProvider } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { Wallet } from "lucide-react";
 
-import { GateMessage } from "@/components/gate-message";
+import { GateMessage } from "@/components/layout/gate-message";
 
 const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "";
 
