@@ -6,6 +6,7 @@ import { LoaderCircle, X } from "lucide-react";
 import { address } from "@solana/kit";
 import Link from "next/link";
 
+import { BackLink } from "@/components/shared/back-link";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus } from "@/hooks/pay/use-delegate-status";
@@ -155,35 +156,27 @@ export function PayFlowPanel({
 
   if (phase === "expired") {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 py-10 text-center">
-        <div className="flex size-14 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-muted-foreground">
-          <X className="size-6" strokeWidth={2} />
-        </div>
-        <div className="max-w-60 space-y-1.5">
-          <p className="text-base font-medium text-foreground">Time Expired</p>
-          <p className="text-sm text-muted-foreground">
-            Tap Pay again to continue.
-          </p>
-        </div>
-        <Button
-          type="button"
-          size="lg"
-          className="w-full max-w-xs"
-          onClick={() => setPhase("idle")}
-        >
-          Pay Again
-        </Button>
-        {onBack ? (
+      <div className="flex flex-1 flex-col gap-5">
+        {onBack ? <BackLink onClick={onBack} /> : null}
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 py-10 text-center">
+          <div className="flex size-14 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-muted-foreground">
+            <X className="size-6" strokeWidth={2} />
+          </div>
+          <div className="max-w-60 space-y-1.5">
+            <p className="text-base font-medium text-foreground">Time Expired</p>
+            <p className="text-sm text-muted-foreground">
+              Tap Pay again to continue.
+            </p>
+          </div>
           <Button
             type="button"
-            variant="ghost"
             size="lg"
             className="w-full max-w-xs"
-            onClick={onBack}
+            onClick={() => setPhase("idle")}
           >
-            Back
+            Pay Again
           </Button>
-        ) : null}
+        </div>
       </div>
     );
   }
@@ -211,38 +204,44 @@ export function PayFlowPanel({
 
   if (capQuery.isLoading || mintQuery.isLoading) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-center">
-        <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading Pay…</p>
+      <div className="flex flex-1 flex-col">
+        {onBack ? <BackLink onClick={onBack} /> : null}
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-center">
+          <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading Pay…</p>
+        </div>
       </div>
     );
   }
 
   if (!tokenEnabled) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 py-8 text-center">
-        <div className="max-w-64 space-y-1.5">
-          <p className="text-base font-medium text-foreground">
-            Turn On {token.symbol}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Set a spending limit to pay with {token.symbol}.
-          </p>
+      <div className="flex flex-1 flex-col">
+        {onBack ? <BackLink onClick={onBack} /> : null}
+        <div className="flex flex-1 flex-col items-center justify-center gap-5 py-8 text-center">
+          <div className="max-w-64 space-y-1.5">
+            <p className="text-base font-medium text-foreground">
+              Turn On {token.symbol}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Set a spending limit to pay with {token.symbol}.
+            </p>
+          </div>
+          {onSetLimit ? (
+            <Button
+              type="button"
+              size="lg"
+              className="w-full max-w-xs"
+              onClick={onSetLimit}
+            >
+              Set Spending Limit
+            </Button>
+          ) : (
+            <Button type="button" size="lg" className="w-full max-w-xs" asChild>
+              <Link href="/">Set Up on Home</Link>
+            </Button>
+          )}
         </div>
-        {onSetLimit ? (
-          <Button
-            type="button"
-            size="lg"
-            className="w-full max-w-xs"
-            onClick={onSetLimit}
-          >
-            Set Spending Limit
-          </Button>
-        ) : (
-          <Button type="button" size="lg" className="w-full max-w-xs" asChild>
-            <Link href="/">Set Up on Home</Link>
-          </Button>
-        )}
       </div>
     );
   }
@@ -251,6 +250,7 @@ export function PayFlowPanel({
 
   return (
     <div className="flex flex-1 flex-col gap-6">
+      {onBack ? <BackLink onClick={onBack} /> : null}
       <div className="flex flex-1 flex-col items-center justify-center text-center">
         <p className="max-w-64 text-sm text-muted-foreground">
           Tap Pay, then hold your device at the receiver phone.
@@ -282,17 +282,7 @@ export function PayFlowPanel({
             Manage API key
           </Button>
         ) : null}
-        {onBack ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            className="w-full"
-            onClick={onBack}
-          >
-            Back
-          </Button>
-        ) : variant === "device" ? (
+        {!onBack && variant === "device" ? (
           <Button type="button" variant="ghost" size="lg" className="w-full" asChild>
             <Link href="/">Done</Link>
           </Button>

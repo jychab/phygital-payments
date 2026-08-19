@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { KeyRound, LoaderCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { BackLink } from "@/components/shared/back-link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { markApiKeyVerified } from "@/hooks/pay/use-verified-api-key";
@@ -50,6 +51,7 @@ export function PasteApiKeyPanel({
 
   return (
     <div className="flex flex-1 flex-col gap-6">
+      {onBack ? <BackLink onClick={onBack} disabled={busy} /> : null}
       <div className="space-y-1.5 text-center">
         <div className="mx-auto flex size-11 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
           <KeyRound className="size-5 text-muted-foreground" />
@@ -68,13 +70,15 @@ export function PasteApiKeyPanel({
         id="paste-api-key"
         type="text"
         autoComplete="off"
+        autoCapitalize="none"
         autoCorrect="off"
         spellCheck={false}
+        enterKeyHint="done"
         placeholder="Paste API key"
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
         disabled={busy}
-        className="font-mono text-xs"
+        className="font-mono"
       />
 
       <div className="mt-auto flex flex-col gap-2.5">
@@ -96,18 +100,6 @@ export function PasteApiKeyPanel({
             "Save API key"
           )}
         </Button>
-        {onBack ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            className="w-full"
-            onClick={onBack}
-            disabled={busy}
-          >
-            Back
-          </Button>
-        ) : null}
       </div>
     </div>
   );

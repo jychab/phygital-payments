@@ -14,8 +14,9 @@ const inputVariants = cva(
           "h-auto min-h-0 border-transparent bg-transparent px-0 text-center font-[family-name:var(--font-display)] text-[2.75rem] leading-none tracking-tight tabular-nums placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 md:text-5xl",
       },
       size: {
-        default: "h-11 min-h-11 px-4 text-[0.9375rem]",
-        sm: "h-9 min-h-9 px-3.5 text-[0.8125rem]",
+        // 16px / 44pt — Safari zooms any focused control below 16px; HIG min hit target is 44pt.
+        default: "h-11 min-h-11 px-4 text-base",
+        sm: "h-11 min-h-11 px-3.5 text-base",
       },
     },
     compoundVariants: [
@@ -48,8 +49,10 @@ function Input({
         inputVariants({
           variant,
           size: variant === "hero" ? null : size,
-          className,
         }),
+        className,
+        // Keep computed size ≥ 16px so iOS does not zoom on focus (callers may pass text-xs).
+        variant !== "hero" && "text-[max(1rem,16px)]",
       )}
       {...props}
     />

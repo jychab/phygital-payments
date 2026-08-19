@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, ChevronLeft, LoaderCircle, Settings2 } from "lucide-react";
+import { Check, LoaderCircle, Settings2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { CenteredStatus } from "@/components/layout/gate-message";
@@ -10,6 +10,7 @@ import { EnablePayPanel } from "@/components/pay/enable-pay-panel";
 import { ManagePayTokens } from "@/components/pay/pay-limit-panel";
 import { PayFlowPanel } from "@/components/pay/pay-flow-panel";
 import { RevealApiKeyPanel } from "@/components/pay/reveal-api-key-panel";
+import { BackLink } from "@/components/shared/back-link";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatuses } from "@/hooks/pay/use-delegate-status";
 import { useVerifiedApiKey, markApiKeyVerified } from "@/hooks/pay/use-verified-api-key";
@@ -128,14 +129,7 @@ export function ManagePayPanel({
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <button
-        type="button"
-        onClick={onBack}
-        className="flex items-center gap-1 self-start text-xs text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="size-3.5" />
-        Back
-      </button>
+      <BackLink onClick={onBack} />
 
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">

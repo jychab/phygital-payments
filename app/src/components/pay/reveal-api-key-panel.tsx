@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Copy, Eye, EyeOff, KeyRound, LoaderCircle } from "lucide-react";
 
+import { BackLink } from "@/components/shared/back-link";
 import { Button } from "@/components/ui/button";
 import { maskApiKey, readApiKey } from "@/lib/pay/api-key-store";
 import { toUserErrorMessage } from "@/lib/user-errors";
@@ -48,6 +49,7 @@ export function RevealApiKeyPanel({
 
   return (
     <div className="flex flex-1 flex-col gap-6">
+      <BackLink onClick={onBack} disabled={extraBusy} />
       <div className="space-y-1.5 text-center">
         <div className="mx-auto flex size-11 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
           <KeyRound className="size-5 text-muted-foreground" />
@@ -98,16 +100,6 @@ export function RevealApiKeyPanel({
             )}
           </Button>
         ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          size="lg"
-          className="w-full"
-          onClick={onBack}
-          disabled={extraBusy}
-        >
-          Back
-        </Button>
       </div>
     </div>
   );

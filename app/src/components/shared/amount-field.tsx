@@ -19,7 +19,7 @@ type AmountFieldProps = {
   caption?: string;
 };
 
-/** Large, Wallet-style currency amount entry. */
+/** Large, wallet-style currency amount entry. */
 export function AmountField({
   id,
   value,
@@ -33,14 +33,16 @@ export function AmountField({
 }: AmountFieldProps) {
   const label = token.symbol;
   const fracCap = Math.max(0, Math.min(decimals ?? token.decimals, 18));
-  const chars = Math.max((value || "0").length, 1);
+
+  // Keep enough width for the value while avoiding excessive expansion.
+  const chars = Math.min(Math.max(value.length || 1, 1), 12);
 
   return (
-    <div className={cn("relative flex flex-col items-center gap-1.5 py-2", className)}>
+    <div className={cn("flex w-full flex-col items-center", className)}>
       {caption ? (
         <label
           htmlFor={id}
-          className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+          className="mb-2 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/70"
         >
           {caption}
         </label>
@@ -49,48 +51,81 @@ export function AmountField({
           Amount in {label}
         </label>
       )}
+
       <div
-        className="flex max-w-full cursor-text items-center justify-center gap-2.5"
+        role="presentation"
         onMouseDown={(e) => {
           if (e.target instanceof HTMLInputElement) return;
           e.preventDefault();
+
           const el = document.getElementById(id);
-          if (el instanceof HTMLInputElement) el.focus();
+          if (el instanceof HTMLInputElement && !el.disabled) {
+            el.focus();
+          }
         }}
+        className={cn(
+          "group flex w-full items-center justify-center",
+          "rounded-2xl px-3 py-4",
+          "transition-colors",
+          !disabled && "cursor-text hover:bg-muted/30",
+        )}
       >
-        <Input
-          id={id}
-          variant="hero"
-          inputMode="decimal"
-          autoComplete="off"
-          autoFocus={autoFocus}
-          disabled={disabled}
-          placeholder="0"
-          value={value}
-          aria-label={caption ? `${caption} in ${label}` : undefined}
-          className="max-w-[min(100%,16ch)] min-w-[1ch] text-left"
-          style={{ width: `${chars}ch` }}
-          onChange={(e) => {
-            const next = e.target.value.replace(/[^0-9.]/g, "");
-            const parts = next.split(".");
-            const cleaned =
-              parts.length <= 1
-                ? next
-                : `${parts[0]}.${parts.slice(1).join("").slice(0, fracCap)}`;
-            onChange(cleaned);
-          }}
-        />
-        <span aria-hidden>
+        <div
+          className={cn(
+            "flex min-w-0 items-center justify-center gap-2",
+            "transition-transform duration-150",
+            "group-focus-within:scale-[1.01]",
+          )}
+        >
+          <Input
+            id={id}
+            variant="hero"
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            autoFocus={autoFocus}
+            disabled={disabled}
+            placeholder="0"
+            value={value}
+            aria-label={
+              caption ? `${caption} in ${label}` : `Amount in ${label}`
+            }
+            className={cn(
+              "h-auto min-w-[1ch] max-w-[12ch]",
+              "border-0 bg-transparent p-0",
+              "text-right text-5xl font-semibold",
+              "tracking-[-0.045em] tabular-nums",
+              "shadow-none outline-none",
+              "placeholder:text-muted-foreground/25",
+              "focus-visible:ring-0",
+            )}
+            style={{ width: `${chars}ch` }}
+            onChange={(e) => {
+              const next = e.target.value.replace(/[^0-9.]/g, "");
+              const parts = next.split(".");
+
+              const cleaned =
+                parts.length <= 1
+                  ? next
+                  : `${parts[0]}.${parts.slice(1).join("").slice(0, fracCap)}`;
+
+              onChange(cleaned);
+            }}
+          />
+
           <TokenSymbol
             token={token}
-            size="xs"
+            size="sm"
             className={cn(
-              "pointer-events-none shrink-0 select-none rounded-full bg-muted/55 py-1 pl-1 pr-2.5",
+              "rounded-full px-2 py-1",
+              "bg-muted/60 ring-1 ring-border/40",
+              "transition-colors",
+              "group-focus-within:bg-muted",
               disabled && "opacity-50",
             )}
-            symbolClassName="text-[13px] font-medium tracking-tight text-muted-foreground"
+            symbolClassName="text-sm font-semibold text-foreground/70"
           />
-        </span>
+        </div>
       </div>
     </div>
   );

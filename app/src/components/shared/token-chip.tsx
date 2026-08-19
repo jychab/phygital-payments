@@ -73,10 +73,21 @@ export function TokenSymbol({
 }) {
   return (
     <span
-      className={cn("inline-flex items-center gap-1.5 align-middle", className)}
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1.5 align-middle",
+        "whitespace-nowrap",
+        className,
+      )}
     >
       <TokenIcon token={token} size={size} />
-      <span className={symbolClassName}>{token.symbol}</span>
+      <span
+        className={cn(
+          "font-semibold tracking-tight text-foreground/75",
+          symbolClassName,
+        )}
+      >
+        {token.symbol}
+      </span>
     </span>
   );
 }
