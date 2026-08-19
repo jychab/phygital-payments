@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useIsRestoring } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, LoaderCircle } from "lucide-react";
+import { Check, LoaderCircle, Nfc } from "lucide-react";
 import { address, type Address } from "@solana/kit";
 
 import { AmountField } from "@/components/shared/amount-field";
@@ -13,7 +13,6 @@ import { TokenListRow, TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import {
   useDelegateStatus,
-  useDelegateStatuses,
 } from "@/hooks/pay/use-delegate-status";
 import { useMintProgram } from "@/hooks/tokens/use-mint-program";
 import {
@@ -25,7 +24,9 @@ import {
   useTokenHoldings,
   useVerifiedTokens,
 } from "@/hooks/tokens/use-verified-tokens";
-import { isDelegateEnabled, uiAmountToRaw, type MintDelegateStatus } from "@/lib/tokens/mint-delegate";
+import { isDelegateEnabled, isOwnerPayMintEnabled, uiAmountToRaw, type OwnerPayMintMatch } from "@/lib/tokens/mint-delegate";
+import type { PhygitalAsset } from "@/lib/phygital/asset";
+import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
 import {
   isDefaultMint,
   resolvePaymentToken,
@@ -44,17 +45,22 @@ function tryUiAmountToRaw(amount: string, decimals: number): bigint | null {
 }
 
 /**
- * Pick a spending limit for a mint (program-authority delegate).
+ * Pick a spending limit for a mint (this device's program-authority delegate).
  */
 export function LimitPanel({
   expectedOwner,
+  asset,
   mint: mintProp,
+  walletMatch,
   onEnabled,
   onBack,
   onSkip,
 }: {
   expectedOwner: string;
+  asset: Address | string;
   mint: Address | string;
+  /** Home Pay already scanned this mint — skip a second delegateStatus RPC. */
+  walletMatch?: OwnerPayMintMatch;
   onEnabled?: () => void;
   onBack?: () => void;
   onSkip?: () => void;
@@ -62,13 +68,24 @@ export function LimitPanel({
   const { address: walletAddress, isConnected } = useSolanaAddress();
   const mint = String(mintProp);
   const mintAddress = address(mint);
+  const assetStr = String(asset);
   const [amount, setAmount] = useState("50");
 
-  const statusQuery = useDelegateStatus(expectedOwner, mintAddress);
+  const seeded =
+    walletMatch?.status &&
+    walletMatch.asset &&
+    String(walletMatch.asset) === assetStr
+      ? walletMatch.status
+      : undefined;
+  const statusQuery = useDelegateStatus(
+    seeded ? null : expectedOwner,
+    seeded ? null : assetStr,
+    mintAddress,
+  );
   const mintQuery = useMintProgram(mintAddress);
   const holdings = useTokenHoldings(expectedOwner);
   const verified = useVerifiedTokens();
-  const status = statusQuery.data;
+  const status = seeded ?? statusQuery.data;
 
   const holding = holdings.data?.find(
     (h: PaymentTokenHolding) => h.mint === mint,
@@ -76,11 +93,11 @@ export function LimitPanel({
   const token = holding ?? resolvePaymentToken(mint, verified.data);
   const setAllowance = useSetDelegateMutation(
     walletAddress === expectedOwner ? walletAddress : null,
-    { mint: mintAddress },
+    { mint: mintAddress, asset: assetStr },
   );
   const revoke = useRevokeDelegateMutation(
     walletAddress === expectedOwner ? walletAddress : null,
-    { mint: mintAddress },
+    { mint: mintAddress, asset: assetStr },
   );
 
   const hasDelegate = isDelegateEnabled(status);
@@ -88,7 +105,9 @@ export function LimitPanel({
     isConnected && walletAddress != null && walletAddress !== expectedOwner;
   const matched = isConnected && walletAddress === expectedOwner;
   const busy =
-    setAllowance.isPending || revoke.isPending || statusQuery.isLoading;
+    setAllowance.isPending ||
+    revoke.isPending ||
+    (!seeded && statusQuery.isLoading);
   const decimals = mintQuery.data?.decimals ?? token.decimals;
 
   const limitRaw = tryUiAmountToRaw(amount, decimals);
@@ -152,7 +171,7 @@ export function LimitPanel({
           Set Spending Limit
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Payments from your devices can use up to this much{" "}
+          Payments from this device can use up to this much{" "}
           <TokenSymbol
             token={token}
             size="xs"
@@ -256,10 +275,9 @@ export function ManagePayTokens({
 }) {
   const isRestoring = useIsRestoring();
   const payContext = usePayTokenContext(owner);
-  const mints = payContext.data?.holdings.map((h) => h.mint) ?? [];
-  const statuses = useDelegateStatuses(owner, mints);
+  const delegates = useOwnerPayDelegates(owner);
 
-  if (isRestoring || payContext.isLoading || statuses.isLoading) {
+  if (isRestoring || payContext.isLoading || delegates.isLoading) {
     return (
       <div className="flex justify-center py-6 text-muted-foreground">
         <LoaderCircle className="size-4 animate-spin" />
@@ -276,35 +294,52 @@ export function ManagePayTokens({
     );
   }
 
+  const assetsByAddress = new Map(
+    (delegates.data?.assets ?? []).map((a) => [String(a.asset), a]),
+  );
+
   return (
     <ul className="flex flex-col gap-0.5">
-      {list.map((h: PaymentTokenHolding) => (
-        <ManagePayTokenRow
-          key={h.mint}
-          holding={h}
-          status={statuses.data?.get(h.mint)}
-          onEditLimit={onEditLimit}
-        />
-      ))}
+      {list.map((h: PaymentTokenHolding) => {
+        const match = delegates.data?.byMint.get(h.mint);
+        const asset = match?.asset;
+        return (
+          <ManagePayTokenRow
+            key={h.mint}
+            holding={h}
+            match={match}
+            device={asset ? assetsByAddress.get(String(asset)) : undefined}
+            onEditLimit={onEditLimit}
+          />
+        );
+      })}
     </ul>
   );
 }
 
 function ManagePayTokenRow({
   holding,
-  status,
+  match,
+  device,
   onEditLimit,
 }: {
   holding: PaymentTokenHolding;
-  status: MintDelegateStatus | undefined;
+  match: OwnerPayMintMatch | undefined;
+  device: PhygitalAsset | undefined;
   onEditLimit: (holding: PaymentTokenHolding) => void;
 }) {
-  const enabled = isDelegateEnabled(status);
+  const enabled = isOwnerPayMintEnabled(match);
   const usdc = isDefaultMint(holding.mint);
+  const deviceLabel = device
+    ? shortAddress(device.secp256r1PublicKey, 4)
+    : null;
+  const limitLabel = usdc
+    ? `Limit $${match?.status?.delegatedAmountUi ?? "—"}`
+    : `Limit ${match?.status?.delegatedAmountUi ?? "—"}`;
   const subtitle = enabled
-    ? usdc
-      ? `Limit $${status?.delegatedAmountUi ?? "—"} · ${holding.balanceUi} available`
-      : `Limit ${status?.delegatedAmountUi ?? "—"} · ${holding.balanceUi} available`
+    ? deviceLabel
+      ? `${limitLabel} · ${deviceLabel} · ${holding.balanceUi} available`
+      : `${limitLabel} · ${holding.balanceUi} available`
     : `Off · ${holding.balanceUi} available`;
 
   return (
@@ -320,5 +355,58 @@ function ManagePayTokenRow({
         }
       />
     </li>
+  );
+}
+
+/** Choose which NFC device a new mint spending limit applies to. */
+export function PayDevicePicker({
+  assets,
+  onSelect,
+  onBack,
+}: {
+  assets: readonly PhygitalAsset[];
+  onSelect: (asset: string) => void;
+  onBack?: () => void;
+}) {
+  return (
+    <div className="flex flex-1 flex-col gap-6">
+      {onBack ? (
+        <div className="flex items-center gap-2">
+          <BackLink onClick={onBack} />
+        </div>
+      ) : null}
+      <div className="space-y-1.5 text-center">
+        <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
+          Choose a Device
+        </h1>
+        <p className="mx-auto max-w-64 text-sm text-muted-foreground">
+          This spending limit applies to one NFC device. Only that device can
+          pay with this token.
+        </p>
+      </div>
+      <ul className="flex flex-col gap-1">
+        {assets.map((asset) => (
+          <li key={asset.asset}>
+            <button
+              type="button"
+              onClick={() => onSelect(String(asset.asset))}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-card/60">
+                <Nfc className="size-4 text-muted-foreground" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-foreground">
+                  {shortAddress(asset.secp256r1PublicKey, 6)}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {asset.isLocked ? "Locked" : "Unlocked"}
+                </span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

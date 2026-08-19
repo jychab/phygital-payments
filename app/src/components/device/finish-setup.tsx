@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { CheckCircle2, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,20 +13,25 @@ import { markApiKeyVerified } from "@/hooks/pay/use-verified-api-key";
 import { getDefaultMint } from "@/lib/tokens/payment-token";
 import { queryKeys } from "@/lib/queries";
 
-/** Spending limit then Enable Pay — used from `/device/finish?intent=` and after claim. */
+/** Spending limit then Enable Pay — used from `/device/finish` and after claim. */
 export function DeviceFinishSetup({
   owner,
+  asset,
   onDismiss,
 }: {
   owner: string;
+  asset: string;
   onDismiss?: () => void;
 }) {
   const queryClient = useQueryClient();
-  const snap = usePaySetupSnapshot(owner);
+  const snap = usePaySetupSnapshot(owner, asset);
 
   async function onCapEnabled() {
     await queryClient.invalidateQueries({
       queryKey: queryKeys.delegateStatus.byOwner(owner),
+    });
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.ownerPayDelegates.byOwner(owner),
     });
   }
 
@@ -44,6 +48,7 @@ export function DeviceFinishSetup({
     return (
       <LimitPanel
         expectedOwner={owner}
+        asset={asset}
         mint={getDefaultMint()}
         onEnabled={() => void onCapEnabled()}
         onSkip={onDismiss}

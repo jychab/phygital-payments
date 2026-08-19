@@ -5,6 +5,7 @@ import {
   CLASSIC_TOKEN_PROGRAM,
   defaultUsdcToken,
   isClassicTokenProgram,
+  zeroUsdcHolding,
   type PaymentToken,
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
@@ -31,11 +32,6 @@ type DasResponse = {
   result?: { items?: DasAsset[] };
   error?: { message?: string };
 };
-
-
-function zeroUsdcHolding(): PaymentTokenHolding {
-  return { ...defaultUsdcToken(), balanceRaw: "0", balanceUi: "0" };
-}
 
 async function fetchAssetsByOwner(owner: string): Promise<DasAsset[]> {
   const res = await fetch(RPC_URL, {

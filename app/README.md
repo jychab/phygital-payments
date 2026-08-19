@@ -85,8 +85,7 @@ After an NFC tap. `/device` has **no Privy / Connect**. Wallet linking is a **su
 **Step 2 — finish (`/device/finish`):** Privy wallet connect.
 
 - `?token=` — claim device, then **Your wallet is ready.** (optional Set Up Pay; no forced wizard)
-- `?intent=limit&owner=` — set spending limit
-- `?intent=enable&owner=` — **Enable Pay** (sign + store API key in localStorage)
+- `?owner=&asset=` — continue Pay setup (spending limit, then Enable Pay if needed)
 
 API keys live in localStorage on this phone, keyed by wallet. **Reveal API key** copies the key onto another phone.
 

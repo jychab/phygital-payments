@@ -22,8 +22,10 @@ import type { QueryClient } from "@tanstack/react-query";
 import {
   fetchMintDelegateStatus,
   fetchMintDelegateStatuses,
+  fetchOwnerPayDelegates,
   resolveMintProgram,
   type MintDelegateStatus,
+  type OwnerPayDelegates,
   type TokenProgram,
 } from "@/lib/tokens/mint-delegate";
 import {
@@ -54,8 +56,20 @@ export const queryKeys = {
     all: () => ["delegateStatus"] as const,
     byOwner: (owner: string | null) =>
       [...queryKeys.delegateStatus.all(), owner] as const,
-    byOwnerMint: (owner: string | null, mint: string | null) =>
-      [...queryKeys.delegateStatus.byOwner(owner), mint] as const,
+    byOwnerAsset: (owner: string | null, asset: string | null) =>
+      [...queryKeys.delegateStatus.byOwner(owner), asset] as const,
+    byOwnerAssetMint: (
+      owner: string | null,
+      asset: string | null,
+      mint: string | null,
+    ) =>
+      [...queryKeys.delegateStatus.byOwnerAsset(owner, asset), mint] as const,
+  },
+
+  ownerPayDelegates: {
+    all: () => ["ownerPayDelegates"] as const,
+    byOwner: (owner: string | null) =>
+      [...queryKeys.ownerPayDelegates.all(), owner] as const,
   },
 
   holdings: {
@@ -131,6 +145,7 @@ export function isOwnerDataQuery(
     root === "holdings" ||
     root === "payContext" ||
     root === "delegateStatus" ||
+    root === "ownerPayDelegates" ||
     root === "history"
   ) {
     return queryKey[1] === owner;
@@ -153,6 +168,9 @@ export function invalidateOwnerQueries(
   });
   void queryClient.invalidateQueries({
     queryKey: queryKeys.delegateStatus.byOwner(owner),
+  });
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.ownerPayDelegates.byOwner(owner),
   });
   void queryClient.invalidateQueries({
     queryKey: queryKeys.history.byAddress(owner),
@@ -202,16 +220,20 @@ export function fetchMintProgram(mint: Address): Promise<MintProgramInfo> {
 export function fetchDelegateStatus(
   owner: Address,
   mint: Address,
+  asset: Address,
 ): Promise<MintDelegateStatus> {
-  return fetchMintDelegateStatus(owner, mint);
+  return fetchMintDelegateStatus(owner, mint, asset);
 }
 
 export function fetchDelegateStatuses(
   owner: Address,
   mints: Address[],
+  asset: Address,
 ): Promise<Map<string, MintDelegateStatus>> {
-  return fetchMintDelegateStatuses(owner, mints);
+  return fetchMintDelegateStatuses(owner, mints, asset);
 }
+
+export { fetchOwnerPayDelegates };
 
 export function fetchAtaStatus(args: {
   owner: Address;
@@ -241,6 +263,7 @@ export type { PayTokenContext };
 
 export type {
   MintDelegateStatus,
+  OwnerPayDelegates,
   RecipientAtaStatus,
   TokenProgram,
   PaymentRecord,

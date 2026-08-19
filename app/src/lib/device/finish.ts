@@ -1,11 +1,8 @@
-/** `/device/finish?intent=limit|enable&owner=` — continue Pay setup after a tap. */
-export function deviceFinishHref(args: {
-  intent: "limit" | "enable";
-  owner: string;
-}): string {
+/** `/device/finish?owner=&asset=` — continue Pay setup after a tap. */
+export function deviceFinishHref(args: { owner: string; asset: string }): string {
   const params = new URLSearchParams({
-    intent: args.intent,
     owner: args.owner,
+    asset: args.asset,
   });
   return `/device/finish?${params.toString()}`;
 }

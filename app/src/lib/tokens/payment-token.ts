@@ -48,6 +48,20 @@ export function defaultUsdcToken(): PaymentToken {
   };
 }
 
+export function zeroUsdcHolding(): PaymentTokenHolding {
+  return { ...defaultUsdcToken(), balanceRaw: "0", balanceUi: "0" };
+}
+
+/** Holdings mints, or default USDC when the wallet has none yet. */
+export function mintsFromHoldings(
+  holdings: readonly PaymentTokenHolding[] | undefined,
+): string[] {
+  if (holdings && holdings.length > 0) {
+    return holdings.map((h) => h.mint);
+  }
+  return [String(getDefaultMint())];
+}
+
 export function isDefaultMint(mint: string | Address): boolean {
   return String(mint) === String(getUsdcMint());
 }

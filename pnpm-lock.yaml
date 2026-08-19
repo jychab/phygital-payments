@@ -94,8 +94,8 @@ importers:
         specifier: 16.2.12
         version: 16.2.12(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       phygital-payments-sdk:
-        specifier: ^0.3.0
-        version: 0.3.0(@solana/kit@7.0.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))
+        specifier: ^0.4.0
+        version: 0.4.0(@solana/kit@7.0.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))
       phygital-token-sdk:
         specifier: ^0.20.0
         version: 0.20.0(@solana/kit@7.0.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)
@@ -6867,8 +6867,8 @@ packages:
     resolution: {integrity: sha512-//nshmD55c46FuFw26xV/xFAaB5HF9Xdap7HJBBnrKdAd6/GxDBaNA1870O79+9ueg61cZLSVc+OaFlfmObYVQ==}
     engines: {node: '>= 14.16'}
 
-  phygital-payments-sdk@0.3.0:
-    resolution: {integrity: sha512-h5ca23VMGt4TA2eitTK5sEdf7jVZna3ShXPSOhPV38YGWH1x0ocjxOJ+cvIrpPHBqONpQTRYKRjJ3Gv3+pbwLQ==}
+  phygital-payments-sdk@0.4.0:
+    resolution: {integrity: sha512-dpUox4erVFw9eoqfyuiUqVEN+Kj/BSmAC4xNLTd3i/tIlv+LNc452Z4GAUZNqjz/YpuBzdwKG6VT+udINdb0pg==}
     peerDependencies:
       '@solana/kit': ^7.0.0
 
@@ -17587,7 +17587,7 @@ snapshots:
 
   pathval@2.0.1: {}
 
-  phygital-payments-sdk@0.3.0(@solana/kit@7.0.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)):
+  phygital-payments-sdk@0.4.0(@solana/kit@7.0.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)):
     dependencies:
       '@noble/hashes': 2.2.0
       '@solana/kit': 7.0.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)

@@ -20,10 +20,13 @@ type View = "home" | "paste" | "reveal" | "pay";
 export function DeviceSetupStatus({ asset }: { asset: PhygitalAsset }) {
   const router = useRouter();
   const owner = asset.currentOwner.toString();
+  const assetAddress = String(asset.asset);
   const [view, setView] = useState<View>("home");
-  const snap = usePaySetupSnapshot(owner);
+  const snap = usePaySetupSnapshot(owner, assetAddress);
   const limitHref = () =>
-    router.push(deviceFinishHref({ intent: "limit", owner }));
+    router.push(
+      deviceFinishHref({ owner, asset: assetAddress }),
+    );
 
   if (view === "paste") {
     return (
@@ -53,6 +56,8 @@ export function DeviceSetupStatus({ asset }: { asset: PhygitalAsset }) {
     return (
       <PayFlowPanel
         owner={owner}
+        tokenEnabled={snap.capSet}
+        isLoading={snap.isPending}
         variant="device"
         onSetLimit={limitHref}
         onManageApiKey={() => setView("reveal")}

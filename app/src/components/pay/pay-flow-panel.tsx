@@ -9,9 +9,6 @@ import { BackLink } from "@/components/shared/back-link";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
-import { useDelegateStatuses } from "@/hooks/pay/use-delegate-status";
-import { usePayTokenContext } from "@/hooks/tokens/use-verified-tokens";
-import { getDefaultMint } from "@/lib/tokens/payment-token";
 import {
   cancelPreauthForWallet,
   requestPreauthForWallet,
@@ -34,6 +31,8 @@ function formatCountdown(seconds: number): string {
  */
 export function PayFlowPanel({
   owner,
+  tokenEnabled,
+  isLoading = false,
   variant = "home",
   onSetLimit,
   onManage,
@@ -41,6 +40,8 @@ export function PayFlowPanel({
   onBack,
 }: {
   owner: string;
+  tokenEnabled: boolean;
+  isLoading?: boolean;
   variant?: "home" | "device";
   onSetLimit?: () => void;
   onManage?: () => void;
@@ -51,18 +52,6 @@ export function PayFlowPanel({
   const [phase, setPhase] = useState<Phase>("idle");
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
-
-  const payContext = usePayTokenContext(owner);
-  const holdingsReady = payContext.isSuccess || payContext.isError;
-  const mints =
-    payContext.data?.holdings && payContext.data.holdings.length > 0
-      ? payContext.data.holdings.map((h) => h.mint)
-      : [String(getDefaultMint())];
-  const statuses = useDelegateStatuses(
-    holdingsReady ? owner : null,
-    mints,
-  );
-  const tokenEnabled = statuses.enabledMints.length > 0;
 
   const windowOpen = phase === "window";
   const secondsLeft =
@@ -161,7 +150,7 @@ export function PayFlowPanel({
     );
   }
 
-  if (payContext.isLoading || statuses.isLoading) {
+  if (isLoading) {
     return (
       <div className="flex flex-1 flex-col">
         {onBack ? <BackLink onClick={onBack} /> : null}

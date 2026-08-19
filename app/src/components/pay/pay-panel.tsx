@@ -13,17 +13,14 @@ import { RevealApiKeyPanel } from "@/components/pay/reveal-api-key-panel";
 import { BackLink } from "@/components/shared/back-link";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
-import { useDelegateStatuses } from "@/hooks/pay/use-delegate-status";
 import {
   useVerifiedApiKey,
   markApiKeyVerified,
 } from "@/hooks/pay/use-verified-api-key";
-import { usePayTokenContext } from "@/hooks/tokens/use-verified-tokens";
+import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
 import { useProvisionApiKey } from "@/hooks/pay/use-provision-api-key";
-import {
-  getDefaultMint,
-  type PaymentTokenHolding,
-} from "@/lib/tokens/payment-token";
+import { isOwnerPayMintEnabled } from "@/lib/tokens/mint-delegate";
+import type { PaymentTokenHolding } from "@/lib/tokens/payment-token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 
@@ -31,9 +28,13 @@ import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
  * Home Pay tab — Enable Pay, Pay, and settings.
  */
 export function PayPanel({
+  tokenEnabled,
+  isLoading,
   onManage,
   onSetLimit,
 }: {
+  tokenEnabled: boolean;
+  isLoading: boolean;
   onManage: () => void;
   onSetLimit?: () => void;
 }) {
@@ -65,6 +66,8 @@ export function PayPanel({
   return (
     <PayFlowPanel
       owner={walletAddress}
+      tokenEnabled={tokenEnabled}
+      isLoading={isLoading}
       variant="home"
       onManage={onManage}
       onSetLimit={onSetLimit}
@@ -86,13 +89,10 @@ export function ManagePayPanel({
   const queryClient = useQueryClient();
   const [keyBusy, setKeyBusy] = useState(false);
   const [reveal, setReveal] = useState(false);
-
-  const payContext = usePayTokenContext(owner);
-  const mints =
-    payContext.data?.holdings && payContext.data.holdings.length > 0
-      ? payContext.data.holdings.map((h) => h.mint)
-      : [String(getDefaultMint())];
-  const statuses = useDelegateStatuses(owner, mints);
+  const delegates = useOwnerPayDelegates(owner);
+  const enabledCount = [...(delegates.data?.byMint.values() ?? [])].filter(
+    isOwnerPayMintEnabled,
+  ).length;
 
   async function onRotateKey() {
     try {
@@ -141,8 +141,8 @@ export function ManagePayPanel({
       </div>
       <p className="flex items-center justify-center gap-1 px-2 text-center text-[11px] text-muted-foreground">
         <Check className="size-3" strokeWidth={2.5} />
-        {statuses.enabledMints.length} token
-        {statuses.enabledMints.length === 1 ? "" : "s"} enabled
+        {enabledCount} token
+        {enabledCount === 1 ? "" : "s"} enabled
       </p>
 
       <div className="mt-auto flex flex-col gap-2">

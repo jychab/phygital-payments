@@ -9,14 +9,20 @@ import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
 import { DevicesPanel } from "@/components/home/devices-panel";
 import { HistoryPanel } from "@/components/home/history-panel";
-import { LimitPanel } from "@/components/pay/pay-limit-panel";
+import {
+  LimitPanel,
+  PayDevicePicker,
+} from "@/components/pay/pay-limit-panel";
 import { ManagePayPanel, PayPanel } from "@/components/pay/pay-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
+import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
 import { usePayTokenContext } from "@/hooks/tokens/use-verified-tokens";
+import { isOwnerPayMintEnabled } from "@/lib/tokens/mint-delegate";
 import {
-  defaultUsdcToken,
   getDefaultMint,
+  zeroUsdcHolding,
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
@@ -125,10 +131,46 @@ export function HomeApp() {
 function HomePayTab({ owner }: { owner: string }) {
   const isRestoring = useIsRestoring();
   const payContext = usePayTokenContext(owner);
-  const [editHolding, setEditHolding] = useState<PaymentTokenHolding | null>(
+  const delegates = useOwnerPayDelegates(owner);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [needDevice, setNeedDevice] = useState(false);
+  const [pickingFor, setPickingFor] = useState<PaymentTokenHolding | null>(
     null,
   );
-  const [manageOpen, setManageOpen] = useState(false);
+  const [limitTarget, setLimitTarget] = useState<{
+    holding: PaymentTokenHolding;
+    asset: string;
+  } | null>(null);
+
+  const assets = delegates.data?.assets ?? [];
+  const tokenEnabled = delegates.data?.tokenEnabled === true;
+
+  function usdcHolding(): PaymentTokenHolding {
+    const mint = String(getDefaultMint());
+    return (
+      payContext.data?.holdings.find((h) => h.mint === mint) ??
+      zeroUsdcHolding()
+    );
+  }
+
+  function openLimit(holding: PaymentTokenHolding) {
+    if (delegates.isPending) return;
+    const match = delegates.data?.byMint.get(holding.mint);
+    const existingAsset = match?.asset;
+    if (existingAsset && isOwnerPayMintEnabled(match)) {
+      setLimitTarget({ holding, asset: String(existingAsset) });
+      return;
+    }
+    if (assets.length === 0) {
+      setNeedDevice(true);
+      return;
+    }
+    if (assets.length === 1) {
+      setLimitTarget({ holding, asset: String(assets[0]!.asset) });
+      return;
+    }
+    setPickingFor(holding);
+  }
 
   if (isRestoring) {
     return (
@@ -139,13 +181,51 @@ function HomePayTab({ owner }: { owner: string }) {
     );
   }
 
-  if (editHolding) {
+  if (needDevice) {
+    return (
+      <div className="flex flex-1 flex-col gap-5">
+        <GateMessage
+          icon={<Nfc className="size-5 text-muted-foreground" />}
+          title="Add an NFC device"
+          body="Hold a device to this phone to add it, then set a spending limit."
+          action={
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              className="w-full"
+              onClick={() => setNeedDevice(false)}
+            >
+              Back
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
+  if (pickingFor) {
+    return (
+      <PayDevicePicker
+        assets={assets}
+        onSelect={(asset) => {
+          setLimitTarget({ holding: pickingFor, asset });
+          setPickingFor(null);
+        }}
+        onBack={() => setPickingFor(null)}
+      />
+    );
+  }
+
+  if (limitTarget) {
     return (
       <LimitPanel
         expectedOwner={owner}
-        mint={editHolding.mint}
-        onEnabled={() => setEditHolding(null)}
-        onBack={() => setEditHolding(null)}
+        asset={limitTarget.asset}
+        mint={limitTarget.holding.mint}
+        walletMatch={delegates.data?.byMint.get(limitTarget.holding.mint)}
+        onEnabled={() => setLimitTarget(null)}
+        onBack={() => setLimitTarget(null)}
       />
     );
   }
@@ -155,25 +235,27 @@ function HomePayTab({ owner }: { owner: string }) {
       <ManagePayPanel
         owner={owner}
         onBack={() => setManageOpen(false)}
-        onEditTokenLimit={(holding) => setEditHolding(holding)}
+        onEditTokenLimit={openLimit}
       />
     );
   }
 
   return (
     <PayPanel
+      tokenEnabled={tokenEnabled}
+      isLoading={delegates.isPending}
       onManage={() => setManageOpen(true)}
       onSetLimit={() => {
-        const mint = String(getDefaultMint());
-        const holding = payContext.data?.holdings.find((h) => h.mint === mint);
-        setEditHolding(
-          holding ?? {
-            ...defaultUsdcToken(),
-            mint,
-            balanceRaw: "0",
-            balanceUi: "0",
-          },
-        );
+        if (delegates.isPending) return;
+        if (assets.length === 0) {
+          setNeedDevice(true);
+          return;
+        }
+        if (assets.length > 1) {
+          setManageOpen(true);
+          return;
+        }
+        openLimit(usdcHolding());
       }}
     />
   );

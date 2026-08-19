@@ -38,6 +38,7 @@ export function FinishClaimPanel() {
   const [phase, setPhase] = useState<Phase>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSetup, setShowSetup] = useState(false);
+  const [claimedAsset, setClaimedAsset] = useState<string | null>(null);
 
   async function onFinish() {
     if (!signer || !address || !pending) return;
@@ -81,6 +82,7 @@ export function FinishClaimPanel() {
         }),
       ]);
 
+      setClaimedAsset(session.asset);
       setPhase("done");
     } catch (err) {
       setPhase(null);
@@ -114,17 +116,22 @@ export function FinishClaimPanel() {
     );
   }
 
-  if (phase === "done" && address) {
+  if (phase === "done" && address && claimedAsset) {
     if (showSetup) {
       return (
         <DeviceFinishSetup
           owner={address}
+          asset={claimedAsset}
           onDismiss={() => setShowSetup(false)}
         />
       );
     }
     return (
-      <DeviceWalletReadyLoader owner={address} onSetUpPay={() => setShowSetup(true)} />
+      <DeviceWalletReadyLoader
+        owner={address}
+        asset={claimedAsset}
+        onSetUpPay={() => setShowSetup(true)}
+      />
     );
   }
 

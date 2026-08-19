@@ -19,38 +19,50 @@ const inflightBatches = new Map<
   Promise<Map<string, MintDelegateStatus>>
 >();
 
-function loadDelegateStatuses(owner: string, mints: readonly string[]) {
-  const key = `${owner}:${mints.join(",")}`;
+function loadDelegateStatuses(
+  owner: string,
+  asset: string,
+  mints: readonly string[],
+) {
+  const key = `${owner}:${asset}:${mints.join(",")}`;
   const pending = inflightBatches.get(key);
   if (pending) return pending;
   const promise = fetchDelegateStatuses(
     address(owner),
     mints.map((m) => address(m)),
+    address(asset),
   ).finally(() => inflightBatches.delete(key));
   inflightBatches.set(key, promise);
   return promise;
 }
 
-function delegateStatusQuery(owner: string | null, mint: string) {
+function delegateStatusQuery(
+  owner: string | null,
+  asset: string | null,
+  mint: string,
+) {
   return {
-    queryKey: queryKeys.delegateStatus.byOwnerMint(owner, mint),
-    queryFn: () => fetchDelegateStatus(address(owner!), address(mint)),
-    enabled: Boolean(owner && mint),
+    queryKey: queryKeys.delegateStatus.byOwnerAssetMint(owner, asset, mint),
+    queryFn: () =>
+      fetchDelegateStatus(address(owner!), address(mint), address(asset!)),
+    enabled: Boolean(owner && asset && mint),
     ...queryOptions.live,
   };
 }
 
-/** The connected wallet's allowance (program-authority delegate) for a mint. */
+/** Allowance for this asset's program-authority PDA on a mint ATA. */
 export function useDelegateStatus(
   owner: string | null,
+  asset: string | null,
   mint: Address | string,
 ) {
-  return useQuery(delegateStatusQuery(owner, String(mint)));
+  return useQuery(delegateStatusQuery(owner, asset, String(mint)));
 }
 
-/** Per-mint observers over a batched RPC (Manage Pay / readiness gate). */
+/** Per-mint observers over a batched RPC (device Pay-setup readiness). */
 export function useDelegateStatuses(
   owner: string | null,
+  asset: string | null,
   mints: readonly string[],
 ) {
   const mintsKey = mints.filter(Boolean).join(",");
@@ -61,9 +73,9 @@ export function useDelegateStatuses(
 
   return useQueries({
     queries: sorted.map((mint) => ({
-      ...delegateStatusQuery(owner, mint),
+      ...delegateStatusQuery(owner, asset, mint),
       queryFn: async () => {
-        const map = await loadDelegateStatuses(owner!, sorted);
+        const map = await loadDelegateStatuses(owner!, asset!, sorted);
         const status = map.get(mint);
         if (!status) {
           throw new Error(`Missing delegate status for mint ${mint}`);
@@ -78,14 +90,10 @@ export function useDelegateStatuses(
         if (status) data.set(sorted[i]!, status);
       }
       return {
-        data,
         isLoading: results.some((result) => result.isLoading),
-        isPending: results.some((result) => result.isPending),
-        isFetching: results.some((result) => result.isFetching),
         isError: results.some((result) => result.isError),
         error: results.find((result) => result.error)?.error ?? null,
         enabledMints: sorted.filter((mint) => isDelegateEnabled(data.get(mint))),
-        mints: sorted,
       };
     },
   });

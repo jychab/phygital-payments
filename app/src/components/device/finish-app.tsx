@@ -11,7 +11,7 @@ import { tryParseAddress } from "@/lib/solana/address";
 
 /**
  * Route `/device/finish` — Privy wallet connect.
- * `?token=` finishes a claim; `?intent=limit|enable&owner=` continues Pay setup.
+ * `?token=` finishes a claim; `?owner=&asset=` continues Pay setup.
  */
 export function DeviceFinishApp() {
   return (
@@ -27,17 +27,18 @@ function FinishDeviceRouter() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token")?.trim() ?? "";
-  const intent = searchParams.get("intent")?.trim();
   const owner = tryParseAddress(searchParams.get("owner")?.trim() ?? "");
+  const asset = tryParseAddress(searchParams.get("asset")?.trim() ?? "");
 
   if (token) {
     return <FinishClaimPanel />;
   }
 
-  if ((intent === "limit" || intent === "enable") && owner) {
+  if (owner && asset) {
     return (
       <DeviceFinishSetup
         owner={String(owner)}
+        asset={String(asset)}
         onDismiss={() => router.push("/")}
       />
     );

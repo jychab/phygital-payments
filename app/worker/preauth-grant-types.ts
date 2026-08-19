@@ -1,6 +1,6 @@
-export const PREAUTH_TTL_SECONDS = 45;
+export const PREAUTH_TTL_SECONDS = 120;
 /** Minimum gap between preauth opens for the same wallet (rate limit). */
-export const PREAUTH_MIN_INTERVAL_SECONDS = 2;
+export const PREAUTH_MIN_INTERVAL_SECONDS = 10;
 
 export type PreauthGrant = {
   id: string;

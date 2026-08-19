@@ -221,7 +221,7 @@ async function buildReceiveTransfer(args: {
 
   // PDA derivation is local; allowance + OV share one RPC wave.
   const [funding, configPda, ov] = await Promise.all([
-    fetchMintDelegateStatus(asset.owner, mint),
+    fetchMintDelegateStatus(asset.owner, mint, assetPda),
     findConfigPda(),
     findOwnerVerifierPda({ owner: asset.owner }).then(async ([pda]) => {
       const account = await fetchMaybeOwnerVerifier(rpc, pda);

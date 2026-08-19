@@ -16,8 +16,10 @@ const STORAGE_KEY = "phygital-pay.react-query";
  * Bump to drop incompatible cached shapes after schema changes.
  * v2: bigint/Map tagged JSON (v1 `JSON.stringify` threw on bigint and never saved).
  * v3: React Query is the only browser cache (no HTTP cache); drop stale persist.
+ * v5: per-asset delegateStatus keys (SDK 0.4) + ownerPayDelegates wallet scan.
+ * v6: OwnerPayMintMatch nests MintDelegateStatus (shared with LimitPanel).
  */
-const CACHE_BUSTER = "v3";
+const CACHE_BUSTER = "v6";
 
 export { CACHE_BUSTER };
 
@@ -32,6 +34,7 @@ const PERSISTED_QUERY_ROOTS = new Set([
   "holdings",
   "payContext",
   "delegateStatus",
+  "ownerPayDelegates",
   "assets",
   "verifiedTokens",
 ]);

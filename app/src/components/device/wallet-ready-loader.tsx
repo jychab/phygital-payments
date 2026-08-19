@@ -10,13 +10,15 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 /** Loads Pay-setup snapshot, then renders DeviceWalletReady. */
 export function DeviceWalletReadyLoader({
   owner,
+  asset,
   onSetUpPay,
 }: {
   owner: string;
+  asset: string;
   onSetUpPay?: () => void;
 }) {
   const { isPending, isError, error, capSet, apiKeyReady } =
-    usePaySetupSnapshot(owner);
+    usePaySetupSnapshot(owner, asset);
 
   if (isPending) {
     return (
