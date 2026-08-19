@@ -6,11 +6,14 @@ import {
   PREAUTH_WEBHOOK_GRACE_SECONDS,
   closeGrantForReplacement,
   currentActiveGrant,
+  expiredPreauthStatus,
   newStoredGrant,
+  openedPreauthCopy,
   prependGrant,
   remainingWaitMs,
   resolvePreauthStatus,
   shouldStampPayment,
+  successPreauthCopy,
   type StoredGrant,
 } from "../../../shared/preauth-status";
 
@@ -45,17 +48,71 @@ describe("resolvePreauthStatus", () => {
       status: "success",
       grantId: "grant-a",
       ...payment,
+      body: "Paid 1 USDC to Reci…1111",
     });
   });
 
   it("returns cancelled when closed without payment", () => {
     expect(
       resolvePreauthStatus(grant({ closedReason: "cancelled" })),
-    ).toEqual({ status: "cancelled", grantId: "grant-a" });
+    ).toEqual({
+      status: "cancelled",
+      grantId: "grant-a",
+      body: "Cancelled. Nothing was charged.",
+    });
   });
 
   it("returns pending until the waiter deadline", () => {
     expect(resolvePreauthStatus(grant())).toBe("pending");
+  });
+
+  it("formats fractional USDC for the shortcut notification", () => {
+    expect(
+      resolvePreauthStatus(
+        grant({ payment: { ...payment, amount: "1230000" } }),
+      ),
+    ).toMatchObject({
+      body: "Paid 1.23 USDC to Reci…1111",
+    });
+  });
+
+  it("formats the UI amount from catalog mint decimals and symbol", () => {
+    expect(
+      successPreauthCopy(
+        {
+          ...payment,
+          mint: "So11111111111111111111111111111111111111112",
+          amount: "1500000000",
+        },
+        { symbol: "SOL", decimals: 9 },
+      ),
+    ).toEqual({
+      body: "Paid 1.5 SOL to Reci…1111",
+    });
+  });
+});
+
+describe("expiredPreauthStatus", () => {
+  it("includes shortcut notification copy", () => {
+    expect(expiredPreauthStatus("grant-a")).toEqual({
+      status: "expired",
+      grantId: "grant-a",
+      body: "Time Expired. Tap Pay again to continue.",
+    });
+  });
+});
+
+describe("openedPreauthCopy", () => {
+  it("matches the Hold to Pay window for the default TTL", () => {
+    expect(openedPreauthCopy(PREAUTH_TTL_SECONDS)).toEqual({
+      body: "Hold to Pay. 2 minutes remaining",
+    });
+  });
+
+  it("singularizes a one-minute window", () => {
+    expect(openedPreauthCopy(60)).toEqual({
+      body: "Hold to Pay. 1 minute remaining",
+    });
   });
 });
 

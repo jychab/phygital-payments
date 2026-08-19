@@ -5,6 +5,7 @@ import { openPreauthGrant } from "@/lib/server/open-preauth-grant";
 /**
  * GET /api/preauth/open?apiKey=
  * In-app Pay and integrators — apiKey in query string.
+ * JSON includes `body` for a Shortcuts notification.
  */
 export async function GET(req: NextRequest) {
   return openPreauthGrant({

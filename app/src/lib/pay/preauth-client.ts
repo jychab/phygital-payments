@@ -2,9 +2,12 @@
 
 import { API_KEY_NOT_SET_UP, readApiKey } from "@/lib/pay/api-key-store";
 import { queryFetch } from "@/lib/queries/http";
-import type { PreauthStatusResult } from "../../../shared/preauth-status";
+import type {
+  PreauthStatusCopy,
+  PreauthStatusResult,
+} from "../../../shared/preauth-status";
 
-export type PreauthResponse = {
+export type PreauthResponse = PreauthStatusCopy & {
   expiresAt: number;
   grantId: string;
   wallet: string;

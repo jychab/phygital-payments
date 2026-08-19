@@ -10,7 +10,9 @@ import {
   getPreauthGrantsStub,
   isApiKeyAuthError,
 } from "@/lib/server/preauth-grants-do";
+import { openedPreauthCopy } from "../../../shared/preauth-status";
 import { INVALID_API_KEY, parseApiKey } from "../../../worker/api-key-hmac";
+import { PREAUTH_TTL_SECONDS } from "../../../worker/preauth-grant-types";
 
 /** GET /api/preauth/open — HMAC-parse key, open a spending window on the DO. */
 export async function openPreauthGrant(params: {
@@ -42,6 +44,7 @@ export async function openPreauthGrant(params: {
         expiresAt: grant.expiresAt,
         grantId: grant.id,
         wallet: parsed.wallet,
+        ...openedPreauthCopy(PREAUTH_TTL_SECONDS),
       },
       { headers: QUERY_NO_STORE },
     );

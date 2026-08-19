@@ -27,17 +27,92 @@ export type StoredGrant = {
   payment: GrantPayment | null;
 };
 
-export type PreauthStatusResult =
-  | { status: "cancelled"; grantId: string }
-  | { status: "expired"; grantId: string }
-  | {
-      status: "success";
-      grantId: string;
-      recipient: string;
-      amount: string;
-      mint: string;
-      signature: string;
-    };
+/** Shortcut / notification copy for a terminal grant status. */
+export type PreauthStatusCopy = {
+  body: string;
+};
+
+export type PreauthStatusResult = PreauthStatusCopy &
+  (
+    | { status: "cancelled"; grantId: string }
+    | { status: "expired"; grantId: string }
+    | {
+        status: "success";
+        grantId: string;
+        recipient: string;
+        amount: string;
+        mint: string;
+        signature: string;
+      }
+  );
+
+const USDC_DECIMALS = 6;
+const USDC_MINTS = new Set([
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDnm3",
+]);
+
+function shortAddress(value: string, length = 4): string {
+  if (value.length <= length * 2 + 1) return value;
+  return `${value.slice(0, length)}…${value.slice(-length)}`;
+}
+
+function formatRawAmount(raw: string, decimals: number): string {
+  if (!/^\d+$/.test(raw)) return "—";
+  const value = BigInt(raw);
+  if (value === 0n) return "0";
+  const base = 10n ** BigInt(decimals);
+  const whole = value / base;
+  const frac = (value % base)
+    .toString()
+    .padStart(decimals, "0")
+    .replace(/0+$/, "");
+  return frac.length > 0 ? `${whole}.${frac}` : whole.toString();
+}
+
+export type PreauthMintDisplay = {
+  symbol: string;
+  decimals: number;
+};
+
+/** Fallback when the verified-token catalog is unavailable. */
+export function fallbackMintDisplay(mint: string): PreauthMintDisplay {
+  if (USDC_MINTS.has(mint)) return { symbol: "USDC", decimals: USDC_DECIMALS };
+  return { symbol: shortAddress(mint), decimals: USDC_DECIMALS };
+}
+
+export function successPreauthCopy(
+  payment: Pick<GrantPayment, "amount" | "mint" | "recipient">,
+  token: PreauthMintDisplay,
+): PreauthStatusCopy {
+  return {
+    body: `Paid ${formatRawAmount(payment.amount, token.decimals)} ${token.symbol} to ${shortAddress(payment.recipient)}`,
+  };
+}
+
+export function cancelledPreauthStatus(grantId: string): PreauthStatusResult {
+  return {
+    status: "cancelled",
+    grantId,
+    body: "Cancelled. Nothing was charged.",
+  };
+}
+
+export function expiredPreauthStatus(grantId: string): PreauthStatusResult {
+  return {
+    status: "expired",
+    grantId,
+    body: "Time Expired. Tap Pay again to continue.",
+  };
+}
+
+/** Copy for a freshly opened spending window (Shortcuts notification). */
+export function openedPreauthCopy(ttlSeconds: number): PreauthStatusCopy {
+  const minutes = Math.max(1, Math.round(ttlSeconds / 60));
+  const remaining =
+    minutes === 1 ? "1 minute remaining" : `${minutes} minutes remaining`;
+  return { body: `Tap to Pay. ${remaining}` };
+}
 
 export function newStoredGrant(now: number, ttlSeconds: number): StoredGrant {
   return {
@@ -126,10 +201,14 @@ export function resolvePreauthStatus(
       amount: grant.payment.amount,
       mint: grant.payment.mint,
       signature: grant.payment.signature,
+      ...successPreauthCopy(
+        grant.payment,
+        fallbackMintDisplay(grant.payment.mint),
+      ),
     };
   }
   if (grant.closedReason === "cancelled") {
-    return { status: "cancelled", grantId: grant.id };
+    return cancelledPreauthStatus(grant.id);
   }
   return "pending";
 }

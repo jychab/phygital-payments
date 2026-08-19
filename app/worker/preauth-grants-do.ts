@@ -11,6 +11,7 @@ import {
   GRANT_NOT_FOUND,
   closeGrantForReplacement,
   currentActiveGrant,
+  expiredPreauthStatus,
   findGrant,
   newStoredGrant,
   prependGrant,
@@ -148,7 +149,7 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
 
       const waitMs = remainingWaitMs(grant, Date.now());
       if (waitMs <= 0) {
-        return { status: "expired", grantId: grant.id };
+        return expiredPreauthStatus(grant.id);
       }
 
       let controller = this.waiters.get(args.grantId);
