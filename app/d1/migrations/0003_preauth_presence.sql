@@ -1,5 +1,5 @@
--- Upgrade DBs that already applied the old 0002 (max_amount / mint columns).
--- Greenfield installs get the presence schema from 0002 directly.
+-- Rebuild preauth_grants for DBs that applied an older 0002 with extra columns.
+-- Greenfield installs already get this schema from 0002.
 CREATE TABLE preauth_grants_v3 (
   id          TEXT    NOT NULL PRIMARY KEY,
   wallet      TEXT    NOT NULL,

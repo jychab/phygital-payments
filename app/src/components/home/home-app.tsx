@@ -12,7 +12,6 @@ import { HistoryPanel } from "@/components/home/history-panel";
 import { LimitPanel } from "@/components/pay/pay-limit-panel";
 import { ManagePayPanel, PayPanel } from "@/components/pay/pay-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDelegateStatuses } from "@/hooks/pay/use-delegate-status";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import { usePayTokenContext } from "@/hooks/tokens/use-verified-tokens";
 import {
@@ -126,24 +125,12 @@ export function HomeApp() {
 function HomePayTab({ owner }: { owner: string }) {
   const isRestoring = useIsRestoring();
   const payContext = usePayTokenContext(owner);
-  const holdingsReady = payContext.isSuccess || payContext.isError;
-  const mints =
-    payContext.data?.holdings && payContext.data.holdings.length > 0
-      ? payContext.data.holdings.map((h) => h.mint)
-      : [String(getDefaultMint())];
-  const statuses = useDelegateStatuses(
-    holdingsReady ? owner : null,
-    mints,
-  );
   const [editHolding, setEditHolding] = useState<PaymentTokenHolding | null>(
     null,
   );
   const [manageOpen, setManageOpen] = useState(false);
 
-  const loading =
-    isRestoring || payContext.isLoading || statuses.isLoading;
-
-  if (loading) {
+  if (isRestoring) {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />

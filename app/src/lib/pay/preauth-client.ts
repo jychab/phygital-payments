@@ -6,8 +6,6 @@ export type PreauthResponse = {
   expiresAt: number;
   grantId: string;
   wallet: string;
-  maxAmount: string;
-  mint: string | null;
 };
 
 function storedApiKey(wallet: string): string {
@@ -18,13 +16,9 @@ function storedApiKey(wallet: string): string {
 
 export async function requestPreauthForWallet(args: {
   wallet: string;
-  amount: string;
-  mint?: string;
 }): Promise<PreauthResponse> {
   const params = new URLSearchParams();
   params.set("apiKey", storedApiKey(args.wallet));
-  params.set("amount", args.amount.trim());
-  if (args.mint) params.set("mint", args.mint);
 
   const res = await fetch(`/api/preauth/open?${params.toString()}`, {
     method: "GET",

@@ -1,5 +1,4 @@
--- Restore payer mint + max tap amount on the presence grant.
--- 0003 dropped these; settle still caps via on-chain delegate, but the
--- open window binds which mint and how much a tap may spend.
-ALTER TABLE preauth_grants ADD COLUMN max_amount TEXT NOT NULL DEFAULT '0';
-ALTER TABLE preauth_grants ADD COLUMN mint TEXT;
+-- No-op. Preauth grants no longer store mint or max_amount.
+-- The table is dropped in 0005 (lifecycle moved to PreauthGrantsDO).
+-- Filename kept so environments that already applied 0004 stay in sync.
+SELECT 1 WHERE 0;

@@ -1,25 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { LoaderCircle, X } from "lucide-react";
-import { address } from "@solana/kit";
 import Link from "next/link";
 
 import { BackLink } from "@/components/shared/back-link";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
-import { useDelegateStatus } from "@/hooks/pay/use-delegate-status";
-import { useMaxTapAmountUi } from "@/hooks/pay/use-max-tap-amount";
-import { useMintProgram } from "@/hooks/tokens/use-mint-program";
-import { useVerifiedTokens } from "@/hooks/tokens/use-verified-tokens";
-import { isDelegateEnabled, uiAmountToRaw } from "@/lib/tokens/mint-delegate";
-import {
-  defaultTapAmountUi,
-  getDefaultMint,
-  resolvePaymentToken,
-} from "@/lib/tokens/payment-token";
+import { useDelegateStatuses } from "@/hooks/pay/use-delegate-status";
+import { usePayTokenContext } from "@/hooks/tokens/use-verified-tokens";
+import { getDefaultMint } from "@/lib/tokens/payment-token";
 import {
   cancelPreauthForWallet,
   requestPreauthForWallet,
@@ -27,29 +19,6 @@ import {
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 type Phase = "idle" | "window" | "expired";
-
-function silentGrantAmountUi(
-  limitUi?: string | null,
-  balanceUi?: string | null,
-  maxTapUi?: string | null,
-  mint?: string | null,
-): string {
-  const fromLimit = defaultTapAmountUi(limitUi, maxTapUi, mint);
-  const bal = balanceUi != null && balanceUi !== "" ? Number(balanceUi) : NaN;
-  if (!Number.isFinite(bal) || bal <= 0) return fromLimit;
-  const cap = Number(fromLimit);
-  if (!Number.isFinite(cap) || cap <= 0) return fromLimit;
-  const n = Math.min(cap, bal);
-  return Number.isInteger(n) ? String(n) : String(n);
-}
-
-function tryUiAmountToRaw(amount: string, decimals: number): bigint | null {
-  try {
-    return uiAmountToRaw(amount, decimals);
-  } catch {
-    return null;
-  }
-}
 
 function formatCountdown(seconds: number): string {
   const s = Math.max(0, seconds);
@@ -59,7 +28,8 @@ function formatCountdown(seconds: number): string {
 }
 
 /**
- * Pay → Hold to Pay. Opens a silent grant up to min(max tap, spending limit).
+ * Pay → Hold to Pay. Opens a silent on/off spending window. Mint and amount
+ * are chosen by Collect and capped on-chain by the token's spending limit.
  * Works without Privy when `owner` is known (e.g. `/device`).
  */
 export function PayFlowPanel({
@@ -77,28 +47,22 @@ export function PayFlowPanel({
   onManageApiKey?: () => void;
   onBack?: () => void;
 }) {
-  const mint = String(getDefaultMint());
-  const mintAddress = useMemo(() => address(mint), [mint]);
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  const capQuery = useDelegateStatus(owner, mintAddress);
-  const mintQuery = useMintProgram(mintAddress);
-  const verified = useVerifiedTokens();
-  const token = resolvePaymentToken(mint, verified.data);
-  const tokenEnabled = isDelegateEnabled(capQuery.data);
-  const limitUi = tokenEnabled ? capQuery.data?.delegatedAmountUi : null;
-  const maxTapUi = useMaxTapAmountUi(owner, mint);
-  const grantUi = silentGrantAmountUi(
-    limitUi,
-    capQuery.data?.balanceUi,
-    maxTapUi,
-    mint,
+  const payContext = usePayTokenContext(owner);
+  const holdingsReady = payContext.isSuccess || payContext.isError;
+  const mints =
+    payContext.data?.holdings && payContext.data.holdings.length > 0
+      ? payContext.data.holdings.map((h) => h.mint)
+      : [String(getDefaultMint())];
+  const statuses = useDelegateStatuses(
+    holdingsReady ? owner : null,
+    mints,
   );
-  const decimals = mintQuery.data?.decimals ?? token.decimals;
-  const rawAmount = tryUiAmountToRaw(grantUi, decimals);
+  const tokenEnabled = statuses.enabledMints.length > 0;
 
   const windowOpen = phase === "window";
   const secondsLeft =
@@ -121,24 +85,12 @@ export function PayFlowPanel({
 
   async function onPay() {
     if (!tokenEnabled) {
-      toast.error(`Turn on ${token.symbol} for Pay first.`);
-      return;
-    }
-    if (!mintQuery.data) {
-      toast.error("Still loading. Try again in a moment.");
-      return;
-    }
-    if (rawAmount == null) {
-      toast.error("Couldn’t start Pay. Check your spending limit.");
+      toast.error("Turn on a token for Pay first.");
       return;
     }
     try {
       setBusy(true);
-      const grant = await requestPreauthForWallet({
-        wallet: owner,
-        amount: rawAmount.toString(),
-        mint,
-      });
+      const grant = await requestPreauthForWallet({ wallet: owner });
       setNowMs(Date.now());
       setExpiresAt(grant.expiresAt);
       setPhase("window");
@@ -209,7 +161,7 @@ export function PayFlowPanel({
     );
   }
 
-  if (capQuery.isLoading || mintQuery.isLoading) {
+  if (payContext.isLoading || statuses.isLoading) {
     return (
       <div className="flex flex-1 flex-col">
         {onBack ? <BackLink onClick={onBack} /> : null}
@@ -231,10 +183,10 @@ export function PayFlowPanel({
         <div className="flex flex-1 flex-col items-center justify-center gap-5 py-8 text-center">
           <div className="max-w-64 space-y-1.5">
             <p className="text-base font-medium text-foreground">
-              Turn On {token.symbol}
+              Turn On Pay
             </p>
             <p className="text-sm text-muted-foreground">
-              Set a spending limit to pay with {token.symbol}.
+              Set a spending limit to start paying.
             </p>
           </div>
           {onSetLimit ? (
@@ -256,8 +208,6 @@ export function PayFlowPanel({
     );
   }
 
-  const payBlocked = busy || rawAmount == null;
-
   return (
     <div className="flex flex-1 flex-col gap-6">
       <div className="flex items-center gap-2">
@@ -276,7 +226,7 @@ export function PayFlowPanel({
           size="lg"
           className="w-full"
           onClick={() => void onPay()}
-          disabled={payBlocked || !mintQuery.data}
+          disabled={busy}
         >
           {busy ? <LoaderCircle className="size-4 animate-spin" /> : "Pay"}
         </Button>

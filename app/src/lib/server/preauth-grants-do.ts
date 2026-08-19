@@ -14,19 +14,9 @@ import {
 export type PreauthGrantsStub = {
   rotate(): Promise<{ gen: number }>;
   currentGeneration(): Promise<number>;
-  open(args: {
-    wallet: string;
-    gen: number;
-    maxAmount: string;
-    mint: string | null;
-  }): Promise<PreauthGrant>;
+  open(args: { gen: number }): Promise<PreauthGrant>;
   cancel(): Promise<void>;
-  claim(args: {
-    wallet: string;
-    amount: string;
-    mint: string;
-    jobId: string;
-  }): Promise<{ grantId: string }>;
+  claim(args: { jobId: string }): Promise<{ grantId: string }>;
   consume(args: { grantId: string }): Promise<void>;
   releaseClaim(args: { grantId: string }): Promise<void>;
 };

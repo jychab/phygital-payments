@@ -4,11 +4,7 @@ export const PREAUTH_MIN_INTERVAL_SECONDS = 2;
 
 export type PreauthGrant = {
   id: string;
-  wallet: string;
-  maxAmount: string;
-  mint: string | null;
   expiresAt: number;
-  consumedAt: number | null;
 };
 
 export type GrantClaim = {

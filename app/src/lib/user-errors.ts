@@ -15,8 +15,6 @@ type Rule = {
   test: RegExp | string;
   title: string;
   body: string;
-  /** Toast / compact banner. Defaults to `title`. */
-  toast?: string;
 };
 
 const FALLBACK_TITLE = "Payment Not Completed";
@@ -62,16 +60,6 @@ const RULES: Rule[] = [
     test: /no active preauth grant|missing preauth/i,
     title: "Payment Not Enabled",
     body: "Ask them to enable Pay on their phone, then hold their device here.",
-  },
-  {
-    test: /preauth grant mint mismatch/i,
-    title: "Wrong Token",
-    body: "They enabled Pay for a different token. Ask them to enable this one.",
-  },
-  {
-    test: /exceeds preauth maxAmount/i,
-    title: "Over the Amount",
-    body: "This is more than they authorized. Ask them to pay a larger amount, or collect less.",
   },
   {
     test: /not the SPL delegate|haven't enabled this token for Pay|enable this token for Pay/i,
@@ -164,11 +152,6 @@ const RULES: Rule[] = [
     body: "You can’t collect a payment from your own NFC device.",
   },
   {
-    test: /USDC account is missing|needs a USDC account|create it before receiving|receive account/i,
-    title: "Receive Account Needed",
-    body: "Set up a receive account before collecting.",
-  },
-  {
     test: /this tap was already used/i,
     title: "Already Used",
     body: "Hold your NFC device to this phone again.",
@@ -189,7 +172,7 @@ const RULES: Rule[] = [
     body: "Hold your NFC device to this phone again.",
   },
   {
-    test: /only classic spl|token-2022|only usdc is supported/i,
+    test: /only classic spl|token-2022/i,
     title: "Token Not Supported",
     body: "Only verified tokens can be used. Switch to USDC.",
   },
@@ -294,7 +277,7 @@ export function toUserErrorMessage(
 
   const rule = matchRule(raw);
   if (rule) {
-    return rule.toast ?? rule.title;
+    return rule.title;
   }
 
   if (isAlreadyFriendly(raw)) return raw;

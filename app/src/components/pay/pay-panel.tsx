@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, LoaderCircle, Settings2 } from "lucide-react";
+import { Check, LoaderCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { CenteredStatus } from "@/components/layout/gate-message";

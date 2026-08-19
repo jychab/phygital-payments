@@ -12,7 +12,7 @@ import {
 } from "@/lib/queries";
 
 /**
- * Whether a recipient already has a USDC token account for `mint`. Pass the
+ * Whether a recipient already has a token account for `mint`. Pass the
  * resolved `program` (from useMintProgram) to avoid re-resolving it here.
  * `keepPreviousData` keeps the last result visible while the recipient changes,
  * so the panel doesn't flash back to empty.

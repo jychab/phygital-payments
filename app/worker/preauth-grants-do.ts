@@ -13,13 +13,10 @@ const GENERATION_KEY = "generation";
 
 type StoredGrant = {
   id: string;
-  maxAmount: string;
-  mint: string | null;
   expiresAt: number;
   consumedAt: number | null;
   claimedAt: number | null;
   claimedBy: string | null;
-  createdAt: number;
 };
 
 /** One DO instance per payer wallet — holds the latest single-use spending window. */
@@ -37,12 +34,7 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
     return (await this.ctx.storage.get<number>(GENERATION_KEY)) ?? 0;
   }
 
-  async open(args: {
-    wallet: string;
-    gen: number;
-    maxAmount: string;
-    mint: string | null;
-  }): Promise<PreauthGrant> {
+  async open(args: { gen: number }): Promise<PreauthGrant> {
     const now = Math.floor(Date.now() / 1000);
 
     const generation =
@@ -63,13 +55,10 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
     const expiresAt = now + PREAUTH_TTL_SECONDS;
     const grant: StoredGrant = {
       id,
-      maxAmount: args.maxAmount,
-      mint: args.mint,
       expiresAt,
       consumedAt: null,
       claimedAt: null,
       claimedBy: null,
-      createdAt: now,
     };
 
     await this.ctx.storage.put({
@@ -78,7 +67,7 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
     });
     await this.ctx.storage.setAlarm(expiresAt * 1000);
 
-    return this.toPreauthGrant(args.wallet, grant);
+    return { id: grant.id, expiresAt: grant.expiresAt };
   }
 
   /** Cancel any open spending window (Pay panel Cancel / reopen). */
@@ -93,24 +82,13 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
 
   /**
    * Atomically claim the active grant for a transfer job (single-use in-flight).
-   * Mint must match when bound; amount must be ≤ maxAmount.
+   * Mint and amount are enforced on-chain (delegate + balance), not here.
    */
-  async claim(args: {
-    wallet: string;
-    amount: string;
-    mint: string;
-    jobId: string;
-  }): Promise<{ grantId: string }> {
+  async claim(args: { jobId: string }): Promise<{ grantId: string }> {
     const now = Math.floor(Date.now() / 1000);
     const grant = await this.loadActiveGrant(now);
     if (!grant) {
       throw new Error("No active preauth grant for this wallet");
-    }
-    if (grant.mint && grant.mint !== args.mint) {
-      throw new Error("Preauth grant mint mismatch");
-    }
-    if (BigInt(args.amount) > BigInt(grant.maxAmount)) {
-      throw new Error("Transfer amount exceeds preauth maxAmount");
     }
     if (grant.claimedAt != null) {
       throw new Error("Preauth grant already used");
@@ -156,16 +134,5 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
       return null;
     }
     return grant;
-  }
-
-  private toPreauthGrant(wallet: string, grant: StoredGrant): PreauthGrant {
-    return {
-      id: grant.id,
-      wallet,
-      maxAmount: grant.maxAmount,
-      mint: grant.mint,
-      expiresAt: grant.expiresAt,
-      consumedAt: grant.consumedAt,
-    };
   }
 }

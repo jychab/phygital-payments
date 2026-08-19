@@ -52,39 +52,6 @@ export function isDefaultMint(mint: string | Address): boolean {
   return String(mint) === String(getUsdcMint());
 }
 
-/** Default max tap for USDC only. Other mints have no implicit cap. */
-export const DEFAULT_PAY_AMOUNT_UI = "100";
-
-function formatUiAmount(n: number): string {
-  return Number.isInteger(n) ? String(n) : String(n);
-}
-
-function parsePositiveUi(value?: string | null): number | null {
-  if (value == null || value === "") return null;
-  const n = Number(value);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return n;
-}
-
-/**
- * Silent Pay cap: min(max tap, spending limit).
- * Unset max tap falls back to $100 for USDC only; other mints have no default.
- */
-export function defaultTapAmountUi(
-  limitUi?: string | null,
-  maxTapUi?: string | null,
-  mint?: string | Address | null,
-): string {
-  const useUsdcDefault = mint == null || isDefaultMint(mint);
-  const maxTap =
-    parsePositiveUi(maxTapUi) ??
-    (useUsdcDefault ? parsePositiveUi(DEFAULT_PAY_AMOUNT_UI) : null);
-  if (maxTap == null) return "";
-  const limit = parsePositiveUi(limitUi);
-  if (limit == null) return formatUiAmount(maxTap);
-  return formatUiAmount(Math.min(limit, maxTap));
-}
-
 /** Resolve mint metadata from a catalog (USDC / short address fallback). */
 export function resolvePaymentToken(
   mint: string | Address,

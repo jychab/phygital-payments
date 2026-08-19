@@ -127,7 +127,7 @@ export async function fetchRecipientAtaStatus(args: {
 }
 
 /**
- * Create the recipient's USDC ATA. The connected wallet pays rent;
+ * Create the recipient's token account. The connected wallet pays rent;
  * `owner` must be the token account owner (defaults to signer).
  */
 export async function buildCreateRecipientAtaInstructions(args: {

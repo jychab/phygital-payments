@@ -5,7 +5,7 @@ import { parsePaymentRequest } from "@/lib/collect/payment-request";
 
 export const metadata: Metadata = {
   title: "Set up receive — Phygital Pay",
-  description: "Create a USDC receive account for Collect",
+  description: "Create a receive account for Collect",
 };
 
 type SetupProps = {

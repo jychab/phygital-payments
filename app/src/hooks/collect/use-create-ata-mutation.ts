@@ -9,7 +9,7 @@ import { sendTransaction } from "@/lib/solana/tx";
 import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
 
 /**
- * Create the recipient's USDC token account (connected wallet pays rent).
+ * Create the recipient's token account (connected wallet pays rent).
  * Status flips to ready after broadcast; confirm refreshes or rolls back.
  */
 export function useCreateAtaMutation(

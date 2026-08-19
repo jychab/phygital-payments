@@ -41,7 +41,7 @@ Configure the Privy app for Solana external wallet connectors. Login method: wal
 
 Connect a wallet via Privy, then use tabs:
 
-- **Pay** — **Pay $X** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC device. If Pay isn't configured, the tab offers **Enable Pay** (wallet sign; the API key is stored in localStorage on this phone).
+- **Pay** — **Pay** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC device. If Pay isn't configured, the tab offers **Enable Pay** (wallet sign; the API key is stored in localStorage on this phone).
 - **Devices** — list of NFC devices for this wallet. Add a device by holding a tag (opens `/device`).
 - **Activity** — recent payments for the connected wallet.
 
@@ -54,7 +54,7 @@ Legacy collect query params on `/` (`?recipient=` / `?amount=`) redirect to `/co
 Destination flow — **no Privy / Connect**. The settle-to wallet **must** come from `?recipient=`:
 
 - Enter an amount, then hold NFC. Must run in Safari/Chrome (not a wallet in-app browser).
-- If the wallet has no USDC receive account yet, Collect shows an error with a link to **`/setup`**.
+- If the wallet has no receive account for the selected token yet, Collect shows an error with a link to **`/setup`**.
 - Missing or invalid `?recipient=` shows an error.
 - Top-level Collect uses the header mode dropdown to return to **Home**. Embeds stay sealed (static Collect label, no dropdown).
 
@@ -80,7 +80,7 @@ After an NFC tap. `/device` has **no Privy / Connect**. Wallet linking is a **su
 2. **Unclaimed / unlocked** — WebAuthn tap, then link wallet on `/device/finish`
 3. **Locked and owned** — **Your wallet is ready.** Status: Wallet, Pay (On/Off), Spending Limit
    - **Set Up Pay** / **Not Now** when Pay is off
-   - **Pay $X** → **Hold to Pay** when Pay is on and this phone has a stored key
+   - **Pay** → **Hold to Pay** when Pay is on and this phone has a stored key
 
 **Step 2 — finish (`/device/finish`):** Privy wallet connect.
 
@@ -95,7 +95,7 @@ API keys live in localStorage on this phone, keyed by wallet. **Reveal API key**
 In-app Pay calls `GET /api/preauth/open` with the stored API key. Integrators can do the same:
 
 ```
-GET /api/preauth/open?apiKey=<ppk_…>&amount=100000000
+GET /api/preauth/open?apiKey=<ppk_…>
 ```
 
 Query params:
@@ -103,19 +103,17 @@ Query params:
 | Param | Required | Description |
 |-------|----------|-------------|
 | `apiKey` | Yes | HMAC API key (`ppk_<wallet>_<gen>_<hmac>`) |
-| `amount` | Yes | Raw u64 decimal (smallest units), e.g. `100000000` for $100 USDC |
-| `mint` | No | Token mint (defaults to USDC) |
 
-Response: `{ grantId, expiresAt, wallet, maxAmount, mint }` (grant stored in a per-wallet Durable Object). Responses use `Cache-Control: no-store`.
+Response: `{ grantId, expiresAt, wallet }` (grant stored in a per-wallet Durable Object). Responses use `Cache-Control: no-store`.
 
-A **200 from `/open` only means the spending window is open** — not that payment completed. Settlement happens when you hold NFC to the merchant Collect phone; the merchant UI is the receipt. In-app Pay stops after opening the window (countdown only). It does **not** poll for `paid`.
+A **200 from `/open` only means the spending window is open** — not that payment completed. Settlement happens when you hold NFC to the merchant Collect phone; the merchant UI is the receipt. In-app Pay stops after opening the window (countdown only). It does **not** poll for `paid`. Mint and amount are chosen by Collect and capped on-chain by the payer's spending limit for that token.
 
 Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey>` (rejects rotated keys).
 
 The API key is stored in plaintext in localStorage on this phone. Keys in query strings may also appear in CDN/proxy logs — use **Rotate API key** in Manage Pay if leaked.
 
 ```bash
-curl "https://<host>/api/preauth/open?apiKey=ppk_…&amount=100000000"
+curl "https://<host>/api/preauth/open?apiKey=ppk_…"
 ```
 
 ### Payment link (`/collect?recipient=<solana-address>`)
