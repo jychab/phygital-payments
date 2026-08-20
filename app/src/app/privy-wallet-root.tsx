@@ -1,12 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useState,
-  type ComponentType,
   type ReactNode,
 } from "react";
 
@@ -16,42 +16,40 @@ const PrivyReadyContext = createContext(false);
 const PrivyRequestContext = createContext<() => void>(() => {});
 
 /**
+ * `ssr: false` is required so OpenNext does not put `@privy-io/react-auth`
+ * in the Cloudflare Worker (10 MiB limit). A plain `import()` from this
+ * root client module is still traced into the worker bundle.
+ */
+const PrivyWalletProvider = dynamic(
+  () => import("./privy-wallet-provider").then((m) => m.PrivyWalletProvider),
+  { ssr: false, loading: () => <EmbedBoot /> },
+);
+
+/**
  * Single app-wide Privy mount. Stays in the root tree so Home ↔ Device ↔
  * Collect share one session. The Privy SDK chunk loads only after a
  * `PrivyGate` asks for it — Collect's happy path never loads `@privy-io/react-auth`.
  */
 export function PrivyWalletRoot({ children }: { children: ReactNode }) {
   const [requested, setRequested] = useState(false);
-  const [Provider, setProvider] = useState<ComponentType<{
-    children: ReactNode;
-  }> | null>(null);
 
   const request = useCallback(() => {
     setRequested(true);
   }, []);
 
-  useEffect(() => {
-    if (!requested || Provider) return;
-    let cancelled = false;
-    void import("./privy-wallet-provider").then((m) => {
-      if (!cancelled) setProvider(() => m.PrivyWalletProvider);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [requested, Provider]);
-
-  const inner = Provider ? (
-    <Provider>
-      <PrivyReadyContext.Provider value={true}>{children}</PrivyReadyContext.Provider>
-    </Provider>
-  ) : (
-    <PrivyReadyContext.Provider value={false}>{children}</PrivyReadyContext.Provider>
-  );
-
   return (
     <PrivyRequestContext.Provider value={request}>
-      {inner}
+      {requested ? (
+        <PrivyWalletProvider>
+          <PrivyReadyContext.Provider value={true}>
+            {children}
+          </PrivyReadyContext.Provider>
+        </PrivyWalletProvider>
+      ) : (
+        <PrivyReadyContext.Provider value={false}>
+          {children}
+        </PrivyReadyContext.Provider>
+      )}
     </PrivyRequestContext.Provider>
   );
 }
