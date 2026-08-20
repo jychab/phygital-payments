@@ -74,7 +74,6 @@ export async function GET(req: Request) {
       return NextResponse.json(
         {
           error:
-          error:
             "This expired. Hold your device to your phone again.",
         },
         { status: 410, headers: QUERY_NO_STORE },
