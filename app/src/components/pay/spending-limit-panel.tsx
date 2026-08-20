@@ -49,7 +49,7 @@ function tryUiAmountToRaw(amount: string, decimals: number): bigint | null {
  */
 export function SpendingLimitPanel({
   owner,
-  asset,
+  tokenAddress,
   mint,
   holding: holdingProp,
   walletMatch,
@@ -59,7 +59,7 @@ export function SpendingLimitPanel({
   onSkip,
 }: {
   owner: string;
-  asset: string;
+  tokenAddress: string;
   mint: string;
   holding?: PaymentTokenHolding;
   /** Home Pay already scanned this mint — skip a second delegateStatus RPC. */
@@ -79,11 +79,11 @@ export function SpendingLimitPanel({
 
   const seeded =
     walletMatch?.status &&
-    walletMatch.asset &&
-    String(walletMatch.asset) === asset
+    walletMatch.token &&
+    String(walletMatch.token) === tokenAddress
       ? walletMatch.status
       : undefined;
-  const statusQuery = useDelegateStatus(owner, asset, mintAddress, {
+  const statusQuery = useDelegateStatus(owner, tokenAddress, mintAddress, {
     live,
     enabled: !seeded,
   });
@@ -95,11 +95,11 @@ export function SpendingLimitPanel({
   const token = holding ?? resolvePaymentToken(mint, verified.data);
   const setAllowance = useSetDelegateMutation(
     walletAddress === owner ? walletAddress : null,
-    { mint: mintAddress, asset },
+    { mint: mintAddress, token: tokenAddress },
   );
   const revoke = useRevokeDelegateMutation(
     walletAddress === owner ? walletAddress : null,
-    { mint: mintAddress, asset },
+    { mint: mintAddress, token: tokenAddress },
   );
 
   const hasDelegate = isDelegateEnabled(status);

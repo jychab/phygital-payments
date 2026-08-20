@@ -37,7 +37,7 @@ export function buildSettleInstructions(
     verifier,
     config: address(transfer.config),
     ownerVerifier: address(transfer.ownerVerifier),
-    asset: address(transfer.asset),
+    token: address(transfer.token),
     mint: address(transfer.mint),
     recipient: address(transfer.recipient),
     programAuthority: address(transfer.programAuthority),

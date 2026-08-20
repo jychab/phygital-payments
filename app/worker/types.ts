@@ -28,7 +28,7 @@ export const RETRY_BACKOFF_MS = 750;
 
 /**
  * Fixed CU budget for a single secp + transfer (skips simulation RTT).
- * Sized with headroom for Token-2022 + verify_asset CPI; multi-job batches
+ * Sized with headroom for Token-2022 + verify CPI; multi-job batches
  * still simulate for a tight limit.
  */
 export const SINGLE_JOB_COMPUTE_UNITS = 100_000;

@@ -14,31 +14,31 @@ import {
   GateMessage,
 } from "@/components/layout/gate-message";
 import { useDevicePayOpen } from "@/hooks/device/use-device-pay-open";
-import { usePhygitalAssetByAddress } from "@/hooks/device/use-phygital-asset";
+import { usePhygitalTokenByAddress } from "@/hooks/device/use-phygital-token";
 import { useAuthenticateDevice } from "@/hooks/device/use-authenticate-device";
 import {
-  assetAllowsPay,
-  isUnclaimedAsset,
-  type PhygitalAsset,
-} from "@/lib/phygital/asset";
+  tokenAllowsPay,
+  isUnclaimedToken,
+  type PhygitalToken,
+} from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 
 /**
- * `/device?owner=&asset=` — load the on-chain asset, then Authentic.
+ * `/device?owner=&phygital=` — load the on-chain token, then Authentic.
  */
 export function DeviceHomeByAddress({
-  asset,
+  tokenAddress,
 }: {
   owner: string;
-  asset: string;
+  tokenAddress: string;
 }) {
   const isRestoring = useIsRestoring();
-  const assetQuery = usePhygitalAssetByAddress(asset);
+  const tokenQuery = usePhygitalTokenByAddress(tokenAddress);
 
-  if (isRestoring || assetQuery.isLoading) {
+  if (isRestoring || tokenQuery.isLoading) {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
@@ -47,13 +47,13 @@ export function DeviceHomeByAddress({
     );
   }
 
-  if (assetQuery.isError || !assetQuery.data) {
+  if (tokenQuery.isError || !tokenQuery.data) {
     return (
       <GateMessage
         icon={<ShieldAlert className="size-5 text-destructive" />}
         title="Not Set Up"
         body={toUserErrorMessage(
-          assetQuery.error,
+          tokenQuery.error,
           "This device isn’t set up yet.",
         )}
         destructive
@@ -61,17 +61,17 @@ export function DeviceHomeByAddress({
     );
   }
 
-  return <DeviceHome asset={assetQuery.data} />;
+  return <DeviceHome token={tokenQuery.data} />;
 }
 
 /**
  * Authentic home after a check or claim. Pay loads Privy only when opened.
  */
 export function DeviceHome({
-  asset,
+  token,
   liveConfirmed: liveConfirmedProp = false,
 }: {
-  asset: PhygitalAsset;
+  token: PhygitalToken;
   liveConfirmed?: boolean;
 }) {
   const inApp = useIsInAppBrowser();
@@ -90,7 +90,7 @@ export function DeviceHome({
     }
     setHoldError(null);
     try {
-      await authenticate({ expectedPublicKey: asset.secp256r1PublicKey });
+      await authenticate({ expectedPublicKey: token.secp256r1PublicKey });
       setLiveConfirmed(true);
     } catch (err) {
       setHoldError(
@@ -111,15 +111,15 @@ export function DeviceHome({
   if (showClaim) {
     return (
       <ClaimPanel
-        asset={asset}
-        unclaimed={isUnclaimedAsset(asset)}
+        token={token}
+        unclaimed={isUnclaimedToken(token)}
         onBack={() => setShowClaim(false)}
       />
     );
   }
 
   if (showPay) {
-    const owner = String(asset.currentOwner);
+    const owner = String(token.currentOwner);
     return (
       <PrivyGate
         fallback={
@@ -132,7 +132,7 @@ export function DeviceHome({
         <WalletSyncGate linkedOwner={owner}>
           <PayScreen
             owner={owner}
-            asset={String(asset.address)}
+            tokenAddress={String(token.address)}
             onExit={() => setShowPay(false)}
           />
         </WalletSyncGate>
@@ -153,12 +153,12 @@ export function DeviceHome({
 
   return (
     <AuthenticDevicePanel
-      asset={asset}
+      token={token}
       liveConfirmed={liveConfirmed}
       holdError={holdError}
       onHoldToCheck={() => void onHoldToCheck()}
       onClaim={() => setShowClaim(true)}
-      onPay={assetAllowsPay(asset) ? () => setShowPay(true) : undefined}
+      onPay={tokenAllowsPay(token) ? () => setShowPay(true) : undefined}
     />
   );
 }

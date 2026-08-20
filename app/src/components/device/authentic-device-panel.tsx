@@ -6,10 +6,10 @@ import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { collectHref } from "@/lib/collect/payment-request";
 import {
-  assetAllowsPay,
-  isUnclaimedAsset,
-  type PhygitalAsset,
-} from "@/lib/phygital/asset";
+  tokenAllowsPay,
+  isUnclaimedToken,
+  type PhygitalToken,
+} from "@/lib/phygital/token";
 import { shortAddress } from "@/lib/utils";
 
 /**
@@ -17,24 +17,24 @@ import { shortAddress } from "@/lib/utils";
  * Claim / Collect / Pay are secondary and never replace the hero.
  */
 export function AuthenticDevicePanel({
-  asset,
+  token,
   liveConfirmed,
   holdError,
   onHoldToCheck,
   onClaim,
   onPay,
 }: {
-  asset: PhygitalAsset;
+  token: PhygitalToken;
   liveConfirmed: boolean;
   holdError?: string | null;
   onHoldToCheck?: () => void;
   onClaim?: () => void;
   onPay?: () => void;
 }) {
-  const unclaimed = isUnclaimedAsset(asset);
-  const canClaim = (unclaimed || !asset.isLocked) && Boolean(onClaim);
-  const canPay = asset.isLocked && assetAllowsPay(asset) && Boolean(onPay);
-  const collectUrl = collectHref({ recipient: String(asset.currentOwner) });
+  const unclaimed = isUnclaimedToken(token);
+  const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
+  const canPay = token.isLocked && tokenAllowsPay(token) && Boolean(onPay);
+  const collectUrl = collectHref({ recipient: String(token.currentOwner) });
 
   return (
     <div className="flex flex-1 flex-col">
@@ -51,7 +51,7 @@ export function AuthenticDevicePanel({
             <p className="text-xs text-muted-foreground">
               {unclaimed
                 ? "Not linked to a wallet."
-                : `Linked to ${shortAddress(String(asset.currentOwner))}.`}
+                : `Linked to ${shortAddress(String(token.currentOwner))}.`}
             </p>
             {!liveConfirmed && onHoldToCheck ? (
               <Button

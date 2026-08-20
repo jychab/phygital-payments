@@ -11,7 +11,7 @@ type AuthenticationResponseJSON = Awaited<
 
 /** JSON-safe `Omit<TransferSession, "rpc">` (KV / API). */
 export type PendingClaimSessionJson = {
-  asset: string;
+  token: string;
   slotNumber: string;
   slotHash: string;
   challenge: string;
@@ -37,7 +37,7 @@ export function serializePendingClaimSession(
   session: TransferSession,
 ): PendingClaimSessionJson {
   return {
-    asset: session.asset.toString(),
+    token: session.token.toString(),
     slotNumber: session.slotNumber.toString(),
     slotHash: getBase58Decoder().decode(session.slotHash),
     challenge: getBase58Decoder().decode(session.challenge),
@@ -47,13 +47,13 @@ export function serializePendingClaimSession(
 function parseSession(value: unknown): PendingClaimSessionJson | null {
   if (!value || typeof value !== "object") return null;
   const o = value as Record<string, unknown>;
-  if (typeof o.asset !== "string" || !o.asset.trim()) return null;
+  if (typeof o.token !== "string" || !o.token.trim()) return null;
   if (typeof o.slotNumber !== "string" || !o.slotNumber.trim()) return null;
-   if (typeof o.slotHash !== "string" || !o.slotNumber.trim()) return null;
-    if (typeof o.challenge !== "string" || !o.slotNumber.trim()) return null;
+  if (typeof o.slotHash !== "string" || !o.slotHash.trim()) return null;
+  if (typeof o.challenge !== "string" || !o.challenge.trim()) return null;
 
   return {
-    asset: o.asset.trim(),
+    token: o.token.trim(),
     slotNumber: o.slotNumber.trim(),
     slotHash: o.slotHash.trim(),
     challenge: o.challenge.trim(),

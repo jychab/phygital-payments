@@ -12,7 +12,7 @@ import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { consumePendingClaim } from "@/lib/device/pending-claim-client";
 import { usePendingClaim } from "@/hooks/device/use-pending-claim";
-import { usePhygitalAssetByAddress } from "@/hooks/device/use-phygital-asset";
+import { usePhygitalTokenByAddress } from "@/hooks/device/use-phygital-token";
 import { assertClaimReady, finishClaim } from "@/lib/device/claim";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { invalidateOwnerQueries, queryKeys } from "@/lib/queries";
@@ -26,14 +26,14 @@ type Phase = "confirming" | "done" | null;
 export function FinishClaimPanel() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const token = searchParams.get("token")?.trim() ?? "";
+  const claimToken = searchParams.get("token")?.trim() ?? "";
 
   const { address, isConnected, ready, connect } = useSolanaAddress();
   const signer = useWalletKitSigner();
 
-  const pendingQuery = usePendingClaim(token || null);
+  const pendingQuery = usePendingClaim(claimToken || null);
   const pending = pendingQuery.data;
-  const assetQuery = usePhygitalAssetByAddress(pending?.session.asset ?? null);
+  const tokenQuery = usePhygitalTokenByAddress(pending?.session.token ?? null);
 
   const [phase, setPhase] = useState<Phase>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,14 +43,14 @@ export function FinishClaimPanel() {
     if (!signer || !address || !pending) return;
     setError(null);
 
-    const asset = assetQuery.data;
-    if (!asset) {
+    const phygitalToken = tokenQuery.data;
+    if (!phygitalToken) {
       setError("Still loading device info. Try again in a moment.");
       return;
     }
 
     try {
-      assertClaimReady(asset, signer.address);
+      assertClaimReady(phygitalToken, signer.address);
     } catch (err) {
       setError(
         toUserErrorMessage(err, "Couldn’t add this device. Try again."),
@@ -63,7 +63,7 @@ export function FinishClaimPanel() {
       const { session, auth } = pending;
       await finishClaim({ session, auth, recipient: signer });
       try {
-        await consumePendingClaim(token);
+        await consumePendingClaim(claimToken);
       } catch {
         /* KV cleanup is best-effort after a confirmed transfer. */
       }
@@ -71,16 +71,20 @@ export function FinishClaimPanel() {
       invalidateOwnerQueries(queryClient, address);
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: queryKeys.asset.byAddress(pending.session.asset),
+          queryKey: queryKeys.phygitalToken.byAddress(pending.session.token),
         }),
         queryClient.invalidateQueries({
-          queryKey: queryKeys.asset.byIdentifier(asset.identifier),
+          queryKey: queryKeys.phygitalToken.byIdentifier(
+            phygitalToken.identifier,
+          ),
         }),
         queryClient.invalidateQueries({
-          queryKey: queryKeys.asset.byPasskey(asset.secp256r1PublicKey),
+          queryKey: queryKeys.phygitalToken.byPasskey(
+            phygitalToken.secp256r1PublicKey,
+          ),
         }),
         queryClient.invalidateQueries({
-          queryKey: queryKeys.pendingClaim.byToken(token),
+          queryKey: queryKeys.pendingClaim.byToken(claimToken),
         }),
       ]);
 
@@ -97,7 +101,7 @@ export function FinishClaimPanel() {
     }
   }
 
-  if (!token) {
+  if (!claimToken) {
     return (
       <GateMessage
         icon={<Wallet className="size-5 text-destructive" />}
@@ -118,11 +122,11 @@ export function FinishClaimPanel() {
     );
   }
 
-  if (phase === "done" && claimedOwner && assetQuery.data) {
+  if (phase === "done" && claimedOwner && tokenQuery.data) {
     return (
       <DeviceHome
-        asset={{
-          ...assetQuery.data,
+        token={{
+          ...tokenQuery.data,
           currentOwner: toAddress(claimedOwner),
         }}
         liveConfirmed
@@ -202,7 +206,7 @@ export function FinishClaimPanel() {
             type="button"
             size="lg"
             className="w-full"
-            disabled={!signer || assetQuery.isPending}
+            disabled={!signer || tokenQuery.isPending}
             onClick={() => void onFinish()}
           >
             {error ? "Try again" : "Confirm in wallet"}

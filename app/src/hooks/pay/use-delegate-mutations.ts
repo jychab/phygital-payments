@@ -16,7 +16,7 @@ import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
 
 type AllowanceOptions = {
   mint: Address | string;
-  asset: Address | string;
+  token: Address | string;
   onSuccess?: (signature: string) => void;
 };
 
@@ -24,7 +24,7 @@ async function applyDelegateAfterSend(args: {
   queryClient: ReturnType<typeof useQueryClient>;
   owner: string | null;
   mint: string;
-  key: ReturnType<typeof queryKeys.delegateStatus.byOwnerAssetMint>;
+  key: ReturnType<typeof queryKeys.delegateStatus.byOwnerTokenMint>;
   confirmed: Promise<void>;
   apply: (
     prev: MintDelegateStatus | undefined,
@@ -68,7 +68,7 @@ async function applyDelegateAfterSend(args: {
 }
 
 /**
- * Approve the asset's program authority as mint delegate for `rawAmount`.
+ * Approve the token's program authority as mint delegate for `rawAmount`.
  * Status updates after broadcast; confirm refreshes or rolls back.
  */
 export function useSetDelegateMutation(
@@ -78,10 +78,10 @@ export function useSetDelegateMutation(
   const signer = useWalletKitSigner();
   const queryClient = useQueryClient();
   const mintStr = String(options.mint);
-  const assetStr = String(options.asset);
-  const key = queryKeys.delegateStatus.byOwnerAssetMint(
+  const tokenStr = String(options.token);
+  const key = queryKeys.delegateStatus.byOwnerTokenMint(
     owner,
-    assetStr,
+    tokenStr,
     mintStr,
   );
 
@@ -92,7 +92,7 @@ export function useSetDelegateMutation(
         signer,
         rawAmount,
         mint: address(mintStr),
-        asset: address(assetStr),
+        token: address(tokenStr),
       });
       const sent = await sendTransaction({
         instructions,
@@ -114,12 +114,12 @@ export function useSetDelegateMutation(
               }
             : prev,
         applyMatch: (prev) => {
-          const asset = address(assetStr);
+          const token = address(tokenStr);
           if (!prev?.status) {
-            return { asset, status: prev?.status ?? null };
+            return { token, status: prev?.status ?? null };
           }
           return {
-            asset,
+            token,
             status: {
               ...prev.status,
               isProgramAuthorityDelegate: true,
@@ -146,10 +146,10 @@ export function useRevokeDelegateMutation(
   const signer = useWalletKitSigner();
   const queryClient = useQueryClient();
   const mintStr = String(options.mint);
-  const assetStr = String(options.asset);
-  const key = queryKeys.delegateStatus.byOwnerAssetMint(
+  const tokenStr = String(options.token);
+  const key = queryKeys.delegateStatus.byOwnerTokenMint(
     owner,
-    assetStr,
+    tokenStr,
     mintStr,
   );
 
@@ -180,7 +180,7 @@ export function useRevokeDelegateMutation(
               }
             : prev,
         applyMatch: (prev) => ({
-          asset: null,
+          token: null,
           status: prev?.status
             ? {
                 ...prev.status,

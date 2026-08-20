@@ -25,11 +25,11 @@ import {
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { getUsdcMint, USDC_DECIMALS } from "@/lib/tokens/usdc-mint";
 import { isDefaultMint } from "@/lib/tokens/payment-token";
-import { type PhygitalAsset } from "@/lib/phygital/asset";
+import { type PhygitalToken } from "@/lib/phygital/token";
 
 /**
  * SPL Token ATA + program-authority delegate (spending limit).
- * `program_authority` is a PDA of the phygital **asset** (SDK 0.4+), not the
+ * `program_authority` is a PDA of the phygital **token** (SDK 0.5+), not the
  * owner wallet. Classic SPL Token only — Token-2022 is not wired in the app yet.
  */
 export type TokenProgram = typeof TOKEN_PROGRAM_ADDRESS;
@@ -181,9 +181,9 @@ function mintStatusFromAccount(args: {
 export async function fetchMintDelegateStatus(
   owner: Address,
   mint: Address,
-  asset: Address,
+  token: Address,
 ): Promise<MintDelegateStatus> {
-  const map = await fetchMintDelegateStatuses(owner, [mint], asset);
+  const map = await fetchMintDelegateStatuses(owner, [mint], token);
   const status = map.get(String(mint));
   if (!status) {
     throw new Error("Missing delegate status for mint");
@@ -192,20 +192,20 @@ export async function fetchMintDelegateStatus(
 }
 
 /**
- * Batch delegate status for many mints of one asset.
+ * Batch delegate status for many mints of one phygital token.
  * One program_authority PDA resolve + batched mint/ATA account reads.
  */
 export async function fetchMintDelegateStatuses(
   owner: Address,
   mints: Address[],
-  asset: Address,
+  token: Address,
 ): Promise<Map<string, MintDelegateStatus>> {
   const unique = uniqueAddresses(mints);
   if (unique.length === 0) return new Map();
 
   const rpc = getSolanaRpc();
   const [programAuthority, decimalsByMint, atas] = await Promise.all([
-    findProgramAuthorityPda(asset, PHYGITAL_PAYMENTS_PROGRAM_ADDRESS),
+    findProgramAuthorityPda(token, PHYGITAL_PAYMENTS_PROGRAM_ADDRESS),
     loadMintDecimals(rpc, unique),
     Promise.all(unique.map((mint) => findAta(mint, owner, TOKEN_PROGRAM_ADDRESS))),
   ]);
@@ -233,40 +233,40 @@ export function isDelegateEnabled(status: MintDelegateStatus | undefined): boole
 export function isOwnerPayMintEnabled(
   match: OwnerPayMintMatch | undefined,
 ): boolean {
-  return !!match?.asset && isDelegateEnabled(match.status ?? undefined);
+  return !!match?.token && isDelegateEnabled(match.status ?? undefined);
 }
 
-/** Per-mint match of the owner's ATA delegate to an owned asset's program_authority. */
+/** Per-mint match of the owner's ATA delegate to an owned token's program_authority. */
 export type OwnerPayMintMatch = {
-  /** Asset whose program_authority is the current ATA delegate, if any. */
-  asset: Address | null;
-  /** Asset-scoped status when `asset` is set; otherwise no program-authority delegate. */
+  /** Token whose program_authority is the current ATA delegate, if any. */
+  token: Address | null;
+  /** Token-scoped status when `token` is set; otherwise no program-authority delegate. */
   status: MintDelegateStatus | null;
 };
 
 export type OwnerPayDelegates = {
-  assets: PhygitalAsset[];
-  /** True when any SPL ATA delegate matches an owned asset PDA with a positive allowance. */
+  tokens: PhygitalToken[];
+  /** True when any SPL ATA delegate matches an owned token PDA with a positive allowance. */
   tokenEnabled: boolean;
   byMint: Map<string, OwnerPayMintMatch>;
 };
 
-const EMPTY_MINT_MATCH: OwnerPayMintMatch = { asset: null, status: null };
+const EMPTY_MINT_MATCH: OwnerPayMintMatch = { token: null, status: null };
 
 /**
- * Wallet-scoped Pay read: owned assets × SPL ATA delegates.
- * Caller supplies assets (shared `asset.byOwner` cache). A mint is enabled iff
- * its ATA delegate is some owned asset's PDA.
+ * Wallet-scoped Pay read: owned tokens × SPL ATA delegates.
+ * Caller supplies tokens (shared `phygitalToken.byOwner` cache). A mint is
+ * enabled iff its ATA delegate is some owned token's PDA.
  */
 export async function fetchOwnerPayDelegates(
   owner: Address,
   mints: Address[],
-  assets: readonly PhygitalAsset[],
+  tokens: readonly PhygitalToken[],
 ): Promise<OwnerPayDelegates> {
-  const owned = [...assets];
+  const owned = [...tokens];
   const unique = uniqueAddresses(mints);
   if (unique.length === 0 || owned.length === 0) {
-    return { assets: owned, tokenEnabled: false, byMint: new Map() };
+    return { tokens: owned, tokenEnabled: false, byMint: new Map() };
   }
 
   const rpc = getSolanaRpc();
@@ -289,7 +289,7 @@ export async function fetchOwnerPayDelegates(
     ),
     fetchAllMaybeToken(rpc, atas),
   ]);
-  const pdaToAsset = new Map(pdaEntries);
+  const pdaToToken = new Map(pdaEntries);
 
   const byMint = new Map<string, OwnerPayMintMatch>();
   let tokenEnabled = false;
@@ -298,30 +298,30 @@ export async function fetchOwnerPayDelegates(
       ata: atas[i]!,
       decimals: decimalsByMint.get(String(unique[i]!))!,
       account: tokenAccounts[i]!,
-      pdaToAsset,
+      pdaToToken,
     });
     if (isOwnerPayMintEnabled(match)) tokenEnabled = true;
     byMint.set(String(unique[i]!), match);
   }
 
-  return { assets: owned, tokenEnabled, byMint };
+  return { tokens: owned, tokenEnabled, byMint };
 }
 
 function mintMatchFromAccount(args: {
   ata: Address;
   decimals: number;
   account: MaybeAccount<Token>;
-  pdaToAsset: Map<string, Address>;
+  pdaToToken: Map<string, Address>;
 }): OwnerPayMintMatch {
-  const { ata, decimals, account, pdaToAsset } = args;
+  const { ata, decimals, account, pdaToToken } = args;
   if (!account.exists) return EMPTY_MINT_MATCH;
 
   const delegate = unwrapOption(account.data.delegate);
-  const asset = delegate ? (pdaToAsset.get(String(delegate)) ?? null) : null;
-  if (!asset || !delegate) return EMPTY_MINT_MATCH;
+  const token = delegate ? (pdaToToken.get(String(delegate)) ?? null) : null;
+  if (!token || !delegate) return EMPTY_MINT_MATCH;
 
   return {
-    asset,
+    token,
     status: mintStatusFromAccount({
       programAuthority: delegate,
       ata,
@@ -336,12 +336,12 @@ export async function buildDelegateInstructions(args: {
   signer: TransactionSigner;
   rawAmount: bigint;
   mint: Address;
-  asset: Address;
+  token: Address;
 }): Promise<{ instructions: Instruction[] }> {
-  const { signer, rawAmount, mint, asset } = args;
+  const { signer, rawAmount, mint, token } = args;
   const [resolved, programAuthority] = await Promise.all([
     resolveMintProgram(mint),
-    findProgramAuthorityPda(asset, PHYGITAL_PAYMENTS_PROGRAM_ADDRESS),
+    findProgramAuthorityPda(token, PHYGITAL_PAYMENTS_PROGRAM_ADDRESS),
   ]);
   const { program, decimals } = resolved;
 

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: "Check if this device is genuine",
 };
 
-/** Hold to Check, Safari NFC tap, or `/device?token=` / `?owner=&asset=` wallet finish. */
+/** Hold to Check, Safari NFC tap, or `/device?token=` / `?owner=&phygital=` wallet finish. */
 export default function DevicePage() {
   return (
     <Suspense fallback={<EmbedBoot />}>

@@ -8,12 +8,12 @@ import {
 } from "@solana/kit";
 import { getCreateAssociatedTokenIdempotentInstruction } from "@solana-program/token";
 import {
-  AssetType,
-  authenticatePasskeyForVerifyAsset,
-  beginVerifyAsset,
-  buildVerifyAssetArgs,
+  PhygitalTokenType,
+  authenticatePasskeyForVerify,
+  beginVerify,
+  buildVerifyArgs,
   buildVerifyInputFromWebAuthn,
-  fetchAsset,
+  fetchPhygitalToken,
   parseSecp256r1Pubkey,
 } from "phygital-token-sdk";
 import {
@@ -39,7 +39,7 @@ import type { SubmitTransferRequest } from "./settle-types";
 import { submitAndWaitSettle } from "./settle-client";
 import { submitTransferViaOwnerVerifier } from "./verifier-submit";
 
-/** `/collect` NFC receive: ATA check, verify-asset, sponsored settle. */
+/** `/collect` NFC receive: ATA check, verify, sponsored settle. */
 export type RecipientAtaStatus = {
   mint: Address;
   owner: Address;
@@ -189,21 +189,21 @@ async function buildReceiveTransfer(args: {
 
   const { slotHash, slotNumber } = await fetchSlotHash();
   const messageHash = buildTransferChallenge(mint, recipient, rawAmount, slotHash);
-  const session = await beginVerifyAsset({ messageHash });
+  const session = await beginVerify({ messageHash });
 
-  const response = await authenticatePasskeyForVerifyAsset(session);
+  const response = await authenticatePasskeyForVerify(session);
   // Card UX: leave "Hold NFC device" the moment the tap returns; RPC/submit = Confirming.
   args.onPasskeyComplete?.();
 
-  const { assetPda, clientDataJson } = await buildVerifyAssetArgs(response);
+  const { tokenPda, clientDataJson } = await buildVerifyArgs(response);
 
-  const { data: asset } = await fetchAsset(rpc, assetPda);
-  if (asset.assetType !== AssetType.Lockable || !asset.isLocked) {
+  const { data: token } = await fetchPhygitalToken(rpc, tokenPda);
+  if (token.tokenType !== PhygitalTokenType.Controlled || !token.isLocked) {
     throw new Error(
-      "No locked NFC device found for this tap. Lock the asset before collecting payment.",
+      "No locked NFC device found for this tap. Lock the device before collecting payment.",
     );
   }
-  if (asset.owner === recipient) {
+  if (token.owner === recipient) {
     throw new Error(
       "This NFC device belongs to the receiving wallet — you can’t collect a payment from yourself.",
     );
@@ -221,9 +221,9 @@ async function buildReceiveTransfer(args: {
 
   // PDA derivation is local; allowance + OV share one RPC wave.
   const [funding, configPda, ov] = await Promise.all([
-    fetchMintDelegateStatus(asset.owner, mint, assetPda),
+    fetchMintDelegateStatus(token.owner, mint, tokenPda),
     findConfigPda(),
-    findOwnerVerifierPda({ owner: asset.owner }).then(async ([pda]) => {
+    findOwnerVerifierPda({ owner: token.owner }).then(async ([pda]) => {
       const account = await fetchMaybeOwnerVerifier(rpc, pda);
       return { pda, account };
     }),
@@ -260,8 +260,8 @@ async function buildReceiveTransfer(args: {
       message: bytesToBase64(new Uint8Array(secpEntry.message)),
     },
     transfer: {
-      asset: assetPda,
-      owner: asset.owner,
+      token: tokenPda,
+      owner: token.owner,
       mint,
       recipient,
       programAuthority: funding.programAuthority,

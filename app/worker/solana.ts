@@ -120,7 +120,7 @@ export function buildTransferIx(
     verifier: feePayer,
     config: address(transfer.config),
     ownerVerifier: address(transfer.ownerVerifier),
-    asset: address(transfer.asset),
+    token: address(transfer.token),
     mint: address(transfer.mint),
     recipient: address(transfer.recipient),
     programAuthority: address(transfer.programAuthority),
@@ -137,7 +137,7 @@ export function buildTransferIx(
 
 export function validateTransferWire(transfer: TransferAccountsWire): void {
   if (
-    !transfer.asset ||
+    !transfer.token ||
     !transfer.owner ||
     !transfer.mint ||
     !transfer.recipient ||

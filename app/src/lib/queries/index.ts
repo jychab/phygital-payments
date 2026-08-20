@@ -55,14 +55,14 @@ export const queryKeys = {
     all: () => ["delegateStatus"] as const,
     byOwner: (owner: string | null) =>
       [...queryKeys.delegateStatus.all(), owner] as const,
-    byOwnerAsset: (owner: string | null, asset: string | null) =>
-      [...queryKeys.delegateStatus.byOwner(owner), asset] as const,
-    byOwnerAssetMint: (
+    byOwnerToken: (owner: string | null, token: string | null) =>
+      [...queryKeys.delegateStatus.byOwner(owner), token] as const,
+    byOwnerTokenMint: (
       owner: string | null,
-      asset: string | null,
+      token: string | null,
       mint: string | null,
     ) =>
-      [...queryKeys.delegateStatus.byOwnerAsset(owner, asset), mint] as const,
+      [...queryKeys.delegateStatus.byOwnerToken(owner, token), mint] as const,
   },
 
   ownerPayDelegates: {
@@ -117,16 +117,16 @@ export const queryKeys = {
       [...queryKeys.apiKey.all(), wallet] as const,
   },
 
-  asset: {
-    all: () => ["assets"] as const,
+  phygitalToken: {
+    all: () => ["phygitalTokens"] as const,
     byIdentifier: (identifier: string | null) =>
-      [...queryKeys.asset.all(), "identifier", identifier] as const,
+      [...queryKeys.phygitalToken.all(), "identifier", identifier] as const,
     byPasskey: (secp256r1PublicKey: string | null) =>
-      [...queryKeys.asset.all(), "passkey", secp256r1PublicKey] as const,
-    byAddress: (asset: string | null) =>
-      [...queryKeys.asset.all(), "address", asset] as const,
+      [...queryKeys.phygitalToken.all(), "passkey", secp256r1PublicKey] as const,
+    byAddress: (token: string | null) =>
+      [...queryKeys.phygitalToken.all(), "address", token] as const,
     byOwner: (owner: string | null) =>
-      [...queryKeys.asset.all(), "owner", owner] as const,
+      [...queryKeys.phygitalToken.all(), "owner", owner] as const,
   },
 };
 
@@ -144,7 +144,7 @@ export function isOwnerDataQuery(
   ) {
     return queryKey[1] === owner;
   }
-  if (root === "assets") {
+  if (root === "phygitalTokens") {
     return queryKey[1] === "owner" && queryKey[2] === owner;
   }
   return false;
@@ -167,7 +167,7 @@ export function invalidateOwnerQueries(
     queryKey: queryKeys.history.byAddress(owner),
   });
   void queryClient.invalidateQueries({
-    queryKey: queryKeys.asset.byOwner(owner),
+    queryKey: queryKeys.phygitalToken.byOwner(owner),
   });
 }
 
@@ -216,9 +216,9 @@ export function fetchMintProgram(mint: Address): Promise<MintProgramInfo> {
 export function fetchDelegateStatus(
   owner: Address,
   mint: Address,
-  asset: Address,
+  token: Address,
 ): Promise<MintDelegateStatus> {
-  return fetchMintDelegateStatus(owner, mint, asset);
+  return fetchMintDelegateStatus(owner, mint, token);
 }
 
 export { fetchOwnerPayDelegates };

@@ -13,10 +13,10 @@ import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
-import { usePhygitalAsset } from "@/hooks/device/use-phygital-asset";
+import { usePhygitalToken } from "@/hooks/device/use-phygital-token";
 import { useTapVerify } from "@/hooks/device/use-tap-verify";
 import { useAuthenticateDevice } from "@/hooks/device/use-authenticate-device";
-import { fetchPhygitalAssetByPasskey, type PhygitalAsset } from "@/lib/phygital/asset";
+import { fetchPhygitalTokenByPasskey, type PhygitalToken } from "@/lib/phygital/token";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { tryParseAddress } from "@/lib/solana/address";
 import { toUserErrorMessage } from "@/lib/user-errors";
@@ -37,7 +37,9 @@ export function DeviceTapApp() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
   const owner = tryParseAddress(searchParams.get("owner")?.trim() ?? "");
-  const asset = tryParseAddress(searchParams.get("asset")?.trim() ?? "");
+  const tokenAddress = tryParseAddress(
+    searchParams.get("phygital")?.trim() ?? "",
+  );
 
   if (embedded === null) {
     return <EmbedBoot />;
@@ -56,8 +58,13 @@ export function DeviceTapApp() {
     return <DeviceWalletShell token={token} />;
   }
 
-  if (owner && asset) {
-    return <DeviceWalletShell owner={String(owner)} asset={String(asset)} />;
+  if (owner && tokenAddress) {
+    return (
+      <DeviceWalletShell
+        owner={String(owner)}
+        tokenAddress={String(tokenAddress)}
+      />
+    );
   }
 
   return (
@@ -87,7 +94,7 @@ function DeviceTapNfcApp() {
     return <HoldToCheckLanding failed />;
   }
 
-  return <AssetFlow pk={pk} />;
+  return <TokenFlow pk={pk} />;
 }
 
 function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
@@ -95,7 +102,7 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
   const { authenticate, pending } = useAuthenticateDevice();
   const [showInAppGate, setShowInAppGate] = useState(false);
   const [notRegistered, setNotRegistered] = useState(false);
-  const [asset, setAsset] = useState<PhygitalAsset | null>(null);
+  const [token, setToken] = useState<PhygitalToken | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function onCheck() {
@@ -108,11 +115,11 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
     try {
       const { secp256r1PublicKey } = await authenticate();
       try {
-        const found = await fetchPhygitalAssetByPasskey(
+        const found = await fetchPhygitalTokenByPasskey(
           getSolanaRpc(),
           secp256r1PublicKey,
         );
-        setAsset(found);
+        setToken(found);
       } catch {
         setNotRegistered(true);
       }
@@ -132,8 +139,8 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
     );
   }
 
-  if (asset) {
-    return <DeviceHome asset={asset} liveConfirmed />;
+  if (token) {
+    return <DeviceHome token={token} liveConfirmed />;
   }
 
   if (pending) {
@@ -183,11 +190,11 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
   );
 }
 
-function AssetFlow({ pk }: { pk: string | null }) {
+function TokenFlow({ pk }: { pk: string | null }) {
   const isRestoring = useIsRestoring();
-  const assetQuery = usePhygitalAsset(pk);
+  const tokenQuery = usePhygitalToken(pk);
 
-  if (isRestoring || assetQuery.isLoading) {
+  if (isRestoring || tokenQuery.isLoading) {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
@@ -196,7 +203,7 @@ function AssetFlow({ pk }: { pk: string | null }) {
     );
   }
 
-  if (assetQuery.isError || !assetQuery.data) {
+  if (tokenQuery.isError || !tokenQuery.data) {
     return (
       <NfcHoldStatus
         size="lg"
@@ -207,5 +214,5 @@ function AssetFlow({ pk }: { pk: string | null }) {
     );
   }
 
-  return <DeviceHome asset={assetQuery.data} />;
+  return <DeviceHome token={tokenQuery.data} />;
 }

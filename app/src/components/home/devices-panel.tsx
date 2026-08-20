@@ -3,7 +3,7 @@
 import { useIsRestoring } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { LoaderCircle, Lock, LockOpen, Nfc, Trash2 } from "lucide-react";
-import { AssetType } from "phygital-token-sdk";
+import { PhygitalTokenType } from "phygital-token-sdk";
 
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
 import { DeviceIdentity } from "@/components/shared/device-identity";
@@ -12,15 +12,15 @@ import { Button } from "@/components/ui/button";
 import {
   useRemoveOwnershipMutation,
   useSetLockStateMutation,
-} from "@/hooks/home/use-asset-mutations";
-import { usePhygitalAssetsByOwner } from "@/hooks/home/use-phygital-assets-by-owner";
-import type { PhygitalAsset } from "@/lib/phygital/asset";
+} from "@/hooks/home/use-token-mutations";
+import { usePhygitalTokensByOwner } from "@/hooks/home/use-phygital-tokens-by-owner";
+import type { PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 /** Home → Devices tab: lock / unlock / remove NFC devices for this wallet. */
 export function DevicesPanel({ owner }: { owner: string }) {
   const isRestoring = useIsRestoring();
-  const assetsQuery = usePhygitalAssetsByOwner(owner);
+  const tokensQuery = usePhygitalTokensByOwner(owner);
   const setLock = useSetLockStateMutation(owner);
   const removeOwnership = useRemoveOwnershipMutation(owner);
 
@@ -31,7 +31,7 @@ export function DevicesPanel({ owner }: { owner: string }) {
     </div>
   );
 
-  if (isRestoring || assetsQuery.isLoading) {
+  if (isRestoring || tokensQuery.isLoading) {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
@@ -40,7 +40,7 @@ export function DevicesPanel({ owner }: { owner: string }) {
     );
   }
 
-  if (assetsQuery.isError) {
+  if (tokensQuery.isError) {
     return (
       <div className="flex flex-1 flex-col gap-3">
         {header}
@@ -48,7 +48,7 @@ export function DevicesPanel({ owner }: { owner: string }) {
           icon={<Nfc className="size-5 text-destructive" />}
           title="Couldn’t load devices"
           body={toUserErrorMessage(
-            assetsQuery.error,
+            tokensQuery.error,
             "Check your connection and try again.",
           )}
           destructive
@@ -57,8 +57,8 @@ export function DevicesPanel({ owner }: { owner: string }) {
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => void assetsQuery.refetch()}
-              disabled={assetsQuery.isFetching}
+              onClick={() => void tokensQuery.refetch()}
+              disabled={tokensQuery.isFetching}
             >
               Try again
             </Button>
@@ -68,9 +68,9 @@ export function DevicesPanel({ owner }: { owner: string }) {
     );
   }
 
-  const assets = assetsQuery.data ?? [];
+  const tokens = tokensQuery.data ?? [];
 
-  if (assets.length === 0) {
+  if (tokens.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-3">
         {header}
@@ -90,10 +90,10 @@ export function DevicesPanel({ owner }: { owner: string }) {
         Lock a device to pay with it. Remove it if you want someone else to add it.
       </p>
       <ul className="flex flex-col gap-2">
-        {assets.map((asset) => (
-          <li key={asset.address}>
-            <AssetRow
-              asset={asset}
+        {tokens.map((token) => (
+          <li key={token.address}>
+            <TokenRow
+              token={token}
               setLock={setLock}
               removeOwnership={removeOwnership}
             />
@@ -107,35 +107,35 @@ export function DevicesPanel({ owner }: { owner: string }) {
 type LockMutation = ReturnType<typeof useSetLockStateMutation>;
 type RemoveMutation = ReturnType<typeof useRemoveOwnershipMutation>;
 
-function AssetRow({
-  asset,
+function TokenRow({
+  token,
   setLock,
   removeOwnership,
 }: {
-  asset: PhygitalAsset;
+  token: PhygitalToken;
   setLock: LockMutation;
   removeOwnership: RemoveMutation;
 }) {
   const lockingThis =
-    setLock.isPending && setLock.variables?.asset === asset.address;
+    setLock.isPending && setLock.variables?.token === token.address;
   const removingThis =
     removeOwnership.isPending &&
-    removeOwnership.variables?.asset === asset.address;
+    removeOwnership.variables?.token === token.address;
   const busy = lockingThis || removingThis;
-  const canToggleLock = asset.assetType === AssetType.Lockable;
+  const canToggleLock = token.tokenType === PhygitalTokenType.Controlled;
 
   async function onToggleLock() {
     try {
       await setLock.mutateAsync({
-        asset: asset.address,
-        isLocked: !asset.isLocked,
+        token: token.address,
+        isLocked: !token.isLocked,
       });
-      toast.success(asset.isLocked ? "Device unlocked" : "Device locked");
+      toast.success(token.isLocked ? "Device unlocked" : "Device locked");
     } catch (error) {
       toast.error(
         toUserErrorMessage(
           error,
-          asset.isLocked
+          token.isLocked
             ? "Couldn’t unlock this device"
             : "Couldn’t lock this device",
         ),
@@ -149,7 +149,7 @@ function AssetRow({
     );
     if (!confirmed) return;
     try {
-      await removeOwnership.mutateAsync({ asset: asset.address });
+      await removeOwnership.mutateAsync({ token: token.address });
       toast.success("Device removed");
     } catch (error) {
       toast.error(
@@ -160,7 +160,7 @@ function AssetRow({
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border/50 bg-muted/20 px-3.5 py-3">
-      <DeviceIdentity asset={asset} />
+      <DeviceIdentity token={token} />
       <div className="flex flex-wrap gap-2">
         {canToggleLock ? (
           <Button
@@ -172,12 +172,12 @@ function AssetRow({
           >
             {lockingThis ? (
               <LoaderCircle className="size-3.5 animate-spin" />
-            ) : asset.isLocked ? (
+            ) : token.isLocked ? (
               <LockOpen className="size-3.5" />
             ) : (
               <Lock className="size-3.5" />
             )}
-            {asset.isLocked ? "Unlock" : "Lock"}
+            {token.isLocked ? "Unlock" : "Lock"}
           </Button>
         ) : null}
         <Button

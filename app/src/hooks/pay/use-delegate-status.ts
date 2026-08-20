@@ -9,20 +9,29 @@ import {
   queryKeys,
 } from "@/lib/queries";
 
-/** Allowance for this asset's program-authority PDA on a mint ATA. */
+/** Allowance for this token's program-authority PDA on a mint ATA. */
 export function useDelegateStatus(
   owner: string | null,
-  asset: string | null,
+  tokenAddress: string | null,
   mint: Address | string,
   options?: { live?: boolean; enabled?: boolean },
 ) {
   const live = options?.live !== false;
   const mintKey = String(mint);
-  const enabled = options?.enabled ?? Boolean(owner && asset && mintKey);
+  const enabled =
+    options?.enabled ?? Boolean(owner && tokenAddress && mintKey);
   return useQuery({
-    queryKey: queryKeys.delegateStatus.byOwnerAssetMint(owner, asset, mintKey),
+    queryKey: queryKeys.delegateStatus.byOwnerTokenMint(
+      owner,
+      tokenAddress,
+      mintKey,
+    ),
     queryFn: () =>
-      fetchDelegateStatus(address(owner!), address(mintKey), address(asset!)),
+      fetchDelegateStatus(
+        address(owner!),
+        address(mintKey),
+        address(tokenAddress!),
+      ),
     enabled,
     ...ownerQueryOptions(live),
   });

@@ -11,7 +11,7 @@ import { TokenListRow } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
 import { usePayTokenContext } from "@/hooks/tokens/use-payment-tokens";
-import type { PhygitalAsset } from "@/lib/phygital/asset";
+import type { PhygitalToken } from "@/lib/phygital/token";
 import {
   isOwnerPayMintEnabled,
   type OwnerPayMintMatch,
@@ -127,21 +127,25 @@ function ManagePayTokens({
     );
   }
 
-  const assetsByAddress = new Map(
-    (delegates.data?.assets ?? []).map((item) => [String(item.address), item]),
+  const tokensByAddress = new Map(
+    (delegates.data?.tokens ?? []).map((item) => [String(item.address), item]),
   );
 
   return (
     <ul className="flex flex-col gap-0.5">
       {list.map((holding: PaymentTokenHolding) => {
         const match = delegates.data?.byMint.get(holding.mint);
-        const asset = match?.asset;
+        const tokenAddress = match?.token;
         return (
           <ManagePayTokenRow
             key={holding.mint}
             holding={holding}
             match={match}
-            device={asset ? assetsByAddress.get(String(asset)) : undefined}
+            device={
+              tokenAddress
+                ? tokensByAddress.get(String(tokenAddress))
+                : undefined
+            }
             onEditLimit={onEditLimit}
           />
         );
@@ -158,7 +162,7 @@ function ManagePayTokenRow({
 }: {
   holding: PaymentTokenHolding;
   match: OwnerPayMintMatch | undefined;
-  device: PhygitalAsset | undefined;
+  device: PhygitalToken | undefined;
   onEditLimit: (holding: PaymentTokenHolding) => void;
 }) {
   const enabled = isOwnerPayMintEnabled(match);

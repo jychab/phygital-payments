@@ -14,17 +14,17 @@ import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 
 /**
  * Chrome for `/device`. Authenticity (NFC children) skips Privy.
- * `?token=` and `?owner=&asset=` still load the wallet.
+ * `?token=` (claim handoff) and `?owner=&phygital=` still load the wallet.
  */
 export function DeviceWalletShell({
   token,
   owner,
-  asset,
+  tokenAddress,
   children,
 }: {
   token?: string;
   owner?: string;
-  asset?: string;
+  tokenAddress?: string;
   children?: ReactNode;
 }) {
   if (token) {
@@ -37,11 +37,11 @@ export function DeviceWalletShell({
     );
   }
 
-  if (owner && asset) {
+  if (owner && tokenAddress) {
     return (
       <PrivyGate>
         <DeviceChrome walletActions="full">
-          <DeviceHomeByAddress owner={owner} asset={asset} />
+          <DeviceHomeByAddress owner={owner} tokenAddress={tokenAddress} />
         </DeviceChrome>
       </PrivyGate>
     );

@@ -17,7 +17,7 @@ import {
   deviceClaimHref,
 } from "@/lib/device/claim";
 import { serializePendingClaimSession } from "../../../shared/pending-claim-wire";
-import type { PhygitalAsset } from "@/lib/phygital/asset";
+import type { PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 type Stage = "ready" | "reading";
@@ -26,11 +26,11 @@ type Stage = "ready" | "reading";
  * Safari NFC tap, then replace to `/device?token=` for wallet connect.
  */
 export function ClaimPanel({
-  asset,
+  token,
   unclaimed = false,
   onBack,
 }: {
-  asset: PhygitalAsset;
+  token: PhygitalToken;
   unclaimed?: boolean;
   onBack?: () => void;
 }) {
@@ -45,7 +45,7 @@ export function ClaimPanel({
   async function onCapture() {
     setError(null);
     try {
-      assertCaptureReady(asset);
+      assertCaptureReady(token);
     } catch (err) {
       setError(
         toUserErrorMessage(err, "Couldn’t add this device. Try again."),
@@ -56,7 +56,7 @@ export function ClaimPanel({
     setStage("reading");
     try {
       const { session, auth } = await captureClaimTap({
-        asset: asset.address,
+        token: token.address,
         onPasskeyComplete: () => {
           try {
             navigator.vibrate?.(30);

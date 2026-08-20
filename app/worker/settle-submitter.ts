@@ -345,7 +345,7 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
 
   /**
    * Fail closed: each job atomically claims a single-use preauth grant for
-   * `asset.owner`. Same-batch / concurrent peers lose the claim race.
+   * `transfer.owner`. Same-batch / concurrent peers lose the claim race.
    * Verifier gating happens in {@link flush} (external → fail; only
    * Revi-eligible jobs reach this method).
    */

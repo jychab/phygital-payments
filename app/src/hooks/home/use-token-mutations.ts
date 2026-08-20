@@ -7,36 +7,36 @@ import {
   getSetLockStateInstruction,
 } from "phygital-token-sdk";
 
-import type { PhygitalAsset } from "@/lib/phygital/asset";
+import type { PhygitalToken } from "@/lib/phygital/token";
 import { queryKeys } from "@/lib/queries";
 import { sendTransaction } from "@/lib/solana/tx";
 import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
 
 /**
- * Toggle lock on a Lockable phygital asset. The row flips after broadcast;
+ * Toggle lock on a Controlled phygital token. The row flips after broadcast;
  * confirm refreshes the list, or a failed land rolls the lock state back.
  */
 export function useSetLockStateMutation(owner: string | null) {
   const signer = useWalletKitSigner();
   const queryClient = useQueryClient();
-  const key = queryKeys.asset.byOwner(owner);
+  const key = queryKeys.phygitalToken.byOwner(owner);
 
-  return useMutation<string, Error, { asset: Address; isLocked: boolean }>({
-    mutationFn: async ({ asset, isLocked }) => {
+  return useMutation<string, Error, { token: Address; isLocked: boolean }>({
+    mutationFn: async ({ token, isLocked }) => {
       if (!signer) throw new Error("Connect your wallet");
       const instruction = getSetLockStateInstruction({
         owner: signer,
-        asset,
+        token,
         isLocked,
       });
       const sent = await sendTransaction({
         instructions: [instruction],
         feePayer: signer,
       });
-      const previous = queryClient.getQueryData<PhygitalAsset[]>(key);
-      queryClient.setQueryData<PhygitalAsset[]>(key, (prev) =>
+      const previous = queryClient.getQueryData<PhygitalToken[]>(key);
+      queryClient.setQueryData<PhygitalToken[]>(key, (prev) =>
         prev?.map((row) =>
-          row.address === asset ? { ...row, isLocked } : row,
+          row.address === token ? { ...row, isLocked } : row,
         ),
       );
       try {
@@ -47,7 +47,7 @@ export function useSetLockStateMutation(owner: string | null) {
       }
       void queryClient.invalidateQueries({ queryKey: key });
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.asset.byAddress(String(asset)),
+        queryKey: queryKeys.phygitalToken.byAddress(String(token)),
       });
       return sent.signature;
     },
@@ -55,28 +55,28 @@ export function useSetLockStateMutation(owner: string | null) {
 }
 
 /**
- * Forfeit ownership of an asset. The row drops after broadcast; a failed land
+ * Forfeit ownership of a token. The row drops after broadcast; a failed land
  * puts it back.
  */
 export function useRemoveOwnershipMutation(owner: string | null) {
   const signer = useWalletKitSigner();
   const queryClient = useQueryClient();
-  const key = queryKeys.asset.byOwner(owner);
+  const key = queryKeys.phygitalToken.byOwner(owner);
 
-  return useMutation<string, Error, { asset: Address }>({
-    mutationFn: async ({ asset }) => {
+  return useMutation<string, Error, { token: Address }>({
+    mutationFn: async ({ token }) => {
       if (!signer) throw new Error("Connect your wallet");
       const instruction = getRemoveOwnershipInstruction({
         owner: signer,
-        asset,
+        token,
       });
       const sent = await sendTransaction({
         instructions: [instruction],
         feePayer: signer,
       });
-      const previous = queryClient.getQueryData<PhygitalAsset[]>(key);
-      queryClient.setQueryData<PhygitalAsset[]>(key, (prev) =>
-        prev?.filter((row) => row.address !== asset),
+      const previous = queryClient.getQueryData<PhygitalToken[]>(key);
+      queryClient.setQueryData<PhygitalToken[]>(key, (prev) =>
+        prev?.filter((row) => row.address !== token),
       );
       try {
         await sent.confirmed;
@@ -86,7 +86,7 @@ export function useRemoveOwnershipMutation(owner: string | null) {
       }
       void queryClient.invalidateQueries({ queryKey: key });
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.asset.byAddress(String(asset)),
+        queryKey: queryKeys.phygitalToken.byAddress(String(token)),
       });
       return sent.signature;
     },

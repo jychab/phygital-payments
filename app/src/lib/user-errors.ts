@@ -137,12 +137,12 @@ const RULES: Rule[] = [
     body: "Try again.",
   },
   {
-    test: /no locked (pass|device|NFC device)|lock the asset/i,
+    test: /no locked (pass|device|NFC device)|lock the device/i,
     title: "Device Isn’t Ready",
     body: "Ask them to lock this device, then try again.",
   },
   {
-    test: /asset is not lockable|AssetIsNotLockable/i,
+    test: /token is not lockable|TokenIsNotLockable/i,
     title: "Can’t Lock",
     body: "This device can’t be locked.",
   },

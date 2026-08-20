@@ -12,8 +12,8 @@ export type Secp256r1VerifyEntryWire = {
 };
 
 export type TransferAccountsWire = {
-  asset: string;
-  /** Asset owner wallet — used for preauth grant lookup and owner_verifier PDA. */
+  token: string;
+  /** Token owner wallet — used for preauth grant lookup and owner_verifier PDA. */
   owner: string;
   mint: string;
   recipient: string;

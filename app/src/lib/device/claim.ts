@@ -6,7 +6,7 @@ import {
 } from "phygital-token-sdk";
 import { address, getBase58Encoder, type Address, type TransactionSigner } from "@solana/kit";
 import type { PendingClaimRecord } from "../../../shared/pending-claim-wire";
-import type { PhygitalAsset } from "@/lib/phygital/asset";
+import type { PhygitalToken } from "@/lib/phygital/token";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { sendTransaction } from "@/lib/solana/tx";
 
@@ -15,11 +15,11 @@ export function deviceClaimHref(token: string): string {
   return `/device?token=${encodeURIComponent(token)}`;
 }
 
-/** Pre-NFC checks from cached asset view — run before showing NFC hold UI. */
+/** Pre-NFC checks from cached token view — run before showing NFC hold UI. */
 export function assertCaptureReady(
-  asset: Pick<PhygitalAsset, "isLocked">,
+  token: Pick<PhygitalToken, "isLocked">,
 ): void {
-  if (asset.isLocked) {
+  if (token.isLocked) {
     throw new Error(
       "This NFC device is locked. Unlock it before claiming it to a wallet.",
     );
@@ -28,18 +28,18 @@ export function assertCaptureReady(
 
 /** Pre-submit checks at wallet finish — recipient must differ from current owner. */
 export function assertClaimReady(
-  asset: Pick<PhygitalAsset, "isLocked" | "currentOwner">,
+  token: Pick<PhygitalToken, "isLocked" | "currentOwner">,
   recipient: Address,
 ): void {
-  assertCaptureReady(asset);
-  if (asset.currentOwner === recipient) {
+  assertCaptureReady(token);
+  if (token.currentOwner === recipient) {
     throw new Error("This NFC device is already on that wallet.");
   }
 }
 
 /** Safari step: NFC tap only — no wallet connect or submit. */
 export async function captureClaimTap(args: {
-  asset: Address;
+  token: Address;
   onPasskeyComplete?: () => void;
 }): Promise<{
   session: TransferSession;
@@ -47,7 +47,7 @@ export async function captureClaimTap(args: {
 }> {
   const session = await beginTransfer({
     rpc: getSolanaRpc(),
-    asset: args.asset,
+    token: args.token,
   });
   const auth = await authenticatePasskeyForTransfer(session);
   args.onPasskeyComplete?.();
@@ -60,7 +60,7 @@ function hydrateTransferSession(
 ): TransferSession {
   return {
     rpc: getSolanaRpc(),
-    asset: address(json.asset),
+    token: address(json.token),
     slotNumber: BigInt(json.slotNumber),
     slotHash: new Uint8Array(getBase58Encoder().encode(json.slotHash)),
     challenge: new Uint8Array(getBase58Encoder().encode(json.challenge)),

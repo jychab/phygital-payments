@@ -3,16 +3,16 @@
 import type { ReactNode } from "react";
 import { Lock, LockOpen, Nfc } from "lucide-react";
 
-import type { PhygitalAsset } from "@/lib/phygital/asset";
+import type { PhygitalToken } from "@/lib/phygital/token";
 import { cn, shortAddress } from "@/lib/utils";
 
 /** NFC icon + passkey label + lock state — Devices list and Pay device picker. */
 export function DeviceIdentity({
-  asset,
+  token,
   className,
   trailing,
 }: {
-  asset: PhygitalAsset;
+  token: PhygitalToken;
   className?: string;
   trailing?: ReactNode;
 }) {
@@ -23,10 +23,10 @@ export function DeviceIdentity({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium text-foreground">
-          {shortAddress(asset.secp256r1PublicKey, 6)}
+          {shortAddress(token.secp256r1PublicKey, 6)}
         </span>
         <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
-          {asset.isLocked ? (
+          {token.isLocked ? (
             <>
               <Lock className="size-3" />
               Locked

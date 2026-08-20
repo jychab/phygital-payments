@@ -17,7 +17,7 @@ import { useDelegateStatus } from "@/hooks/pay/use-delegate-status";
 import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
 import { useVerifiedApiKey } from "@/hooks/pay/use-verified-api-key";
 import { invalidateOwnerQueries } from "@/lib/queries";
-import type { PhygitalAsset } from "@/lib/phygital/asset";
+import type { PhygitalToken } from "@/lib/phygital/token";
 import {
   isDelegateEnabled,
   isOwnerPayMintEnabled,
@@ -33,13 +33,13 @@ type PayNav =
   | { screen: "manage" }
   | { screen: "need-device" }
   | { screen: "pick-limit"; holding: PaymentTokenHolding }
-  | { screen: "limit"; holding: PaymentTokenHolding; asset: string }
-  | { screen: "first-limit"; asset: string };
+  | { screen: "limit"; holding: PaymentTokenHolding; tokenAddress: string }
+  | { screen: "first-limit"; tokenAddress: string };
 
 export type PayScreenProps = {
   owner: string;
-  /** When set (owned device), spending limit is bound to this NFC asset PDA. */
-  asset?: string;
+  /** When set (owned device), spending limit is bound to this NFC token PDA. */
+  tokenAddress?: string;
   onExit?: () => void;
   /** When false, owner queries fetch once without background polling. */
   active?: boolean;
@@ -51,7 +51,7 @@ export type PayScreenProps = {
  */
 export function PayScreen({
   owner,
-  asset: deviceAsset,
+  tokenAddress: deviceTokenAddress,
   onExit,
   active = true,
 }: PayScreenProps) {
@@ -62,25 +62,25 @@ export function PayScreen({
   const keyQuery = useVerifiedApiKey(owner);
   const defaultMint = getDefaultMint();
   const pinnedDelegate = useDelegateStatus(
-    deviceAsset ? owner : null,
-    deviceAsset ?? null,
+    deviceTokenAddress ? owner : null,
+    deviceTokenAddress ?? null,
     defaultMint,
     queryOpts,
   );
 
   const [nav, setNav] = useState<PayNav | null>(null);
 
-  const assets = delegates.data?.assets ?? [];
+  const tokens = delegates.data?.tokens ?? [];
   const defaultMintKey = String(defaultMint);
   const defaultWalletMatch = delegates.data?.byMint.get(defaultMintKey);
   const pinnedWalletMatch: OwnerPayMintMatch | undefined =
-    deviceAsset && pinnedDelegate.data
-      ? { asset: deviceAsset as Address, status: pinnedDelegate.data }
+    deviceTokenAddress && pinnedDelegate.data
+      ? { token: deviceTokenAddress as Address, status: pinnedDelegate.data }
       : undefined;
-  const limitReady = deviceAsset
+  const limitReady = deviceTokenAddress
     ? isDelegateEnabled(pinnedDelegate.data)
     : delegates.data?.tokenEnabled === true;
-  const limitLoading = deviceAsset
+  const limitLoading = deviceTokenAddress
     ? pinnedDelegate.isLoading
     : delegates.isPending;
 
@@ -92,24 +92,24 @@ export function PayScreen({
   function openLimit(holding: PaymentTokenHolding) {
     if (delegates.isPending) return;
     const match = delegates.data?.byMint.get(holding.mint);
-    const existingAsset = match?.asset;
-    if (existingAsset && isOwnerPayMintEnabled(match)) {
-      setNav({ screen: "limit", holding, asset: String(existingAsset) });
+    const existingToken = match?.token;
+    if (existingToken && isOwnerPayMintEnabled(match)) {
+      setNav({ screen: "limit", holding, tokenAddress: String(existingToken) });
       return;
     }
-    if (deviceAsset) {
-      setNav({ screen: "limit", holding, asset: deviceAsset });
+    if (deviceTokenAddress) {
+      setNav({ screen: "limit", holding, tokenAddress: deviceTokenAddress });
       return;
     }
-    if (assets.length === 0) {
+    if (tokens.length === 0) {
       setNav({ screen: "need-device" });
       return;
     }
-    if (assets.length === 1) {
+    if (tokens.length === 1) {
       setNav({
         screen: "limit",
         holding,
-        asset: String(assets[0]!.address),
+        tokenAddress: String(tokens[0]!.address),
       });
       return;
     }
@@ -120,7 +120,7 @@ export function PayScreen({
 
   const loadError =
     keyQuery.error ??
-    (deviceAsset ? pinnedDelegate.error : null) ??
+    (deviceTokenAddress ? pinnedDelegate.error : null) ??
     delegates.error;
 
   if (loading) {
@@ -166,12 +166,12 @@ export function PayScreen({
   if (nav?.screen === "pick-limit") {
     return (
       <PayDevicePicker
-        assets={assets}
-        onSelect={(asset) => {
+        tokens={tokens}
+        onSelect={(tokenAddress) => {
           setNav({
             screen: "limit",
             holding: nav.holding,
-            asset,
+            tokenAddress,
           });
         }}
         onBack={() => setNav(null)}
@@ -183,7 +183,7 @@ export function PayScreen({
     return (
       <SpendingLimitPanel
         owner={owner}
-        asset={nav.asset}
+        tokenAddress={nav.tokenAddress}
         mint={nav.holding.mint}
         holding={nav.holding}
         walletMatch={delegates.data?.byMint.get(nav.holding.mint)}
@@ -209,7 +209,7 @@ export function PayScreen({
     return (
       <SpendingLimitPanel
         owner={owner}
-        asset={nav.asset}
+        tokenAddress={nav.tokenAddress}
         mint={defaultMintKey}
         walletMatch={pinnedWalletMatch ?? defaultWalletMatch}
         live={active}
@@ -225,11 +225,11 @@ export function PayScreen({
   }
 
   if (!limitReady) {
-    if (deviceAsset) {
+    if (deviceTokenAddress) {
       return (
         <SpendingLimitPanel
           owner={owner}
-          asset={deviceAsset}
+          tokenAddress={deviceTokenAddress}
           mint={defaultMintKey}
           walletMatch={pinnedWalletMatch ?? defaultWalletMatch}
           live={active}
@@ -240,15 +240,17 @@ export function PayScreen({
       );
     }
 
-    if (assets.length === 0) {
+    if (tokens.length === 0) {
       return <NeedDeviceGate onBack={onExit ?? (() => setNav(null))} />;
     }
 
-    if (assets.length > 1) {
+    if (tokens.length > 1) {
       return (
         <PayDevicePicker
-          assets={assets}
-          onSelect={(asset) => setNav({ screen: "first-limit", asset })}
+          tokens={tokens}
+          onSelect={(tokenAddress) =>
+            setNav({ screen: "first-limit", tokenAddress })
+          }
           onBack={onExit}
         />
       );
@@ -257,7 +259,7 @@ export function PayScreen({
     return (
       <SpendingLimitPanel
         owner={owner}
-        asset={String(assets[0]!.address)}
+        tokenAddress={String(tokens[0]!.address)}
         mint={defaultMintKey}
         walletMatch={defaultWalletMatch}
         live={active}
@@ -301,12 +303,12 @@ function NeedDeviceGate({ onBack }: { onBack: () => void }) {
 }
 
 function PayDevicePicker({
-  assets,
+  tokens,
   onSelect,
   onBack,
 }: {
-  assets: readonly PhygitalAsset[];
-  onSelect: (asset: string) => void;
+  tokens: readonly PhygitalToken[];
+  onSelect: (tokenAddress: string) => void;
   onBack?: () => void;
 }) {
   return (
@@ -326,14 +328,14 @@ function PayDevicePicker({
         </p>
       </div>
       <ul className="flex flex-col gap-1">
-        {assets.map((item) => (
+        {tokens.map((item) => (
           <li key={item.address}>
             <button
               type="button"
               onClick={() => onSelect(String(item.address))}
               className="flex w-full rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
             >
-              <DeviceIdentity asset={item} />
+              <DeviceIdentity token={item} />
             </button>
           </li>
         ))}
