@@ -11,7 +11,11 @@ import {
   isApiKeyAuthError,
 } from "@/lib/server/preauth-grants-do";
 import { openedPreauthCopy } from "../../../shared/preauth-status";
-import { INVALID_API_KEY, parseApiKey } from "../../../worker/api-key-hmac";
+import {
+  INVALID_API_KEY,
+  MISSING_API_KEY_HEADER,
+  parseApiKey,
+} from "../../../worker/api-key-hmac";
 import { PREAUTH_TTL_SECONDS } from "../../../worker/preauth-grant-types";
 
 function errorJson(error: unknown, status: number, errorField?: string) {
@@ -32,7 +36,7 @@ export async function openPreauthGrant(params: {
 }): Promise<NextResponse> {
   const apiKey = params.apiKey.trim();
   if (!apiKey) {
-    return errorJson("Query param apiKey is required", 400);
+    return errorJson(MISSING_API_KEY_HEADER, 401);
   }
 
   try {

@@ -5,7 +5,7 @@ import { handlePreauthStatus } from "../../../../../worker/handle-preauth-status
 import { withMintDisplayCopy } from "@/lib/server/with-mint-display-copy";
 
 /**
- * GET /api/preauth/status?apiKey=&grantId=
+ * GET /api/preauth/status?grantId= (`x-api-key: <api_key>`)
  * Holds until cancelled, replaced, expired, or webhook success.
  * Each JSON includes `body` for a Shortcuts notification, including errors.
  */

@@ -106,8 +106,8 @@ describe("toUserFacingBody", () => {
     );
   });
 
-  it("folds a missing apiKey query into one Shortcuts line", () => {
-    expect(toUserFacingBody("Query param apiKey is required")).toBe(
+  it("folds a missing apiKey header into one Shortcuts line", () => {
+    expect(toUserFacingBody("Missing x-api-key header")).toBe(
       "Pay Isn’t Set Up. Turn on Pay here first.",
     );
   });

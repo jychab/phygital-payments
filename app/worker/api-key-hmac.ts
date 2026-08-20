@@ -6,6 +6,13 @@
 export const INVALID_API_KEY = "Invalid or revoked API key";
 export const REVOKED_API_KEY =
   "Key has been revoked — re-provision to get a new key";
+export const API_KEY_HEADER = "x-api-key";
+export const MISSING_API_KEY_HEADER = "Missing x-api-key header";
+
+/** Extract the API key from `x-api-key`. Empty if missing. */
+export function apiKeyFromHeader(headers: Headers): string {
+  return headers.get(API_KEY_HEADER)?.trim() ?? "";
+}
 
 const PREFIX = "ppk_";
 const HMAC_HEX_LEN = 48;

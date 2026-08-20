@@ -24,11 +24,9 @@ function storedApiKey(wallet: string): string {
 export async function requestPreauthForWallet(args: {
   wallet: string;
 }): Promise<PreauthResponse> {
-  const params = new URLSearchParams();
-  params.set("apiKey", storedApiKey(args.wallet));
-
-  const res = await queryFetch(`/api/preauth/open?${params.toString()}`, {
+  const res = await queryFetch("/api/preauth/open", {
     method: "GET",
+    headers: { "x-api-key": storedApiKey(args.wallet) },
   });
   const body = (await res.json()) as PreauthResponse & { error?: string };
   if (!res.ok) {
@@ -43,11 +41,11 @@ export async function waitPreauthStatusForWallet(args: {
   signal?: AbortSignal;
 }): Promise<PreauthStatusResult> {
   const params = new URLSearchParams();
-  params.set("apiKey", storedApiKey(args.wallet));
   params.set("grantId", args.grantId);
 
   const res = await queryFetch(`/api/preauth/status?${params.toString()}`, {
     method: "GET",
+    headers: { "x-api-key": storedApiKey(args.wallet) },
     signal: args.signal,
   });
   const body = (await res.json()) as PreauthStatusResult & { error?: string };

@@ -102,14 +102,15 @@ API keys live in localStorage on this phone, keyed by wallet. **Manage API Keys*
 In-app Pay calls `GET /api/preauth/open` with the stored API key. Integrators can do the same:
 
 ```
-GET /api/preauth/open?apiKey=<ppk_…>
+GET /api/preauth/open
+x-api-key: <ppk_…>
 ```
 
-Query params:
+Headers:
 
-| Param | Required | Description |
-|-------|----------|-------------|
-| `apiKey` | Yes | HMAC API key (`ppk_<wallet>_<gen>_<hmac>`) |
+| Header | Required | Description |
+|--------|----------|-------------|
+| `x-api-key` | Yes | HMAC API key (`ppk_<wallet>_<gen>_<hmac>`) |
 
 Response: `{ grantId, expiresAt, wallet }` (grant stored in a per-wallet Durable Object). Responses use `Cache-Control: no-store`. Opening a new window **immediately cancels** any previous unpaid grant for that wallet.
 
@@ -118,7 +119,8 @@ A **200 from `/open` only means the spending window is open** — not that payme
 Wait for the result of that window (one request, no polling):
 
 ```
-GET /api/preauth/status?apiKey=<ppk_…>&grantId=<uuid>
+GET /api/preauth/status?grantId=<uuid>
+x-api-key: <ppk_…>
 ```
 
 The response is held until a terminal status:
@@ -129,15 +131,15 @@ The response is held until a terminal status:
 | `expired` | Window TTL elapsed with no webhook |
 | `success` | Helius webhook indexed the transfer — includes `recipient`, `amount` (raw u64), `mint`, `signature` |
 
-Keep the HTTP connection open for the full window. Example: `curl --max-time 150 "https://<host>/api/preauth/status?apiKey=ppk_…&grantId=…"`.
+Keep the HTTP connection open for the full window. Example: `curl --max-time 150 -H "x-api-key: ppk_…" "https://<host>/api/preauth/status?grantId=…"`.
 
 Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey>` (rejects rotated keys).
 
-The API key is stored in plaintext in localStorage on this phone. Keys in query strings may also appear in CDN/proxy logs — use **Rotate API key** in **Manage API Keys** if leaked.
+The API key is stored in plaintext in localStorage on this phone. Use **Rotate API key** in **Manage API Keys** if leaked.
 
 ```bash
-curl "https://<host>/api/preauth/open?apiKey=ppk_…"
-curl --max-time 150 "https://<host>/api/preauth/status?apiKey=ppk_…&grantId=…"
+curl -H "x-api-key: ppk_…" "https://<host>/api/preauth/open"
+curl --max-time 150 -H "x-api-key: ppk_…" "https://<host>/api/preauth/status?grantId=…"
 ```
 
 ### Payment link (`/collect?recipient=<solana-address>`)

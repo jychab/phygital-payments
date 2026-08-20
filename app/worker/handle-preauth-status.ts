@@ -4,7 +4,9 @@ import {
 } from "../shared/preauth-status";
 import {
   INVALID_API_KEY,
+  MISSING_API_KEY_HEADER,
   REVOKED_API_KEY,
+  apiKeyFromHeader,
   parseApiKey,
 } from "./api-key-hmac";
 
@@ -30,11 +32,11 @@ export async function handlePreauthStatus(
   env: Pick<CloudflareEnv, "PAY_HMAC_SECRET" | "PREAUTH_GRANTS">,
 ): Promise<Response> {
   const url = new URL(request.url);
-  const apiKey = url.searchParams.get("apiKey")?.trim() ?? "";
+  const apiKey = apiKeyFromHeader(request.headers);
   const grantId = url.searchParams.get("grantId")?.trim() ?? "";
 
   if (!apiKey) {
-    return json({ error: "Query param apiKey is required" }, 400);
+    return json({ error: MISSING_API_KEY_HEADER }, 401);
   }
   if (!grantId) {
     return json({ error: "Query param grantId is required" }, 400);

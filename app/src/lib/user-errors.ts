@@ -97,7 +97,7 @@ const RULES: Rule[] = [
     body: "Check what you pasted and try again.",
   },
   {
-    test: /query param apikey is required|missing preauth api key|enable Pay on this device|Pay isn't set up on this phone|Pay isn't set up in this browser|Pay isn't turned on here/i,
+    test: /missing x-api-key header|missing preauth api key|enable Pay on this device|Pay isn't set up on this phone|Pay isn't set up in this browser|Pay isn't turned on here/i,
     title: "Pay Isn’t Set Up",
     body: "Turn on Pay here first.",
   },
