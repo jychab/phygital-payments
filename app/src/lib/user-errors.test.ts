@@ -59,9 +59,17 @@ describe("toUserFacingError", () => {
     ).toBe("Couldn’t Use That");
   });
 
-  it("distinguishes an already-used Pay from not enabled", () => {
-    const used = toUserFacingError(new Error("Preauth grant already used"));
-    expect(used.title).toBe("Already Used");
+  it("maps a passkey mismatch to Couldn't Verify", () => {
+    expect(
+      toUserErrorMessage(new Error("This is not the same NFC device.")),
+    ).toBe("Couldn't Verify");
+  });
+
+  it("maps an unverified live check", () => {
+    const facing = toUserFacingError(
+      new Error("Couldn't verify this NFC device."),
+    );
+    expect(facing.title).toBe("Couldn't Verify");
   });
 });
 

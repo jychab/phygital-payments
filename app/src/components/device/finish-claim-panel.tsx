@@ -14,11 +14,11 @@ import { consumePendingClaim } from "@/lib/device/pending-claim-client";
 import { usePendingClaim } from "@/hooks/device/use-pending-claim";
 import { usePhygitalAssetByAddress } from "@/hooks/device/use-phygital-asset";
 import { assertClaimReady, finishClaim } from "@/lib/device/claim";
-import { assetAllowsPay } from "@/lib/phygital/asset";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { invalidateOwnerQueries, queryKeys } from "@/lib/queries";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
+import { address as toAddress } from "@solana/kit";
 
 type Phase = "confirming" | "done" | null;
 
@@ -37,8 +37,7 @@ export function FinishClaimPanel() {
 
   const [phase, setPhase] = useState<Phase>(null);
   const [error, setError] = useState<string | null>(null);
-  const [claimedAsset, setClaimedAsset] = useState<string | null>(null);
-  const [claimedPayAllowed, setClaimedPayAllowed] = useState(false);
+  const [claimedOwner, setClaimedOwner] = useState<string | null>(null);
 
   async function onFinish() {
     if (!signer || !address || !pending) return;
@@ -54,7 +53,7 @@ export function FinishClaimPanel() {
       assertClaimReady(asset, signer.address);
     } catch (err) {
       setError(
-        toUserErrorMessage(err, "Couldn't add this NFC device. Try again."),
+        toUserErrorMessage(err, "Couldn't claim this NFC device. Try again."),
       );
       return;
     }
@@ -78,12 +77,14 @@ export function FinishClaimPanel() {
           queryKey: queryKeys.asset.byIdentifier(asset.identifier),
         }),
         queryClient.invalidateQueries({
+          queryKey: queryKeys.asset.byPasskey(asset.secp256r1PublicKey),
+        }),
+        queryClient.invalidateQueries({
           queryKey: queryKeys.pendingClaim.byToken(token),
         }),
       ]);
 
-      setClaimedAsset(session.asset);
-      setClaimedPayAllowed(assetAllowsPay(asset));
+      setClaimedOwner(address);
       setPhase("done");
     } catch (err) {
       setPhase(null);
@@ -117,12 +118,14 @@ export function FinishClaimPanel() {
     );
   }
 
-  if (phase === "done" && address && claimedAsset) {
+  if (phase === "done" && claimedOwner && assetQuery.data) {
     return (
       <DeviceHome
-        isPayAllowed={claimedPayAllowed}
-        owner={address}
-        asset={claimedAsset}
+        asset={{
+          ...assetQuery.data,
+          currentOwner: toAddress(claimedOwner),
+        }}
+        liveConfirmed
       />
     );
   }

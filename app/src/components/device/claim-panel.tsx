@@ -7,6 +7,7 @@ import { Nfc } from "lucide-react";
 import { GateMessage } from "@/components/layout/gate-message";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
+import { BackLink } from "@/components/shared/back-link";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import { createPendingClaim } from "@/lib/device/pending-claim-client";
@@ -27,9 +28,11 @@ type Stage = "ready" | "reading";
 export function ClaimPanel({
   asset,
   unclaimed = false,
+  onBack,
 }: {
   asset: PhygitalAsset;
   unclaimed?: boolean;
+  onBack?: () => void;
 }) {
   const router = useRouter();
   const inApp = useIsInAppBrowser();
@@ -37,14 +40,16 @@ export function ClaimPanel({
   const [stage, setStage] = useState<Stage>("ready");
   const [error, setError] = useState<string | null>(null);
 
-  const title = unclaimed ? "Add to this phone" : "Move to this phone";
+  const title = unclaimed ? "Claim to wallet" : "Claim to a new wallet";
 
   async function onCapture() {
     setError(null);
     try {
       assertCaptureReady(asset);
     } catch (err) {
-      setError(toUserErrorMessage(err, "Couldn’t add this NFC device. Try again."));
+      setError(
+        toUserErrorMessage(err, "Couldn’t claim this NFC device. Try again."),
+      );
       return;
     }
 
@@ -80,14 +85,14 @@ export function ClaimPanel({
 
   if (inApp) {
     return (
-      <InAppBrowserGate body="Adding an NFC device needs Safari or Chrome." />
+      <InAppBrowserGate body="Claiming an NFC device needs Safari or Chrome." />
     );
   }
 
   if (stage === "reading") {
     return (
       <NfcHoldStatus
-        title="Hold your NFC device close"
+        title="Hold Still…"
         body="Keep it against the back until it reads."
         pulsing
       />
@@ -95,28 +100,31 @@ export function ClaimPanel({
   }
 
   return (
-    <GateMessage
-      icon={<Nfc className="size-5 text-muted-foreground" />}
-      title={title}
-      body="Hold your NFC device to verify, then connect your wallet."
-      action={
-        <div className="flex w-full max-w-64 flex-col gap-3">
-          {error ? (
-            <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
-              {error}
-            </p>
-          ) : null}
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            onClick={() => void onCapture()}
-          >
-            <Nfc className="size-4" />
-            {error ? "Try again" : "Hold to add"}
-          </Button>
-        </div>
-      }
-    />
+    <div className="flex flex-1 flex-col">
+      {onBack ? <BackLink onClick={onBack} /> : null}
+      <GateMessage
+        icon={<Nfc className="size-5 text-muted-foreground" />}
+        title={title}
+        body="Hold your NFC device to prove possession, then connect the wallet that should own it."
+        action={
+          <div className="flex w-full max-w-64 flex-col gap-3">
+            {error ? (
+              <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
+                {error}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              onClick={() => void onCapture()}
+            >
+              <Nfc className="size-4" />
+              {error ? "Try again" : "Hold to claim"}
+            </Button>
+          </div>
+        }
+      />
+    </div>
   );
 }

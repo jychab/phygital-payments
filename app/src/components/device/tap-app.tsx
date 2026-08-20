@@ -1,18 +1,23 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useIsRestoring } from "@tanstack/react-query";
-import { LoaderCircle, Nfc, ShieldAlert } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 
-import { ClaimPanel } from "@/components/device/claim-panel";
 import { DeviceHome } from "@/components/device/device-home";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
-import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
+import { CenteredStatus } from "@/components/layout/gate-message";
+import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
+import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
+import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import { usePhygitalAsset } from "@/hooks/device/use-phygital-asset";
 import { useTapVerify } from "@/hooks/device/use-tap-verify";
-import { isUnclaimedAsset, assetAllowsPay } from "@/lib/phygital/asset";
+import { useAuthenticateDevice } from "@/hooks/device/use-authenticate-device";
+import { fetchPhygitalAssetByPasskey, type PhygitalAsset } from "@/lib/phygital/asset";
+import { getSolanaRpc } from "@/lib/solana/rpc";
 import { tryParseAddress } from "@/lib/solana/address";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
@@ -25,7 +30,7 @@ const DeviceWalletShell = dynamic(
 );
 
 /**
- * Route `/device` — NFC tap or wallet finish. Privy loads for the header chip.
+ * Route `/device` — Hold to Check, signed NFC URL, or wallet finish.
  */
 export function DeviceTapApp() {
   const embedded = useIsEmbedded();
@@ -63,43 +68,119 @@ export function DeviceTapApp() {
 }
 
 function DeviceTapNfcApp() {
-  const { pk, hasTapProof, verify, verifyPending, verifyError } =
-    useTapVerify();
+  const { pk, hasTapProof, verify, verifyPending } = useTapVerify();
 
   if (!hasTapProof) {
-    return (
-      <GateMessage
-        icon={<Nfc className="size-5 text-muted-foreground" />}
-        title="Hold NFC device to this phone"
-        body="This page only opens from an NFC tap. Hold your device flat against the back of your phone."
-      />
-    );
+    return <HoldToCheckLanding />;
   }
 
   if (verifyPending || verify === "pending") {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Checking NFC device…</p>
+        <p className="text-sm text-muted-foreground">Checking…</p>
       </CenteredStatus>
     );
   }
 
   if (verify !== "verified") {
+    return <HoldToCheckLanding failed />;
+  }
+
+  return <AssetFlow pk={pk} />;
+}
+
+function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
+  const inApp = useIsInAppBrowser();
+  const { authenticate, pending } = useAuthenticateDevice();
+  const [showInAppGate, setShowInAppGate] = useState(false);
+  const [notRegistered, setNotRegistered] = useState(false);
+  const [asset, setAsset] = useState<PhygitalAsset | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onCheck() {
+    if (inApp) {
+      setShowInAppGate(true);
+      return;
+    }
+    setError(null);
+    setNotRegistered(false);
+    try {
+      const { secp256r1PublicKey } = await authenticate();
+      try {
+        const found = await fetchPhygitalAssetByPasskey(
+          getSolanaRpc(),
+          secp256r1PublicKey,
+        );
+        setAsset(found);
+      } catch {
+        setNotRegistered(true);
+      }
+    } catch (err) {
+      setError(
+        toUserErrorMessage(
+          err,
+          "Hold it flat against the back of your phone and try again.",
+        ),
+      );
+    }
+  }
+
+  if (showInAppGate) {
     return (
-      <GateMessage
-        icon={<ShieldAlert className="size-5 text-destructive" />}
-        title="Verification failed or expired."
-        body={toUserErrorMessage(
-          verifyError,
-          "Hold flat against the back of your phone and try again.",
-        )}
-        destructive
+      <InAppBrowserGate body="Checking an NFC device needs Safari or Chrome." />
+    );
+  }
+
+  if (asset) {
+    return <DeviceHome asset={asset} liveConfirmed />;
+  }
+
+  if (pending) {
+    return (
+      <NfcHoldStatus
+        size="lg"
+        busy
+        title="Hold Still…"
+        body="Keep it against the back until it reads."
       />
     );
   }
 
-  return <AssetFlow pk={pk} />;
+  if (notRegistered) {
+    return (
+      <NfcHoldStatus
+        size="lg"
+        pulsing={false}
+        title="Not Registered"
+        body="This device isn’t set up."
+        onRingClick={() => void onCheck()}
+        ringAriaLabel="Hold to Check"
+      />
+    );
+  }
+
+  if (error || failed) {
+    return (
+      <NfcHoldStatus
+        size="lg"
+        title="Couldn't Verify"
+        body="Hold it flat against the back of your phone and try again."
+        onRingClick={() => void onCheck()}
+        ringAriaLabel="Hold to Check"
+      />
+    );
+  }
+
+  return (
+    <NfcHoldStatus
+      size="lg"
+      title="Hold to Check"
+      body="Hold your device near the back of this phone."
+      onRingClick={() => void onCheck()}
+      ringAriaLabel="Hold to Check"
+    />
+  );
 }
 
 function AssetFlow({ pk }: { pk: string | null }) {
@@ -110,36 +191,21 @@ function AssetFlow({ pk }: { pk: string | null }) {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading device…</p>
+        <p className="text-sm text-muted-foreground">Checking…</p>
       </CenteredStatus>
     );
   }
 
   if (assetQuery.isError || !assetQuery.data) {
     return (
-      <GateMessage
-        icon={<ShieldAlert className="size-5 text-destructive" />}
-        title="NFC device not found"
-        body={toUserErrorMessage(
-          assetQuery.error,
-          "We couldn’t find this NFC device. Try tapping again.",
-        )}
-        destructive
+      <NfcHoldStatus
+        size="lg"
+        pulsing={false}
+        title="Not Registered"
+        body="This device isn’t set up."
       />
     );
   }
 
-  const asset = assetQuery.data;
-
-  if (isUnclaimedAsset(asset) || !asset.isLocked) {
-    return <ClaimPanel asset={asset} unclaimed={isUnclaimedAsset(asset)} />;
-  }
-
-  return (
-    <DeviceHome
-      isPayAllowed={assetAllowsPay(asset)}
-      owner={asset.currentOwner.toString()}
-      asset={String(asset.address)}
-    />
-  );
+  return <DeviceHome asset={assetQuery.data} />;
 }

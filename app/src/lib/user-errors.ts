@@ -38,11 +38,11 @@ const RULES: Rule[] = [
   },
   {
     test: /already on that wallet/i,
-    title: "Already Added",
+    title: "Already Claimed",
     body: "This NFC device is already on that wallet.",
   },
   {
-    test: /device is locked|unlock it before moving/i,
+    test: /device is locked|unlock it before moving|unlock it before claiming/i,
     title: "Device Locked",
     body: "Unlock this NFC device, then try again.",
   },
@@ -162,9 +162,24 @@ const RULES: Rule[] = [
     body: "Hold your NFC device to this phone again.",
   },
   {
+    test: /this is not the same NFC device/i,
+    title: "Couldn't Verify",
+    body: "Hold the same NFC device against the back of your phone.",
+  },
+  {
+    test: /couldn't verify this NFC device|message mismatch/i,
+    title: "Couldn't Verify",
+    body: "Hold it flat against the back of your phone and try again.",
+  },
+  {
+    test: /isn't set up|not registered/i,
+    title: "Not Registered",
+    body: "This device isn’t set up.",
+  },
+  {
     test: /missing tap parameters|verification failed|invalid signature/i,
-    title: "Couldn’t Read",
-    body: "Hold flat against the back of your phone and try again.",
+    title: "Couldn't Verify",
+    body: "Hold it flat against the back of your phone and try again.",
   },
   {
     test: /connect your wallet|connect a wallet|sign in to continue/i,

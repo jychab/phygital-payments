@@ -54,9 +54,10 @@ Shared Pay UI (Home tab and owned device) is `PayScreen` in `components/pay/`:
 - `manage-pay-panel.tsx` — tokens + API key
 - `api-key-panel.tsx` — paste / issue / rotate
 
-Owned-device home after tap or claim is `DeviceHome` (`device/device-home.tsx`).
-One `PrivyProvider` lives in `PrivyWalletRoot` (root layout). Home, `/device`,
-and non-embed Collect ask for it via `PrivyGate`; Collect embeds do not load
+Owned-device home after a check or claim is `DeviceHome` (`device/device-home.tsx`).
+One `PrivyProvider` lives in `PrivyWalletRoot` (root layout). Home, `/device` claim
+finish, and non-embed Collect ask for it via `PrivyGate`. The `/device` authenticity
+path does not load Privy until Pay. Collect embeds do not load
 the Privy SDK. Do not wrap `PrivyWalletProvider` again on a route.
 The connected wallet is always passed as `owner` (not `recipient` / `expectedOwner`), except Collect's settle-to address which stays `recipient`.
 
@@ -67,7 +68,7 @@ The connected wallet is always passed as `owner` (not `recipient` / `expectedOwn
 Connect a wallet via Privy, then use tabs:
 
 - **Pay** — **Pay** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC device. If Pay isn't configured, the tab offers **Manage API Keys** (paste a key, or wallet-sign to issue one; the API key is stored in localStorage on this phone).
-- **Devices** — list of NFC devices for this wallet. Add a device by holding a tag (opens `/device`).
+- **Devices** — list of NFC devices for this wallet. Hold a device on `/device` to check it, then claim it to this wallet if you want.
 - **Activity** — recent payments for the connected wallet.
 
 Pay settings (spending limits, token management) live on Home. The API key is stored in **localStorage** on this phone after **Manage API Keys**.
@@ -84,13 +85,15 @@ Destination flow. The settle-to wallet comes from the **connected wallet** or `?
 
 Activity lives on Home, not Collect.
 
-### Device / claim (`/device?pk=&s=&c=&n=`)
+### Device (`/device`)
 
-After an NFC tap. `/device` loads Privy for the header chip. Wallet linking is a **successful end state**; Pay setup is **optional**.
+Authenticity first. Claim and Pay are optional.
 
-1. Verify tap (silent)
-2. **Unclaimed / unlocked** — WebAuthn tap, then replace to `/device?token=` and connect (Google in this tab, or copy the finish link into a wallet in-app browser)
-3. **Locked and owned** — **Your wallet is ready.** **Collect** (primary) and **Pay** (opens the same Pay tab as Home: API key, spending limit, Hold to Pay). Connect a wallet only when signing a limit or issuing a key — not to open Pay.
+`/device` with no tap params shows **Hold to Check** (live WebAuthn in the browser). A signed NFC URL (`/device?pk=&s=&c=&n=`) verifies silently, then shows **Authentic**. Optional **Hold to Check** upgrades the subtitle to **Confirmed just now.** Privy is not loaded until Pay or `/device?token=`.
+
+1. **Hold to Check** (no URL) or silent URL verify → **Authentic**
+2. **Unclaimed / unlocked** — optional **Claim to wallet** (WebAuthn tap, then `/device?token=` to connect and confirm)
+3. **Locked and payment-capable** — **Collect** and **Pay** (same Pay tab as Home). Connect a wallet only when signing a limit or issuing a key.
 
 API keys live in localStorage on this phone, keyed by wallet. **Manage API Keys** copies, pastes, or issues/rotates a key. Setting a spending limit requires a balance for that token in the linked wallet.
 

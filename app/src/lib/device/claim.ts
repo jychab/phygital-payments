@@ -21,7 +21,7 @@ export function assertCaptureReady(
 ): void {
   if (asset.isLocked) {
     throw new Error(
-      "This NFC device is locked. Unlock it before moving it to this phone.",
+      "This NFC device is locked. Unlock it before claiming it to a wallet.",
     );
   }
 }

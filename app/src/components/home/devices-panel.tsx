@@ -77,7 +77,7 @@ export function DevicesPanel({ owner }: { owner: string }) {
         <GateMessage
           icon={<Nfc className="size-5 text-muted-foreground" />}
           title="No NFC devices yet"
-          body="Hold a device to this phone to add it. Nothing to tap on this screen."
+          body="Hold a device, then claim it to this wallet. Nothing to tap on this screen."
         />
       </div>
     );

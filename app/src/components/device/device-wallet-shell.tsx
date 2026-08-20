@@ -13,8 +13,8 @@ import {
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 
 /**
- * AppShell for every `/device` visit. Uses the root `PrivyProvider` via `PrivyGate`.
- * NFC content is `children`; `?token=` finishes a claim; `?owner=&asset=` is owned-device home.
+ * Chrome for `/device`. Authenticity (NFC children) skips Privy.
+ * `?token=` and `?owner=&asset=` still load the wallet.
  */
 export function DeviceWalletShell({
   token,
@@ -27,22 +27,50 @@ export function DeviceWalletShell({
   asset?: string;
   children?: ReactNode;
 }) {
-  return (
-    <PrivyGate>
-      <DeviceChrome>
-        {token ? (
+  if (token) {
+    return (
+      <PrivyGate>
+        <DeviceChrome walletActions="full">
           <FinishClaimPanel />
-        ) : owner && asset ? (
+        </DeviceChrome>
+      </PrivyGate>
+    );
+  }
+
+  if (owner && asset) {
+    return (
+      <PrivyGate>
+        <DeviceChrome walletActions="full">
           <DeviceHomeByAddress owner={owner} asset={asset} />
-        ) : (
-          children
-        )}
-      </DeviceChrome>
-    </PrivyGate>
+        </DeviceChrome>
+      </PrivyGate>
+    );
+  }
+
+  return (
+    <DeviceChrome walletActions="hidden">{children}</DeviceChrome>
   );
 }
 
-function DeviceChrome({ children }: { children: ReactNode }) {
+function DeviceChrome({
+  children,
+  walletActions,
+}: {
+  children: ReactNode;
+  walletActions: "full" | "hidden";
+}) {
+  if (walletActions === "full") {
+    return <DeviceChromeWithWallet>{children}</DeviceChromeWithWallet>;
+  }
+
+  return (
+    <AppShell walletActions="hidden" modeLabel="Device">
+      <AppCard>{children}</AppCard>
+    </AppShell>
+  );
+}
+
+function DeviceChromeWithWallet({ children }: { children: ReactNode }) {
   const { address, isConnected } = useSolanaAddress();
 
   return (

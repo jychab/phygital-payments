@@ -283,7 +283,7 @@ function NeedDeviceGate({ onBack }: { onBack: () => void }) {
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
         title="Add an NFC device"
-        body="Hold a device to this phone to add it, then set a spending limit."
+        body="Hold a device, then claim it to this wallet, then set a spending limit."
         action={
           <Button
             type="button"

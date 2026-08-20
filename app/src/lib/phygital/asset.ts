@@ -4,6 +4,7 @@ import {
   fetchAsset,
   fetchAssetByIdentifier,
   findAssetPda,
+  parseSecp256r1Pubkey,
   AssetType,
   type Asset,
 } from "phygital-token-sdk";
@@ -49,6 +50,20 @@ export async function fetchPhygitalAsset(
 ): Promise<PhygitalAsset> {
   const { data } = await fetchAsset(rpc, assetAddress);
   return phygitalAssetFromAccount(assetAddress, data);
+}
+
+/**
+ * Load asset by passkey public key (WebAuthn `verifyResponse` result).
+ * PDA is seeded by the passkey, not the chip identifier.
+ */
+export async function fetchPhygitalAssetByPasskey(
+  rpc: Rpc<SolanaRpcApi>,
+  secp256r1PublicKey: string,
+): Promise<PhygitalAsset> {
+  const assetAddress = await findAssetPda(
+    parseSecp256r1Pubkey(secp256r1PublicKey),
+  );
+  return fetchPhygitalAsset(rpc, assetAddress);
 }
 
 /**

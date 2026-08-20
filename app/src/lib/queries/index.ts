@@ -8,7 +8,7 @@
  * Domain code lives next to the matching UI folder:
  *   lib/pay + hooks/pay         This Browser (Pay key), Hold to Pay, limits
  *   lib/collect + hooks/collect `/collect` receive + ATA setup
- *   lib/device + hooks/device   NFC tap, claim, `/device?token=`
+ *   lib/device + hooks/device   NFC tap, Hold to Check, claim, `/device?token=`
  *   lib/home + hooks/home       Activity + Devices tab
  *   lib/tokens + hooks/tokens   mint catalog, holdings (`use-payment-tokens`)
  *   lib/server                  API routes only (`import "server-only"`)
@@ -121,6 +121,8 @@ export const queryKeys = {
     all: () => ["assets"] as const,
     byIdentifier: (identifier: string | null) =>
       [...queryKeys.asset.all(), "identifier", identifier] as const,
+    byPasskey: (secp256r1PublicKey: string | null) =>
+      [...queryKeys.asset.all(), "passkey", secp256r1PublicKey] as const,
     byAddress: (asset: string | null) =>
       [...queryKeys.asset.all(), "address", asset] as const,
     byOwner: (owner: string | null) =>
