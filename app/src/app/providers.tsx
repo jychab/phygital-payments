@@ -16,7 +16,7 @@ import { queryOptions } from "@/lib/queries";
 /**
  * Shared by all routes: React Query (localStorage-persisted, only browser cache) + toasts.
  * No Privy / WalletConnect — those live in `privy-wallet-provider.tsx` and are
- * loaded client-only from the `(wallet)` layout.
+ * mounted per-route (`HomeApp`, `DeviceWalletShell`, `CollectAtaSetup`).
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(

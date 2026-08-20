@@ -15,7 +15,6 @@ import {
 import { collectHref } from "@/lib/collect/payment-request";
 import { isMainnet } from "@/lib/solana/cluster";
 import { cn } from "@/lib/utils";
-import { WalletSyncGate } from "@/components/shared/wallet-sync-gate";
 
 const WalletChip = dynamic(
   () => import("@/components/shared/wallet-chip").then((m) => m.WalletChip),
@@ -24,24 +23,21 @@ const WalletChip = dynamic(
 
 export type WalletActionsMode = "full" | "display-only" | "hidden";
 
-export type AppMode = "Home" | "Collect" | "Setup" | "Device";
+export type AppMode = "Home" | "Collect" | "Device";
 
 export type ModeNavItem = {
   mode: "Home" | "Collect";
   href: string;
-  /** Visible but not selectable (e.g. Collect before Connect). */
-  disabled?: boolean;
 };
 
-/** Shared Home ↔ Collect header dropdown items. */
-export function homeCollectModeNav(recipient: string | null): ModeNavItem[] {
+/**
+ * Home ↔ Collect header items. Pass only when a session wallet is connected;
+ * a Collect `?recipient=` is not a connected wallet.
+ */
+export function homeCollectModeNav(recipient: string): ModeNavItem[] {
   return [
     { mode: "Home", href: "/" },
-    {
-      mode: "Collect",
-      href: recipient ? collectHref({ recipient }) : "/collect",
-      disabled: !recipient,
-    },
+    { mode: "Collect", href: collectHref({ recipient }) },
   ];
 }
 
@@ -52,7 +48,6 @@ export function AppShell({
   walletActions = "full",
   modeLabel,
   modeNav,
-  linkedOwner,
 }: {
   /** Required for `walletActions="display-only"` (sealed Collect chip). */
   recipient?: string | null;
@@ -61,18 +56,15 @@ export function AppShell({
   walletActions?: WalletActionsMode;
   /** Current mode label in the header. */
   modeLabel?: AppMode;
-  /** When set, mode label becomes a dropdown (Home / Collect; Device stays the current label). */
+  /** Home / Collect dropdown. Only pass when a session wallet is connected. */
   modeNav?: ModeNavItem[] | null;
-  /** Asset-linked wallet — must match Privy when both are connected. */
-  linkedOwner?: string | null;
 }) {
-  const navItems = modeNav && modeNav.length > 0 ? modeNav : null;
-  const body =
-    walletActions === "full" && linkedOwner ? (
-      <WalletSyncGate linkedOwner={linkedOwner}>{children}</WalletSyncGate>
-    ) : (
-      children
-    );
+  const navItems =
+    modeNav &&
+    modeNav.length > 0 &&
+    modeNav.some((item) => item.mode !== modeLabel)
+      ? modeNav
+      : null;
 
   return (
     <div className="relative flex min-h-full flex-1 flex-col">
@@ -110,7 +102,7 @@ export function AppShell({
             <span aria-hidden />
           )}
         </div>
-        {body}
+        {children}
       </main>
     </div>
   );
@@ -148,9 +140,8 @@ function ModeSwitcher({
           return (
             <DropdownMenuItem
               key={item.mode}
-              disabled={item.disabled}
               onSelect={() => {
-                if (selected || item.disabled) return;
+                if (selected) return;
                 router.push(item.href);
               }}
               className={cn(

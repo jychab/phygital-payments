@@ -52,7 +52,7 @@ function isExportablePrivySolanaWallet(
 
 /**
  * Connected Solana address from Privy `useWallets()`.
- * Connect opens Privy login (Google or wallet); disconnect logs out.
+ * Connect logs in, or reconnects an external wallet if a session already exists.
  */
 export function useSolanaAddress(): {
   address: string | null;
@@ -72,7 +72,10 @@ export function useSolanaAddress(): {
    * the user can export via `exportWallet`.
    */
   canExportWallet: boolean;
-  /** Open Privy login (Google or wallet). */
+  /**
+   * Open Privy login (Google or wallet), or reconnect an external wallet
+   * when a Privy session already exists.
+   */
   connect: () => void;
   /** Disconnect wallets, log out of Privy, and clear app storage / query cache. */
   disconnect: () => Promise<void>;
@@ -85,6 +88,7 @@ export function useSolanaAddress(): {
     user,
     login,
     logout,
+    connectWallet,
   } = usePrivy();
   const { wallets, ready: walletsReady } = useWallets();
   const cleared = useSyncExternalStore(
@@ -126,8 +130,22 @@ export function useSolanaAddress(): {
     if (walletAddress && !cleared) return;
 
     setSessionCleared(false);
-    void login();
-  }, [embedded, privyReady, walletAddress, cleared, login]);
+    // `login()` is a no-op when Privy already restored the session (typical
+    // after refresh). Reconnect the signing wallet instead.
+    if (authenticated) {
+      connectWallet({ walletChainType: "solana-only" });
+      return;
+    }
+    login();
+  }, [
+    embedded,
+    privyReady,
+    walletAddress,
+    cleared,
+    authenticated,
+    connectWallet,
+    login,
+  ]);
 
   const disconnect = useCallback(async () => {
     setSessionCleared(true);

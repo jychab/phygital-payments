@@ -44,7 +44,6 @@ Routes live in `src/app`. Each has a top-level `*App` component. Domain code
 |-------|-----------|--------|
 | `/` | `HomeApp` | `home/` |
 | `/collect` | `CollectApp` | `collect/` |
-| `/setup` | `SetupCollectApp` (`setup-collect-app.tsx`) | `collect/` |
 | `/device` | `DeviceTapApp` | `device/` |
 
 Shared Pay UI (Home tab and owned device) is `PayScreen` in `components/pay/`:
@@ -56,7 +55,8 @@ Shared Pay UI (Home tab and owned device) is `PayScreen` in `components/pay/`:
 - `api-key-panel.tsx` — paste / issue / rotate
 
 Owned-device home after tap or claim is `DeviceHome` (`device/device-home.tsx`).
-`/device` wraps that in `DeviceWalletShell` (Privy + header).
+`HomeApp` and `DeviceWalletShell` wrap Privy themselves; `/collect` loads it only
+for missing receive-account setup. Do not put Privy on the root layout.
 The connected wallet is always passed as `owner` (not `recipient` / `expectedOwner`), except Collect's settle-to address which stays `recipient`.
 
 ## Modes
@@ -73,28 +73,18 @@ Pay settings (spending limits, token management) live on Home. The API key is st
 
 ### Collect (`/collect`)
 
-Destination flow — **no Privy / Connect**. The settle-to wallet **must** come from `?recipient=`:
+Destination flow. The settle-to wallet **must** come from `?recipient=`:
 
 - Enter an amount, then hold NFC. Must run in Safari/Chrome (not a wallet in-app browser).
-- If the wallet has no receive account for the selected token yet, Collect shows an error with a link to **`/setup`**.
+- If the wallet has no receive account for the selected token yet, Collect shows **Connect wallet** on the same page (same flow as device setup). After the matching wallet connects, create the receive account, then collect.
 - Missing or invalid `?recipient=` shows an error.
-- Top-level Collect uses the header mode dropdown to return to **Home**. Embeds stay sealed (static Collect label, no dropdown).
+- Top-level Collect does not show a Home/Collect dropdown (no session wallet). Embeds stay sealed (static Collect label, no dropdown).
 
 Activity lives on Home, not Collect.
 
-### Receive setup (`/setup?recipient=`)
-
-One-time ATA creation (Connect required):
-
-1. Connect the wallet that matches `?recipient=`
-2. Create the receive account
-3. **Open Collect** opens `/collect?recipient=…` in a new tab
-
-Embeds cannot use `/setup` (error screen).
-
 ### Device / claim (`/device?pk=&s=&c=&n=`)
 
-After an NFC tap. NFC verify has **no Privy**. Wallet connect loads only for `?token=` or `?owner=&asset=`. Wallet linking is a **successful end state**; Pay setup is **optional**.
+After an NFC tap. `/device` loads Privy for the header chip. Wallet linking is a **successful end state**; Pay setup is **optional**.
 
 1. Verify tap (silent)
 2. **Unclaimed / unlocked** — WebAuthn tap, then replace to `/device?token=` and connect (Google in this tab, or copy the finish link into a wallet in-app browser)
@@ -147,7 +137,7 @@ curl --max-time 150 "https://<host>/api/preauth/status?apiKey=ppk_…&grantId=�
 
 ### Payment link (`/collect?recipient=<solana-address>`)
 
-This is the only Collect entry point. Settles to the URL recipient. **No Sign in / wallet controls** in the header — sealed destination chip only. Optional `?amount=` prefills (and locks) the amount. Optional `?mint=` selects a Jupiter-verified classic SPL mint (defaults to USDC). Without a valid `?recipient=`, Collect shows an error.
+This is the only Collect entry point. Settles to the URL recipient. No wallet chip in the header (embeds show a sealed destination chip). Optional `?amount=` prefills (and locks) the amount. Optional `?mint=` selects a Jupiter-verified classic SPL mint (defaults to USDC). Without a valid `?recipient=`, Collect shows an error. If the recipient has no receive account yet, Collect offers **Connect wallet** on the same page.
 
 ### iframe embed
 

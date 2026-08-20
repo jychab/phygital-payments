@@ -107,7 +107,7 @@ const RULES: Rule[] = [
     body: "Tap Pay again to continue.",
   },
   {
-    test: /user rejected|rejected the request|transaction cancelled|signing was cancelled/i,
+    test: /user rejected|rejected the request|transaction cancelled|signing was cancelled|user closed|closed the flow|user_exited/i,
     title: "Cancelled",
     body: "Nothing was charged.",
   },

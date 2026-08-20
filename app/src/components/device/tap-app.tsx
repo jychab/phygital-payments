@@ -3,11 +3,7 @@
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useIsRestoring } from "@tanstack/react-query";
-import {
-  LoaderCircle,
-  Nfc,
-  ShieldAlert,
-} from "lucide-react";
+import { LoaderCircle, Nfc, ShieldAlert } from "lucide-react";
 
 import { ClaimPanel } from "@/components/device/claim-panel";
 import { DeviceHome } from "@/components/device/device-home";
@@ -19,6 +15,7 @@ import { useTapVerify } from "@/hooks/device/use-tap-verify";
 import { isUnclaimedAsset } from "@/lib/phygital/asset";
 import { tryParseAddress } from "@/lib/solana/address";
 import { toUserErrorMessage } from "@/lib/user-errors";
+import { AssetType } from "phygital-token-sdk";
 
 const DeviceWalletShell = dynamic(
   () =>
@@ -56,9 +53,7 @@ export function DeviceTapApp() {
   }
 
   if (owner && asset) {
-    return (
-      <DeviceWalletShell owner={String(owner)} asset={String(asset)} />
-    );
+    return <DeviceWalletShell owner={String(owner)} asset={String(asset)} />;
   }
 
   return (
@@ -69,7 +64,8 @@ export function DeviceTapApp() {
 }
 
 function DeviceTapNfcApp() {
-  const { pk, hasTapProof, verify, verifyPending, verifyError } = useTapVerify();
+  const { pk, hasTapProof, verify, verifyPending, verifyError } =
+    useTapVerify();
 
   if (!hasTapProof) {
     return (
@@ -137,16 +133,12 @@ function AssetFlow({ pk }: { pk: string | null }) {
   const asset = assetQuery.data;
 
   if (isUnclaimedAsset(asset) || !asset.isLocked) {
-    return (
-      <ClaimPanel
-        asset={asset}
-        unclaimed={isUnclaimedAsset(asset)}
-      />
-    );
+    return <ClaimPanel asset={asset} unclaimed={isUnclaimedAsset(asset)} />;
   }
 
   return (
     <DeviceHome
+      isPayAllowed={asset.assetType === AssetType.Lockable}
       owner={asset.currentOwner.toString()}
       asset={String(asset.address)}
     />

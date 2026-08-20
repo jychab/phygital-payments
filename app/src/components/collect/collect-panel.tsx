@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   AlertCircle,
   Check,
-  ExternalLink,
   LoaderCircle,
   Nfc,
   ShieldCheck,
@@ -24,7 +24,6 @@ import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
 import { uiAmountToRaw } from "@/lib/tokens/mint-delegate";
 import {
   collectHref,
-  receiveSetupHref,
   type PaymentRequest,
 } from "@/lib/collect/payment-request";
 import {
@@ -44,7 +43,32 @@ import {
 import { useMintProgram } from "@/hooks/tokens/use-mint-program";
 import { useRecipientAtaStatus } from "@/hooks/collect/use-recipient-ata-status";
 import { useCollectMutation } from "@/hooks/collect/use-collect-mutation";
-import { cn } from "@/lib/utils";
+
+function AtaSetupLoading() {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3">
+      <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+        <AlertCircle className="size-4" />
+      </div>
+      <div className="min-w-0 flex-1 space-y-2.5">
+        <p className="text-sm font-medium text-foreground">
+          Receive Account Needed
+        </p>
+        <div className="flex justify-center py-1">
+          <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const CollectAtaSetup = dynamic(
+  () =>
+    import("@/components/collect/collect-ata-setup").then(
+      (m) => m.CollectAtaSetup,
+    ),
+  { ssr: false, loading: AtaSetupLoading },
+);
 
 type Phase = "idle" | "awaiting-tap" | "confirming" | "success" | "failed";
 
@@ -66,12 +90,15 @@ function syncCollectUrl(args: {
 
 /**
  * Collect receive UI. Settle-to wallet is always the sealed URL `recipient`.
- * Merchant chooses mint; no Privy / wallet connect — missing ATA hands off to `/setup`.
+ * Merchant chooses mint. Missing ATA connects in place (device-setup flow).
  */
 export function CollectPanel({
   paymentRequest,
+  allowWalletSetup = false,
 }: {
   paymentRequest: PaymentRequest & { recipient: Address };
+  /** Non-embed Collect: Privy connect + create ATA in this panel. */
+  allowWalletSetup?: boolean;
 }) {
   const recipient = paymentRequest.recipient;
   const inApp = useIsInAppBrowser();
@@ -113,11 +140,6 @@ export function CollectPanel({
   const receive = useCollectMutation();
 
   const busy = phase !== "idle";
-  const setupUrl = receiveSetupHref({
-    recipient,
-    mint,
-    amount: paymentRequest.amount,
-  });
 
   useEffect(() => {
     syncCollectUrl({
@@ -151,7 +173,7 @@ export function CollectPanel({
     }
     if (!readyToReceive || !ataStatus || !mintQuery.data) {
       setFailTitle("Finish Setup");
-      setFailMessage("Set up a receive account before collecting.");
+      setFailMessage("Create a receive account before collecting.");
       return;
     }
     const paidAmount = amount;
@@ -389,59 +411,38 @@ export function CollectPanel({
         <CopyableAddress address={recipient} length={6} label="recipient" />
       </div>
 
-      {ataLoading || missingAta ? (
-        <div
-          className={cn(
-            "flex items-start gap-3 rounded-xl border px-4 py-3",
-            missingAta && !ataLoading
-              ? "border-destructive/30 bg-destructive/10"
-              : "border-border/60 bg-muted/25",
-          )}
-        >
-          <div
-            className={cn(
-              "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full",
-              missingAta && !ataLoading
-                ? "bg-destructive/15 text-destructive"
-                : "bg-muted text-muted-foreground",
-            )}
-          >
-            {ataLoading ? (
-              <LoaderCircle className="size-4 animate-spin" />
-            ) : (
-              <AlertCircle className="size-4" />
-            )}
+      {ataLoading ? (
+        <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/25 px-4 py-3">
+          <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <LoaderCircle className="size-4 animate-spin" />
+          </div>
+          <p className="text-sm font-medium text-foreground">Checking…</p>
+        </div>
+      ) : missingAta && allowWalletSetup ? (
+        <CollectAtaSetup
+          recipient={recipient}
+          mint={mintAddress}
+          token={token}
+        />
+      ) : missingAta ? (
+        <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3">
+          <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-destructive/15 text-destructive">
+            <AlertCircle className="size-4" />
           </div>
           <div className="min-w-0 flex-1 space-y-2">
             <p className="text-sm font-medium text-foreground">
-              {ataLoading ? "Checking…" : "Receive Account Needed"}
+              Receive Account Needed
             </p>
-            {missingAta && !ataLoading ? (
-              <>
-                <p className="text-xs text-muted-foreground">
-                  This wallet needs a one-time{" "}
-                  <TokenSymbol
-                    token={token}
-                    size="xs"
-                    className="mx-0.5"
-                    symbolClassName="font-medium text-foreground"
-                  />{" "}
-                  receive account. Set it up, then come back to collect.
-                </p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-8 gap-1.5"
-                  asChild
-                >
-                  <a href={setupUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="size-3.5" />
-                    Set up receive account
-                  </a>
-                </Button>
-              </>
-            ) : null}
+            <p className="text-xs text-muted-foreground">
+              Open this page in Safari or Chrome to create a{" "}
+              <TokenSymbol
+                token={token}
+                size="xs"
+                className="mx-0.5"
+                symbolClassName="font-medium text-foreground"
+              />{" "}
+              receive account, then come back to collect.
+            </p>
           </div>
         </div>
       ) : null}

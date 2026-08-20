@@ -17,7 +17,9 @@ import { collectHref } from "@/lib/collect/payment-request";
 export function DeviceHome({
   owner,
   asset,
+  isPayAllowed,
 }: {
+  isPayAllowed: boolean;
   owner: string;
   asset: string;
 }) {
@@ -32,7 +34,11 @@ export function DeviceHome({
           onExit={() => setShowPay(false)}
         />
       ) : (
-        <OwnedDeviceReady owner={owner} onPay={() => setShowPay(true)} />
+        <OwnedDeviceReady
+          isPayAllowed={isPayAllowed}
+          owner={owner}
+          onPay={() => setShowPay(true)}
+        />
       )}
     </WalletSyncGate>
   );
@@ -41,7 +47,9 @@ export function DeviceHome({
 function OwnedDeviceReady({
   owner,
   onPay,
+  isPayAllowed,
 }: {
+  isPayAllowed: boolean;
   owner: string;
   onPay: () => void;
 }) {
@@ -58,20 +66,22 @@ function OwnedDeviceReady({
 
       <WalletAddressRow address={owner} length={4} />
 
-      <div className="mt-auto flex flex-col gap-2.5">
-        <Button type="button" size="lg" className="w-full" asChild>
-          <Link href={collectUrl}>Collect</Link>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="lg"
-          className="w-full"
-          onClick={onPay}
-        >
-          Pay
-        </Button>
-      </div>
+      {isPayAllowed && (
+        <div className="mt-auto flex flex-col gap-2.5">
+          <Button type="button" size="lg" className="w-full" asChild>
+            <Link href={collectUrl}>Collect</Link>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="w-full"
+            onClick={onPay}
+          >
+            Pay
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

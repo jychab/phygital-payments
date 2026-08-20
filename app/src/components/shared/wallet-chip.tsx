@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Copy, KeyRound, LoaderCircle, LogOut } from "lucide-react";
+import { Banknote, ChevronDown, Copy, KeyRound, LoaderCircle, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { useExportWallet } from "@privy-io/react-auth/solana";
 
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useBuyUsdc } from "@/hooks/wallet/use-buy-usdc";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { cn, shortAddress } from "@/lib/utils";
@@ -45,7 +46,7 @@ function GoogleMark({ className }: { className?: string }) {
 }
 
 /**
- * Session wallet control for Privy routes (Home / setup / `/device`).
+ * Session wallet control for Privy routes (Home / `/device`).
  * Do not mount on `/collect`.
  */
 export function WalletChip({ className }: { className?: string }) {
@@ -61,6 +62,7 @@ export function WalletChip({ className }: { className?: string }) {
     disconnect,
   } = useSolanaAddress();
   const { exportWallet } = useExportWallet();
+  const { buyUsdc, pending: onrampPending } = useBuyUsdc(address);
 
   const display = isConnected && address ? address : null;
   const canConnect = ready && !display;
@@ -159,6 +161,19 @@ export function WalletChip({ className }: { className?: string }) {
         >
           <Copy className="size-3.5 opacity-70" />
           Copy address
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={onrampPending}
+          onSelect={() => {
+            void buyUsdc();
+          }}
+        >
+          {onrampPending ? (
+            <LoaderCircle className="size-3.5 animate-spin opacity-70" />
+          ) : (
+            <Banknote className="size-3.5 opacity-70" />
+          )}
+          Buy USDC
         </DropdownMenuItem>
         {canExportWallet ? (
           <DropdownMenuItem

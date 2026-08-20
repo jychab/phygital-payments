@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { History, LoaderCircle, Nfc, Wallet } from "lucide-react";
 
+import { PrivyWalletProvider } from "@/app/privy-wallet-provider";
 import { AppCard, AppShell, homeCollectModeNav } from "@/components/layout/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
@@ -18,8 +19,17 @@ type HomeTab = "pay" | "devices" | "history";
 /**
  * Route `/` — Pay, Devices, and Activity tabs (Privy).
  * NFC devices and first-time setup start by tapping a tag (opens `/device`).
+ * Loaded with `ssr: false` from `app/page.tsx` so Privy never runs on the server.
  */
 export function HomeApp() {
+  return (
+    <PrivyWalletProvider>
+      <HomeScreen />
+    </PrivyWalletProvider>
+  );
+}
+
+function HomeScreen() {
   const embedded = useIsEmbedded();
   const { address, isConnected, ready } = useSolanaAddress();
   const [tab, setTab] = useState<HomeTab>("pay");
@@ -38,7 +48,12 @@ export function HomeApp() {
   }
 
   return (
-    <AppShell modeLabel="Home" modeNav={homeCollectModeNav(address)}>
+    <AppShell
+      modeLabel="Home"
+      modeNav={
+        isConnected && address ? homeCollectModeNav(address) : null
+      }
+    >
       {!ready ? (
         <AppCard>
           <CenteredStatus>

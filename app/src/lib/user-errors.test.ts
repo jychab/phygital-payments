@@ -72,10 +72,10 @@ describe("toUserErrorMessage", () => {
     ).toBe("Payment Not Enabled");
   });
 
-  it("does not call insufficient funds a Pay-setup problem", () => {
+  it("maps a closed onramp sheet to Cancelled", () => {
     expect(
-      toUserErrorMessage(new Error("Error: insufficient funds")),
-    ).toBe("Not Enough Money");
+      toUserErrorMessage(new Error("The user closed the flow")),
+    ).toBe("Cancelled");
   });
 });
 

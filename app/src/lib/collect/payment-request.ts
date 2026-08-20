@@ -3,7 +3,7 @@ import { type Address } from "@solana/kit";
 import { tryParseAddress } from "@/lib/solana/address";
 import { getDefaultMint, isDefaultMint } from "@/lib/tokens/payment-token";
 
-/** `/collect` and `/setup` URL parse + builders (`?recipient=&mint=&amount=`). */
+/** `/collect` URL parse + builders (`?recipient=&mint=&amount=`). */
 
 export type PaymentRequest = {
   amount: string | null;
@@ -61,20 +61,11 @@ type PaymentLinkArgs = {
   amount?: string | null;
 };
 
-function paymentLinkHref(path: "/collect" | "/setup", args: PaymentLinkArgs): string {
+/** Build `/collect` URL (payment link). */
+export function collectHref(args: PaymentLinkArgs): string {
   const params = new URLSearchParams();
   params.set("recipient", args.recipient);
   if (args.mint && !isDefaultMint(args.mint)) params.set("mint", args.mint);
   if (args.amount) params.set("amount", args.amount);
-  return `${path}?${params.toString()}`;
-}
-
-/** Build `/setup` URL for one-time receive-account creation. */
-export function receiveSetupHref(args: PaymentLinkArgs): string {
-  return paymentLinkHref("/setup", args);
-}
-
-/** Build `/collect` URL (payment link / after setup). */
-export function collectHref(args: PaymentLinkArgs): string {
-  return paymentLinkHref("/collect", args);
+  return `/collect?${params.toString()}`;
 }
