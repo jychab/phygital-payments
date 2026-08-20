@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 import { AppCard, AppShell } from "@/components/layout/app-shell";
-import { CopyableAddress } from "@/components/shared/copyable-address";
+import { WalletAddressRow } from "@/components/shared/copyable-address";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
 import { TokenSymbol } from "@/components/shared/token-chip";
@@ -30,7 +30,7 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 import { shortAddress } from "@/lib/utils";
 import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
-import { useVerifiedTokens } from "@/hooks/tokens/use-verified-tokens";
+import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
 
 /**
  * Route `/setup` — one-time receive-account (ATA) creation. Connect required.
@@ -48,7 +48,7 @@ export function SetupCollectApp({
     isConnected,
     ready,
     connect,
-    matched: matches,
+    matched,
   } = useExpectedWallet(recipient ?? "");
   const signer = useWalletKitSigner();
   const verified = useVerifiedTokens();
@@ -95,7 +95,7 @@ export function SetupCollectApp({
   });
 
   async function onCreate() {
-    if (!recipient || !matches || !signer) return;
+    if (!recipient || !matched || !signer) return;
     try {
       await createAta.mutateAsync({ recipient });
     } catch (error) {
@@ -152,14 +152,7 @@ export function SetupCollectApp({
             }
             action={
               <div className="flex w-full max-w-64 flex-col items-center gap-3">
-                <div className="flex w-full items-center justify-between gap-2 rounded-xl bg-muted/35 px-4 py-2.5 text-xs">
-                  <span className="text-muted-foreground">Wallet</span>
-                  <CopyableAddress
-                    address={recipient}
-                    length={6}
-                    label="recipient"
-                  />
-                </div>
+                <WalletAddressRow address={recipient} length={6} label="recipient" />
                 <Button type="button" size="lg" className="w-full" onClick={connect}>
                   Connect wallet
                 </Button>
@@ -184,14 +177,7 @@ export function SetupCollectApp({
               </p>
             </div>
 
-            <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/35 px-4 py-2.5 text-xs">
-              <span className="text-muted-foreground">Wallet</span>
-              <CopyableAddress
-                address={recipient}
-                length={6}
-                label="recipient"
-              />
-            </div>
+            <WalletAddressRow address={recipient} length={6} label="recipient" />
 
             <Button
               type="button"

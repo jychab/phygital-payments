@@ -47,18 +47,18 @@ export function ConnectWalletNotice({
 
 /** Connect CTA when the expected wallet is not linked yet. */
 export function ExpectedWalletConnect({
-  expectedOwner,
+  owner,
   hint,
   label = "Connect wallet",
   disabled,
 }: {
-  expectedOwner: string;
+  owner: string;
   hint?: string;
   label?: string;
   disabled?: boolean;
 }) {
   const { ready, wrongWallet, matched, ownerShort, connect } =
-    useExpectedWallet(expectedOwner);
+    useExpectedWallet(owner);
 
   if (!ready) {
     return (

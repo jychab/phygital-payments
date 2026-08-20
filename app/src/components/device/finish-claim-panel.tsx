@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle, Wallet } from "lucide-react";
 
-import { DevicePayShell } from "@/components/device/device-pay-shell";
+import { DeviceHome } from "@/components/device/device-home";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
 import { ExpiryCountdown } from "@/components/shared/expiry-countdown";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
@@ -15,13 +15,13 @@ import { usePendingClaim } from "@/hooks/device/use-pending-claim";
 import { usePhygitalAssetByAddress } from "@/hooks/device/use-phygital-asset";
 import { assertClaimReady, finishClaim } from "@/lib/device/claim";
 import { toUserErrorMessage } from "@/lib/user-errors";
-import { queryKeys } from "@/lib/queries";
+import { invalidateOwnerQueries, queryKeys } from "@/lib/queries";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
 
 type Phase = "confirming" | "done" | null;
 
-/** `/device?token=` — confirm claim in the wallet, then optional Pay setup. */
+/** `/device?token=` — confirm claim in the wallet, then owned-device home. */
 export function FinishClaimPanel() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -67,15 +67,13 @@ export function FinishClaimPanel() {
         /* KV cleanup is best-effort after a confirmed transfer. */
       }
 
+      invalidateOwnerQueries(queryClient, address);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: queryKeys.asset.byAddress(pending.session.asset),
         }),
         queryClient.invalidateQueries({
           queryKey: queryKeys.asset.byIdentifier(asset.identifier),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.asset.byOwner(address),
         }),
         queryClient.invalidateQueries({
           queryKey: queryKeys.pendingClaim.byToken(token),
@@ -118,7 +116,7 @@ export function FinishClaimPanel() {
 
   if (phase === "done" && address && claimedAsset) {
     return (
-      <DevicePayShell owner={address} pinnedAsset={claimedAsset} />
+      <DeviceHome owner={address} asset={claimedAsset} />
     );
   }
 

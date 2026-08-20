@@ -20,7 +20,7 @@ import { TokenChip, TokenSymbol } from "@/components/shared/token-chip";
 import { TokenPickerSheet } from "@/components/shared/token-picker-sheet";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
-import { useVerifiedTokens } from "@/hooks/tokens/use-verified-tokens";
+import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
 import { uiAmountToRaw } from "@/lib/tokens/mint-delegate";
 import {
   collectHref,
@@ -70,11 +70,10 @@ function syncCollectUrl(args: {
  */
 export function CollectPanel({
   paymentRequest,
-  recipient,
 }: {
-  paymentRequest: PaymentRequest;
-  recipient: Address;
+  paymentRequest: PaymentRequest & { recipient: Address };
 }) {
+  const recipient = paymentRequest.recipient;
   const inApp = useIsInAppBrowser();
   const [amount, setAmount] = useState(paymentRequest.amount ?? "");
   const [mint, setMint] = useState(String(paymentRequest.mint));

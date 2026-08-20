@@ -7,7 +7,7 @@ import {
   writePendingClaim,
 } from "@/lib/device/pending-claim-store";
 import { toUserErrorMessage } from "@/lib/user-errors";
-import { deviceClaimHref } from "@/lib/device/finish";
+import { deviceClaimHref } from "@/lib/device/claim";
 import {
   parseCreatePendingClaimRequest,
   type CreatePendingClaimResponse,

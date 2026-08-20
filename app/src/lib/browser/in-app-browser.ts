@@ -33,18 +33,3 @@ export function isInAppBrowser(
   }
   return IAB_PATTERNS.some((re) => re.test(userAgent));
 }
-
-/** Best-effort “open in system browser” URL for iOS. */
-export function safariOpenHintUrl(
-  href: string = typeof window !== "undefined" ? window.location.href : "",
-): string {
-  try {
-    const url = new URL(href);
-    if (url.protocol === "https:") {
-      return `x-safari-https://${url.host}${url.pathname}${url.search}${url.hash}`;
-    }
-  } catch {
-    /* ignore */
-  }
-  return href;
-}

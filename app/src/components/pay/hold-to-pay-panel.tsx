@@ -9,8 +9,9 @@ import { BackLink } from "@/components/shared/back-link";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenSymbol } from "@/components/shared/token-chip";
+import { formatCountdown } from "@/components/shared/expiry-countdown";
 import { Button } from "@/components/ui/button";
-import { useVerifiedTokens } from "@/hooks/tokens/use-verified-tokens";
+import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
 import {
   cancelPreauthForWallet,
   requestPreauthForWallet,
@@ -31,13 +32,6 @@ type Phase =
   | "replaced"
   | "success";
 
-function formatCountdown(seconds: number): string {
-  const s = Math.max(0, seconds);
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}:${r.toString().padStart(2, "0")}`;
-}
-
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException
     ? error.name === "AbortError"
@@ -45,11 +39,11 @@ function isAbortError(error: unknown): boolean {
 }
 
 /**
- * Pay → Hold to Pay. Opens a spending window, then waits on `/api/preauth/status`
- * for cancelled, replaced, expired, or webhook success. Mint and amount are chosen by
- * Collect and capped on-chain by the token's spending limit.
+ * Hold to Pay: open a spending window, then wait on `/api/preauth/status`
+ * for cancelled, replaced, expired, or webhook success. Mint and amount are
+ * chosen by Collect and capped on-chain by the token's spending limit.
  */
-export function PayFlowPanel({
+export function HoldToPayPanel({
   owner,
   onManage,
   onBack,

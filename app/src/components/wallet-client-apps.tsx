@@ -10,11 +10,12 @@ const loading = () => <EmbedBoot />;
  * Privy wallet apps. `ssr: false` so `@privy-io/react-auth` never runs in SSR
  * or the OpenNext worker. Public routes import their `*-app` files directly.
  *
- *   `/`              home/home-app          HomeApp          (this file)
- *   `/setup`         collect/setup-app      SetupCollectApp  (this file)
+ *   `/`              home/home-app          HomeApp
+ *   `/setup`         collect/setup-collect-app  SetupCollectApp
  *   `/collect`       collect/collect-app    CollectApp       (page import)
- *   `/device`        device/tap-app         DeviceTapApp     (page import; Privy only for `?token=` / `?owner=`)
+ *   `/device`        device/tap-app         DeviceTapApp     (page import)
  *
+ * Shared Pay UI (Home tab + owned device) is `pay/pay-screen` (`PayScreen`).
  * `lib/` and `hooks/` use the same folder names (pay, collect, device, home).
  */
 export const HomeApp = dynamic(
@@ -24,6 +25,8 @@ export const HomeApp = dynamic(
 
 export const SetupCollectApp = dynamic(
   () =>
-    import("@/components/collect/setup-app").then((m) => m.SetupCollectApp),
+    import("@/components/collect/setup-collect-app").then(
+      (m) => m.SetupCollectApp,
+    ),
   { ssr: false, loading },
 );

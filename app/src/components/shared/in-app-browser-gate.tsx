@@ -1,11 +1,10 @@
 "use client";
 
 import { toast } from "sonner";
-import { ExternalLink, Smartphone } from "lucide-react";
+import { Smartphone } from "lucide-react";
 
 import { GateMessage } from "@/components/layout/gate-message";
 import { Button } from "@/components/ui/button";
-import { safariOpenHintUrl } from "@/lib/browser/in-app-browser";
 
 /** Block WebAuthn NFC steps inside wallet / social in-app browsers. */
 export function InAppBrowserGate({

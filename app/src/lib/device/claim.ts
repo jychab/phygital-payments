@@ -10,6 +10,11 @@ import type { PhygitalAsset } from "@/lib/phygital/asset";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { sendTransaction } from "@/lib/solana/tx";
 
+/** `/device?token=` — pending claim (same-tab or wallet in-app browser). */
+export function deviceClaimHref(token: string): string {
+  return `/device?token=${encodeURIComponent(token)}`;
+}
+
 /** Pre-NFC checks from cached asset view — run before showing NFC hold UI. */
 export function assertCaptureReady(
   asset: Pick<PhygitalAsset, "isLocked">,

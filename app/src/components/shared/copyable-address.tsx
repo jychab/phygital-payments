@@ -5,6 +5,23 @@ import { Check, Copy } from "lucide-react";
 
 import { cn, shortAddress } from "@/lib/utils";
 
+export function WalletAddressRow({
+  address,
+  length = 4,
+  label = "wallet",
+}: {
+  address: string;
+  length?: number;
+  label?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-muted/25 px-4 py-3 text-xs">
+      <span className="text-muted-foreground">Wallet</span>
+      <CopyableAddress address={address} length={length} label={label} />
+    </div>
+  );
+}
+
 /**
  * A truncated address the user can tap to copy in full. Verifiability is a core
  * trust signal — you can confirm exactly who you're paying — so this is reused

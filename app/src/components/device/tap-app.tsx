@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 import { ClaimPanel } from "@/components/device/claim-panel";
-import { DeviceSetupStatus } from "@/components/device/setup-status";
+import { DeviceHome } from "@/components/device/device-home";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
@@ -20,10 +20,10 @@ import { isUnclaimedAsset } from "@/lib/phygital/asset";
 import { tryParseAddress } from "@/lib/solana/address";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
-const DeviceWalletPhase = dynamic(
+const DeviceWalletShell = dynamic(
   () =>
-    import("@/components/device/device-wallet-phase").then(
-      (m) => m.DeviceWalletPhase,
+    import("@/components/device/device-wallet-shell").then(
+      (m) => m.DeviceWalletShell,
     ),
   { ssr: false, loading: () => <EmbedBoot /> },
 );
@@ -52,19 +52,19 @@ export function DeviceTapApp() {
   }
 
   if (token) {
-    return <DeviceWalletPhase token={token} />;
+    return <DeviceWalletShell token={token} />;
   }
 
   if (owner && asset) {
     return (
-      <DeviceWalletPhase owner={String(owner)} asset={String(asset)} />
+      <DeviceWalletShell owner={String(owner)} asset={String(asset)} />
     );
   }
 
   return (
-    <DeviceWalletPhase>
+    <DeviceWalletShell>
       <DeviceTapNfcApp />
-    </DeviceWalletPhase>
+    </DeviceWalletShell>
   );
 }
 
@@ -145,5 +145,10 @@ function AssetFlow({ pk }: { pk: string | null }) {
     );
   }
 
-  return <DeviceSetupStatus asset={asset} />;
+  return (
+    <DeviceHome
+      owner={asset.currentOwner.toString()}
+      asset={String(asset.address)}
+    />
+  );
 }

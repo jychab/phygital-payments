@@ -1,17 +1,17 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { address } from "@solana/kit";
 
 import { usePhygitalAssetsByOwner } from "@/hooks/home/use-phygital-assets-by-owner";
+import { useTokenHoldings } from "@/hooks/tokens/use-payment-tokens";
 import {
   fetchOwnerPayDelegates,
   ownerQueryOptions,
   queryKeys,
   type OwnerPayDelegates,
 } from "@/lib/queries";
-import { usePayTokenContext } from "@/hooks/tokens/use-verified-tokens";
 import { mintsFromHoldings } from "@/lib/tokens/payment-token";
 
 function seedDelegateStatus(
@@ -39,16 +39,15 @@ export function useOwnerPayDelegates(
 ) {
   const live = options?.live !== false;
   const queryClient = useQueryClient();
-  const payContext = usePayTokenContext(owner, { live });
+  const holdings = useTokenHoldings(owner, { live });
   const assetsQuery = usePhygitalAssetsByOwner(owner);
-  const holdingsReady = payContext.isSuccess || payContext.isError;
   const mints = useMemo(
-    () => mintsFromHoldings(payContext.data?.holdings),
-    [payContext.data],
+    () => mintsFromHoldings(holdings.data),
+    [holdings.data],
   );
   const mintsKey = mints.join(",");
   const assets = assetsQuery.data ?? [];
-  const assetsKey = assets.map((item) => String(item.asset)).join(",");
+  const assetsKey = assets.map((item) => String(item.address)).join(",");
 
   const query = useQuery<OwnerPayDelegates, Error>({
     queryKey: [
@@ -65,7 +64,8 @@ export function useOwnerPayDelegates(
       seedDelegateStatus(queryClient, owner!, result);
       return result;
     },
-    enabled: Boolean(owner) && holdingsReady && assetsQuery.isSuccess,
+    enabled: Boolean(owner) && assetsQuery.isSuccess,
+    placeholderData: keepPreviousData,
     ...ownerQueryOptions(live),
   });
 
@@ -73,14 +73,11 @@ export function useOwnerPayDelegates(
     ...query,
     isPending:
       Boolean(owner) &&
-      (payContext.isLoading ||
-        assetsQuery.isPending ||
-        (assetsQuery.isSuccess && query.isPending)),
+      (assetsQuery.isPending || (assetsQuery.isSuccess && query.isPending)),
     isLoading:
-      payContext.isLoading ||
       assetsQuery.isLoading ||
       (assetsQuery.isSuccess && query.isLoading),
-    isError: payContext.isError || assetsQuery.isError || query.isError,
-    error: payContext.error ?? assetsQuery.error ?? query.error,
+    isError: holdings.isError || assetsQuery.isError || query.isError,
+    error: holdings.error ?? assetsQuery.error ?? query.error,
   };
 }

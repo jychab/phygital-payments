@@ -4,14 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 
 import {
   fetchHoldings,
-  fetchPayContext,
   fetchVerifiedTokens,
   ownerQueryOptions,
   queryKeys,
   queryOptions,
   type PaymentToken,
   type PaymentTokenHolding,
-  type PayTokenContext,
 } from "@/lib/queries";
 
 export function useVerifiedTokens() {
@@ -35,16 +33,22 @@ export function useTokenHoldings(
   });
 }
 
-/** Catalog + holdings in one request (Pay manage screens). */
+/** Catalog (stable) + holdings (live-polled). */
 export function usePayTokenContext(
   owner: string | null,
   options?: { live?: boolean },
 ) {
-  const live = options?.live !== false;
-  return useQuery<PayTokenContext>({
-    queryKey: queryKeys.payContext.byOwner(owner),
-    queryFn: () => fetchPayContext(owner!),
-    enabled: Boolean(owner),
-    ...ownerQueryOptions(live),
-  });
+  const catalog = useVerifiedTokens();
+  const holdings = useTokenHoldings(owner, options);
+  return {
+    data:
+      holdings.data != null
+        ? { tokens: catalog.data ?? [], holdings: holdings.data }
+        : undefined,
+    isLoading: catalog.isLoading || holdings.isLoading,
+    isPending: catalog.isPending || holdings.isPending,
+    isError: catalog.isError || holdings.isError,
+    error: catalog.error ?? holdings.error,
+    isSuccess: holdings.isSuccess,
+  };
 }

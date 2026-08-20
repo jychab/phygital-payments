@@ -35,6 +35,30 @@ Read **string vars/secrets** from `process.env`. Use `getCloudflareContext().env
 
 Configure the Privy app for Solana external wallet connectors. Login method: wallet connect only.
 
+## Code map
+
+Routes live in `src/app`. Each has a top-level `*App` component. Domain code
+(`components/`, `hooks/`, `lib/`) uses the same folder names.
+
+| Route | Component | Folder |
+|-------|-----------|--------|
+| `/` | `HomeApp` | `home/` |
+| `/collect` | `CollectApp` | `collect/` |
+| `/setup` | `SetupCollectApp` (`setup-collect-app.tsx`) | `collect/` |
+| `/device` | `DeviceTapApp` | `device/` |
+
+Shared Pay UI (Home tab and owned device) is `PayScreen` in `components/pay/`:
+
+- `pay-screen.tsx` — orchestrator (API key → spending limit → Hold to Pay)
+- `hold-to-pay-panel.tsx` — open a spending window
+- `spending-limit-panel.tsx` — per-device token allowance
+- `manage-pay-panel.tsx` — tokens + API key
+- `api-key-panel.tsx` — paste / issue / rotate
+
+Owned-device home after tap or claim is `DeviceHome` (`device/device-home.tsx`).
+`/device` wraps that in `DeviceWalletShell` (Privy + header).
+The connected wallet is always passed as `owner` (not `recipient` / `expectedOwner`), except Collect's settle-to address which stays `recipient`.
+
 ## Modes
 
 ### Home (`/`)

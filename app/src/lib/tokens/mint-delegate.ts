@@ -281,10 +281,10 @@ export async function fetchOwnerPayDelegates(
     Promise.all(
       owned.map(async (item) => {
         const pda = await findProgramAuthorityPda(
-          item.asset,
+          item.address,
           PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
         );
-        return [String(pda), item.asset] as const;
+        return [String(pda), item.address] as const;
       }),
     ),
     fetchAllMaybeToken(rpc, atas),

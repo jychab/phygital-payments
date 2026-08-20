@@ -4,12 +4,6 @@ import { tryParseAddress } from "@/lib/solana/address";
 import { getDefaultMint, isDefaultMint } from "@/lib/tokens/payment-token";
 
 /** `/collect` and `/setup` URL parse + builders (`?recipient=&mint=&amount=`). */
-export type PaymentRequestParams = {
-  amount?: string;
-  recipient?: string;
-  /** Defaults to USDC. */
-  mint?: string;
-};
 
 export type PaymentRequest = {
   amount: string | null;
@@ -18,8 +12,6 @@ export type PaymentRequest = {
   recipient: Address | null;
   /** True when `?recipient=` was present (even if invalid). */
   hasRecipientParam: boolean;
-  /** True when any payment-request param was present in the URL. */
-  fromUrl: boolean;
 };
 
 function firstValue(
@@ -43,7 +35,7 @@ function normalizeAmount(
 
 /** Parse `?amount=&recipient=&mint=` into a receive-flow payment request. */
 export function parsePaymentRequest(
-  searchParams: Record<string, string | string[] | undefined> | PaymentRequestParams,
+  searchParams: Record<string, string | string[] | undefined>,
 ): PaymentRequest {
   const amountRaw = firstValue(searchParams.amount as string | string[] | undefined);
   const recipientRaw = firstValue(
@@ -51,9 +43,6 @@ export function parsePaymentRequest(
   );
   const mintRaw = firstValue(searchParams.mint as string | string[] | undefined);
 
-  const fromUrl = Boolean(
-    amountRaw?.trim() || recipientRaw?.trim() || mintRaw?.trim(),
-  );
   const hasRecipientParam = Boolean(recipientRaw?.trim());
   const usdc = getDefaultMint();
   const mint = tryParseAddress(mintRaw) ?? usdc;
@@ -63,7 +52,6 @@ export function parsePaymentRequest(
     mint,
     recipient: tryParseAddress(recipientRaw),
     hasRecipientParam,
-    fromUrl,
   };
 }
 

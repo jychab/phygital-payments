@@ -11,7 +11,7 @@ import {
 import { TokenSymbol } from "@/components/shared/token-chip";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
-import { useVerifiedTokens } from "@/hooks/tokens/use-verified-tokens";
+import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
 import { explorerTxUrl } from "@/lib/solana/cluster";
 import { formatTokenAmount } from "@/lib/tokens/mint-delegate";
 import { resolvePaymentToken, type PaymentToken } from "@/lib/tokens/payment-token";
@@ -64,20 +64,20 @@ function formatPaymentAmountUi(
 }
 
 /** Home → Activity: payments this wallet sent or received. */
-export function HistoryPanel({ recipient }: { recipient: string }) {
+export function HistoryPanel({ owner }: { owner: string }) {
   const isRestoring = useIsRestoring();
-  const query = usePaymentHistory(recipient);
+  const query = usePaymentHistory(owner);
   const verified = useVerifiedTokens();
 
   const loading = isRestoring || query.isLoading;
   const error = query.error as Error | null;
-  const rows = query.data ? toRows(query.data, recipient) : [];
+  const rows = query.data ? toRows(query.data, owner) : [];
 
   return (
     <div className="flex flex-1 flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-foreground">Activity</p>
-        <QueryRefreshButton owner={recipient} />
+        <QueryRefreshButton owner={owner} />
       </div>
 
       {loading ? (

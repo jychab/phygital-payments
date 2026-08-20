@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { address, type Address } from "@solana/kit";
 
-import { queryKeys, type MintDelegateStatus, type OwnerPayDelegates } from "@/lib/queries";
+import { invalidateOwnerQueries, queryKeys, type MintDelegateStatus, type OwnerPayDelegates } from "@/lib/queries";
 import {
   buildDelegateInstructions,
   buildRevokeDelegateInstructions,
@@ -62,18 +62,9 @@ async function applyDelegateAfterSend(args: {
     }
     throw error;
   }
-  void args.queryClient.invalidateQueries({
-    queryKey: queryKeys.holdings.byOwner(args.owner),
-  });
-  void args.queryClient.invalidateQueries({
-    queryKey: queryKeys.payContext.byOwner(args.owner),
-  });
-  void args.queryClient.invalidateQueries({
-    queryKey: queryKeys.delegateStatus.byOwner(args.owner),
-  });
-  void args.queryClient.invalidateQueries({
-    queryKey: queryKeys.ownerPayDelegates.byOwner(args.owner),
-  });
+  if (args.owner) {
+    invalidateOwnerQueries(args.queryClient, args.owner);
+  }
 }
 
 /**

@@ -3,7 +3,7 @@
 import { RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useOwnerQueryRefresh } from "@/hooks/use-owner-query-refresh";
+import { useOwnerQueryRefresh } from "@/hooks/wallet/use-owner-query-refresh";
 import { cn } from "@/lib/utils";
 
 /** Icon control to refetch owner-scoped queries while they are still stale. */

@@ -129,7 +129,7 @@ function buildVerifiedHoldings(
 
 /**
  * Wallet fungible holdings ∩ Jupiter verified (classic SPL).
- * Pass `verifiedCatalog` when the caller already loaded the catalog (e.g. pay-context).
+ * Pass `verifiedCatalog` when the caller already loaded the catalog.
  */
 export async function fetchVerifiedHoldings(
   owner: string,
@@ -151,26 +151,4 @@ export async function fetchVerifiedHoldings(
   }
 
   return buildVerifiedHoldings(verified, assetsResult.assets);
-}
-
-/** Catalog + holdings with Jupiter and DAS fetched in parallel. */
-export async function fetchPayTokenContext(
-  owner: string,
-): Promise<{ tokens: PaymentToken[]; holdings: PaymentTokenHolding[] }> {
-  const [tokens, assetsResult] = await Promise.all([
-    fetchVerifiedTokens(),
-    fetchAssetsByOwner(owner).then(
-      (assets) => ({ ok: true as const, assets }),
-      (error: unknown) => {
-        console.error("getAssetsByOwner failed", error);
-        return { ok: false as const, assets: [] as DasAsset[] };
-      },
-    ),
-  ]);
-
-  const holdings = assetsResult.ok
-    ? buildVerifiedHoldings(tokens, assetsResult.assets)
-    : [zeroUsdcHolding()];
-
-  return { tokens, holdings };
 }

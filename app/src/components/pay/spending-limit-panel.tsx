@@ -1,38 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { useIsRestoring } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, Coins, LoaderCircle, Nfc } from "lucide-react";
-import { address, type Address } from "@solana/kit";
+import { Check, Coins, LoaderCircle } from "lucide-react";
+import { address } from "@solana/kit";
 
 import { AmountField } from "@/components/shared/amount-field";
 import { BackLink } from "@/components/shared/back-link";
-import {
-  ConnectWalletNotice,
-} from "@/components/shared/expected-wallet-prompt";
+import { ConnectWalletNotice } from "@/components/shared/wallet-notices";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
-import { TokenListRow, TokenSymbol } from "@/components/shared/token-chip";
+import { TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import { GateMessage } from "@/components/layout/gate-message";
-import {
-  useDelegateStatus,
-} from "@/hooks/pay/use-delegate-status";
+import { useDelegateStatus } from "@/hooks/pay/use-delegate-status";
 import { useMintProgram } from "@/hooks/tokens/use-mint-program";
 import {
   useSetDelegateMutation,
   useRevokeDelegateMutation,
 } from "@/hooks/pay/use-delegate-mutations";
+import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
 import {
-  usePayTokenContext,
-  useTokenHoldings,
-  useVerifiedTokens,
-} from "@/hooks/tokens/use-verified-tokens";
-import { isDelegateEnabled, isOwnerPayMintEnabled, uiAmountToRaw, type OwnerPayMintMatch } from "@/lib/tokens/mint-delegate";
-import type { PhygitalAsset } from "@/lib/phygital/asset";
-import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
+  isDelegateEnabled,
+  uiAmountToRaw,
+  type OwnerPayMintMatch,
+} from "@/lib/tokens/mint-delegate";
 import {
-  isDefaultMint,
   resolvePaymentToken,
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
@@ -49,60 +41,59 @@ function tryUiAmountToRaw(amount: string, decimals: number): bigint | null {
 }
 
 /**
- * Pick a spending limit for a mint (this device's program-authority delegate).
+ * Set or update the spending limit for one mint on one NFC device
+ * (program-authority SPL delegate).
  */
-export function LimitPanel({
-  expectedOwner,
+export function SpendingLimitPanel({
+  owner,
   asset,
-  mint: mintProp,
+  mint,
+  holding: holdingProp,
   walletMatch,
+  live = true,
   onEnabled,
   onBack,
   onSkip,
 }: {
-  expectedOwner: string;
-  asset: Address | string;
-  mint: Address | string;
+  owner: string;
+  asset: string;
+  mint: string;
+  holding?: PaymentTokenHolding;
   /** Home Pay already scanned this mint — skip a second delegateStatus RPC. */
   walletMatch?: OwnerPayMintMatch;
+  live?: boolean;
   onEnabled?: () => void;
   onBack?: () => void;
   onSkip?: () => void;
 }) {
   const { address: walletAddress, isConnected, matched, ownerShort } =
-    useExpectedWallet(expectedOwner);
-  const mint = String(mintProp);
+    useExpectedWallet(owner);
   const mintAddress = address(mint);
-  const assetStr = String(asset);
   const [amount, setAmount] = useState("50");
 
   const seeded =
     walletMatch?.status &&
     walletMatch.asset &&
-    String(walletMatch.asset) === assetStr
+    String(walletMatch.asset) === asset
       ? walletMatch.status
       : undefined;
-  const statusQuery = useDelegateStatus(
-    seeded ? null : expectedOwner,
-    seeded ? null : assetStr,
-    mintAddress,
-  );
+  const statusQuery = useDelegateStatus(owner, asset, mintAddress, {
+    live,
+    enabled: !seeded,
+  });
   const mintQuery = useMintProgram(mintAddress);
-  const holdings = useTokenHoldings(expectedOwner);
   const verified = useVerifiedTokens();
   const status = seeded ?? statusQuery.data;
 
-  const holding = holdings.data?.find(
-    (h: PaymentTokenHolding) => h.mint === mint,
-  );
+  const holding = holdingProp;
   const token = holding ?? resolvePaymentToken(mint, verified.data);
   const setAllowance = useSetDelegateMutation(
-    walletAddress === expectedOwner ? walletAddress : null,
-    { mint: mintAddress, asset: assetStr },
+    walletAddress === owner ? walletAddress : null,
+    { mint: mintAddress, asset },
   );
   const revoke = useRevokeDelegateMutation(
-    walletAddress === expectedOwner ? walletAddress : null,
-    { mint: mintAddress, asset: assetStr },
+    walletAddress === owner ? walletAddress : null,
+    { mint: mintAddress, asset },
   );
 
   const hasDelegate = isDelegateEnabled(status);
@@ -119,7 +110,7 @@ export function LimitPanel({
   const limitRaw = tryUiAmountToRaw(amount, decimals);
 
   async function runEnable() {
-    if (!walletAddress || walletAddress !== expectedOwner) return;
+    if (!walletAddress || walletAddress !== owner) return;
     if (!mintQuery.data) {
       toast.error("Still loading. Try again in a moment.");
       return;
@@ -147,7 +138,7 @@ export function LimitPanel({
   }
 
   async function runRemove() {
-    if (!walletAddress || walletAddress !== expectedOwner) return;
+    if (!walletAddress || walletAddress !== owner) return;
     try {
       await revoke.mutateAsync();
       toast.success("Spending limit removed");
@@ -171,7 +162,7 @@ export function LimitPanel({
       <div className="flex flex-1 flex-col gap-6">
         <div className="flex items-center gap-2">
           {onBack ? <BackLink onClick={onBack} /> : null}
-          <QueryRefreshButton owner={expectedOwner} className="ml-auto" />
+          <QueryRefreshButton owner={owner} className="ml-auto" />
         </div>
         <GateMessage
           icon={<Coins className="size-5 text-muted-foreground" />}
@@ -209,7 +200,7 @@ export function LimitPanel({
     <div className="flex flex-1 flex-col gap-6">
       <div className="flex items-center gap-2">
         {onBack ? <BackLink onClick={onBack} /> : null}
-        <QueryRefreshButton owner={expectedOwner} className="ml-auto" />
+        <QueryRefreshButton owner={owner} className="ml-auto" />
       </div>
 
       <div className="space-y-1.5 text-center">
@@ -241,7 +232,7 @@ export function LimitPanel({
       />
 
       <p className="flex items-center justify-center gap-1.5 text-center text-[11px] tabular-nums text-muted-foreground">
-        From {shortAddress(expectedOwner, 4)}
+        From {shortAddress(owner, 4)}
         {status ? (
           <>
             <span>·</span>
@@ -250,9 +241,7 @@ export function LimitPanel({
           </>
         ) : null}
       </p>
-      {!isConnected ? (
-        <ConnectWalletNotice ownerShort={ownerShort} />
-      ) : null}
+      {!isConnected ? <ConnectWalletNotice ownerShort={ownerShort} /> : null}
 
       <div className="mt-auto flex flex-col gap-2.5">
         <Button
@@ -300,154 +289,6 @@ export function LimitPanel({
           </Button>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-/** Compact list of holdings for enabling additional Pay instruments. */
-export function ManagePayTokens({
-  owner,
-  onEditLimit,
-  live = true,
-}: {
-  owner: string;
-  onEditLimit: (holding: PaymentTokenHolding) => void;
-  live?: boolean;
-}) {
-  const isRestoring = useIsRestoring();
-  const payContext = usePayTokenContext(owner, { live });
-  const delegates = useOwnerPayDelegates(owner, { live });
-
-  if (isRestoring || payContext.isLoading || delegates.isLoading) {
-    return (
-      <div className="flex justify-center py-6 text-muted-foreground">
-        <LoaderCircle className="size-4 animate-spin" />
-      </div>
-    );
-  }
-
-  const list = payContext.data?.holdings ?? [];
-  if (list.length === 0) {
-    return (
-      <p className="px-2 py-4 text-center text-xs text-muted-foreground">
-        No verified tokens in this wallet.
-      </p>
-    );
-  }
-
-  const assetsByAddress = new Map(
-    (delegates.data?.assets ?? []).map((a) => [String(a.asset), a]),
-  );
-
-  return (
-    <ul className="flex flex-col gap-0.5">
-      {list.map((h: PaymentTokenHolding) => {
-        const match = delegates.data?.byMint.get(h.mint);
-        const asset = match?.asset;
-        return (
-          <ManagePayTokenRow
-            key={h.mint}
-            holding={h}
-            match={match}
-            device={asset ? assetsByAddress.get(String(asset)) : undefined}
-            onEditLimit={onEditLimit}
-          />
-        );
-      })}
-    </ul>
-  );
-}
-
-function ManagePayTokenRow({
-  holding,
-  match,
-  device,
-  onEditLimit,
-}: {
-  holding: PaymentTokenHolding;
-  match: OwnerPayMintMatch | undefined;
-  device: PhygitalAsset | undefined;
-  onEditLimit: (holding: PaymentTokenHolding) => void;
-}) {
-  const enabled = isOwnerPayMintEnabled(match);
-  const usdc = isDefaultMint(holding.mint);
-  const deviceLabel = device
-    ? shortAddress(device.secp256r1PublicKey, 4)
-    : null;
-  const limitLabel = usdc
-    ? `Limit $${match?.status?.delegatedAmountUi ?? "—"}`
-    : `Limit ${match?.status?.delegatedAmountUi ?? "—"}`;
-  const subtitle = enabled
-    ? deviceLabel
-      ? `${limitLabel} · ${deviceLabel} · ${holding.balanceUi} available`
-      : `${limitLabel} · ${holding.balanceUi} available`
-    : `Off · ${holding.balanceUi} available`;
-
-  return (
-    <li>
-      <TokenListRow
-        token={holding}
-        subtitle={subtitle}
-        onSelect={() => onEditLimit(holding)}
-        trailing={
-          <span className="text-[11px] font-medium text-primary">
-            {enabled ? "Edit" : "Turn On"}
-          </span>
-        }
-      />
-    </li>
-  );
-}
-
-/** Choose which NFC device a new mint spending limit applies to. */
-export function PayDevicePicker({
-  assets,
-  onSelect,
-  onBack,
-}: {
-  assets: readonly PhygitalAsset[];
-  onSelect: (asset: string) => void;
-  onBack?: () => void;
-}) {
-  return (
-    <div className="flex flex-1 flex-col gap-6">
-      {onBack ? (
-        <div className="flex items-center gap-2">
-          <BackLink onClick={onBack} />
-        </div>
-      ) : null}
-      <div className="space-y-1.5 text-center">
-        <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
-          Choose a Device
-        </h1>
-        <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          This spending limit applies to one NFC device. Only that device can
-          pay with this token.
-        </p>
-      </div>
-      <ul className="flex flex-col gap-1">
-        {assets.map((asset) => (
-          <li key={asset.asset}>
-            <button
-              type="button"
-              onClick={() => onSelect(String(asset.asset))}
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
-            >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-card/60">
-                <Nfc className="size-4 text-muted-foreground" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-foreground">
-                  {shortAddress(asset.secp256r1PublicKey, 6)}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {asset.isLocked ? "Locked" : "Unlocked"}
-                </span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

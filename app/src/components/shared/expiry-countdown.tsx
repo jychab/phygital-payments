@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from "react";
 
+export function formatCountdown(seconds: number): string {
+  const s = Math.max(0, seconds);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, "0")}`;
+}
+
 function formatRemaining(ms: number): string {
-  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  return formatCountdown(Math.ceil(ms / 1000));
 }
 
 /** Countdown to an absolute expiry timestamp. */

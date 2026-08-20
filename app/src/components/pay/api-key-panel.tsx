@@ -12,7 +12,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 
 import { BackLink } from "@/components/shared/back-link";
-import { ExpectedWalletConnect } from "@/components/shared/expected-wallet-prompt";
+import { ExpectedWalletConnect } from "@/components/shared/wallet-notices";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useProvisionApiKey } from "@/hooks/pay/use-provision-api-key";
@@ -24,24 +24,24 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 
 /** Paste, reveal/copy, or wallet-sign issue/rotate — same panel on every route. */
 export function ApiKeyPanel({
-  expectedOwner,
+  owner,
   onStored,
   onBack,
   replace = false,
   onSkip,
 }: {
-  expectedOwner: string;
+  owner: string;
   onStored?: () => void;
   onBack?: () => void;
   replace?: boolean;
   onSkip?: () => void;
 }) {
   const queryClient = useQueryClient();
-  const { matched, ownerShort } = useExpectedWallet(expectedOwner);
+  const { matched, ownerShort } = useExpectedWallet(owner);
   const { provisionKey } = useProvisionApiKey();
   const [pasteValue, setPasteValue] = useState("");
   const [storedKey, setStoredKey] = useState(
-    () => readApiKey(expectedOwner) ?? "",
+    () => readApiKey(owner) ?? "",
   );
   const [visible, setVisible] = useState(false);
   const [pasteBusy, setPasteBusy] = useState(false);
@@ -52,7 +52,7 @@ export function ApiKeyPanel({
   const rotate = replace || hasStoredKey;
 
   function refreshStoredKey() {
-    setStoredKey(readApiKey(expectedOwner) ?? "");
+    setStoredKey(readApiKey(owner) ?? "");
     setVisible(false);
   }
 
@@ -64,8 +64,8 @@ export function ApiKeyPanel({
     }
     try {
       setPasteBusy(true);
-      await verifyAndStoreApiKey(expectedOwner, trimmed);
-      markApiKeyVerified(queryClient, expectedOwner);
+      await verifyAndStoreApiKey(owner, trimmed);
+      markApiKeyVerified(queryClient, owner);
       refreshStoredKey();
       setPasteValue("");
       toast.success(
@@ -98,8 +98,8 @@ export function ApiKeyPanel({
     if (!matched) return;
     try {
       setProvisionBusy(true);
-      await provisionKey(expectedOwner, { rotate });
-      markApiKeyVerified(queryClient, expectedOwner);
+      await provisionKey(owner, { rotate });
+      markApiKeyVerified(queryClient, owner);
       refreshStoredKey();
       toast.success(rotate ? "API key updated" : "API key saved on this phone");
       onStored?.();
@@ -198,7 +198,7 @@ export function ApiKeyPanel({
         </div>
 
         <ProvisionAction
-          expectedOwner={expectedOwner}
+          owner={owner}
           matched={matched}
           ownerShort={ownerShort}
           rotate={rotate}
@@ -225,7 +225,7 @@ export function ApiKeyPanel({
 }
 
 function ProvisionAction({
-  expectedOwner,
+  owner,
   matched,
   ownerShort,
   rotate,
@@ -233,7 +233,7 @@ function ProvisionAction({
   provisionBusy,
   onProvision,
 }: {
-  expectedOwner: string;
+  owner: string;
   matched: boolean;
   ownerShort: string;
   rotate: boolean;
@@ -244,7 +244,7 @@ function ProvisionAction({
   if (!matched) {
     return (
       <ExpectedWalletConnect
-        expectedOwner={expectedOwner}
+        owner={owner}
         disabled={busy}
         hint={`Connect ${ownerShort} to ${rotate ? "rotate this key" : "issue a key"}.`}
       />

@@ -1,11 +1,10 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 
 import { PrivyWalletProvider } from "@/app/privy-wallet-provider";
+import { DeviceHome } from "@/components/device/device-home";
 import { FinishClaimPanel } from "@/components/device/finish-claim-panel";
-import { PayTab } from "@/components/pay/pay-tab";
 import {
   AppCard,
   AppShell,
@@ -14,10 +13,10 @@ import {
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 
 /**
- * Privy + header for every `/device` visit. NFC content is `children`;
- * `?token=` / `?owner=&asset=` replace it with wallet finish.
+ * Privy + AppShell for every `/device` visit.
+ * NFC content is `children`; `?token=` finishes a claim; `?owner=&asset=` is owned-device home.
  */
-export function DeviceWalletPhase({
+export function DeviceWalletShell({
   token,
   owner,
   asset,
@@ -28,34 +27,22 @@ export function DeviceWalletPhase({
   asset?: string;
   children?: ReactNode;
 }) {
-  const router = useRouter();
-
   return (
     <PrivyWalletProvider>
-      <DeviceShell linkedOwner={owner && asset ? owner : null}>
+      <DeviceChrome>
         {token ? (
           <FinishClaimPanel />
         ) : owner && asset ? (
-          <PayTab
-            owner={owner}
-            pinnedAsset={asset}
-            onExit={() => router.push("/")}
-          />
+          <DeviceHome owner={owner} asset={asset} />
         ) : (
           children
         )}
-      </DeviceShell>
+      </DeviceChrome>
     </PrivyWalletProvider>
   );
 }
 
-function DeviceShell({
-  children,
-  linkedOwner,
-}: {
-  children: ReactNode;
-  linkedOwner?: string | null;
-}) {
+function DeviceChrome({ children }: { children: ReactNode }) {
   const { address, isConnected } = useSolanaAddress();
 
   return (
@@ -63,7 +50,6 @@ function DeviceShell({
       walletActions="full"
       modeLabel="Device"
       modeNav={isConnected && address ? homeCollectModeNav(address) : null}
-      linkedOwner={linkedOwner}
     >
       <AppCard>{children}</AppCard>
     </AppShell>

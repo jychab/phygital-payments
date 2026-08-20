@@ -47,7 +47,7 @@ export function CollectApp({
       modeNav={embedded ? null : homeCollectModeNav(recipientStr)}
     >
       <AppCard>
-        <CollectPanel paymentRequest={paymentRequest} recipient={recipient} />
+        <CollectPanel paymentRequest={{ ...paymentRequest, recipient }} />
       </AppCard>
     </AppShell>
   );

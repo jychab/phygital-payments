@@ -6,8 +6,6 @@ import type {
   PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
 
-export type { PaymentToken, PaymentTokenHolding };
-
 async function readJson<T extends { error?: string }>(
   res: Response,
   fallback: string,
@@ -39,25 +37,4 @@ export async function fetchHoldingsClient(
     "Couldn’t load holdings",
   );
   return body.holdings ?? [];
-}
-
-export type PayTokenContext = {
-  tokens: PaymentToken[];
-  holdings: PaymentTokenHolding[];
-};
-
-/** Verified catalog + holdings in one browser round trip. */
-export async function fetchPayContextClient(
-  owner: string,
-): Promise<PayTokenContext> {
-  const res = await queryFetch(
-    `/api/tokens/pay-context?owner=${encodeURIComponent(owner)}`,
-  );
-  const body = await readJson<
-    PayTokenContext & { error?: string }
-  >(res, "Couldn’t load pay context");
-  return {
-    tokens: body.tokens ?? [],
-    holdings: body.holdings ?? [],
-  };
 }

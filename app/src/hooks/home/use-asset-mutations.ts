@@ -36,7 +36,7 @@ export function useSetLockStateMutation(owner: string | null) {
       const previous = queryClient.getQueryData<PhygitalAsset[]>(key);
       queryClient.setQueryData<PhygitalAsset[]>(key, (prev) =>
         prev?.map((row) =>
-          row.asset === asset ? { ...row, isLocked } : row,
+          row.address === asset ? { ...row, isLocked } : row,
         ),
       );
       try {
@@ -76,7 +76,7 @@ export function useRemoveOwnershipMutation(owner: string | null) {
       });
       const previous = queryClient.getQueryData<PhygitalAsset[]>(key);
       queryClient.setQueryData<PhygitalAsset[]>(key, (prev) =>
-        prev?.filter((row) => row.asset !== asset),
+        prev?.filter((row) => row.address !== asset),
       );
       try {
         await sent.confirmed;

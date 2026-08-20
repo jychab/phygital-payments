@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Address } from "@solana/kit";
 
-import { queryKeys } from "@/lib/queries";
+import { invalidateOwnerQueries } from "@/lib/queries";
 import {
   receiveTransfer,
   type ReceiveTransferContext,
@@ -29,15 +29,7 @@ export function useCollectMutation(options?: {
   return useMutation<{ signature: string }, Error, ReceiveVars>({
     mutationFn: (vars) => receiveTransfer(vars),
     onSuccess: ({ signature }, { recipient }) => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.history.byAddress(recipient),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.holdings.byOwner(recipient),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.payContext.byOwner(recipient),
-      });
+      invalidateOwnerQueries(queryClient, recipient);
       options?.onSuccess?.(signature);
     },
   });

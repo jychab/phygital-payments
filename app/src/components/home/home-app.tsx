@@ -8,7 +8,7 @@ import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
 import { DevicesPanel } from "@/components/home/devices-panel";
 import { HistoryPanel } from "@/components/home/history-panel";
-import { PayTab } from "@/components/pay/pay-tab";
+import { PayScreen } from "@/components/pay/pay-screen";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
@@ -22,7 +22,7 @@ type HomeTab = "pay" | "devices" | "history";
 export function HomeApp() {
   const embedded = useIsEmbedded();
   const { address, isConnected, ready } = useSolanaAddress();
-  const [mode, setMode] = useState<HomeTab>("pay");
+  const [tab, setTab] = useState<HomeTab>("pay");
 
   if (embedded === null) {
     return <EmbedBoot />;
@@ -56,10 +56,10 @@ export function HomeApp() {
         </AppCard>
       ) : (
         <Tabs
-          value={mode}
+          value={tab}
           onValueChange={(value) => {
             if (value === "pay" || value === "devices" || value === "history") {
-              setMode(value);
+              setTab(value);
             }
           }}
           className="flex flex-1 flex-col gap-0 motion-safe:animate-[wallet-rise_0.5s_cubic-bezier(0.22,1,0.36,1)_both]"
@@ -93,7 +93,7 @@ export function HomeApp() {
               value="pay"
               className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
             >
-              <PayTab owner={address} active={mode === "pay"} />
+              <PayScreen owner={address} active={tab === "pay"} />
             </TabsContent>
             <TabsContent
               value="devices"
@@ -105,7 +105,7 @@ export function HomeApp() {
               value="history"
               className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
             >
-              <HistoryPanel recipient={address} />
+              <HistoryPanel owner={address} />
             </TabsContent>
           </AppCard>
         </Tabs>

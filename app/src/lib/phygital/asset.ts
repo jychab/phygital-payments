@@ -20,7 +20,8 @@ export type PhygitalAsset = {
   assetType: AssetType;
   identifier: string;
   secp256r1PublicKey: string;
-  asset: Address;
+  /** On-chain asset PDA. */
+  address: Address;
   isLocked: boolean;
   currentOwner: Address;
   lastSignCount: number;
@@ -34,7 +35,7 @@ export function phygitalAssetFromAccount(
     assetType: asset.assetType,
     identifier: bytesToBase64Url(new Uint8Array(asset.identifier[0])),
     secp256r1PublicKey: bytesToBase64Url(new Uint8Array(asset.publicKey[0])),
-    asset: assetAddress,
+    address: assetAddress,
     isLocked: asset.isLocked,
     currentOwner: asset.owner,
     lastSignCount: asset.lastSignCount,

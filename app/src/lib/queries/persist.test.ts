@@ -40,16 +40,16 @@ describe("serializeQueryCache / deserializeQueryCache", () => {
 describe("isPersistedQueryKey", () => {
   it("allows instant-paint roots", () => {
     expect(isPersistedQueryKey(["holdings", "owner"])).toBe(true);
-    expect(isPersistedQueryKey(["payContext", "owner"])).toBe(true);
     expect(isPersistedQueryKey(["delegateStatus", "owner", "asset", "mint"])).toBe(
       true,
     );
     expect(isPersistedQueryKey(["assets", "owner", "owner"])).toBe(true);
     expect(isPersistedQueryKey(["ownerPayDelegates", "owner"])).toBe(true);
-    expect(isPersistedQueryKey(["verifiedTokens"])).toBe(true);
   });
 
   it("skips growing or one-shot caches", () => {
+    expect(isPersistedQueryKey(["payContext", "owner"])).toBe(false);
+    expect(isPersistedQueryKey(["verifiedTokens"])).toBe(false);
     expect(isPersistedQueryKey(["history", "owner"])).toBe(false);
     expect(isPersistedQueryKey(["tapVerify", "pk=1"])).toBe(false);
     expect(isPersistedQueryKey(["pendingClaim", "token"])).toBe(false);
@@ -61,7 +61,6 @@ describe("isPersistedQueryKey", () => {
 describe("isOwnerDataQuery", () => {
   it("matches owner-scoped live and default reads", () => {
     expect(isOwnerDataQuery(["holdings", "owner"], "owner")).toBe(true);
-    expect(isOwnerDataQuery(["payContext", "owner"], "owner")).toBe(true);
     expect(
       isOwnerDataQuery(["delegateStatus", "owner", "asset", "mint"], "owner"),
     ).toBe(true);
@@ -78,6 +77,7 @@ describe("isOwnerDataQuery", () => {
       false,
     );
     expect(isOwnerDataQuery(["tapVerify", "pk=1"], "owner")).toBe(false);
+    expect(isOwnerDataQuery(["payContext", "owner"], "owner")).toBe(false);
     expect(isOwnerDataQuery(["verifiedTokens"], "owner")).toBe(false);
   });
 });

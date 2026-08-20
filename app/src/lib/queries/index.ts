@@ -10,9 +10,9 @@
  *   lib/collect + hooks/collect `/collect` receive + `/setup` ATA
  *   lib/device + hooks/device   NFC tap, claim, `/device?token=`
  *   lib/home + hooks/home       Activity + Devices tab
- *   lib/tokens + hooks/tokens   mint catalog, holdings, spending-limit math
+ *   lib/tokens + hooks/tokens   mint catalog, holdings (`use-payment-tokens`)
  *   lib/server                  API routes only (`import "server-only"`)
- *   hooks/wallet                Privy address + kit signer
+ *   hooks/wallet                Privy address, expected-wallet match, query refresh
  *   hooks/layout                iframe / in-app browser
  */
 
@@ -21,7 +21,6 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import {
   fetchMintDelegateStatus,
-  fetchMintDelegateStatuses,
   fetchOwnerPayDelegates,
   resolveMintProgram,
   type MintDelegateStatus,
@@ -38,12 +37,12 @@ import {
 } from "@/lib/home/history-client";
 import {
   fetchHoldingsClient,
-  fetchPayContextClient,
   fetchVerifiedTokensClient,
-  type PaymentToken,
-  type PaymentTokenHolding,
-  type PayTokenContext,
 } from "@/lib/tokens/verified-tokens-client";
+import type {
+  PaymentToken,
+  PaymentTokenHolding,
+} from "@/lib/tokens/payment-token";
 
 export { queryFetch } from "./http";
 
@@ -80,12 +79,6 @@ export const queryKeys = {
 
   verifiedTokens: {
     all: () => ["verifiedTokens"] as const,
-  },
-
-  payContext: {
-    all: () => ["payContext"] as const,
-    byOwner: (owner: string | null) =>
-      [...queryKeys.payContext.all(), owner] as const,
   },
 
   ataStatus: {
@@ -143,7 +136,6 @@ export function isOwnerDataQuery(
   const root = queryKey[0];
   if (
     root === "holdings" ||
-    root === "payContext" ||
     root === "delegateStatus" ||
     root === "ownerPayDelegates" ||
     root === "history"
@@ -162,9 +154,6 @@ export function invalidateOwnerQueries(
 ): void {
   void queryClient.invalidateQueries({
     queryKey: queryKeys.holdings.byOwner(owner),
-  });
-  void queryClient.invalidateQueries({
-    queryKey: queryKeys.payContext.byOwner(owner),
   });
   void queryClient.invalidateQueries({
     queryKey: queryKeys.delegateStatus.byOwner(owner),
@@ -230,14 +219,6 @@ export function fetchDelegateStatus(
   return fetchMintDelegateStatus(owner, mint, asset);
 }
 
-export function fetchDelegateStatuses(
-  owner: Address,
-  mints: Address[],
-  asset: Address,
-): Promise<Map<string, MintDelegateStatus>> {
-  return fetchMintDelegateStatuses(owner, mints, asset);
-}
-
 export { fetchOwnerPayDelegates };
 
 export function fetchAtaStatus(args: {
@@ -259,12 +240,6 @@ export function fetchVerifiedTokens(): Promise<PaymentToken[]> {
 export function fetchHoldings(owner: string): Promise<PaymentTokenHolding[]> {
   return fetchHoldingsClient(owner);
 }
-
-export function fetchPayContext(owner: string): Promise<PayTokenContext> {
-  return fetchPayContextClient(owner);
-}
-
-export type { PayTokenContext };
 
 export type {
   MintDelegateStatus,

@@ -17,9 +17,10 @@ const STORAGE_KEY = "phygital-pay.react-query";
  * v2: bigint/Map tagged JSON (v1 `JSON.stringify` threw on bigint and never saved).
  * v3: React Query is the only browser cache (no HTTP cache); drop stale persist.
  * v5: per-asset delegateStatus keys (SDK 0.4) + ownerPayDelegates wallet scan.
- * v6: OwnerPayMintMatch nests MintDelegateStatus (shared with LimitPanel).
+ * v6: OwnerPayMintMatch nests MintDelegateStatus (shared with SpendingLimitPanel).
+ * v7: drop payContext + verifiedTokens persist (catalog is memory-only; holdings poll live).
  */
-const CACHE_BUSTER = "v6";
+const CACHE_BUSTER = "v7";
 
 export { CACHE_BUSTER };
 
@@ -32,11 +33,9 @@ type TaggedMap = { [MAP_TAG]: [unknown, unknown][] };
 /** Roots worth instant paint. Must match `queryKeys` in `./index.ts`. */
 const PERSISTED_QUERY_ROOTS = new Set([
   "holdings",
-  "payContext",
   "delegateStatus",
   "ownerPayDelegates",
   "assets",
-  "verifiedTokens",
 ]);
 
 function isTaggedBigInt(value: object): value is TaggedBigInt {

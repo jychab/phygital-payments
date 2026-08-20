@@ -6,6 +6,7 @@ import { LoaderCircle, Lock, LockOpen, Nfc, Trash2 } from "lucide-react";
 import { AssetType } from "phygital-token-sdk";
 
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
+import { DeviceIdentity } from "@/components/shared/device-identity";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,6 @@ import {
 import { usePhygitalAssetsByOwner } from "@/hooks/home/use-phygital-assets-by-owner";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
 import { toUserErrorMessage } from "@/lib/user-errors";
-import { shortAddress } from "@/lib/utils";
 
 /** Home → Devices tab: lock / unlock / remove NFC devices for this wallet. */
 export function DevicesPanel({ owner }: { owner: string }) {
@@ -91,7 +91,7 @@ export function DevicesPanel({ owner }: { owner: string }) {
       </p>
       <ul className="flex flex-col gap-2">
         {assets.map((asset) => (
-          <li key={asset.asset}>
+          <li key={asset.address}>
             <AssetRow
               asset={asset}
               setLock={setLock}
@@ -117,17 +117,17 @@ function AssetRow({
   removeOwnership: RemoveMutation;
 }) {
   const lockingThis =
-    setLock.isPending && setLock.variables?.asset === asset.asset;
+    setLock.isPending && setLock.variables?.asset === asset.address;
   const removingThis =
     removeOwnership.isPending &&
-    removeOwnership.variables?.asset === asset.asset;
+    removeOwnership.variables?.asset === asset.address;
   const busy = lockingThis || removingThis;
   const canToggleLock = asset.assetType === AssetType.Lockable;
 
   async function onToggleLock() {
     try {
       await setLock.mutateAsync({
-        asset: asset.asset,
+        asset: asset.address,
         isLocked: !asset.isLocked,
       });
       toast.success(asset.isLocked ? "Device unlocked" : "Device locked");
@@ -149,7 +149,7 @@ function AssetRow({
     );
     if (!confirmed) return;
     try {
-      await removeOwnership.mutateAsync({ asset: asset.asset });
+      await removeOwnership.mutateAsync({ asset: asset.address });
       toast.success("Device removed from this wallet");
     } catch (error) {
       toast.error(
@@ -160,29 +160,7 @@ function AssetRow({
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border/50 bg-muted/20 px-3.5 py-3">
-      <div className="flex items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-card/60">
-          <Nfc className="size-4 text-muted-foreground" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-foreground">
-            {shortAddress(asset.secp256r1PublicKey, 6)}
-          </span>
-          <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
-            {asset.isLocked ? (
-              <>
-                <Lock className="size-3" />
-                Locked
-              </>
-            ) : (
-              <>
-                <LockOpen className="size-3" />
-                Unlocked
-              </>
-            )}
-          </span>
-        </span>
-      </div>
+      <DeviceIdentity asset={asset} />
       <div className="flex flex-wrap gap-2">
         {canToggleLock ? (
           <Button

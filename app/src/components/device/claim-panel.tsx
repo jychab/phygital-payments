@@ -10,10 +10,13 @@ import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import { createPendingClaim } from "@/lib/device/pending-claim-client";
-import { deviceClaimHref } from "@/lib/device/finish";
+import {
+  assertCaptureReady,
+  captureClaimTap,
+  deviceClaimHref,
+} from "@/lib/device/claim";
 import { serializePendingClaimSession } from "../../../shared/pending-claim-wire";
 import type { PhygitalAsset } from "@/lib/phygital/asset";
-import { assertCaptureReady, captureClaimTap } from "@/lib/device/claim";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 type Stage = "ready" | "reading";
@@ -48,7 +51,7 @@ export function ClaimPanel({
     setStage("reading");
     try {
       const { session, auth } = await captureClaimTap({
-        asset: asset.asset,
+        asset: asset.address,
         onPasskeyComplete: () => {
           try {
             navigator.vibrate?.(30);

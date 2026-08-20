@@ -7,7 +7,7 @@ import { LoaderCircle, Search, X } from "lucide-react";
 import { TokenListRow } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useVerifiedTokens } from "@/hooks/tokens/use-verified-tokens";
+import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
 import {
   filterPaymentTokens,
   type PaymentToken,
