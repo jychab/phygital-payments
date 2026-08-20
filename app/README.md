@@ -55,8 +55,9 @@ Shared Pay UI (Home tab and owned device) is `PayScreen` in `components/pay/`:
 - `api-key-panel.tsx` — paste / issue / rotate
 
 Owned-device home after tap or claim is `DeviceHome` (`device/device-home.tsx`).
-`HomeApp` and `DeviceWalletShell` wrap Privy themselves; `/collect` loads it only
-for missing receive-account setup. Do not put Privy on the root layout.
+`HomeWalletShell` and `DeviceWalletShell` wrap Privy (loaded with `ssr: false`);
+`/collect` loads it only for missing receive-account setup. Do not put Privy on
+the root layout.
 The connected wallet is always passed as `owner` (not `recipient` / `expectedOwner`), except Collect's settle-to address which stays `recipient`.
 
 ## Modes
