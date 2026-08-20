@@ -56,7 +56,7 @@ describe("toUserFacingError", () => {
   it("maps an invalid API key", () => {
     expect(
       toUserErrorMessage(new Error("Invalid or revoked API key")),
-    ).toBe("Invalid API Key");
+    ).toBe("Couldn’t Use That");
   });
 
   it("distinguishes an already-used Pay from not enabled", () => {
@@ -88,7 +88,7 @@ describe("toUserFacingBody", () => {
 
   it("folds an invalid API key into one Shortcuts line", () => {
     expect(toUserFacingBody("Invalid or revoked API key")).toBe(
-      "Invalid API Key. Check the key and try again.",
+      "Couldn’t Use That. Check what you pasted and try again.",
     );
   });
 
@@ -100,7 +100,7 @@ describe("toUserFacingBody", () => {
 
   it("folds a missing apiKey query into one Shortcuts line", () => {
     expect(toUserFacingBody("Query param apiKey is required")).toBe(
-      "Pay Isn’t Set Up. Turn on Pay on this phone first.",
+      "Pay Isn’t Set Up. Turn on Pay here first.",
     );
   });
 });

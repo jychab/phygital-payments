@@ -1,14 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { AppCard, AppShell } from "@/components/layout/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CollectPanel } from "@/components/collect/collect-panel";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import type { PaymentRequest } from "@/lib/collect/payment-request";
 
+const CollectWalletShell = dynamic(
+  () =>
+    import("@/components/collect/collect-wallet-shell").then(
+      (m) => m.CollectWalletShell,
+    ),
+  { ssr: false, loading: () => <EmbedBoot /> },
+);
+
 /**
- * Route `/collect` — merchant receive. Settle-to wallet always comes from `?recipient=`.
- * No Privy on the happy path; missing ATA connects in place (same as device setup).
+ * Route `/collect` — merchant receive. Non-embed uses the connected wallet
+ * or `?recipient=` (synced when both exist). Embeds stay sealed to the URL.
  */
 export function CollectApp({
   paymentRequest,
@@ -16,11 +26,16 @@ export function CollectApp({
   paymentRequest: PaymentRequest;
 }) {
   const embedded = useIsEmbedded();
-  const recipient = paymentRequest.recipient;
 
   if (embedded === null) {
     return <EmbedBoot />;
   }
+
+  if (!embedded) {
+    return <CollectWalletShell paymentRequest={paymentRequest} />;
+  }
+
+  const recipient = paymentRequest.recipient;
 
   if (!recipient) {
     return (
@@ -29,9 +44,7 @@ export function CollectApp({
         body={
           paymentRequest.hasRecipientParam
             ? "The link looks incomplete. Ask for a new one."
-            : embedded
-              ? "Ask the seller to send a working payment link."
-              : "Open a Collect link that includes ?recipient=…"
+            : "Ask the seller to send a working payment link."
         }
       />
     );
@@ -41,14 +54,14 @@ export function CollectApp({
 
   return (
     <AppShell
-      recipient={embedded ? recipientStr : undefined}
-      walletActions={embedded ? "display-only" : "hidden"}
+      recipient={recipientStr}
+      walletActions="display-only"
       modeLabel="Collect"
     >
       <AppCard>
         <CollectPanel
           paymentRequest={{ ...paymentRequest, recipient }}
-          allowWalletSetup={!embedded}
+          allowWalletSetup={false}
         />
       </AppCard>
     </AppShell>

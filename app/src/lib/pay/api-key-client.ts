@@ -11,7 +11,7 @@ export async function verifyApiKey(
 ): Promise<void> {
   const trimmed = apiKey.trim();
   if (!trimmed) {
-    throw new Error("Paste an API key first.");
+    throw new Error("Paste it here first.");
   }
   const res = await queryFetch("/api/preauth/verify", {
     method: "POST",
@@ -20,7 +20,7 @@ export async function verifyApiKey(
   });
   const body = (await res.json()) as { error?: string };
   if (!res.ok) {
-    const error = new Error(body.error ?? "Couldn’t verify API key");
+    const error = new Error(body.error ?? "Couldn’t use that");
     if (res.status === 401 || res.status === 403) {
       error.name = "RejectedApiKeyError";
     }

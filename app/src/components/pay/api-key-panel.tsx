@@ -2,13 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-  Copy,
-  Eye,
-  EyeOff,
-  KeyRound,
-  LoaderCircle,
-} from "lucide-react";
+import { Copy, Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { BackLink } from "@/components/shared/back-link";
@@ -22,23 +16,24 @@ import { verifyAndStoreApiKey } from "@/lib/pay/api-key-client";
 import { maskApiKey, readApiKey } from "@/lib/pay/api-key-store";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
-/** Paste, reveal/copy, or wallet-sign issue/rotate — same panel on every route. */
+type PanelStep = "home" | "paste" | "confirm-reset";
+
+/** Save a key in this browser, or wallet-sign a new one. */
 export function ApiKeyPanel({
   owner,
   onStored,
   onBack,
-  replace = false,
   onSkip,
 }: {
   owner: string;
   onStored?: () => void;
   onBack?: () => void;
-  replace?: boolean;
   onSkip?: () => void;
 }) {
   const queryClient = useQueryClient();
   const { matched, ownerShort } = useExpectedWallet(owner);
   const { provisionKey } = useProvisionApiKey();
+  const [step, setStep] = useState<PanelStep>("home");
   const [pasteValue, setPasteValue] = useState("");
   const [storedKey, setStoredKey] = useState(
     () => readApiKey(owner) ?? "",
@@ -49,7 +44,12 @@ export function ApiKeyPanel({
 
   const busy = pasteBusy || provisionBusy;
   const hasStoredKey = Boolean(storedKey);
-  const rotate = replace || hasStoredKey;
+  const canGoBack = Boolean(onBack) || step !== "home";
+
+  function goHome() {
+    setStep("home");
+    setPasteValue("");
+  }
 
   function refreshStoredKey() {
     setStoredKey(readApiKey(owner) ?? "");
@@ -59,7 +59,7 @@ export function ApiKeyPanel({
   async function onSave() {
     const trimmed = pasteValue.trim();
     if (!trimmed) {
-      toast.error("Paste an API key first.");
+      toast.error("Paste it here first.");
       return;
     }
     try {
@@ -68,14 +68,11 @@ export function ApiKeyPanel({
       markApiKeyVerified(queryClient, owner);
       refreshStoredKey();
       setPasteValue("");
-      toast.success(
-        rotate
-          ? "API key updated on this phone"
-          : "API key saved on this phone",
-      );
+      goHome();
+      toast.success("Pay is on");
       onStored?.();
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t save API key"));
+      toast.error(toUserErrorMessage(error, "Couldn’t continue"));
     } finally {
       setPasteBusy(false);
     }
@@ -83,131 +80,174 @@ export function ApiKeyPanel({
 
   async function onCopy() {
     if (!storedKey) {
-      toast.error("No API key on this phone.");
+      toast.error("Pay isn’t on here.");
       return;
     }
     try {
       await navigator.clipboard.writeText(storedKey);
-      toast.success("API key copied");
+      toast.success("Copied");
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t copy API key"));
+      toast.error(toUserErrorMessage(error, "Couldn’t copy"));
     }
   }
 
-  async function onProvision() {
+  async function onProvision(rotate: boolean) {
     if (!matched) return;
     try {
       setProvisionBusy(true);
       await provisionKey(owner, { rotate });
       markApiKeyVerified(queryClient, owner);
       refreshStoredKey();
-      toast.success(rotate ? "API key updated" : "API key saved on this phone");
-      onStored?.();
+      goHome();
+      toast.success(
+        rotate ? "Pay will stop in other browsers." : "Pay is on",
+      );
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t update API key"));
+      toast.error(
+        toUserErrorMessage(
+          error,
+          rotate ? "Couldn’t start over" : "Couldn’t turn on Pay",
+        ),
+      );
     } finally {
       setProvisionBusy(false);
     }
   }
 
+  const copy = copyForStep(step, hasStoredKey);
+
   return (
     <div className="flex flex-1 flex-col gap-6">
-      {onBack ? <BackLink onClick={onBack} disabled={busy} /> : null}
+      {canGoBack ? (
+        <BackLink
+          onClick={() => {
+            if (step !== "home") goHome();
+            else onBack?.();
+          }}
+          disabled={busy}
+        />
+      ) : null}
+
       <div className="space-y-1.5 text-center">
-        <div className="mx-auto flex size-11 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
-          <KeyRound className="size-5 text-muted-foreground" />
-        </div>
-        <p className="text-sm font-medium text-foreground">Manage API Keys</p>
-        <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Paste a key from another phone, or issue one with this wallet.
-          Rotating issues a new key and stops older ones.
+        <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
+          {copy.title}
+        </h1>
+        <p className="mx-auto max-w-72 text-sm text-muted-foreground">
+          {copy.subtitle}
         </p>
       </div>
 
-      {hasStoredKey ? (
-        <div className="rounded-xl border border-border/50 bg-muted/25 px-4 py-3">
-          <div className="mb-2 flex items-center justify-end gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={visible ? "Hide API key" : "Show API key"}
-              onClick={() => setVisible((value) => !value)}
-              disabled={busy}
-            >
-              {visible ? <EyeOff /> : <Eye />}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Copy API key"
-              onClick={() => void onCopy()}
-              disabled={busy}
-            >
-              <Copy />
-            </Button>
-          </div>
-          <p className="break-all font-mono text-xs leading-relaxed text-foreground">
-            {visible ? storedKey : maskApiKey(storedKey)}
-          </p>
-        </div>
+      {step === "home" && hasStoredKey ? (
+        <StoredKeyCard
+          storedKey={storedKey}
+          visible={visible}
+          busy={busy}
+          onToggleVisible={() => setVisible((value) => !value)}
+          onCopy={() => void onCopy()}
+        />
       ) : null}
 
-      <Input
-        id="paste-api-key"
-        type="text"
-        autoComplete="off"
-        autoCapitalize="none"
-        autoCorrect="off"
-        spellCheck={false}
-        enterKeyHint="done"
-        placeholder="Paste API key"
-        value={pasteValue}
-        onChange={(e) => setPasteValue(e.target.value)}
-        disabled={busy}
-        className="font-mono"
-      />
+      {step === "paste" ? (
+        <Input
+          id="paste-api-key"
+          type="text"
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="done"
+          placeholder="Paste here"
+          value={pasteValue}
+          onChange={(e) => setPasteValue(e.target.value)}
+          disabled={busy}
+          className="font-mono"
+        />
+      ) : null}
 
       <div className="mt-auto flex flex-col gap-2.5">
-        <Button
-          type="button"
-          size="lg"
-          className="w-full"
-          onClick={() => void onSave()}
-          disabled={busy || !pasteValue.trim()}
-        >
-          {pasteBusy ? (
-            <>
-              <LoaderCircle className="size-4 animate-spin" />
-              Checking key…
-            </>
-          ) : rotate ? (
-            "Replace API key"
-          ) : (
-            "Save API key"
-          )}
-        </Button>
+        {step === "home" && !hasStoredKey ? (
+          <>
+            <ProvisionAction
+              owner={owner}
+              matched={matched}
+              busy={busy}
+              provisionBusy={provisionBusy}
+              idleLabel="Turn On Pay"
+              busyLabel="Turning on…"
+              connectHint={`Connect ${ownerShort} to turn on Pay.`}
+              onProvision={() => void onProvision(false)}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              className="w-full"
+              onClick={() => setStep("paste")}
+              disabled={busy}
+            >
+              I already turned this on
+            </Button>
+          </>
+        ) : null}
 
-        <div className="flex items-center gap-3 py-1">
-          <span className="h-px flex-1 bg-border/60" />
-          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            or
-          </span>
-          <span className="h-px flex-1 bg-border/60" />
-        </div>
+        {step === "home" && hasStoredKey ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="w-full"
+              onClick={() => setStep("paste")}
+              disabled={busy}
+            >
+              Paste from another browser
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              className="w-full text-muted-foreground"
+              onClick={() => setStep("confirm-reset")}
+              disabled={busy}
+            >
+              Start over
+            </Button>
+          </>
+        ) : null}
 
-        <ProvisionAction
-          owner={owner}
-          matched={matched}
-          ownerShort={ownerShort}
-          rotate={rotate}
-          busy={busy}
-          provisionBusy={provisionBusy}
-          onProvision={() => void onProvision()}
-        />
+        {step === "paste" ? (
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={() => void onSave()}
+            disabled={busy || !pasteValue.trim()}
+          >
+            {pasteBusy ? (
+              <>
+                <LoaderCircle className="size-4 animate-spin" />
+                Checking…
+              </>
+            ) : (
+              "Continue"
+            )}
+          </Button>
+        ) : null}
 
-        {onSkip ? (
+        {step === "confirm-reset" ? (
+          <ProvisionAction
+            owner={owner}
+            matched={matched}
+            busy={busy}
+            provisionBusy={provisionBusy}
+            idleLabel="Start Over"
+            busyLabel="Starting over…"
+            connectHint={`Connect ${ownerShort} to start over.`}
+            onProvision={() => void onProvision(true)}
+          />
+        ) : null}
+
+        {onSkip && step === "home" && !hasStoredKey ? (
           <Button
             type="button"
             variant="ghost"
@@ -224,21 +264,96 @@ export function ApiKeyPanel({
   );
 }
 
+function copyForStep(step: PanelStep, hasStoredKey: boolean): {
+  title: string;
+  subtitle: string;
+} {
+  if (step === "paste") {
+    return {
+      title: "Already Set Up?",
+      subtitle: "Paste what you copied from the other browser.",
+    };
+  }
+  if (step === "confirm-reset") {
+    return {
+      title: "Start over?",
+      subtitle:
+        "Pay will stop in other browsers. It will stay on here.",
+    };
+  }
+  if (hasStoredKey) {
+    return {
+      title: "Use on Another Browser",
+      subtitle: "Copy this, then paste it there.",
+    };
+  }
+  return {
+    title: "Turn On Pay",
+    subtitle: "You can pay from here.",
+  };
+}
+
+function StoredKeyCard({
+  storedKey,
+  visible,
+  busy,
+  onToggleVisible,
+  onCopy,
+}: {
+  storedKey: string;
+  visible: boolean;
+  busy: boolean;
+  onToggleVisible: () => void;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="rounded-xl border border-border/50 bg-muted/25 px-4 py-3">
+      <div className="mb-2 flex items-center justify-end gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label={visible ? "Hide" : "Show"}
+          onClick={onToggleVisible}
+          disabled={busy}
+        >
+          {visible ? <EyeOff /> : <Eye />}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Copy"
+          onClick={onCopy}
+          disabled={busy}
+        >
+          <Copy />
+        </Button>
+      </div>
+      <p className="break-all font-mono text-xs leading-relaxed text-foreground">
+        {visible ? storedKey : maskApiKey(storedKey)}
+      </p>
+    </div>
+  );
+}
+
 function ProvisionAction({
   owner,
   matched,
-  ownerShort,
-  rotate,
   busy,
   provisionBusy,
+  idleLabel,
+  busyLabel,
+  connectHint,
   onProvision,
 }: {
   owner: string;
   matched: boolean;
-  ownerShort: string;
-  rotate: boolean;
   busy: boolean;
   provisionBusy: boolean;
+  idleLabel: string;
+  busyLabel: string;
+  connectHint: string;
   onProvision: () => void;
 }) {
   if (!matched) {
@@ -246,7 +361,7 @@ function ProvisionAction({
       <ExpectedWalletConnect
         owner={owner}
         disabled={busy}
-        hint={`Connect ${ownerShort} to ${rotate ? "rotate this key" : "issue a key"}.`}
+        hint={connectHint}
       />
     );
   }
@@ -254,7 +369,6 @@ function ProvisionAction({
   return (
     <Button
       type="button"
-      variant="outline"
       size="lg"
       className="w-full"
       onClick={onProvision}
@@ -263,12 +377,10 @@ function ProvisionAction({
       {provisionBusy ? (
         <>
           <LoaderCircle className="size-4 animate-spin" />
-          {rotate ? "Rotating…" : "Issuing…"}
+          {busyLabel}
         </>
-      ) : rotate ? (
-        "Rotate API key"
       ) : (
-        "Issue API key"
+        idleLabel
       )}
     </Button>
   );

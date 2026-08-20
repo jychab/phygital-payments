@@ -5,7 +5,7 @@
 
 const PREFIX = "phygital.preauth.apiKey.";
 
-export const API_KEY_NOT_SET_UP = "Pay isn't set up on this phone yet.";
+export const API_KEY_NOT_SET_UP = "Pay isn't turned on here yet.";
 
 function storageKey(wallet: string): string {
   return `${PREFIX}${wallet}`;
@@ -23,7 +23,7 @@ export function hasStoredApiKey(wallet: string): boolean {
 export function storeApiKey(wallet: string, apiKey: string): void {
   const trimmed = apiKey.trim();
   if (!trimmed) {
-    throw new Error("Paste an API key first.");
+    throw new Error("Paste it here first.");
   }
   if (typeof window === "undefined") {
     throw new Error(API_KEY_NOT_SET_UP);

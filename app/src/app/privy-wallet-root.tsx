@@ -28,7 +28,7 @@ const PrivyWalletProvider = dynamic(
 /**
  * Single app-wide Privy mount. Stays in the root tree so Home ↔ Device ↔
  * Collect share one session. The Privy SDK chunk loads only after a
- * `PrivyGate` asks for it — Collect's happy path never loads `@privy-io/react-auth`.
+ * `PrivyGate` asks for it — Collect embeds never load `@privy-io/react-auth`.
  */
 export function PrivyWalletRoot({ children }: { children: ReactNode }) {
   const [requested, setRequested] = useState(false);

@@ -89,8 +89,9 @@ function syncCollectUrl(args: {
 }
 
 /**
- * Collect receive UI. Settle-to wallet is always the sealed URL `recipient`.
- * Merchant chooses mint. Missing ATA connects in place (device-setup flow).
+ * Collect receive UI. Settle-to wallet is the resolved `recipient` (session
+ * wallet or `?recipient=`). Merchant chooses mint. Missing ATA connects in
+ * place (device-setup flow).
  */
 export function CollectPanel({
   paymentRequest,

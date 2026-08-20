@@ -56,8 +56,8 @@ Shared Pay UI (Home tab and owned device) is `PayScreen` in `components/pay/`:
 
 Owned-device home after tap or claim is `DeviceHome` (`device/device-home.tsx`).
 One `PrivyProvider` lives in `PrivyWalletRoot` (root layout). Home, `/device`,
-and Collect ATA-setup ask for it via `PrivyGate`; Collect's happy path does not
-load the Privy SDK. Do not wrap `PrivyWalletProvider` again on a route.
+and non-embed Collect ask for it via `PrivyGate`; Collect embeds do not load
+the Privy SDK. Do not wrap `PrivyWalletProvider` again on a route.
 The connected wallet is always passed as `owner` (not `recipient` / `expectedOwner`), except Collect's settle-to address which stays `recipient`.
 
 ## Modes
@@ -74,12 +74,13 @@ Pay settings (spending limits, token management) live on Home. The API key is st
 
 ### Collect (`/collect`)
 
-Destination flow. The settle-to wallet **must** come from `?recipient=`:
+Destination flow. The settle-to wallet comes from the **connected wallet** or `?recipient=`. When both exist, they stay in sync (session wallet is the source of truth; the URL is updated to match).
 
+- Header shows the same wallet chip as Home. Connect on `/collect` with no `?recipient=` to start collecting to that wallet.
 - Enter an amount, then hold NFC. Must run in Safari/Chrome (not a wallet in-app browser).
 - If the wallet has no receive account for the selected token yet, Collect shows **Connect wallet** on the same page (same flow as device setup). After the matching wallet connects, create the receive account, then collect.
-- Missing or invalid `?recipient=` shows an error.
-- Top-level Collect does not show a Home/Collect dropdown (no session wallet). Embeds stay sealed (static Collect label, no dropdown).
+- Missing or invalid `?recipient=` with no connected wallet prompts to connect (or shows an error in embeds).
+- Connected Collect shows the Home/Collect dropdown. Embeds stay sealed (static Collect label, display-only destination chip, no dropdown).
 
 Activity lives on Home, not Collect.
 
@@ -138,7 +139,7 @@ curl --max-time 150 "https://<host>/api/preauth/status?apiKey=ppk_â€¦&grantId=â€
 
 ### Payment link (`/collect?recipient=<solana-address>`)
 
-This is the only Collect entry point. Settles to the URL recipient. No wallet chip in the header (embeds show a sealed destination chip). Optional `?amount=` prefills (and locks) the amount. Optional `?mint=` selects a Jupiter-verified classic SPL mint (defaults to USDC). Without a valid `?recipient=`, Collect shows an error. If the recipient has no receive account yet, Collect offers **Connect wallet** on the same page.
+Collect can also open from a payment link. Settles to `?recipient=` until a wallet is connected; connecting syncs the URL to that wallet. The header shows a wallet chip (embeds show a sealed destination chip). Optional `?amount=` prefills (and locks) the amount. Optional `?mint=` selects a Jupiter-verified classic SPL mint (defaults to USDC). Without a valid `?recipient=` or connected wallet, Collect prompts to connect. If the recipient has no receive account yet, Collect offers **Connect wallet** on the same page.
 
 ### iframe embed
 

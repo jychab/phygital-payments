@@ -46,8 +46,8 @@ function GoogleMark({ className }: { className?: string }) {
 }
 
 /**
- * Session wallet control for Privy routes (Home / `/device`).
- * Do not mount on `/collect`.
+ * Session wallet control for Privy routes (Home, `/collect`, `/device`).
+ * Embeds use a sealed display chip instead.
  */
 export function WalletChip({ className }: { className?: string }) {
   const {

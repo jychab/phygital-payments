@@ -84,22 +84,22 @@ const RULES: Rule[] = [
   {
     test: /this API key is for a different wallet/i,
     title: "Wrong Wallet",
-    body: "That API key belongs to a different wallet.",
+    body: "That belongs to a different wallet.",
   },
   {
     test: /key has been revoked|re-provision to get a new key/i,
-    title: "API Key Changed",
-    body: "Turn on Pay again on this phone.",
+    title: "Pay Stopped Here",
+    body: "Turn on Pay again.",
   },
   {
     test: /invalid or revoked API key/i,
-    title: "Invalid API Key",
-    body: "Check the key and try again.",
+    title: "Couldn’t Use That",
+    body: "Check what you pasted and try again.",
   },
   {
-    test: /query param apikey is required|missing preauth api key|enable Pay on this device|Pay isn't set up on this phone/i,
+    test: /query param apikey is required|missing preauth api key|enable Pay on this device|Pay isn't set up on this phone|Pay isn't set up in this browser|Pay isn't turned on here/i,
     title: "Pay Isn’t Set Up",
-    body: "Turn on Pay on this phone first.",
+    body: "Turn on Pay here first.",
   },
   {
     test: /query param grantid is required|preauth grant not found/i,

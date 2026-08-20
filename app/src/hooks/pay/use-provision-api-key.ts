@@ -24,10 +24,10 @@ async function provisionApiKey(args: ProvisionArgs): Promise<string> {
     wallet: args.solanaWallet,
     options: {
       uiOptions: {
-        title: args.rotate ? "Rotate API Key" : "Enable Pay",
+        title: args.rotate ? "Start Over" : "Turn On Pay",
         description: args.rotate
-          ? "This message issues a new API key for this wallet. It does not move funds."
-          : "This message turns on Pay for this wallet. It does not move funds.",
+          ? "Pay will stop in other browsers. This does not move funds."
+          : "Pay will work here. This does not move funds.",
       },
     },
   });
@@ -43,7 +43,7 @@ async function provisionApiKey(args: ProvisionArgs): Promise<string> {
   });
   const body = (await res.json()) as { apiKey?: string; error?: string };
   if (!res.ok || !body.apiKey) {
-    throw new Error(body.error ?? "Couldn't enable Pay");
+    throw new Error(body.error ?? "Couldn't turn on Pay");
   }
   return body.apiKey;
 }
@@ -57,7 +57,7 @@ async function provisionAndStoreApiKey(
   storeApiKey(args.wallet, await provisionApiKey(args));
 }
 
-/** Wallet-sign a provision message, store the issued API key on this phone. */
+/** Wallet-sign a provision message, store the issued API key in this browser. */
 export function useProvisionApiKey() {
   const { wallets } = useWallets();
   const { signMessage } = useSignMessage();

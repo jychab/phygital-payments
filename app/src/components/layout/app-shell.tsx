@@ -31,8 +31,7 @@ export type ModeNavItem = {
 };
 
 /**
- * Home ↔ Collect header items. Pass only when a session wallet is connected;
- * a Collect `?recipient=` is not a connected wallet.
+ * Home ↔ Collect header items. Pass only when a session wallet is connected.
  */
 export function homeCollectModeNav(recipient: string): ModeNavItem[] {
   return [

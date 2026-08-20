@@ -22,7 +22,7 @@ import {
 } from "@/lib/tokens/payment-token";
 import { shortAddress } from "@/lib/utils";
 
-/** Tokens, spending limits, and this phone's API key. */
+/** Tokens, spending limits, and this browser's Pay key. */
 export function ManagePayPanel({
   owner,
   onBack,
@@ -44,7 +44,6 @@ export function ManagePayPanel({
     return (
       <ApiKeyPanel
         owner={owner}
-        replace
         onStored={() => setManageKeys(false)}
         onBack={() => setManageKeys(false)}
       />
@@ -63,7 +62,7 @@ export function ManagePayPanel({
           Manage Pay
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Spending limits and this phone’s API key.
+          Spending limits. Use Pay here or in another browser.
         </p>
       </div>
 
@@ -91,7 +90,7 @@ export function ManagePayPanel({
           className="w-full"
           onClick={() => setManageKeys(true)}
         >
-          Manage API Keys
+          Use on Another Browser
         </Button>
       </div>
     </div>
