@@ -63,7 +63,7 @@ export type TransferInstruction<
   TAccountVerifier extends string | AccountMeta<string> = string,
   TAccountConfig extends string | AccountMeta<string> = string,
   TAccountOwnerVerifier extends string | AccountMeta<string> = string,
-  TAccountAsset extends string | AccountMeta<string> = string,
+  TAccountToken extends string | AccountMeta<string> = string,
   TAccountMint extends string | AccountMeta<string> = string,
   TAccountRecipient extends string | AccountMeta<string> = string,
   TAccountProgramAuthority extends string | AccountMeta<string> = string,
@@ -92,9 +92,9 @@ export type TransferInstruction<
       TAccountOwnerVerifier extends string
         ? ReadonlyAccount<TAccountOwnerVerifier>
         : TAccountOwnerVerifier,
-      TAccountAsset extends string
-        ? WritableAccount<TAccountAsset>
-        : TAccountAsset,
+      TAccountToken extends string
+        ? WritableAccount<TAccountToken>
+        : TAccountToken,
       TAccountMint extends string
         ? ReadonlyAccount<TAccountMint>
         : TAccountMint,
@@ -188,7 +188,7 @@ export type TransferAsyncInput<
   TAccountVerifier extends string = string,
   TAccountConfig extends string = string,
   TAccountOwnerVerifier extends string = string,
-  TAccountAsset extends string = string,
+  TAccountToken extends string = string,
   TAccountMint extends string = string,
   TAccountRecipient extends string = string,
   TAccountProgramAuthority extends string = string,
@@ -208,7 +208,7 @@ export type TransferAsyncInput<
    * Initialized → ONLY `owner_verifier.verifier` is accepted.
    */
   ownerVerifier: Address<TAccountOwnerVerifier>;
-  asset: Address<TAccountAsset>;
+  token: Address<TAccountToken>;
   mint: Address<TAccountMint>;
   recipient: Address<TAccountRecipient>;
   programAuthority?: Address<TAccountProgramAuthority>;
@@ -229,7 +229,7 @@ export async function getTransferInstructionAsync<
   TAccountVerifier extends string,
   TAccountConfig extends string,
   TAccountOwnerVerifier extends string,
-  TAccountAsset extends string,
+  TAccountToken extends string,
   TAccountMint extends string,
   TAccountRecipient extends string,
   TAccountProgramAuthority extends string,
@@ -245,7 +245,7 @@ export async function getTransferInstructionAsync<
     TAccountVerifier,
     TAccountConfig,
     TAccountOwnerVerifier,
-    TAccountAsset,
+    TAccountToken,
     TAccountMint,
     TAccountRecipient,
     TAccountProgramAuthority,
@@ -263,7 +263,7 @@ export async function getTransferInstructionAsync<
     TAccountVerifier,
     TAccountConfig,
     TAccountOwnerVerifier,
-    TAccountAsset,
+    TAccountToken,
     TAccountMint,
     TAccountRecipient,
     TAccountProgramAuthority,
@@ -284,7 +284,7 @@ export async function getTransferInstructionAsync<
     verifier: { value: input.verifier ?? null, isWritable: false },
     config: { value: input.config ?? null, isWritable: false },
     ownerVerifier: { value: input.ownerVerifier ?? null, isWritable: false },
-    asset: { value: input.asset ?? null, isWritable: true },
+    token: { value: input.token ?? null, isWritable: true },
     mint: { value: input.mint ?? null, isWritable: false },
     recipient: { value: input.recipient ?? null, isWritable: false },
     programAuthority: {
@@ -324,9 +324,9 @@ export async function getTransferInstructionAsync<
   }
   if (!accounts.programAuthority.value) {
     accounts.programAuthority.value = await findProgramAuthorityPda({
-      asset: getAddressFromResolvedInstructionAccount(
-        "asset",
-        accounts.asset.value,
+      token: getAddressFromResolvedInstructionAccount(
+        "token",
+        accounts.token.value,
       ),
     });
   }
@@ -353,7 +353,7 @@ export async function getTransferInstructionAsync<
       getAccountMeta("verifier", accounts.verifier),
       getAccountMeta("config", accounts.config),
       getAccountMeta("ownerVerifier", accounts.ownerVerifier),
-      getAccountMeta("asset", accounts.asset),
+      getAccountMeta("token", accounts.token),
       getAccountMeta("mint", accounts.mint),
       getAccountMeta("recipient", accounts.recipient),
       getAccountMeta("programAuthority", accounts.programAuthority),
@@ -373,7 +373,7 @@ export async function getTransferInstructionAsync<
     TAccountVerifier,
     TAccountConfig,
     TAccountOwnerVerifier,
-    TAccountAsset,
+    TAccountToken,
     TAccountMint,
     TAccountRecipient,
     TAccountProgramAuthority,
@@ -390,7 +390,7 @@ export type TransferInput<
   TAccountVerifier extends string = string,
   TAccountConfig extends string = string,
   TAccountOwnerVerifier extends string = string,
-  TAccountAsset extends string = string,
+  TAccountToken extends string = string,
   TAccountMint extends string = string,
   TAccountRecipient extends string = string,
   TAccountProgramAuthority extends string = string,
@@ -410,7 +410,7 @@ export type TransferInput<
    * Initialized → ONLY `owner_verifier.verifier` is accepted.
    */
   ownerVerifier: Address<TAccountOwnerVerifier>;
-  asset: Address<TAccountAsset>;
+  token: Address<TAccountToken>;
   mint: Address<TAccountMint>;
   recipient: Address<TAccountRecipient>;
   programAuthority: Address<TAccountProgramAuthority>;
@@ -431,7 +431,7 @@ export function getTransferInstruction<
   TAccountVerifier extends string,
   TAccountConfig extends string,
   TAccountOwnerVerifier extends string,
-  TAccountAsset extends string,
+  TAccountToken extends string,
   TAccountMint extends string,
   TAccountRecipient extends string,
   TAccountProgramAuthority extends string,
@@ -447,7 +447,7 @@ export function getTransferInstruction<
     TAccountVerifier,
     TAccountConfig,
     TAccountOwnerVerifier,
-    TAccountAsset,
+    TAccountToken,
     TAccountMint,
     TAccountRecipient,
     TAccountProgramAuthority,
@@ -464,7 +464,7 @@ export function getTransferInstruction<
   TAccountVerifier,
   TAccountConfig,
   TAccountOwnerVerifier,
-  TAccountAsset,
+  TAccountToken,
   TAccountMint,
   TAccountRecipient,
   TAccountProgramAuthority,
@@ -484,7 +484,7 @@ export function getTransferInstruction<
     verifier: { value: input.verifier ?? null, isWritable: false },
     config: { value: input.config ?? null, isWritable: false },
     ownerVerifier: { value: input.ownerVerifier ?? null, isWritable: false },
-    asset: { value: input.asset ?? null, isWritable: true },
+    token: { value: input.token ?? null, isWritable: true },
     mint: { value: input.mint ?? null, isWritable: false },
     recipient: { value: input.recipient ?? null, isWritable: false },
     programAuthority: {
@@ -542,7 +542,7 @@ export function getTransferInstruction<
       getAccountMeta("verifier", accounts.verifier),
       getAccountMeta("config", accounts.config),
       getAccountMeta("ownerVerifier", accounts.ownerVerifier),
-      getAccountMeta("asset", accounts.asset),
+      getAccountMeta("token", accounts.token),
       getAccountMeta("mint", accounts.mint),
       getAccountMeta("recipient", accounts.recipient),
       getAccountMeta("programAuthority", accounts.programAuthority),
@@ -562,7 +562,7 @@ export function getTransferInstruction<
     TAccountVerifier,
     TAccountConfig,
     TAccountOwnerVerifier,
-    TAccountAsset,
+    TAccountToken,
     TAccountMint,
     TAccountRecipient,
     TAccountProgramAuthority,
@@ -590,7 +590,7 @@ export type ParsedTransferInstruction<
      * Initialized → ONLY `owner_verifier.verifier` is accepted.
      */
     ownerVerifier: TAccountMetas[2];
-    asset: TAccountMetas[3];
+    token: TAccountMetas[3];
     mint: TAccountMetas[4];
     recipient: TAccountMetas[5];
     programAuthority: TAccountMetas[6];
@@ -633,7 +633,7 @@ export function parseTransferInstruction<
       verifier: getNextAccount(),
       config: getNextAccount(),
       ownerVerifier: getNextAccount(),
-      asset: getNextAccount(),
+      token: getNextAccount(),
       mint: getNextAccount(),
       recipient: getNextAccount(),
       programAuthority: getNextAccount(),

@@ -339,14 +339,14 @@
               },
               {
                 "kind": "account",
-                "path": "asset.owner",
-                "account": "Asset"
+                "path": "token.owner",
+                "account": "PhygitalToken"
               }
             ]
           }
         },
         {
-          "name": "asset",
+          "name": "token",
           "writable": true
         },
         {
@@ -383,7 +383,7 @@
               },
               {
                 "kind": "account",
-                "path": "asset"
+                "path": "token"
               }
             ]
           }
@@ -478,8 +478,8 @@
   "errors": [
     {
       "code": 6000,
-      "name": "AssetIsCurrentlyUnLocked",
-      "msg": "Asset must be lockable and currently locked"
+      "name": "TokenIsCurrentlyUnLocked",
+      "msg": "Token must be lockable and currently locked"
     },
     {
       "code": 6001,
@@ -514,7 +514,7 @@
     {
       "code": 6007,
       "name": "OwnerVerifierMismatch",
-      "msg": "Owner verifier account does not match the asset owner"
+      "msg": "Owner verifier account does not match the token owner"
     },
     {
       "code": 6008,
@@ -567,7 +567,7 @@
       "name": "OwnerVerifier",
       "docs": [
         "Optional per-owner verifier override. When present, ONLY this verifier may",
-        "authorize transfers for assets owned by `owner` (admin set is not accepted).",
+        "authorize transfers for tokens owned by `owner` (admin set is not accepted).",
         "`endpoint` is the HTTPS URL of that verifier's build/sign/send service."
       ],
       "type": {

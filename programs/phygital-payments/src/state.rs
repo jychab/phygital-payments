@@ -41,7 +41,7 @@ impl Config {
 }
 
 /// Optional per-owner verifier override. When present, ONLY this verifier may
-/// authorize transfers for assets owned by `owner` (admin set is not accepted).
+/// authorize transfers for tokens owned by `owner` (admin set is not accepted).
 /// `endpoint` is the HTTPS URL of that verifier's build/sign/send service.
 #[account]
 #[derive(InitSpace)]

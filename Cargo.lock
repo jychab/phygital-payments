@@ -2107,9 +2107,9 @@ dependencies = [
 
 [[package]]
 name = "phygital-token-client"
-version = "0.9.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90e0866e69b7af6a0421d386742ca941b4d7ea62cbd33198181599293012b480"
+checksum = "5db6becd0d2008adf0f9c882f5287311c28bf3312de91537c5efac4a3dcfad16"
 dependencies = [
  "anchor-lang",
  "borsh",

@@ -2,8 +2,8 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum PhygitalError {
-    #[msg("Asset must be lockable and currently locked")]
-    AssetIsCurrentlyUnLocked,
+    #[msg("Token must be lockable and currently locked")]
+    TokenIsCurrentlyUnLocked,
     #[msg("Verifier is not authorized for this transfer")]
     UnauthorizedVerifier,
     #[msg("Owner has configured a custom verifier; that key must sign")]
@@ -16,7 +16,7 @@ pub enum PhygitalError {
     TooManyVerifiers,
     #[msg("Only the config admin may perform this action")]
     UnauthorizedAdmin,
-    #[msg("Owner verifier account does not match the asset owner")]
+    #[msg("Owner verifier account does not match the token owner")]
     OwnerVerifierMismatch,
     #[msg("Verifier endpoint URL is empty or invalid")]
     InvalidEndpoint,

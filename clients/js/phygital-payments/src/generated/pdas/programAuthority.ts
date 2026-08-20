@@ -15,7 +15,7 @@ import {
 } from "@solana/kit";
 
 export type ProgramAuthoritySeeds = {
-  asset: Address;
+  token: Address;
 };
 
 export async function findProgramAuthorityPda(
@@ -34,7 +34,7 @@ export async function findProgramAuthorityPda(
           105, 116, 121,
         ]),
       ),
-      getAddressEncoder().encode(seeds.asset),
+      getAddressEncoder().encode(seeds.token),
     ],
   });
 }

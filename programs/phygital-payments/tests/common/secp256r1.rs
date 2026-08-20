@@ -7,8 +7,8 @@ use phygital_payments::Secp256r1VerifyArgs;
 use rand::rngs::OsRng;
 use sha2::{Digest, Sha256};
 
-pub const TEST_RP_ID: &str = "payments.revibase.com";
-pub const TEST_ORIGIN: &str = "https://payments.revibase.com";
+pub const TEST_RP_ID: &str = phygital_payments::WHITELISTED_RPID;
+pub const TEST_ORIGIN: &str = phygital_payments::WHITELISTED_ORIGIN;
 
 const COMPRESSED_PUBKEY_SERIALIZED_SIZE: usize = 33;
 const SIGNATURE_OFFSETS_SERIALIZED_SIZE: usize = 14;

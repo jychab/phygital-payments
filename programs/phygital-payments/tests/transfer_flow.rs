@@ -140,7 +140,7 @@ fn transfer_rejects_unlocked_asset() {
 
     let err_str = format!("{err:?}");
     assert!(
-        err_str.contains("AssetIsCurrentlyUnLocked") || err_str.contains("6000"),
+        err_str.contains("TokenIsCurrentlyUnLocked") || err_str.contains("6000"),
         "unexpected error: {err:?}"
     );
 }

@@ -3,10 +3,10 @@ use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::solana_program::program_option::COption;
 use anchor_spl::token_2022::spl_token_2022::instruction::transfer_checked;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-use phygital_token_client::{Asset, AssetType, VerifyAssetCpiBuilder};
 use solana_sdk_ids::sysvar::instructions::ID as INSTRUCTIONS_SYSVAR_ID;
 use solana_sdk_ids::sysvar::slot_hashes::ID as SLOT_HASHES_SYSVAR_ID;
 use solana_sha256_hasher::hash;
+use phygital_token_client::{PhygitalToken, VerifyCpiBuilder, PhygitalTokenType};
 
 use crate::constants::{
     CONFIG_SEED, OWNER_VERIFIER_SEED, PROGRAM_AUTHORITY_SEED, PHYGITAL_TOKEN_PROGRAM_ID,
@@ -15,8 +15,6 @@ use crate::constants::{
 use crate::error::PhygitalError;
 use crate::state::{Config, OwnerVerifier, Secp256r1VerifyArgs};
 
-/// WebAuthn challenge / `verify_asset.message_hash`:
-/// `sha256("phygital_payments:transfer" || mint || recipient || amount_le || slot_hash)`.
 pub fn build_transfer_challenge(
     mint: &Pubkey,
     recipient: &Pubkey,
@@ -59,13 +57,13 @@ pub struct ExecuteTransfer<'info> {
     /// Initialized → ONLY `owner_verifier.verifier` is accepted.
     /// CHECK: validated in handler when data is present.
     #[account(
-        seeds = [OWNER_VERIFIER_SEED, asset.owner.key().as_ref()],
+        seeds = [OWNER_VERIFIER_SEED, token.owner.key().as_ref()],
         bump,
     )]
     pub owner_verifier: UncheckedAccount<'info>,
 
     #[account(mut)]
-    pub asset: Account<'info, Asset>,
+    pub token: Account<'info, PhygitalToken>,
 
     pub mint: Box<InterfaceAccount<'info, Mint>>,
 
@@ -74,7 +72,7 @@ pub struct ExecuteTransfer<'info> {
 
     /// CHECK: PDA that signs as the SPL delegate for the sender token account
     #[account(
-        seeds = [PROGRAM_AUTHORITY_SEED, asset.key().as_ref()],
+        seeds = [PROGRAM_AUTHORITY_SEED, token.key().as_ref()],
         bump,
     )]
     pub program_authority: UncheckedAccount<'info>,
@@ -82,7 +80,7 @@ pub struct ExecuteTransfer<'info> {
     #[account(
         mut,
         constraint = sender_token_account.amount >= amount,
-        constraint = sender_token_account.owner == asset.owner.key(),
+        constraint = sender_token_account.owner == token.owner.key(),
         constraint = sender_token_account.mint == mint.key(),
         constraint = sender_token_account.delegate == COption::Some(program_authority.key()),
         constraint = sender_token_account.delegated_amount >= amount,
@@ -104,7 +102,7 @@ pub struct ExecuteTransfer<'info> {
     #[account(address = INSTRUCTIONS_SYSVAR_ID)]
     pub instructions_sysvar: UncheckedAccount<'info>,
 
-    /// CHECK: phygital-token program for verify_asset CPI
+    /// CHECK: phygital-token program for verify CPI
     #[account(address = PHYGITAL_TOKEN_PROGRAM_ID)]
     pub phygital_token_program: UncheckedAccount<'info>,
 
@@ -121,26 +119,25 @@ pub fn handler(
         &ctx.accounts.verifier,
         &ctx.accounts.config,
         &ctx.accounts.owner_verifier,
-        &ctx.accounts.asset.owner.key(),
+        &ctx.accounts.token.owner.key(),
     )?;
 
     let program_authority_bump = ctx.bumps.program_authority;
-    let asset_key = ctx.accounts.asset.key();
+    let token_key = ctx.accounts.token.key();
     let bump_seed = [program_authority_bump];
     let authority_seeds = [
         PROGRAM_AUTHORITY_SEED,
-        asset_key.as_ref(),
+        token_key.as_ref(),
         bump_seed.as_ref(),
     ];
     let signer_seeds: &[&[&[u8]]] = &[&authority_seeds];
 
     require!(
-        ctx.accounts.asset.asset_type == AssetType::Lockable && ctx.accounts.asset.is_locked,
-        PhygitalError::AssetIsCurrentlyUnLocked
+        ctx.accounts.token.token_type == PhygitalTokenType::Controlled && ctx.accounts.token.is_locked,
+        PhygitalError::TokenIsCurrentlyUnLocked
     );
 
     let slot_hash = fetch_slot_hash(&ctx.accounts.slot_hashes, slot_number)?;
-    // verify_asset (token ≥0.9) takes message_hash as the WebAuthn challenge.
     let message_hash = build_transfer_challenge(
         &ctx.accounts.mint.key(),
         &ctx.accounts.recipient.key(),
@@ -148,12 +145,12 @@ pub fn handler(
         slot_hash,
     );
 
-    let asset_info = ctx.accounts.asset.to_account_info();
+    let token_info = ctx.accounts.token.to_account_info();
     let instructions_sysvar_info = ctx.accounts.instructions_sysvar.to_account_info();
     let phygital_token_program_info = ctx.accounts.phygital_token_program.to_account_info();
 
-    VerifyAssetCpiBuilder::new(&phygital_token_program_info)
-        .asset(&asset_info)
+    VerifyCpiBuilder::new(&phygital_token_program_info)
+        .token(&token_info)
         .instructions_sysvar(&instructions_sysvar_info)
         .secp256r1_verify_args(secp256r1_verify_args.into())
         .message_hash(message_hash)
@@ -161,7 +158,7 @@ pub fn handler(
         .expected_origin(WHITELISTED_ORIGIN.to_string())
         .invoke()?;
 
-    ctx.accounts.asset.reload()?;
+    ctx.accounts.token.reload()?;
 
     let transfer_ix = transfer_checked(
         &ctx.accounts.token_program.key(),
@@ -186,10 +183,10 @@ pub fn handler(
     )?;
 
     emit!(TransferEvent {
-        owner: ctx.accounts.asset.owner.key(),
+        owner: ctx.accounts.token.owner.key(),
         recipient: ctx.accounts.recipient.key(),
         mint: ctx.accounts.mint.key(),
-        public_key: ctx.accounts.asset.public_key,
+        public_key: ctx.accounts.token.public_key,
         amount,
         time: Clock::get()?.unix_timestamp,
     });
@@ -262,14 +259,14 @@ fn resolve_verifier(
     verifier: &Signer,
     config: &Account<Config>,
     owner_verifier_info: &UncheckedAccount,
-    asset_owner: &Pubkey,
+    owner: &Pubkey,
 ) -> Result<()> {
     let data = owner_verifier_info.try_borrow_data()?;
     let initialized = !data.is_empty() && owner_verifier_info.owner != &System::id();
 
     if initialized {
         let ov = OwnerVerifier::try_deserialize(&mut &data[..])?;
-        require_keys_eq!(ov.owner, *asset_owner, PhygitalError::OwnerVerifierMismatch);
+        require_keys_eq!(ov.owner, *owner, PhygitalError::OwnerVerifierMismatch);
         require_keys_eq!(
             verifier.key(),
             ov.verifier,

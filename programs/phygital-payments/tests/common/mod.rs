@@ -17,7 +17,7 @@ use phygital_payments::{
     CONFIG_SEED, OWNER_VERIFIER_SEED, PROGRAM_AUTHORITY_SEED, PHYGITAL_TOKEN_PROGRAM_ID,
     Secp256r1VerifyArgs,
 };
-use phygital_token_client::{Asset, AssetType, ASSET_DISCRIMINATOR};
+use phygital_token_client::{PhygitalToken, PhygitalTokenType, PHYGITAL_TOKEN_DISCRIMINATOR};
 use solana_account::Account as SolanaAccount;
 use solana_keypair::Keypair;
 use solana_message::{Message, VersionedMessage};
@@ -27,7 +27,7 @@ use solana_sdk_ids::sysvar::{
 use solana_signer::Signer;
 use solana_transaction::versioned::VersionedTransaction;
 
-pub const ASSET_SEED: &[u8] = b"asset";
+pub const TOKEN_SEED: &[u8] = b"token";
 pub const LAMPORTS_PER_SOL: u64 = 1_000_000_000;
 
 pub struct TestContext {
@@ -176,16 +176,16 @@ impl TestContext {
         Pubkey::find_program_address(&[PROGRAM_AUTHORITY_SEED, asset.as_ref()], &self.program_id).0
     }
 
-    /// Derive the asset PDA from the compressed secp256r1 passkey public key.
+    /// Derive the token PDA from the compressed secp256r1 passkey public key.
     pub fn asset_pda(&self, secp256r1_pubkey: &[u8; 33]) -> Pubkey {
         Pubkey::find_program_address(
-            &[ASSET_SEED, &secp256r1_pubkey[1..]],
+            &[TOKEN_SEED, &secp256r1_pubkey[1..]],
             &PHYGITAL_TOKEN_PROGRAM_ID,
         )
         .0
     }
 
-    /// Generate a unique chip identifier (stored on the asset; not used as the PDA seed).
+    /// Generate a unique chip identifier (stored on the token; not used as the PDA seed).
     pub fn unique_identifier() -> [u8; 33] {
         use rand::RngCore;
         let mut bytes = [0u8; 33];
@@ -302,29 +302,7 @@ impl TestContext {
         public_key: [u8; 33],
         last_sign_count: u32,
     ) {
-        let asset_data = Asset {
-            discriminator: ASSET_DISCRIMINATOR,
-            asset_type: AssetType::Lockable,
-            owner: owner.to_bytes().into(),
-            last_sign_count,
-            is_locked: true,
-            public_key,
-            identifier,
-        };
-        let data = borsh::to_vec(&asset_data).expect("serialize asset");
-        let rent: Rent = self.svm.get_sysvar();
-        self.svm
-            .set_account(
-                asset,
-                SolanaAccount {
-                    lamports: rent.minimum_balance(data.len()),
-                    data,
-                    owner: PHYGITAL_TOKEN_PROGRAM_ID,
-                    executable: false,
-                    rent_epoch: 0,
-                },
-            )
-            .expect("set asset account");
+        self.write_token_account(asset, owner, identifier, public_key, last_sign_count, true);
     }
 
     pub fn write_unlocked_asset(
@@ -334,20 +312,33 @@ impl TestContext {
         identifier: [u8; 33],
         public_key: [u8; 33],
     ) {
-        let asset_data = Asset {
-            discriminator: ASSET_DISCRIMINATOR,
-            asset_type: AssetType::Lockable,
+        self.write_token_account(asset, owner, identifier, public_key, 0, false);
+    }
+
+    fn write_token_account(
+        &mut self,
+        token: Pubkey,
+        owner: Pubkey,
+        identifier: [u8; 33],
+        public_key: [u8; 33],
+        last_sign_count: u32,
+        is_locked: bool,
+    ) {
+        let token_data = PhygitalToken {
+            discriminator: PHYGITAL_TOKEN_DISCRIMINATOR,
+            token_type: PhygitalTokenType::Controlled,
             owner: owner.to_bytes().into(),
-            last_sign_count: 0,
-            is_locked: false,
+            last_sign_count,
+            is_locked,
             public_key,
             identifier,
+            mint: Pubkey::default().to_bytes().into(),
         };
-        let data = borsh::to_vec(&asset_data).expect("serialize asset");
+        let data = borsh::to_vec(&token_data).expect("serialize token");
         let rent: Rent = self.svm.get_sysvar();
         self.svm
             .set_account(
-                asset,
+                token,
                 SolanaAccount {
                     lamports: rent.minimum_balance(data.len()),
                     data,
@@ -356,7 +347,7 @@ impl TestContext {
                     rent_epoch: 0,
                 },
             )
-            .expect("set asset account");
+            .expect("set token account");
     }
 
     pub fn token_balance(&self, token_account: Pubkey) -> u64 {
@@ -370,8 +361,8 @@ impl TestContext {
     }
 
     pub fn last_sign_count(&self, asset: Pubkey) -> u32 {
-        let account = self.svm.get_account(&asset).expect("asset account");
-        let decoded = Asset::try_from_slice(&account.data).expect("deserialize asset");
+        let account = self.svm.get_account(&asset).expect("token account");
+        let decoded = PhygitalToken::try_from_slice(&account.data).expect("deserialize token");
         decoded.last_sign_count
     }
 
@@ -394,7 +385,7 @@ impl TestContext {
                 verifier,
                 config: self.config_pda(),
                 owner_verifier: self.owner_verifier_pda(owner),
-                asset,
+                token: asset,
                 mint,
                 recipient,
                 program_authority: self.program_authority(asset),

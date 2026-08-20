@@ -43,7 +43,7 @@ export async function getTransferInstructionAsync(input, config) {
         verifier: { value: input.verifier ?? null, isWritable: false },
         config: { value: input.config ?? null, isWritable: false },
         ownerVerifier: { value: input.ownerVerifier ?? null, isWritable: false },
-        asset: { value: input.asset ?? null, isWritable: true },
+        token: { value: input.token ?? null, isWritable: true },
         mint: { value: input.mint ?? null, isWritable: false },
         recipient: { value: input.recipient ?? null, isWritable: false },
         programAuthority: {
@@ -76,7 +76,7 @@ export async function getTransferInstructionAsync(input, config) {
     }
     if (!accounts.programAuthority.value) {
         accounts.programAuthority.value = await findProgramAuthorityPda({
-            asset: getAddressFromResolvedInstructionAccount("asset", accounts.asset.value),
+            token: getAddressFromResolvedInstructionAccount("token", accounts.token.value),
         });
     }
     if (!accounts.slotHashes.value) {
@@ -101,7 +101,7 @@ export async function getTransferInstructionAsync(input, config) {
             getAccountMeta("verifier", accounts.verifier),
             getAccountMeta("config", accounts.config),
             getAccountMeta("ownerVerifier", accounts.ownerVerifier),
-            getAccountMeta("asset", accounts.asset),
+            getAccountMeta("token", accounts.token),
             getAccountMeta("mint", accounts.mint),
             getAccountMeta("recipient", accounts.recipient),
             getAccountMeta("programAuthority", accounts.programAuthority),
@@ -122,7 +122,7 @@ export function getTransferInstruction(input, config) {
         verifier: { value: input.verifier ?? null, isWritable: false },
         config: { value: input.config ?? null, isWritable: false },
         ownerVerifier: { value: input.ownerVerifier ?? null, isWritable: false },
-        asset: { value: input.asset ?? null, isWritable: true },
+        token: { value: input.token ?? null, isWritable: true },
         mint: { value: input.mint ?? null, isWritable: false },
         recipient: { value: input.recipient ?? null, isWritable: false },
         programAuthority: {
@@ -172,7 +172,7 @@ export function getTransferInstruction(input, config) {
             getAccountMeta("verifier", accounts.verifier),
             getAccountMeta("config", accounts.config),
             getAccountMeta("ownerVerifier", accounts.ownerVerifier),
-            getAccountMeta("asset", accounts.asset),
+            getAccountMeta("token", accounts.token),
             getAccountMeta("mint", accounts.mint),
             getAccountMeta("recipient", accounts.recipient),
             getAccountMeta("programAuthority", accounts.programAuthority),
@@ -206,7 +206,7 @@ export function parseTransferInstruction(instruction) {
             verifier: getNextAccount(),
             config: getNextAccount(),
             ownerVerifier: getNextAccount(),
-            asset: getNextAccount(),
+            token: getNextAccount(),
             mint: getNextAccount(),
             recipient: getNextAccount(),
             programAuthority: getNextAccount(),
