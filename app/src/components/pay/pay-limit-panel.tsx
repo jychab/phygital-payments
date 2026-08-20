@@ -3,14 +3,18 @@
 import { useState } from "react";
 import { useIsRestoring } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Check, LoaderCircle, Nfc } from "lucide-react";
+import { Check, Coins, LoaderCircle, Nfc } from "lucide-react";
 import { address, type Address } from "@solana/kit";
 
 import { AmountField } from "@/components/shared/amount-field";
 import { BackLink } from "@/components/shared/back-link";
+import {
+  ConnectWalletNotice,
+} from "@/components/shared/expected-wallet-prompt";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenListRow, TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
+import { GateMessage } from "@/components/layout/gate-message";
 import {
   useDelegateStatus,
 } from "@/hooks/pay/use-delegate-status";
@@ -33,7 +37,7 @@ import {
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
 import { toUserErrorMessage } from "@/lib/user-errors";
-import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
+import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 import { shortAddress } from "@/lib/utils";
 
 function tryUiAmountToRaw(amount: string, decimals: number): bigint | null {
@@ -65,7 +69,8 @@ export function LimitPanel({
   onBack?: () => void;
   onSkip?: () => void;
 }) {
-  const { address: walletAddress, isConnected } = useSolanaAddress();
+  const { address: walletAddress, isConnected, matched, ownerShort } =
+    useExpectedWallet(expectedOwner);
   const mint = String(mintProp);
   const mintAddress = address(mint);
   const assetStr = String(asset);
@@ -101,9 +106,10 @@ export function LimitPanel({
   );
 
   const hasDelegate = isDelegateEnabled(status);
-  const wrongWallet =
-    isConnected && walletAddress != null && walletAddress !== expectedOwner;
-  const matched = isConnected && walletAddress === expectedOwner;
+  const balanceRaw =
+    status?.balanceRaw ??
+    (holding ? BigInt(holding.balanceRaw) : BigInt(0));
+  const needsBalance = !hasDelegate && balanceRaw <= BigInt(0);
   const busy =
     setAllowance.isPending ||
     revoke.isPending ||
@@ -157,7 +163,47 @@ export function LimitPanel({
     return "Set Limit";
   })();
 
-  const saveDisabled = busy || !amount || limitRaw == null || !matched;
+  const saveDisabled =
+    busy || !amount || limitRaw == null || !matched || needsBalance;
+
+  if (needsBalance) {
+    return (
+      <div className="flex flex-1 flex-col gap-6">
+        <div className="flex items-center gap-2">
+          {onBack ? <BackLink onClick={onBack} /> : null}
+          <QueryRefreshButton owner={expectedOwner} className="ml-auto" />
+        </div>
+        <GateMessage
+          icon={<Coins className="size-5 text-muted-foreground" />}
+          title={`Add ${token.symbol} first`}
+          body="This wallet needs a balance before you can set a spending limit for Pay."
+          action={
+            onSkip ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                className="w-full max-w-xs"
+                onClick={onSkip}
+              >
+                Not Now
+              </Button>
+            ) : onBack ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                className="w-full max-w-xs"
+                onClick={onBack}
+              >
+                Back
+              </Button>
+            ) : undefined
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -205,14 +251,7 @@ export function LimitPanel({
         ) : null}
       </p>
       {!isConnected ? (
-        <p className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2 text-center text-xs text-muted-foreground">
-          Connect {shortAddress(expectedOwner, 4)} above to continue.
-        </p>
-      ) : wrongWallet ? (
-        <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
-          Wrong wallet. Disconnect above, then connect{" "}
-          {shortAddress(expectedOwner, 4)}.
-        </p>
+        <ConnectWalletNotice ownerShort={ownerShort} />
       ) : null}
 
       <div className="mt-auto flex flex-col gap-2.5">
@@ -269,13 +308,15 @@ export function LimitPanel({
 export function ManagePayTokens({
   owner,
   onEditLimit,
+  live = true,
 }: {
   owner: string;
   onEditLimit: (holding: PaymentTokenHolding) => void;
+  live?: boolean;
 }) {
   const isRestoring = useIsRestoring();
-  const payContext = usePayTokenContext(owner);
-  const delegates = useOwnerPayDelegates(owner);
+  const payContext = usePayTokenContext(owner, { live });
+  const delegates = useOwnerPayDelegates(owner, { live });
 
   if (isRestoring || payContext.isLoading || delegates.isLoading) {
     return (

@@ -28,7 +28,7 @@ import {
 } from "@/lib/tokens/payment-token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { shortAddress } from "@/lib/utils";
-import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
+import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
 import { useVerifiedTokens } from "@/hooks/tokens/use-verified-tokens";
 
@@ -42,17 +42,15 @@ export function SetupCollectApp({
   paymentRequest: PaymentRequest;
 }) {
   const embedded = useIsEmbedded();
+  const recipient = paymentRequest.recipient;
+  const mint = paymentRequest.mint;
   const {
-    address: connectedAddress,
     isConnected,
     ready,
     connect,
-    disconnect,
-  } = useSolanaAddress();
+    matched: matches,
+  } = useExpectedWallet(recipient ?? "");
   const signer = useWalletKitSigner();
-
-  const recipient = paymentRequest.recipient;
-  const mint = paymentRequest.mint;
   const verified = useVerifiedTokens();
   const token = resolvePaymentToken(mint, verified.data);
   const mintQuery = useMintProgram(mint);
@@ -90,9 +88,6 @@ export function SetupCollectApp({
     );
   }
 
-  const matches = isConnected && connectedAddress === recipient;
-  const wrongWallet =
-    isConnected && connectedAddress != null && connectedAddress !== recipient;
   const collectUrl = collectHref({
     recipient,
     mint,
@@ -109,7 +104,7 @@ export function SetupCollectApp({
   }
 
   return (
-    <AppShell modeLabel="Setup" walletActions="full">
+    <AppShell modeLabel="Setup" walletActions="full" linkedOwner={recipient}>
       <AppCard>
         {!ready || ataLoading ? (
           <CenteredStatus>
@@ -154,7 +149,8 @@ export function SetupCollectApp({
                 />{" "}
                 receive account.
               </>
-            }            action={
+            }
+            action={
               <div className="flex w-full max-w-64 flex-col items-center gap-3">
                 <div className="flex w-full items-center justify-between gap-2 rounded-xl bg-muted/35 px-4 py-2.5 text-xs">
                   <span className="text-muted-foreground">Wallet</span>
@@ -168,22 +164,6 @@ export function SetupCollectApp({
                   Connect wallet
                 </Button>
               </div>
-            }
-          />
-        ) : wrongWallet ? (
-          <GateMessage
-            icon={<Wallet className="size-5 text-muted-foreground" />}
-            title="Wrong wallet"
-            body={`Disconnect above, then connect ${shortAddress(recipient, 4)}.`}
-            action={
-              <Button
-                type="button"
-                size="lg"
-                variant="outline"
-                onClick={() => void disconnect()}
-              >
-                Disconnect
-              </Button>
             }
           />
         ) : (

@@ -15,6 +15,7 @@ import {
 import { collectHref } from "@/lib/collect/payment-request";
 import { isMainnet } from "@/lib/solana/cluster";
 import { cn } from "@/lib/utils";
+import { WalletSyncGate } from "@/components/shared/wallet-sync-gate";
 
 const WalletChip = dynamic(
   () => import("@/components/shared/wallet-chip").then((m) => m.WalletChip),
@@ -51,6 +52,7 @@ export function AppShell({
   walletActions = "full",
   modeLabel,
   modeNav,
+  linkedOwner,
 }: {
   /** Required for `walletActions="display-only"` (sealed Collect chip). */
   recipient?: string | null;
@@ -61,8 +63,16 @@ export function AppShell({
   modeLabel?: AppMode;
   /** When set, mode label becomes a dropdown (Home / Collect; Device stays the current label). */
   modeNav?: ModeNavItem[] | null;
+  /** Asset-linked wallet — must match Privy when both are connected. */
+  linkedOwner?: string | null;
 }) {
   const navItems = modeNav && modeNav.length > 0 ? modeNav : null;
+  const body =
+    walletActions === "full" && linkedOwner ? (
+      <WalletSyncGate linkedOwner={linkedOwner}>{children}</WalletSyncGate>
+    ) : (
+      children
+    );
 
   return (
     <div className="relative flex min-h-full flex-1 flex-col">
@@ -100,7 +110,7 @@ export function AppShell({
             <span aria-hidden />
           )}
         </div>
-        {children}
+        {body}
       </main>
     </div>
   );

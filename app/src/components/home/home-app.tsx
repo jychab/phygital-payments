@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useIsRestoring } from "@tanstack/react-query";
 import { History, LoaderCircle, Nfc, Wallet } from "lucide-react";
 
 import { AppCard, AppShell, homeCollectModeNav } from "@/components/layout/app-shell";
@@ -9,22 +8,9 @@ import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
 import { DevicesPanel } from "@/components/home/devices-panel";
 import { HistoryPanel } from "@/components/home/history-panel";
-import {
-  LimitPanel,
-  PayDevicePicker,
-} from "@/components/pay/pay-limit-panel";
-import { ManagePayPanel, PayPanel } from "@/components/pay/pay-panel";
+import { PayTab } from "@/components/pay/pay-tab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
-import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
-import { usePayTokenContext } from "@/hooks/tokens/use-verified-tokens";
-import { isOwnerPayMintEnabled } from "@/lib/tokens/mint-delegate";
-import {
-  getDefaultMint,
-  zeroUsdcHolding,
-  type PaymentTokenHolding,
-} from "@/lib/tokens/payment-token";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 
 type HomeTab = "pay" | "devices" | "history";
@@ -107,7 +93,7 @@ export function HomeApp() {
               value="pay"
               className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
             >
-              <HomePayTab owner={address} />
+              <PayTab owner={address} active={mode === "pay"} />
             </TabsContent>
             <TabsContent
               value="devices"
@@ -125,138 +111,5 @@ export function HomeApp() {
         </Tabs>
       )}
     </AppShell>
-  );
-}
-
-function HomePayTab({ owner }: { owner: string }) {
-  const isRestoring = useIsRestoring();
-  const payContext = usePayTokenContext(owner);
-  const delegates = useOwnerPayDelegates(owner);
-  const [manageOpen, setManageOpen] = useState(false);
-  const [needDevice, setNeedDevice] = useState(false);
-  const [pickingFor, setPickingFor] = useState<PaymentTokenHolding | null>(
-    null,
-  );
-  const [limitTarget, setLimitTarget] = useState<{
-    holding: PaymentTokenHolding;
-    asset: string;
-  } | null>(null);
-
-  const assets = delegates.data?.assets ?? [];
-  const tokenEnabled = delegates.data?.tokenEnabled === true;
-
-  function usdcHolding(): PaymentTokenHolding {
-    const mint = String(getDefaultMint());
-    return (
-      payContext.data?.holdings.find((h) => h.mint === mint) ??
-      zeroUsdcHolding()
-    );
-  }
-
-  function openLimit(holding: PaymentTokenHolding) {
-    if (delegates.isPending) return;
-    const match = delegates.data?.byMint.get(holding.mint);
-    const existingAsset = match?.asset;
-    if (existingAsset && isOwnerPayMintEnabled(match)) {
-      setLimitTarget({ holding, asset: String(existingAsset) });
-      return;
-    }
-    if (assets.length === 0) {
-      setNeedDevice(true);
-      return;
-    }
-    if (assets.length === 1) {
-      setLimitTarget({ holding, asset: String(assets[0]!.asset) });
-      return;
-    }
-    setPickingFor(holding);
-  }
-
-  if (isRestoring) {
-    return (
-      <CenteredStatus>
-        <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading Pay…</p>
-      </CenteredStatus>
-    );
-  }
-
-  if (needDevice) {
-    return (
-      <div className="flex flex-1 flex-col gap-5">
-        <GateMessage
-          icon={<Nfc className="size-5 text-muted-foreground" />}
-          title="Add an NFC device"
-          body="Hold a device to this phone to add it, then set a spending limit."
-          action={
-            <Button
-              type="button"
-              variant="ghost"
-              size="lg"
-              className="w-full"
-              onClick={() => setNeedDevice(false)}
-            >
-              Back
-            </Button>
-          }
-        />
-      </div>
-    );
-  }
-
-  if (pickingFor) {
-    return (
-      <PayDevicePicker
-        assets={assets}
-        onSelect={(asset) => {
-          setLimitTarget({ holding: pickingFor, asset });
-          setPickingFor(null);
-        }}
-        onBack={() => setPickingFor(null)}
-      />
-    );
-  }
-
-  if (limitTarget) {
-    return (
-      <LimitPanel
-        expectedOwner={owner}
-        asset={limitTarget.asset}
-        mint={limitTarget.holding.mint}
-        walletMatch={delegates.data?.byMint.get(limitTarget.holding.mint)}
-        onEnabled={() => setLimitTarget(null)}
-        onBack={() => setLimitTarget(null)}
-      />
-    );
-  }
-
-  if (manageOpen) {
-    return (
-      <ManagePayPanel
-        owner={owner}
-        onBack={() => setManageOpen(false)}
-        onEditTokenLimit={openLimit}
-      />
-    );
-  }
-
-  return (
-    <PayPanel
-      tokenEnabled={tokenEnabled}
-      isLoading={delegates.isPending}
-      onManage={() => setManageOpen(true)}
-      onSetLimit={() => {
-        if (delegates.isPending) return;
-        if (assets.length === 0) {
-          setNeedDevice(true);
-          return;
-        }
-        if (assets.length > 1) {
-          setManageOpen(true);
-          return;
-        }
-        openLimit(usdcHolding());
-      }}
-    />
   );
 }

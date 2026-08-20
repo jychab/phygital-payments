@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Check, LoaderCircle, X } from "lucide-react";
-import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { BackLink } from "@/components/shared/back-link";
@@ -52,21 +51,11 @@ function isAbortError(error: unknown): boolean {
  */
 export function PayFlowPanel({
   owner,
-  tokenEnabled,
-  isLoading = false,
-  variant = "home",
-  onSetLimit,
   onManage,
-  onManageApiKey,
   onBack,
 }: {
   owner: string;
-  tokenEnabled: boolean;
-  isLoading?: boolean;
-  variant?: "home" | "device";
-  onSetLimit?: () => void;
   onManage?: () => void;
-  onManageApiKey?: () => void;
   onBack?: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -123,10 +112,6 @@ export function PayFlowPanel({
   }, [windowOpen, grantId, owner, queryClient]);
 
   async function onPay() {
-    if (!tokenEnabled) {
-      toast.error("Turn on a token for Pay first.");
-      return;
-    }
     try {
       setBusy(true);
       const grant = await requestPreauthForWallet({ wallet: owner });
@@ -266,53 +251,6 @@ export function PayFlowPanel({
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-1 flex-col">
-        {onBack ? <BackLink onClick={onBack} /> : null}
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-center">
-          <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Loading Pay…</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!tokenEnabled) {
-    return (
-      <div className="flex flex-1 flex-col">
-        <div className="flex items-center gap-2">
-          {onBack ? <BackLink onClick={onBack} /> : null}
-          <QueryRefreshButton owner={owner} className="ml-auto" />
-        </div>
-        <div className="flex flex-1 flex-col items-center justify-center gap-5 py-8 text-center">
-          <div className="max-w-64 space-y-1.5">
-            <p className="text-base font-medium text-foreground">
-              Turn On Pay
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Set a spending limit to start paying.
-            </p>
-          </div>
-          {onSetLimit ? (
-            <Button
-              type="button"
-              size="lg"
-              className="w-full max-w-xs"
-              onClick={onSetLimit}
-            >
-              Set Spending Limit
-            </Button>
-          ) : (
-            <Button type="button" size="lg" className="w-full max-w-xs" asChild>
-              <Link href="/">Set Up on Home</Link>
-            </Button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-1 flex-col gap-6">
       <div className="flex items-center gap-2">
@@ -344,28 +282,6 @@ export function PayFlowPanel({
             onClick={onManage}
           >
             Manage Pay
-          </Button>
-        ) : null}
-        {onManageApiKey ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="w-full"
-            onClick={onManageApiKey}
-          >
-            Manage API key
-          </Button>
-        ) : null}
-        {!onBack && variant === "device" ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            className="w-full"
-            asChild
-          >
-            <Link href="/">Done</Link>
           </Button>
         ) : null}
       </div>

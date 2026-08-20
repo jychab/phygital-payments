@@ -42,7 +42,6 @@ export function parseCounterState(raw: string | null): CounterState | null {
       return { c, t };
     }
   } catch {
-    // Legacy plain decimal string (mint / early writers).
     const asNumber = Number(raw);
     if (Number.isFinite(asNumber)) {
       return { c: asNumber, t: 0 };

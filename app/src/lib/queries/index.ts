@@ -6,7 +6,7 @@
  * `Cache-Control: private, no-store`.
  *
  * Domain code lives next to the matching UI folder:
- *   lib/pay + hooks/pay         Enable Pay, API keys, Hold to Pay, limits
+ *   lib/pay + hooks/pay         Manage API Keys, Hold to Pay, limits
  *   lib/collect + hooks/collect `/collect` receive + `/setup` ATA
  *   lib/device + hooks/device   NFC tap, claim, `/device?token=`
  *   lib/home + hooks/home       Activity + Devices tab
@@ -206,6 +206,11 @@ export const queryOptions = {
   /** One-shot proofs / immutable chain metadata — never refetch. */
   immutable: { refetchOnWindowFocus: false, staleTime: Infinity },
 } as const;
+
+/** Owner-scoped reads: poll only while the UI surface is active. */
+export function ownerQueryOptions(live: boolean) {
+  return live ? queryOptions.live : queryOptions.default;
+}
 
 // ============================================================================
 // Fetchers (reuse the existing domain functions)

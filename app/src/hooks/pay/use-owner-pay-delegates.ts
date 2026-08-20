@@ -7,8 +7,8 @@ import { address } from "@solana/kit";
 import { usePhygitalAssetsByOwner } from "@/hooks/home/use-phygital-assets-by-owner";
 import {
   fetchOwnerPayDelegates,
+  ownerQueryOptions,
   queryKeys,
-  queryOptions,
   type OwnerPayDelegates,
 } from "@/lib/queries";
 import { usePayTokenContext } from "@/hooks/tokens/use-verified-tokens";
@@ -33,9 +33,13 @@ function seedDelegateStatus(
 }
 
 /** Wallet-scoped Pay scan: owned assets vs SPL ATA delegates. No device pick. */
-export function useOwnerPayDelegates(owner: string | null) {
+export function useOwnerPayDelegates(
+  owner: string | null,
+  options?: { live?: boolean },
+) {
+  const live = options?.live !== false;
   const queryClient = useQueryClient();
-  const payContext = usePayTokenContext(owner);
+  const payContext = usePayTokenContext(owner, { live });
   const assetsQuery = usePhygitalAssetsByOwner(owner);
   const holdingsReady = payContext.isSuccess || payContext.isError;
   const mints = useMemo(
@@ -62,7 +66,7 @@ export function useOwnerPayDelegates(owner: string | null) {
       return result;
     },
     enabled: Boolean(owner) && holdingsReady && assetsQuery.isSuccess,
-    ...queryOptions.live,
+    ...ownerQueryOptions(live),
   });
 
   return {

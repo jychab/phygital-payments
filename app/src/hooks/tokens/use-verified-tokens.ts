@@ -6,6 +6,7 @@ import {
   fetchHoldings,
   fetchPayContext,
   fetchVerifiedTokens,
+  ownerQueryOptions,
   queryKeys,
   queryOptions,
   type PaymentToken,
@@ -21,21 +22,29 @@ export function useVerifiedTokens() {
   });
 }
 
-export function useTokenHoldings(owner: string | null) {
+export function useTokenHoldings(
+  owner: string | null,
+  options?: { live?: boolean },
+) {
+  const live = options?.live !== false;
   return useQuery<PaymentTokenHolding[]>({
     queryKey: queryKeys.holdings.byOwner(owner),
     queryFn: () => fetchHoldings(owner!),
     enabled: Boolean(owner),
-    ...queryOptions.live,
+    ...ownerQueryOptions(live),
   });
 }
 
 /** Catalog + holdings in one request (Pay manage screens). */
-export function usePayTokenContext(owner: string | null) {
+export function usePayTokenContext(
+  owner: string | null,
+  options?: { live?: boolean },
+) {
+  const live = options?.live !== false;
   return useQuery<PayTokenContext>({
     queryKey: queryKeys.payContext.byOwner(owner),
     queryFn: () => fetchPayContext(owner!),
     enabled: Boolean(owner),
-    ...queryOptions.live,
+    ...ownerQueryOptions(live),
   });
 }

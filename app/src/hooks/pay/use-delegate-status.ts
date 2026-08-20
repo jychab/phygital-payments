@@ -7,8 +7,8 @@ import { address, type Address } from "@solana/kit";
 import {
   fetchDelegateStatus,
   fetchDelegateStatuses,
+  ownerQueryOptions,
   queryKeys,
-  queryOptions,
   type MintDelegateStatus,
 } from "@/lib/queries";
 import { isDelegateEnabled } from "@/lib/tokens/mint-delegate";
@@ -40,13 +40,14 @@ function delegateStatusQuery(
   owner: string | null,
   asset: string | null,
   mint: string,
+  live = true,
 ) {
   return {
     queryKey: queryKeys.delegateStatus.byOwnerAssetMint(owner, asset, mint),
     queryFn: () =>
       fetchDelegateStatus(address(owner!), address(mint), address(asset!)),
     enabled: Boolean(owner && asset && mint),
-    ...queryOptions.live,
+    ...ownerQueryOptions(live),
   };
 }
 
@@ -55,8 +56,10 @@ export function useDelegateStatus(
   owner: string | null,
   asset: string | null,
   mint: Address | string,
+  options?: { live?: boolean },
 ) {
-  return useQuery(delegateStatusQuery(owner, asset, String(mint)));
+  const live = options?.live !== false;
+  return useQuery(delegateStatusQuery(owner, asset, String(mint), live));
 }
 
 /** Per-mint observers over a batched RPC (device Pay-setup readiness). */
@@ -64,7 +67,9 @@ export function useDelegateStatuses(
   owner: string | null,
   asset: string | null,
   mints: readonly string[],
+  options?: { live?: boolean },
 ) {
+  const live = options?.live !== false;
   const mintsKey = mints.filter(Boolean).join(",");
   const sorted = useMemo(
     () => [...new Set(mintsKey.split(",").filter(Boolean))].sort(),
@@ -73,7 +78,7 @@ export function useDelegateStatuses(
 
   return useQueries({
     queries: sorted.map((mint) => ({
-      ...delegateStatusQuery(owner, asset, mint),
+      ...delegateStatusQuery(owner, asset, mint, live),
       queryFn: async () => {
         const map = await loadDelegateStatuses(owner!, asset!, sorted);
         const status = map.get(mint);

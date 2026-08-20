@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { PrivyWalletProvider } from "@/app/privy-wallet-provider";
 import { FinishClaimPanel } from "@/components/device/finish-claim-panel";
-import { DeviceFinishSetup } from "@/components/device/finish-setup";
+import { PayTab } from "@/components/pay/pay-tab";
 import {
   AppCard,
   AppShell,
@@ -32,14 +32,14 @@ export function DeviceWalletPhase({
 
   return (
     <PrivyWalletProvider>
-      <DeviceShell>
+      <DeviceShell linkedOwner={owner && asset ? owner : null}>
         {token ? (
           <FinishClaimPanel />
         ) : owner && asset ? (
-          <DeviceFinishSetup
+          <PayTab
             owner={owner}
-            asset={asset}
-            onDismiss={() => router.push("/")}
+            pinnedAsset={asset}
+            onExit={() => router.push("/")}
           />
         ) : (
           children
@@ -49,7 +49,13 @@ export function DeviceWalletPhase({
   );
 }
 
-function DeviceShell({ children }: { children: ReactNode }) {
+function DeviceShell({
+  children,
+  linkedOwner,
+}: {
+  children: ReactNode;
+  linkedOwner?: string | null;
+}) {
   const { address, isConnected } = useSolanaAddress();
 
   return (
@@ -57,6 +63,7 @@ function DeviceShell({ children }: { children: ReactNode }) {
       walletActions="full"
       modeLabel="Device"
       modeNav={isConnected && address ? homeCollectModeNav(address) : null}
+      linkedOwner={linkedOwner}
     >
       <AppCard>{children}</AppCard>
     </AppShell>

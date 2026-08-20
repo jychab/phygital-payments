@@ -41,13 +41,11 @@ Configure the Privy app for Solana external wallet connectors. Login method: wal
 
 Connect a wallet via Privy, then use tabs:
 
-- **Pay** — **Pay** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC device. If Pay isn't configured, the tab offers **Enable Pay** (wallet sign; the API key is stored in localStorage on this phone).
+- **Pay** — **Pay** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC device. If Pay isn't configured, the tab offers **Manage API Keys** (paste a key, or wallet-sign to issue one; the API key is stored in localStorage on this phone).
 - **Devices** — list of NFC devices for this wallet. Add a device by holding a tag (opens `/device`).
 - **Activity** — recent payments for the connected wallet.
 
-Pay settings (spending limits, token management) live on Home. The API key is stored in **localStorage** on this phone after Enable Pay.
-
-Legacy collect query params on `/` (`?recipient=` / `?amount=`) redirect to `/collect`.
+Pay settings (spending limits, token management) live on Home. The API key is stored in **localStorage** on this phone after **Manage API Keys**.
 
 ### Collect (`/collect`)
 
@@ -76,11 +74,9 @@ After an NFC tap. NFC verify has **no Privy**. Wallet connect loads only for `?t
 
 1. Verify tap (silent)
 2. **Unclaimed / unlocked** — WebAuthn tap, then replace to `/device?token=` and connect (Google in this tab, or copy the finish link into a wallet in-app browser)
-3. **Locked and owned** — **Your wallet is ready.** Status: Wallet, Pay (On/Off), Spending Limit
-   - **Set Up Pay** replaces to `/device?owner=&asset=` (spending limit, then Enable Pay if needed)
-   - **Pay** → **Hold to Pay** when Pay is on and this phone has a stored key
+3. **Locked and owned** — **Your wallet is ready.** **Collect** (primary) and **Pay** (opens the same Pay tab as Home: API key, spending limit, Hold to Pay). Connect a wallet only when signing a limit or issuing a key — not to open Pay.
 
-API keys live in localStorage on this phone, keyed by wallet. **Reveal API key** copies the key onto another phone.
+API keys live in localStorage on this phone, keyed by wallet. **Manage API Keys** copies, pastes, or issues/rotates a key. Setting a spending limit requires a balance for that token in the linked wallet.
 
 ### Open a spending window (API key)
 
@@ -118,7 +114,7 @@ Keep the HTTP connection open for the full window. Example: `curl --max-time 150
 
 Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey>` (rejects rotated keys).
 
-The API key is stored in plaintext in localStorage on this phone. Keys in query strings may also appear in CDN/proxy logs — use **Rotate API key** in Manage Pay if leaked.
+The API key is stored in plaintext in localStorage on this phone. Keys in query strings may also appear in CDN/proxy logs — use **Rotate API key** in **Manage API Keys** if leaked.
 
 ```bash
 curl "https://<host>/api/preauth/open?apiKey=ppk_…"

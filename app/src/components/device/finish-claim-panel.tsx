@@ -3,17 +3,14 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, LoaderCircle, Wallet } from "lucide-react";
-import { toast } from "sonner";
+import { LoaderCircle, Wallet } from "lucide-react";
 
-import { DeviceFinishSetup } from "@/components/device/finish-setup";
-import { DeviceWalletReadyLoader } from "@/components/device/wallet-ready-loader";
+import { DevicePayShell } from "@/components/device/device-pay-shell";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
 import { ExpiryCountdown } from "@/components/shared/expiry-countdown";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { consumePendingClaim } from "@/lib/device/pending-claim-client";
-import { deviceClaimHref } from "@/lib/device/finish";
 import { usePendingClaim } from "@/hooks/device/use-pending-claim";
 import { usePhygitalAssetByAddress } from "@/hooks/device/use-phygital-asset";
 import { assertClaimReady, finishClaim } from "@/lib/device/claim";
@@ -39,20 +36,7 @@ export function FinishClaimPanel() {
 
   const [phase, setPhase] = useState<Phase>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showSetup, setShowSetup] = useState(false);
   const [claimedAsset, setClaimedAsset] = useState<string | null>(null);
-
-  async function onCopyLink() {
-    if (!token) return;
-    try {
-      await navigator.clipboard.writeText(
-        `${window.location.origin}${deviceClaimHref(token)}`,
-      );
-      toast.success("Finish link copied");
-    } catch {
-      toast.error("Couldn’t copy link");
-    }
-  }
 
   async function onFinish() {
     if (!signer || !address || !pending) return;
@@ -67,7 +51,9 @@ export function FinishClaimPanel() {
     try {
       assertClaimReady(asset, signer.address);
     } catch (err) {
-      setError(toUserErrorMessage(err, "Couldn't add this NFC device. Try again."));
+      setError(
+        toUserErrorMessage(err, "Couldn't add this NFC device. Try again."),
+      );
       return;
     }
 
@@ -131,21 +117,8 @@ export function FinishClaimPanel() {
   }
 
   if (phase === "done" && address && claimedAsset) {
-    if (showSetup) {
-      return (
-        <DeviceFinishSetup
-          owner={address}
-          asset={claimedAsset}
-          onDismiss={() => setShowSetup(false)}
-        />
-      );
-    }
     return (
-      <DeviceWalletReadyLoader
-        owner={address}
-        asset={claimedAsset}
-        onSetUpPay={() => setShowSetup(true)}
-      />
+      <DevicePayShell owner={address} pinnedAsset={claimedAsset} />
     );
   }
 
@@ -175,10 +148,12 @@ export function FinishClaimPanel() {
   return (
     <div className="flex flex-1 flex-col gap-5 py-2">
       <div className="space-y-1.5 text-center">
-        <p className="text-base font-medium text-foreground">Link your wallet</p>
+        <p className="text-base font-medium text-foreground">
+          Link your wallet
+        </p>
         <p className="mx-auto max-w-72 text-sm text-muted-foreground">
-          Connect the wallet that should own this device, then confirm. You&apos;ll
-          pay a small network fee.
+          Connect the wallet that should own this device, then confirm.
+          You&apos;ll pay a small network fee.
         </p>
       </div>
 
@@ -198,26 +173,14 @@ export function FinishClaimPanel() {
           title="Connect your wallet"
           body="This wallet will be linked to the device."
           action={
-            <div className="flex w-full max-w-64 flex-col gap-2.5">
-              <Button
-                type="button"
-                size="lg"
-                className="w-full"
-                onClick={connect}
-              >
-                Connect wallet
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="w-full"
-                onClick={() => void onCopyLink()}
-              >
-                <Copy className="size-4" />
-                Copy finish link
-              </Button>
-            </div>
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              onClick={connect}
+            >
+              Connect wallet
+            </Button>
           }
         />
       ) : (
