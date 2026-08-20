@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 
+import { PrivyWalletRoot } from "./privy-wallet-root";
 import { Toaster } from "@/components/ui/sonner";
 import {
   CACHE_BUSTER,
@@ -15,8 +16,7 @@ import { queryOptions } from "@/lib/queries";
 
 /**
  * Shared by all routes: React Query (localStorage-persisted, only browser cache) + toasts.
- * No Privy / WalletConnect — those live in `privy-wallet-provider.tsx` and are
- * mounted per-route (`HomeApp`, `DeviceWalletShell`, `CollectAtaSetup`).
+ * One Privy tree (`PrivyWalletRoot`) — the SDK loads only when a route gates on it.
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -43,8 +43,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
         dehydrateOptions: { shouldDehydrateQuery },
       }}
     >
-      {children}
-      <Toaster richColors position="top-center" />
+      <PrivyWalletRoot>
+        {children}
+        <Toaster richColors position="top-center" />
+      </PrivyWalletRoot>
     </PersistQueryClientProvider>
   );
 }

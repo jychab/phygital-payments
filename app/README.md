@@ -55,9 +55,9 @@ Shared Pay UI (Home tab and owned device) is `PayScreen` in `components/pay/`:
 - `api-key-panel.tsx` — paste / issue / rotate
 
 Owned-device home after tap or claim is `DeviceHome` (`device/device-home.tsx`).
-`HomeWalletShell` and `DeviceWalletShell` wrap Privy (loaded with `ssr: false`);
-`/collect` loads it only for missing receive-account setup. Do not put Privy on
-the root layout.
+One `PrivyProvider` lives in `PrivyWalletRoot` (root layout). Home, `/device`,
+and Collect ATA-setup ask for it via `PrivyGate`; Collect's happy path does not
+load the Privy SDK. Do not wrap `PrivyWalletProvider` again on a route.
 The connected wallet is always passed as `owner` (not `recipient` / `expectedOwner`), except Collect's settle-to address which stays `recipient`.
 
 ## Modes

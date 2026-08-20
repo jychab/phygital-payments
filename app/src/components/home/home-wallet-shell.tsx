@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { History, LoaderCircle, Nfc, Wallet } from "lucide-react";
 
-import { PrivyWalletProvider } from "@/app/privy-wallet-provider";
+import { PrivyGate } from "@/app/privy-wallet-root";
 import { AppCard, AppShell, homeCollectModeNav } from "@/components/layout/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
@@ -17,14 +17,14 @@ import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 type HomeTab = "pay" | "devices" | "history";
 
 /**
- * Privy + home UI. Loaded from `HomeApp` with `ssr: false` so
- * `@privy-io/react-auth` never runs on the server.
+ * Home UI. Loaded from `HomeApp` with `ssr: false` so Privy hooks never run
+ * on the server. Uses the root `PrivyProvider` via `PrivyGate`.
  */
 export function HomeWalletShell() {
   return (
-    <PrivyWalletProvider>
+    <PrivyGate>
       <HomeScreen />
-    </PrivyWalletProvider>
+    </PrivyGate>
   );
 }
 

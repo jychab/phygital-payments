@@ -2,8 +2,8 @@
 
 import { type ReactNode } from "react";
 
-import { PrivyWalletProvider } from "@/app/privy-wallet-provider";
-import { DeviceHome } from "@/components/device/device-home";
+import { PrivyGate } from "@/app/privy-wallet-root";
+import { DeviceHomeByAddress } from "@/components/device/device-home";
 import { FinishClaimPanel } from "@/components/device/finish-claim-panel";
 import {
   AppCard,
@@ -13,7 +13,7 @@ import {
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 
 /**
- * Privy + AppShell for every `/device` visit.
+ * AppShell for every `/device` visit. Uses the root `PrivyProvider` via `PrivyGate`.
  * NFC content is `children`; `?token=` finishes a claim; `?owner=&asset=` is owned-device home.
  */
 export function DeviceWalletShell({
@@ -28,17 +28,17 @@ export function DeviceWalletShell({
   children?: ReactNode;
 }) {
   return (
-    <PrivyWalletProvider>
+    <PrivyGate>
       <DeviceChrome>
         {token ? (
           <FinishClaimPanel />
         ) : owner && asset ? (
-          <DeviceHome owner={owner} asset={asset} />
+          <DeviceHomeByAddress owner={owner} asset={asset} />
         ) : (
           children
         )}
       </DeviceChrome>
-    </PrivyWalletProvider>
+    </PrivyGate>
   );
 }
 

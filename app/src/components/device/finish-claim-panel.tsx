@@ -14,6 +14,7 @@ import { consumePendingClaim } from "@/lib/device/pending-claim-client";
 import { usePendingClaim } from "@/hooks/device/use-pending-claim";
 import { usePhygitalAssetByAddress } from "@/hooks/device/use-phygital-asset";
 import { assertClaimReady, finishClaim } from "@/lib/device/claim";
+import { assetAllowsPay } from "@/lib/phygital/asset";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { invalidateOwnerQueries, queryKeys } from "@/lib/queries";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
@@ -37,6 +38,7 @@ export function FinishClaimPanel() {
   const [phase, setPhase] = useState<Phase>(null);
   const [error, setError] = useState<string | null>(null);
   const [claimedAsset, setClaimedAsset] = useState<string | null>(null);
+  const [claimedPayAllowed, setClaimedPayAllowed] = useState(false);
 
   async function onFinish() {
     if (!signer || !address || !pending) return;
@@ -81,6 +83,7 @@ export function FinishClaimPanel() {
       ]);
 
       setClaimedAsset(session.asset);
+      setClaimedPayAllowed(assetAllowsPay(asset));
       setPhase("done");
     } catch (err) {
       setPhase(null);
@@ -116,7 +119,11 @@ export function FinishClaimPanel() {
 
   if (phase === "done" && address && claimedAsset) {
     return (
-      <DeviceHome owner={address} asset={claimedAsset} />
+      <DeviceHome
+        isPayAllowed={claimedPayAllowed}
+        owner={address}
+        asset={claimedAsset}
+      />
     );
   }
 

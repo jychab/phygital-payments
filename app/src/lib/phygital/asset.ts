@@ -4,8 +4,8 @@ import {
   fetchAsset,
   fetchAssetByIdentifier,
   findAssetPda,
+  AssetType,
   type Asset,
-  type AssetType,
 } from "phygital-token-sdk";
 
 import { bytesToBase64Url } from "@/lib/crypto/base64";
@@ -86,4 +86,11 @@ export function isUnclaimedAsset(
   asset: Pick<PhygitalAsset, "currentOwner">,
 ): boolean {
   return asset.currentOwner === DEFAULT_ASSET_OWNER;
+}
+
+/** Lockable devices can open Pay (spending limit / Hold to Pay). */
+export function assetAllowsPay(
+  asset: Pick<PhygitalAsset, "assetType">,
+): boolean {
+  return asset.assetType === AssetType.Lockable;
 }

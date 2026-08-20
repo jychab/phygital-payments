@@ -42,10 +42,9 @@ const privyConfig: PrivyClientConfig = {
 };
 
 /**
- * Per-route Privy wrap — not the root layout. `/` and `/device` always mount
- * this; `/collect` only when creating a missing receive account.
- * Parents load it via `next/dynamic({ ssr: false })` so `@privy-io/react-auth`
- * never runs on the server.
+ * The one `PrivyProvider` for the app. Mounted from `PrivyWalletRoot` after a
+ * route asks for it (`PrivyGate`). Do not wrap this again on Home / Device /
+ * Collect. Dynamic-imported so `@privy-io/react-auth` never runs on the server.
  */
 export function PrivyWalletProvider({ children }: { children: ReactNode }) {
   if (!privyAppId) {

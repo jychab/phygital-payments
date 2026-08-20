@@ -12,10 +12,9 @@ import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import { usePhygitalAsset } from "@/hooks/device/use-phygital-asset";
 import { useTapVerify } from "@/hooks/device/use-tap-verify";
-import { isUnclaimedAsset } from "@/lib/phygital/asset";
+import { isUnclaimedAsset, assetAllowsPay } from "@/lib/phygital/asset";
 import { tryParseAddress } from "@/lib/solana/address";
 import { toUserErrorMessage } from "@/lib/user-errors";
-import { AssetType } from "phygital-token-sdk";
 
 const DeviceWalletShell = dynamic(
   () =>
@@ -138,7 +137,7 @@ function AssetFlow({ pk }: { pk: string | null }) {
 
   return (
     <DeviceHome
-      isPayAllowed={asset.assetType === AssetType.Lockable}
+      isPayAllowed={assetAllowsPay(asset)}
       owner={asset.currentOwner.toString()}
       asset={String(asset.address)}
     />

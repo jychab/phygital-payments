@@ -2,14 +2,67 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2 } from "lucide-react";
+import { useIsRestoring } from "@tanstack/react-query";
+import { CheckCircle2, LoaderCircle, ShieldAlert } from "lucide-react";
 
 import { PayScreen } from "@/components/pay/pay-screen";
 import { WalletAddressRow } from "@/components/shared/copyable-address";
 import { WalletSyncGate } from "@/components/shared/wallet-sync-gate";
-import { SuccessStatus } from "@/components/layout/gate-message";
+import {
+  CenteredStatus,
+  GateMessage,
+  SuccessStatus,
+} from "@/components/layout/gate-message";
 import { Button } from "@/components/ui/button";
+import { usePhygitalAssetByAddress } from "@/hooks/device/use-phygital-asset";
 import { collectHref } from "@/lib/collect/payment-request";
+import { assetAllowsPay } from "@/lib/phygital/asset";
+import { toUserErrorMessage } from "@/lib/user-errors";
+
+/**
+ * `/device?owner=&asset=` — load the on-chain asset, then owned-device home.
+ */
+export function DeviceHomeByAddress({
+  owner,
+  asset,
+}: {
+  owner: string;
+  asset: string;
+}) {
+  const isRestoring = useIsRestoring();
+  const assetQuery = usePhygitalAssetByAddress(asset);
+
+  if (isRestoring || assetQuery.isLoading) {
+    return (
+      <CenteredStatus>
+        <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Loading device…</p>
+      </CenteredStatus>
+    );
+  }
+
+  if (assetQuery.isError || !assetQuery.data) {
+    return (
+      <GateMessage
+        icon={<ShieldAlert className="size-5 text-destructive" />}
+        title="NFC device not found"
+        body={toUserErrorMessage(
+          assetQuery.error,
+          "We couldn’t find this NFC device. Try tapping again.",
+        )}
+        destructive
+      />
+    );
+  }
+
+  return (
+    <DeviceHome
+      isPayAllowed={assetAllowsPay(assetQuery.data)}
+      owner={owner}
+      asset={asset}
+    />
+  );
+}
 
 /**
  * Owned-device home after NFC tap or claim: Collect, or open the shared Pay screen.
@@ -66,11 +119,12 @@ function OwnedDeviceReady({
 
       <WalletAddressRow address={owner} length={4} />
 
-      {isPayAllowed && (
+      {isPayAllowed ? (
         <div className="mt-auto flex flex-col gap-2.5">
           <Button type="button" size="lg" className="w-full" asChild>
             <Link href={collectUrl}>Collect</Link>
           </Button>
+
           <Button
             type="button"
             variant="ghost"
@@ -81,7 +135,7 @@ function OwnedDeviceReady({
             Pay
           </Button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

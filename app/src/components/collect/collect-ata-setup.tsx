@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import type { Address } from "@solana/kit";
 
-import { PrivyWalletProvider } from "@/app/privy-wallet-provider";
+import { PrivyGate } from "@/app/privy-wallet-root";
 import { TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import { useCreateAtaMutation } from "@/hooks/collect/use-create-ata-mutation";
@@ -34,9 +34,15 @@ export function CollectAtaSetup({
   token: PaymentToken;
 }) {
   return (
-    <PrivyWalletProvider>
+    <PrivyGate
+      fallback={
+        <div className="flex justify-center py-2">
+          <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
       <CollectAtaSetupCard recipient={recipient} mint={mint} token={token} />
-    </PrivyWalletProvider>
+    </PrivyGate>
   );
 }
 
