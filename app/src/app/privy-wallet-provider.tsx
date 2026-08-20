@@ -6,6 +6,8 @@ import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { Wallet } from "lucide-react";
 
 import { GateMessage } from "@/components/layout/gate-message";
+import { createSolanaRpcSubscriptions, createSolanaRpc } from "@solana/kit";
+import { RPC_URL, rpcSubscriptionsUrl } from "@/lib/solana/cluster";
 
 const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "";
 
@@ -20,12 +22,7 @@ const privyConfig: PrivyClientConfig = {
     theme: "dark",
     walletChainType: "solana-only",
     showWalletLoginFirst: true,
-    walletList: [
-      "phantom",
-      "solflare",
-      "backpack",
-      "detected_solana_wallets",
-    ],
+    walletList: ["phantom", "solflare", "backpack", "detected_solana_wallets"],
   },
   loginMethods: ["google", "wallet"],
   embeddedWallets: {
@@ -33,6 +30,14 @@ const privyConfig: PrivyClientConfig = {
   },
   externalWallets: {
     solana: { connectors: solanaConnectors },
+  },
+  solana: {
+    rpcs: {
+      "solana:mainnet": {
+        rpc: createSolanaRpc(RPC_URL),
+        rpcSubscriptions: createSolanaRpcSubscriptions(rpcSubscriptionsUrl()),
+      },
+    },
   },
 };
 
