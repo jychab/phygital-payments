@@ -138,7 +138,7 @@ export function SpendingLimitPanel({
           decimals: mintQuery.data.decimals,
         });
       }
-      toast.success("Spending limit saved.");
+      toast.success("Spending limit saved");
       onEnabled?.();
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn’t save spending limit"));
@@ -199,8 +199,8 @@ export function SpendingLimitPanel({
           title={`Add ${token.symbol} first`}
           body={
             canBuyUsdc
-              ? "This wallet needs USDC before you can set a spending limit for Pay."
-              : "This wallet needs a balance before you can set a spending limit for Pay."
+              ? "Add USDC to this wallet to set a spending limit."
+              : "Add some of this token to this wallet to set a spending limit."
           }
           action={
             canBuyUsdc || skipOrBack ? (
@@ -218,7 +218,7 @@ export function SpendingLimitPanel({
                     {onrampPending ? (
                       <>
                         <LoaderCircle className="size-4 animate-spin" />
-                        Starting onramp…
+                        Opening…
                       </>
                     ) : (
                       "Buy USDC"
@@ -292,7 +292,7 @@ export function SpendingLimitPanel({
           {setAllowance.isPending ? (
             <>
               <LoaderCircle className="size-4 animate-spin" />
-              Confirm spending limit in wallet…
+              Confirm in wallet…
             </>
           ) : hasDelegate && matched ? (
             <>

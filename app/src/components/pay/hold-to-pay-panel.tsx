@@ -115,7 +115,7 @@ export function HoldToPayPanel({
       setExpiresAt(grant.expiresAt);
       setPhase("window");
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t enable this payment."));
+        toast.error(toUserErrorMessage(error, "Couldn’t start this payment."));
     } finally {
       setBusy(false);
     }
@@ -188,14 +188,14 @@ export function HoldToPayPanel({
       phase === "cancelled"
         ? "Cancelled"
         : phase === "replaced"
-          ? "Replaced"
+          ? "New Payment Started"
           : "Time Expired";
     const detail =
       phase === "cancelled"
         ? "Nothing was charged."
         : phase === "replaced"
-          ? "A new payment started."
-          : "Tap Pay again to continue.";
+          ? "Continue with the new payment."
+          : "Press Pay again to continue.";
     return (
       <div className="flex flex-1 flex-col gap-5">
         {onBack ? <BackLink onClick={onBack} /> : null}
@@ -253,7 +253,7 @@ export function HoldToPayPanel({
       </div>
       <div className="flex flex-1 flex-col items-center justify-center text-center">
         <p className="max-w-64 text-sm text-muted-foreground">
-          Tap Pay, then hold your device at the receiver phone.
+          Press Pay, then hold your device to their phone.
         </p>
       </div>
 
@@ -275,7 +275,7 @@ export function HoldToPayPanel({
             className="w-full text-muted-foreground"
             onClick={onManage}
           >
-            Manage Pay
+            Pay Settings
           </Button>
         ) : null}
       </div>

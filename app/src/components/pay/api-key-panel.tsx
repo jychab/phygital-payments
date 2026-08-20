@@ -59,7 +59,7 @@ export function ApiKeyPanel({
   async function onSave() {
     const trimmed = pasteValue.trim();
     if (!trimmed) {
-      toast.error("Paste it here first.");
+      toast.error("Paste it first.");
       return;
     }
     try {
@@ -100,7 +100,7 @@ export function ApiKeyPanel({
       refreshStoredKey();
       goHome();
       toast.success(
-        rotate ? "Pay will stop in other browsers." : "Pay is on",
+        rotate ? "Pay will stop on other phones." : "Pay is on",
       );
     } catch (error) {
       toast.error(
@@ -185,7 +185,7 @@ export function ApiKeyPanel({
               onClick={() => setStep("paste")}
               disabled={busy}
             >
-              I already turned this on
+              I set this up already
             </Button>
           </>
         ) : null}
@@ -200,7 +200,7 @@ export function ApiKeyPanel({
               onClick={() => setStep("paste")}
               disabled={busy}
             >
-              Paste from another browser
+              Paste from another phone
             </Button>
             <Button
               type="button"
@@ -271,25 +271,25 @@ function copyForStep(step: PanelStep, hasStoredKey: boolean): {
   if (step === "paste") {
     return {
       title: "Already Set Up?",
-      subtitle: "Paste what you copied from the other browser.",
+      subtitle: "Paste what you copied from the other phone.",
     };
   }
   if (step === "confirm-reset") {
     return {
       title: "Start over?",
       subtitle:
-        "Pay will stop in other browsers. It will stay on here.",
+        "Pay will stop on other phones. It will stay on here.",
     };
   }
   if (hasStoredKey) {
     return {
-      title: "Use on Another Browser",
+      title: "Use on Another Phone",
       subtitle: "Copy this, then paste it there.",
     };
   }
   return {
     title: "Turn On Pay",
-    subtitle: "You can pay from here.",
+      subtitle: "You’ll be able to pay from this phone.",
   };
 }
 

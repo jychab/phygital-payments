@@ -31,7 +31,7 @@ export async function fetchPendingClaim(
   const res = await queryFetch(
     `/api/claim/pending?token=${encodeURIComponent(token)}`,
   );
-  return readJson<PendingClaimView>(res, "Couldn’t load your tap proof.");
+  return readJson<PendingClaimView>(res, "Couldn’t load this. Try again.");
 }
 
 export async function consumePendingClaim(token: string): Promise<void> {
@@ -39,5 +39,5 @@ export async function consumePendingClaim(token: string): Promise<void> {
     `/api/claim/pending?token=${encodeURIComponent(token)}`,
     { method: "DELETE" },
   );
-  await readJson(res, "Couldn’t finalize the tap session.");
+  await readJson(res, "Couldn’t finish. Try again.");
 }

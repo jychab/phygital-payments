@@ -74,7 +74,7 @@ export function TokenPickerSheet({
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/50 px-4 py-3">
           <p id={titleId} className="text-sm font-medium text-foreground">
-            Choose token
+            Choose a token
           </p>
           <Button
             type="button"
@@ -94,13 +94,13 @@ export function TokenPickerSheet({
               variant="muted"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search verified tokens"
+              placeholder="Search tokens"
               autoFocus
               className="pl-10"
             />
           </label>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Jupiter verified · classic SPL only
+            Supported tokens only
             {!verified.isLoading && catalog.length > 0
               ? ` · ${tokens.length.toLocaleString()}${
                   query.trim() ? ` of ${catalog.length.toLocaleString()}` : ""
@@ -116,7 +116,7 @@ export function TokenPickerSheet({
             </div>
           ) : tokens.length === 0 ? (
             <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-              No verified tokens match.
+              No tokens match.
             </p>
           ) : (
             <VirtualTokenList

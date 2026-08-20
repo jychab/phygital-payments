@@ -27,8 +27,8 @@ export function WalletSyncGate({
   return (
     <GateMessage
       icon={<Wallet className="size-5 text-destructive" />}
-      title="Wallet mismatch"
-      body={`This page is linked to ${wallet.ownerShort}. Disconnect above, then connect that wallet.`}
+      title="Wrong wallet"
+      body={`This page is for ${wallet.ownerShort}. Disconnect above, then connect that wallet.`}
       destructive
       action={
         <Button

@@ -53,7 +53,7 @@ export function FinishClaimPanel() {
       assertClaimReady(asset, signer.address);
     } catch (err) {
       setError(
-        toUserErrorMessage(err, "Couldn't claim this NFC device. Try again."),
+        toUserErrorMessage(err, "Couldn’t add this device. Try again."),
       );
       return;
     }
@@ -101,8 +101,8 @@ export function FinishClaimPanel() {
     return (
       <GateMessage
         icon={<Wallet className="size-5 text-destructive" />}
-        title="Can't finish"
-        body="Missing finish link. Tap your NFC device again in Safari or Chrome."
+        title="Can’t finish"
+        body="This link is missing. Hold your device to your phone again."
         destructive
       />
     );
@@ -112,7 +112,7 @@ export function FinishClaimPanel() {
     return (
       <NfcHoldStatus
         title="Confirm in wallet…"
-        body="Approve the transaction in your wallet."
+        body="Approve in your wallet to continue."
         busy
       />
     );
@@ -134,7 +134,7 @@ export function FinishClaimPanel() {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading tap proof…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </CenteredStatus>
     );
   }
@@ -143,10 +143,10 @@ export function FinishClaimPanel() {
     return (
       <GateMessage
         icon={<Wallet className="size-5 text-destructive" />}
-        title="Can't finish"
+        title="Can’t finish"
         body={toUserErrorMessage(
           pendingQuery.error,
-          "Tap proof expired. Tap your NFC device again in Safari or Chrome.",
+          "This expired. Hold your device to your phone again.",
         )}
         destructive
       />
@@ -179,7 +179,7 @@ export function FinishClaimPanel() {
         <GateMessage
           icon={<Wallet className="size-5 text-muted-foreground" />}
           title="Connect your wallet"
-          body="This wallet will be linked to the device."
+          body="This wallet will own the device."
           action={
             <Button
               type="button"

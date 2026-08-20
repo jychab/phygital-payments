@@ -2,8 +2,8 @@
  * Map technical payment / preauth / submit errors to human-facing copy.
  * Keep raw Error.message in logs; never show engineer jargon in toasts.
  *
- * Voice: Apple Wallet — short title, one calm next step. No “window”,
- * grant, delegate, ATA, or program IDs.
+ * Voice: Apple Pay — short title, one calm next step. Everyday words only.
+ * No window, grant, delegate, ATA, mint, or program IDs.
  */
 
 export type UserFacingError = {
@@ -38,33 +38,33 @@ const RULES: Rule[] = [
   },
   {
     test: /already on that wallet/i,
-    title: "Already Claimed",
-    body: "This NFC device is already on that wallet.",
+    title: "Already Added",
+    body: "This device is already on that wallet.",
   },
   {
     test: /device is locked|unlock it before moving|unlock it before claiming/i,
     title: "Device Locked",
-    body: "Unlock this NFC device, then try again.",
+    body: "Unlock this device, then try again.",
   },
   {
     test: /recipient token account is missing|token account is missing\. create it/i,
-    title: "Receive Account Needed",
-    body: "Set up a receive account before collecting.",
+    title: "Finish Setup",
+    body: "This wallet isn’t ready to receive yet. Finish setup, then try again.",
   },
   {
     test: /preauth grant already used/i,
     title: "Already Used",
-    body: "Ask them to enable Pay again, then hold their device here.",
+    body: "Ask them to press Pay again, then hold their device here.",
   },
   {
     test: /no active preauth grant|missing preauth/i,
-    title: "Payment Not Enabled",
-    body: "Ask them to enable Pay on their phone, then hold their device here.",
+    title: "Pay Isn’t Ready",
+    body: "Ask them to press Pay on their phone, then hold their device here.",
   },
   {
     test: /not the SPL delegate|haven't enabled this token for Pay|enable this token for Pay/i,
-    title: "Pay Isn’t Turned On",
-    body: "Ask them to turn on this token for Pay, then try again.",
+    title: "This Token Isn’t On",
+    body: "Ask them to set a spending limit for this token, then try again.",
   },
   {
     test: /more than their spending limit|Delegated amount is insufficient/i,
@@ -88,12 +88,12 @@ const RULES: Rule[] = [
   },
   {
     test: /key has been revoked|re-provision to get a new key/i,
-    title: "Pay Stopped Here",
+    title: "Pay Was Reset",
     body: "Turn on Pay again.",
   },
   {
     test: /invalid or revoked API key/i,
-    title: "Couldn’t Use That",
+    title: "That Didn’t Work",
     body: "Check what you pasted and try again.",
   },
   {
@@ -104,7 +104,7 @@ const RULES: Rule[] = [
   {
     test: /query param grantid is required|preauth grant not found/i,
     title: "Payment Not Found",
-    body: "Tap Pay again to continue.",
+    body: "Press Pay again to continue.",
   },
   {
     test: /user rejected|rejected the request|transaction cancelled|signing was cancelled|user closed|closed the flow|user_exited/i,
@@ -123,8 +123,8 @@ const RULES: Rule[] = [
   },
   {
     test: /tap proof expired|slot hash no longer valid/i,
-    title: "Tap Expired",
-    body: "Hold your NFC device to this phone again.",
+    title: "This Expired",
+    body: "Hold your device to this phone again.",
   },
   {
     test: /slot hashes|slot hash/i,
@@ -139,62 +139,62 @@ const RULES: Rule[] = [
   {
     test: /no locked (pass|device|NFC device)|lock the asset/i,
     title: "Device Isn’t Ready",
-    body: "Ask them to lock this NFC device, then try again.",
+    body: "Ask them to lock this device, then try again.",
   },
   {
     test: /asset is not lockable|AssetIsNotLockable/i,
     title: "Can’t Lock",
-    body: "This NFC device can’t be locked.",
+    body: "This device can’t be locked.",
   },
   {
     test: /owner mismatch|OwnerMismatch/i,
     title: "Wrong Wallet",
-    body: "Connect the wallet that owns this NFC device.",
+    body: "Connect the wallet that owns this device.",
   },
   {
     test: /belongs to the receiving wallet|collect a payment from yourself/i,
     title: "That’s Your Device",
-    body: "You can’t collect a payment from your own NFC device.",
+    body: "You can’t collect a payment from your own device.",
   },
   {
     test: /this tap was already used/i,
     title: "Already Used",
-    body: "Hold your NFC device to this phone again.",
+    body: "Hold your device to this phone again.",
   },
   {
     test: /this is not the same NFC device/i,
-    title: "Couldn't Verify",
-    body: "Hold the same NFC device against the back of your phone.",
+    title: "Couldn’t Verify",
+    body: "Hold the same device against the back of your phone.",
   },
   {
     test: /couldn't verify this NFC device|message mismatch/i,
-    title: "Couldn't Verify",
+    title: "Couldn’t Verify",
     body: "Hold it flat against the back of your phone and try again.",
   },
   {
     test: /isn't set up|not registered/i,
-    title: "Not Registered",
-    body: "This device isn’t set up.",
+    title: "Not Set Up",
+    body: "This device isn’t set up yet.",
   },
   {
     test: /missing tap parameters|verification failed|invalid signature/i,
-    title: "Couldn't Verify",
+    title: "Couldn’t Verify",
     body: "Hold it flat against the back of your phone and try again.",
   },
   {
     test: /connect your wallet|connect a wallet|sign in to continue/i,
-    title: "Connect Wallet",
+    title: "Connect your wallet",
     body: "Connect your wallet to continue.",
   },
   {
     test: /(pass|device|NFC device) not found|missing passkey/i,
     title: "Device Not Found",
-    body: "Hold your NFC device to this phone again.",
+    body: "Hold your device to this phone again.",
   },
   {
     test: /only classic spl|token-2022/i,
     title: "Token Not Supported",
-    body: "Only verified tokens can be used. Switch to USDC.",
+    body: "This token isn’t supported. Switch to USDC.",
   },
   {
     test: /mint account not found/i,
@@ -208,8 +208,8 @@ const RULES: Rule[] = [
   },
   {
     test: /amount supports at most/i,
-    title: "Too Many Decimals",
-    body: "That amount has too many decimal places.",
+    title: "Amount Too Precise",
+    body: "Use fewer decimal places.",
   },
 ];
 

@@ -49,7 +49,7 @@ export async function GET(req: Request) {
       return json(
         {
           isVerified: false,
-          error: "This tap was already used. Tap your NFC device again to continue.",
+          error: "This tap was already used. Hold your device to this phone again.",
         },
         409,
       );

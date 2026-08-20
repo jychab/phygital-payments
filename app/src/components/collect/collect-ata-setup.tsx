@@ -62,7 +62,7 @@ function CollectAtaSetupCard({
   const [error, setError] = useState<string | null>(null);
 
   const createAta = useCreateAtaMutation(mint, {
-    onSuccess: () => toast.success("Receive account ready"),
+    onSuccess: () => toast.success("Ready to receive"),
   });
 
   async function onCreate() {
@@ -82,17 +82,17 @@ function CollectAtaSetupCard({
       </div>
       <div className="min-w-0 flex-1 space-y-2.5">
         <p className="text-sm font-medium text-foreground">
-          Receive Account Needed
+          Finish Setup
         </p>
         <p className="text-xs text-muted-foreground">
-          This wallet needs a one-time{" "}
+          This wallet isn’t ready to receive{" "}
           <TokenSymbol
             token={token}
             size="xs"
             className="mx-0.5"
             symbolClassName="font-medium text-foreground"
           />{" "}
-          receive account. Connect the matching wallet to create it.
+          yet. Connect it to finish setup.
         </p>
         {!ready ? (
           <div className="flex justify-center py-1">
@@ -140,12 +140,12 @@ function CollectAtaSetupCard({
               {createAta.isPending ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />
-                  Creating…
+                  Setting up…
                 </>
               ) : (
                 <>
                   <Plus className="size-4" />
-                  {error ? "Try again" : "Create receive account"}
+                  {error ? "Try again" : "Set up receiving"}
                 </>
               )}
             </Button>

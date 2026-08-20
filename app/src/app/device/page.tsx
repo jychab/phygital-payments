@@ -6,7 +6,7 @@ import { DeviceTapApp } from "@/components/device/tap-app";
 
 export const metadata: Metadata = {
   title: "Device — Phygital Pay",
-  description: "Check if this NFC device is genuine",
+  description: "Check if this device is genuine",
 };
 
 /** Hold to Check, Safari NFC tap, or `/device?token=` / `?owner=&asset=` wallet finish. */

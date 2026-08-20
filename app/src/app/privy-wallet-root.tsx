@@ -22,36 +22,56 @@ const PrivyRequestContext = createContext<() => void>(() => {});
  */
 const PrivyWalletProvider = dynamic(
   () => import("./privy-wallet-provider").then((m) => m.PrivyWalletProvider),
-  { ssr: false, loading: () => <EmbedBoot /> },
+  // Keep the rest of the app mounted while the chunk loads. A loading fallback
+  // here would replace `{children}` and look like a full page refresh.
+  { ssr: false, loading: () => null },
 );
 
 /**
  * Single app-wide Privy mount. Stays in the root tree so Home ↔ Device ↔
  * Collect share one session. The Privy SDK chunk loads only after a
  * `PrivyGate` asks for it — Collect embeds never load `@privy-io/react-auth`.
+ *
+ * While the SDK loads, `{children}` stay as a sibling so local UI state is
+ * not wiped. They move under `PrivyProvider` once the chunk is ready.
  */
 export function PrivyWalletRoot({ children }: { children: ReactNode }) {
   const [requested, setRequested] = useState(false);
+  const [ready, setReady] = useState(false);
 
   const request = useCallback(() => {
     setRequested(true);
   }, []);
 
-  return (
+  const markReady = useCallback(() => {
+    setReady(true);
+  }, []);
+
+  const gated = (
     <PrivyRequestContext.Provider value={request}>
-      {requested ? (
-        <PrivyWalletProvider>
-          <PrivyReadyContext.Provider value={true}>
-            {children}
-          </PrivyReadyContext.Provider>
-        </PrivyWalletProvider>
-      ) : (
-        <PrivyReadyContext.Provider value={false}>
-          {children}
-        </PrivyReadyContext.Provider>
-      )}
+      <PrivyReadyContext.Provider value={ready}>
+        {children}
+      </PrivyReadyContext.Provider>
     </PrivyRequestContext.Provider>
   );
+
+  return (
+    <>
+      {requested ? (
+        <PrivyWalletProvider>
+          {ready ? gated : <PrivyMountSignal onReady={markReady} />}
+        </PrivyWalletProvider>
+      ) : null}
+      {ready ? null : gated}
+    </>
+  );
+}
+
+function PrivyMountSignal({ onReady }: { onReady: () => void }) {
+  useEffect(() => {
+    onReady();
+  }, [onReady]);
+  return null;
 }
 
 /** Load the root Privy provider if it isn't already. Returns true once mounted. */

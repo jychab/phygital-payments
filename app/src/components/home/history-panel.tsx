@@ -104,7 +104,7 @@ export function HistoryPanel({ owner }: { owner: string }) {
             <History className="size-5 text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground">
-            Payments for this wallet will appear here.
+            Payments you send and receive will appear here.
           </p>
         </div>
       ) : (

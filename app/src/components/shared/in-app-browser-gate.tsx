@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 
 /** Block WebAuthn NFC steps inside wallet / social in-app browsers. */
 export function InAppBrowserGate({
-  body = "NFC only works in Safari or Chrome. Open this page in your phone’s browser, then try again.",
+  body = "This step only works in Safari or Chrome. Copy this link and open it in your phone’s browser.",
 }: {
   body?: string;
 }) {

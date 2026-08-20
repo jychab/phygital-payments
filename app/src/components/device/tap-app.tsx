@@ -47,7 +47,7 @@ export function DeviceTapApp() {
     return (
       <EmbedError
         title="Can’t open here"
-        body="Open this on your phone instead of inside this page."
+        body="Open this on your phone, not in this window."
       />
     );
   }
@@ -128,7 +128,7 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
 
   if (showInAppGate) {
     return (
-      <InAppBrowserGate body="Checking an NFC device needs Safari or Chrome." />
+      <InAppBrowserGate body="To check a device, open this page in Safari or Chrome." />
     );
   }
 
@@ -142,7 +142,7 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
         size="lg"
         busy
         title="Hold Still…"
-        body="Keep it against the back until it reads."
+        body="Keep holding until it reads."
       />
     );
   }
@@ -152,8 +152,8 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
       <NfcHoldStatus
         size="lg"
         pulsing={false}
-        title="Not Registered"
-        body="This device isn’t set up."
+        title="Not Set Up"
+        body="This device isn’t set up yet."
         onRingClick={() => void onCheck()}
         ringAriaLabel="Hold to Check"
       />
@@ -164,7 +164,7 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
     return (
       <NfcHoldStatus
         size="lg"
-        title="Couldn't Verify"
+        title="Couldn’t Verify"
         body="Hold it flat against the back of your phone and try again."
         onRingClick={() => void onCheck()}
         ringAriaLabel="Hold to Check"
@@ -176,7 +176,7 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
     <NfcHoldStatus
       size="lg"
       title="Hold to Check"
-      body="Hold your device near the back of this phone."
+      body="Hold your device to the back of this phone."
       onRingClick={() => void onCheck()}
       ringAriaLabel="Hold to Check"
     />
@@ -201,8 +201,8 @@ function AssetFlow({ pk }: { pk: string | null }) {
       <NfcHoldStatus
         size="lg"
         pulsing={false}
-        title="Not Registered"
-        body="This device isn’t set up."
+        title="Not Set Up"
+        body="This device isn’t set up yet."
       />
     );
   }

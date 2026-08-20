@@ -127,7 +127,7 @@ function ModeSwitcher({
             "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40",
             "data-[state=open]:border-border data-[state=open]:bg-muted/40 data-[state=open]:text-foreground",
           )}
-          aria-label="Switch mode"
+          aria-label="Switch page"
         >
           {current}
           <ChevronDown className="size-3.5 opacity-70" aria-hidden />

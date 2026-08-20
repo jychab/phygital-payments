@@ -127,7 +127,7 @@ export function PayScreen({
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading Pay…</p>
+        <p className="text-sm text-muted-foreground">Loading…</p>
       </CenteredStatus>
     );
   }
@@ -136,7 +136,7 @@ export function PayScreen({
     return (
       <GateMessage
         icon={<Nfc className="size-5 text-destructive" />}
-        title="Couldn't load Pay"
+        title="Couldn’t load Pay"
         body={toUserErrorMessage(
           loadError,
           "Check your connection and try again.",
@@ -282,8 +282,8 @@ function NeedDeviceGate({ onBack }: { onBack: () => void }) {
     <div className="flex flex-1 flex-col gap-5">
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
-        title="Add an NFC device"
-        body="Hold a device, then claim it to this wallet, then set a spending limit."
+        title="Add a device first"
+        body="Hold a device to the back of your phone to add it to this wallet."
         action={
           <Button
             type="button"
@@ -321,8 +321,8 @@ function PayDevicePicker({
           Choose a Device
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          This spending limit applies to one NFC device. Only that device can
-          pay with this token.
+          This limit is for one device. Only that device can pay with this
+          token.
         </p>
       </div>
       <ul className="flex flex-col gap-1">

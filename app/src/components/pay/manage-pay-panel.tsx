@@ -59,16 +59,16 @@ export function ManagePayPanel({
 
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
-          Manage Pay
+          Pay Settings
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Spending limits. Use Pay here or in another browser.
+          Set spending limits, or use Pay on another phone.
         </p>
       </div>
 
       <div className="space-y-1">
         <p className="px-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          Enabled tokens
+          Spending limits
         </p>
         <ManagePayTokens
           owner={owner}
@@ -90,7 +90,7 @@ export function ManagePayPanel({
           className="w-full"
           onClick={() => setManageKeys(true)}
         >
-          Use on Another Browser
+          Use on Another Phone
         </Button>
       </div>
     </div>
@@ -122,7 +122,7 @@ function ManagePayTokens({
   if (list.length === 0) {
     return (
       <p className="px-2 py-4 text-center text-xs text-muted-foreground">
-        No verified tokens in this wallet.
+        No tokens in this wallet yet.
       </p>
     );
   }
@@ -173,7 +173,7 @@ function ManagePayTokenRow({
     ? deviceLabel
       ? `${limitLabel} · ${deviceLabel} · ${holding.balanceUi} available`
       : `${limitLabel} · ${holding.balanceUi} available`
-    : `Off · ${holding.balanceUi} available`;
+    : `No limit · ${holding.balanceUi} available`;
 
   return (
     <li>
@@ -183,7 +183,7 @@ function ManagePayTokenRow({
         onSelect={() => onEditLimit(holding)}
         trailing={
           <span className="text-[11px] font-medium text-primary">
-            {enabled ? "Edit" : "Turn On"}
+            {enabled ? "Edit" : "Set Limit"}
           </span>
         }
       />

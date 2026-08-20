@@ -37,8 +37,8 @@ export function ExpiryCountdown({
   return (
     <p className={className}>
       {expired
-        ? "Tap proof expired — tap your NFC device again."
-        : `Finish within ${formatRemaining(remainingMs)} (~3 min from tap)`}
+        ? "This expired. Hold your device to your phone again."
+        : `Finish within ${formatRemaining(remainingMs)}`}
     </p>
   );
 }

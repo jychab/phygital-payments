@@ -4,7 +4,7 @@ import { HomeApp } from "@/components/home/home-app";
 
 export const metadata: Metadata = {
   title: "Phygital Pay",
-  description: "Manage NFC devices and tap-to-pay",
+  description: "Tap to pay with your device",
 };
 
 export default function Home() {

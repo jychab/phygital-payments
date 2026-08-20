@@ -40,7 +40,7 @@ export function ClaimPanel({
   const [stage, setStage] = useState<Stage>("ready");
   const [error, setError] = useState<string | null>(null);
 
-  const title = unclaimed ? "Claim to wallet" : "Claim to a new wallet";
+  const title = unclaimed ? "Add to Wallet" : "Move to a New Wallet";
 
   async function onCapture() {
     setError(null);
@@ -48,7 +48,7 @@ export function ClaimPanel({
       assertCaptureReady(asset);
     } catch (err) {
       setError(
-        toUserErrorMessage(err, "Couldn’t claim this NFC device. Try again."),
+        toUserErrorMessage(err, "Couldn’t add this device. Try again."),
       );
       return;
     }
@@ -77,7 +77,7 @@ export function ClaimPanel({
       setError(
         toUserErrorMessage(
           err,
-          "Couldn’t read the NFC device. Turn on NFC and hold it near the back of your phone.",
+          "Couldn’t read the device. Turn on NFC and hold it to the back of your phone.",
         ),
       );
     }
@@ -85,7 +85,7 @@ export function ClaimPanel({
 
   if (inApp) {
     return (
-      <InAppBrowserGate body="Claiming an NFC device needs Safari or Chrome." />
+      <InAppBrowserGate body="To add a device, open this page in Safari or Chrome." />
     );
   }
 
@@ -93,7 +93,7 @@ export function ClaimPanel({
     return (
       <NfcHoldStatus
         title="Hold Still…"
-        body="Keep it against the back until it reads."
+        body="Keep holding until it reads."
         pulsing
       />
     );
@@ -105,7 +105,7 @@ export function ClaimPanel({
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
         title={title}
-        body="Hold your NFC device to prove possession, then connect the wallet that should own it."
+        body="Hold your device to this phone, then connect the wallet that should own it."
         action={
           <div className="flex w-full max-w-64 flex-col gap-3">
             {error ? (
@@ -120,7 +120,7 @@ export function ClaimPanel({
               onClick={() => void onCapture()}
             >
               <Nfc className="size-4" />
-              {error ? "Try again" : "Hold to claim"}
+              {error ? "Try again" : "Hold to Add"}
             </Button>
           </div>
         }

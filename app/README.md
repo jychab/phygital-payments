@@ -89,9 +89,9 @@ Activity lives on Home, not Collect.
 
 Authenticity first. Claim and Pay are optional.
 
-`/device` with no tap params shows **Hold to Check** (live WebAuthn in the browser). A signed NFC URL (`/device?pk=&s=&c=&n=`) verifies silently, then shows **Authentic**. Optional **Hold to Check** upgrades the subtitle to **Confirmed just now.** Privy is not loaded until Pay or `/device?token=`.
+`/device` with no tap params shows **Hold to Check** (live WebAuthn in the browser). A signed NFC URL (`/device?pk=&s=&c=&n=`) verifies silently, then shows **Verified**. Optional **Hold to Check** upgrades the subtitle to **Confirmed just now.** Privy is not loaded until Pay or `/device?token=`.
 
-1. **Hold to Check** (no URL) or silent URL verify → **Authentic**
+1. **Hold to Check** (no URL) or silent URL verify → **Verified**
 2. **Unclaimed / unlocked** — optional **Claim to wallet** (WebAuthn tap, then `/device?token=` to connect and confirm)
 3. **Locked and payment-capable** — **Collect** and **Pay** (same Pay tab as Home). Connect a wallet only when signing a limit or issuing a key.
 

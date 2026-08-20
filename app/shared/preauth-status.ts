@@ -103,7 +103,7 @@ export function replacedPreauthStatus(grantId: string): PreauthStatusResult {
   return {
     status: "replaced",
     grantId,
-    body: "Replaced. A new payment started.",
+    body: "A new payment started.",
   };
 }
 
@@ -111,7 +111,7 @@ export function expiredPreauthStatus(grantId: string): PreauthStatusResult {
   return {
     status: "expired",
     grantId,
-    body: "Time Expired. Tap Pay again to continue.",
+    body: "Time expired. Press Pay again to continue.",
   };
 }
 

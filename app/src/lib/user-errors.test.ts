@@ -7,12 +7,12 @@ import {
 } from "./user-errors";
 
 describe("toUserFacingError", () => {
-  it("tells the collector when Pay is not enabled", () => {
+  it("tells the collector when Pay is not ready", () => {
     const facing = toUserFacingError(
       new Error("No active preauth grant for this wallet"),
     );
-    expect(facing.title).toBe("Payment Not Enabled");
-    expect(facing.body).toMatch(/enable Pay/i);
+    expect(facing.title).toBe("Pay Isn’t Ready");
+    expect(facing.body).toMatch(/press Pay/i);
   });
 
   it("names insufficient balance instead of a generic Pay setup error", () => {
@@ -36,7 +36,7 @@ describe("toUserFacingError", () => {
     const facing = toUserFacingError(
       new Error("They haven't enabled this token for Pay."),
     );
-    expect(facing.title).toBe("Pay Isn’t Turned On");
+    expect(facing.title).toBe("This Token Isn’t On");
   });
 
   it("tells the collector when the amount is over the spending limit", () => {
@@ -56,20 +56,20 @@ describe("toUserFacingError", () => {
   it("maps an invalid API key", () => {
     expect(
       toUserErrorMessage(new Error("Invalid or revoked API key")),
-    ).toBe("Couldn’t Use That");
+    ).toBe("That Didn’t Work");
   });
 
-  it("maps a passkey mismatch to Couldn't Verify", () => {
+  it("maps a passkey mismatch to Couldn’t Verify", () => {
     expect(
       toUserErrorMessage(new Error("This is not the same NFC device.")),
-    ).toBe("Couldn't Verify");
+    ).toBe("Couldn’t Verify");
   });
 
   it("maps an unverified live check", () => {
     const facing = toUserFacingError(
       new Error("Couldn't verify this NFC device."),
     );
-    expect(facing.title).toBe("Couldn't Verify");
+    expect(facing.title).toBe("Couldn’t Verify");
   });
 });
 
@@ -77,7 +77,7 @@ describe("toUserErrorMessage", () => {
   it("returns a short toast when Pay is not enabled", () => {
     expect(
       toUserErrorMessage(new Error("No active preauth grant for this wallet")),
-    ).toBe("Payment Not Enabled");
+    ).toBe("Pay Isn’t Ready");
   });
 
   it("maps a closed onramp sheet to Cancelled", () => {
@@ -96,13 +96,13 @@ describe("toUserFacingBody", () => {
 
   it("folds an invalid API key into one Shortcuts line", () => {
     expect(toUserFacingBody("Invalid or revoked API key")).toBe(
-      "Couldn’t Use That. Check what you pasted and try again.",
+      "That Didn’t Work. Check what you pasted and try again.",
     );
   });
 
   it("folds a missing grant into one Shortcuts line", () => {
     expect(toUserFacingBody("Preauth grant not found")).toBe(
-      "Payment Not Found. Tap Pay again to continue.",
+      "Payment Not Found. Press Pay again to continue.",
     );
   });
 

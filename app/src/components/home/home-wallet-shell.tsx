@@ -40,8 +40,8 @@ function HomeScreen() {
   if (embedded) {
     return (
       <EmbedError
-        title="This page isn’t for embeds"
-        body="Use a Collect payment link with ?recipient= instead."
+        title="Can’t open here"
+        body="Use a payment link instead."
       />
     );
   }
@@ -65,7 +65,7 @@ function HomeScreen() {
           <GateMessage
             icon={<Wallet className="size-5 text-muted-foreground" />}
             title="Connect your wallet"
-            body="Connect to pay, see your devices, and review activity."
+            body="Connect to pay, see your devices, and check activity."
           />
         </AppCard>
       ) : (

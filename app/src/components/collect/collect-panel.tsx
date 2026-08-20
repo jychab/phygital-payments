@@ -52,7 +52,7 @@ function AtaSetupLoading() {
       </div>
       <div className="min-w-0 flex-1 space-y-2.5">
         <p className="text-sm font-medium text-foreground">
-          Receive Account Needed
+          Finish Setup
         </p>
         <div className="flex justify-center py-1">
           <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
@@ -159,7 +159,7 @@ export function CollectPanel({
   async function onReceive() {
     if (inApp) {
       setFailTitle("Open in Safari or Chrome");
-      setFailMessage("Collecting needs Safari or Chrome so the NFC device can be read.");
+      setFailMessage("To collect a payment, open this page in Safari or Chrome.");
       return;
     }
     if (!sponsoredAvailable) {
@@ -174,7 +174,7 @@ export function CollectPanel({
     }
     if (!readyToReceive || !ataStatus || !mintQuery.data) {
       setFailTitle("Finish Setup");
-      setFailMessage("Create a receive account before collecting.");
+      setFailMessage("This wallet isn’t ready to receive yet. Finish setup, then try again.");
       return;
     }
     const paidAmount = amount;
@@ -234,7 +234,7 @@ export function CollectPanel({
 
   if (phase === "idle" && inApp) {
     return (
-      <InAppBrowserGate body="Collecting needs Safari or Chrome so the NFC device can be read." />
+      <InAppBrowserGate body="To collect a payment, open this page in Safari or Chrome." />
     );
   }
 
@@ -254,7 +254,7 @@ export function CollectPanel({
           </div>
         </div>
         <div className="space-y-1">
-          <p className="text-xl font-semibold tracking-tight">Done</p>
+          <p className="text-xl font-semibold tracking-tight">Received</p>
           <p className="font-(family-name:--font-display) text-[2.5rem] leading-none tracking-tight tabular-nums">
             {settledAmount || amount || "0"}
             <span className="ml-2 inline-flex align-middle text-lg font-medium text-muted-foreground">
@@ -332,7 +332,7 @@ export function CollectPanel({
         </div>
         <NfcHoldStatus
           size="lg"
-          title={phase === "confirming" ? "Processing" : "Hold Near Device"}
+          title={phase === "confirming" ? "Processing" : "Hold Their Device Here"}
           body={
             phase === "confirming"
               ? "Just a moment."
@@ -356,7 +356,7 @@ export function CollectPanel({
             Token Not Supported
           </p>
           <p className="text-sm text-muted-foreground">
-            Only verified tokens can be collected. Switch to USDC to continue.
+            Only supported tokens can be collected. Switch to USDC to continue.
           </p>
         </div>
         <Button
@@ -432,17 +432,17 @@ export function CollectPanel({
           </div>
           <div className="min-w-0 flex-1 space-y-2">
             <p className="text-sm font-medium text-foreground">
-              Receive Account Needed
+              Finish Setup
             </p>
             <p className="text-xs text-muted-foreground">
-              Open this page in Safari or Chrome to create a{" "}
+              Open this page in Safari or Chrome to finish{" "}
               <TokenSymbol
                 token={token}
                 size="xs"
                 className="mx-0.5"
                 symbolClassName="font-medium text-foreground"
               />{" "}
-              receive account, then come back to collect.
+              setup, then come back.
             </p>
           </div>
         </div>
@@ -477,7 +477,7 @@ export function CollectPanel({
           }
         >
           <Nfc className="size-4" />
-          Hold to Receive
+          Hold to Collect
         </Button>
         {sponsoredAvailable ? (
           <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">

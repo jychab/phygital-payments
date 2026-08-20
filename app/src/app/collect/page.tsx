@@ -5,7 +5,7 @@ import { parsePaymentRequest } from "@/lib/collect/payment-request";
 
 export const metadata: Metadata = {
   title: "Collect — Phygital Pay",
-  description: "Collect a tap-to-pay payment",
+  description: "Collect a payment with a tap",
 };
 
 type CollectProps = {

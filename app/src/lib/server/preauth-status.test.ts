@@ -68,7 +68,7 @@ describe("resolvePreauthStatus", () => {
     ).toEqual({
       status: "replaced",
       grantId: "grant-a",
-      body: "Replaced. A new payment started.",
+      body: "A new payment started.",
     });
   });
 
@@ -107,7 +107,7 @@ describe("expiredPreauthStatus", () => {
     expect(expiredPreauthStatus("grant-a")).toEqual({
       status: "expired",
       grantId: "grant-a",
-      body: "Time Expired. Tap Pay again to continue.",
+      body: "Time expired. Press Pay again to continue.",
     });
   });
 });

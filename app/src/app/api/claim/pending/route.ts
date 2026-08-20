@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       {
         error: toUserErrorMessage(
           err,
-          "Couldn’t save your tap. Try holding the NFC device again.",
+          "Couldn’t save this. Hold your device to your phone again.",
         ),
       },
       { status: 500 },
@@ -74,7 +74,8 @@ export async function GET(req: Request) {
       return NextResponse.json(
         {
           error:
-            "This tap proof expired or was already used. Tap your NFC device again in Safari or Chrome.",
+          error:
+            "This expired. Hold your device to your phone again.",
         },
         { status: 410, headers: QUERY_NO_STORE },
       );
@@ -86,7 +87,7 @@ export async function GET(req: Request) {
       {
         error: toUserErrorMessage(
           err,
-          "Couldn’t load your tap proof. Try again.",
+          "Couldn’t load this. Try again.",
         ),
       },
       { status: 500, headers: QUERY_NO_STORE },

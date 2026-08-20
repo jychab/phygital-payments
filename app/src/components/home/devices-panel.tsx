@@ -26,7 +26,7 @@ export function DevicesPanel({ owner }: { owner: string }) {
 
   const header = (
     <div className="flex items-center justify-between gap-2">
-      <p className="text-sm font-medium text-foreground">Your NFC devices</p>
+      <p className="text-sm font-medium text-foreground">Your devices</p>
       <QueryRefreshButton owner={owner} />
     </div>
   );
@@ -76,8 +76,8 @@ export function DevicesPanel({ owner }: { owner: string }) {
         {header}
         <GateMessage
           icon={<Nfc className="size-5 text-muted-foreground" />}
-          title="No NFC devices yet"
-          body="Hold a device, then claim it to this wallet. Nothing to tap on this screen."
+          title="No devices yet"
+          body="Hold a device to the back of your phone to add it to this wallet."
         />
       </div>
     );
@@ -87,7 +87,7 @@ export function DevicesPanel({ owner }: { owner: string }) {
     <div className="flex flex-1 flex-col gap-3">
       {header}
       <p className="text-sm text-muted-foreground">
-        Lock a device to pay with it. Remove lets someone else claim it.
+        Lock a device to pay with it. Remove it if you want someone else to add it.
       </p>
       <ul className="flex flex-col gap-2">
         {assets.map((asset) => (
@@ -145,12 +145,12 @@ function AssetRow({
 
   async function onRemoveOwnership() {
     const confirmed = window.confirm(
-      "Remove this NFC device from your wallet? It will be unlocked and anyone can claim it again.",
+      "Remove this device from your wallet? Anyone will be able to add it.",
     );
     if (!confirmed) return;
     try {
       await removeOwnership.mutateAsync({ asset: asset.address });
-      toast.success("Device removed from this wallet");
+      toast.success("Device removed");
     } catch (error) {
       toast.error(
         toUserErrorMessage(error, "Couldn’t remove this device"),

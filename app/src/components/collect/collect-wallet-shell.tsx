@@ -64,13 +64,13 @@ function CollectScreen({ paymentRequest }: { paymentRequest: PaymentRequest }) {
             <GateMessage
               icon={<Wallet className="size-5 text-muted-foreground" />}
               title="This payment link isn’t set up"
-              body="The link looks incomplete. Connect a wallet to collect, or ask for a new link."
+              body="The link looks incomplete. Connect a wallet to collect, or ask for a new one."
             />
           ) : (
             <GateMessage
               icon={<Wallet className="size-5 text-muted-foreground" />}
               title="Connect your wallet"
-              body="Connect to collect payments to this wallet, or open a Collect link with ?recipient=…"
+              body="Connect to collect payments to this wallet."
             />
           )}
         </AppCard>

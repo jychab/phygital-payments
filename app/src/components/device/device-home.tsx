@@ -13,6 +13,7 @@ import {
   CenteredStatus,
   GateMessage,
 } from "@/components/layout/gate-message";
+import { useDevicePayOpen } from "@/hooks/device/use-device-pay-open";
 import { usePhygitalAssetByAddress } from "@/hooks/device/use-phygital-asset";
 import { useAuthenticateDevice } from "@/hooks/device/use-authenticate-device";
 import {
@@ -50,10 +51,10 @@ export function DeviceHomeByAddress({
     return (
       <GateMessage
         icon={<ShieldAlert className="size-5 text-destructive" />}
-        title="Not Registered"
+        title="Not Set Up"
         body={toUserErrorMessage(
           assetQuery.error,
-          "This device isn’t set up.",
+          "This device isn’t set up yet.",
         )}
         destructive
       />
@@ -75,9 +76,9 @@ export function DeviceHome({
 }) {
   const inApp = useIsInAppBrowser();
   const { authenticate, pending } = useAuthenticateDevice();
+  const [showPay, setShowPay] = useDevicePayOpen();
 
   const [liveConfirmed, setLiveConfirmed] = useState(liveConfirmedProp);
-  const [showPay, setShowPay] = useState(false);
   const [showClaim, setShowClaim] = useState(false);
   const [showInAppGate, setShowInAppGate] = useState(false);
   const [holdError, setHoldError] = useState<string | null>(null);
@@ -103,7 +104,7 @@ export function DeviceHome({
 
   if (showInAppGate) {
     return (
-      <InAppBrowserGate body="Checking an NFC device needs Safari or Chrome." />
+      <InAppBrowserGate body="To check a device, open this page in Safari or Chrome." />
     );
   }
 
@@ -120,7 +121,14 @@ export function DeviceHome({
   if (showPay) {
     const owner = String(asset.currentOwner);
     return (
-      <PrivyGate>
+      <PrivyGate
+        fallback={
+          <CenteredStatus>
+            <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading Pay…</p>
+          </CenteredStatus>
+        }
+      >
         <WalletSyncGate linkedOwner={owner}>
           <PayScreen
             owner={owner}
@@ -138,7 +146,7 @@ export function DeviceHome({
         size="lg"
         busy
         title="Hold Still…"
-        body="Keep it against the back until it reads."
+        body="Keep holding until it reads."
       />
     );
   }

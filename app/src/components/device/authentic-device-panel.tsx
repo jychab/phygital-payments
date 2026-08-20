@@ -42,7 +42,7 @@ export function AuthenticDevicePanel({
         size="lg"
         tone="success"
         pulsing={false}
-        title="Authentic"
+        title="Verified"
         body={
           liveConfirmed ? "Confirmed just now." : "This device is genuine."
         }
@@ -83,7 +83,7 @@ export function AuthenticDevicePanel({
               className="w-full"
               onClick={onClaim}
             >
-              Claim to wallet
+              Add to Wallet
             </Button>
           ) : null}
 
