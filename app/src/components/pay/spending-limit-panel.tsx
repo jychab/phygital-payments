@@ -19,7 +19,6 @@ import {
   useSetDelegateMutation,
   useRevokeDelegateMutation,
 } from "@/hooks/pay/use-delegate-mutations";
-import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
 import {
   isDelegateEnabled,
   uiAmountToRaw,
@@ -88,11 +87,10 @@ export function SpendingLimitPanel({
     enabled: !seeded,
   });
   const mintQuery = useMintProgram(mintAddress);
-  const verified = useVerifiedTokens();
   const status = seeded ?? statusQuery.data;
 
   const holding = holdingProp;
-  const token = holding ?? resolvePaymentToken(mint, verified.data);
+  const token = holding ?? resolvePaymentToken(mint);
   const setAllowance = useSetDelegateMutation(
     walletAddress === owner ? walletAddress : null,
     { mint: mintAddress, token: tokenAddress },

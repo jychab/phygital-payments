@@ -1,24 +1,26 @@
 "use client";
 
-import { useMemo } from "react";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { address } from "@solana/kit";
 
-import { usePhygitalTokensByOwner } from "@/hooks/home/use-phygital-tokens-by-owner";
-import { useTokenHoldings } from "@/hooks/tokens/use-payment-tokens";
 import {
-  fetchOwnerPayDelegates,
+  fetchPayBootstrap,
   ownerQueryOptions,
   queryKeys,
   type OwnerPayDelegates,
+  type PaymentTokenHolding,
 } from "@/lib/queries";
-import { mintsFromHoldings } from "@/lib/tokens/payment-token";
 
-function seedDelegateStatus(
+function seedPayBootstrap(
   queryClient: ReturnType<typeof useQueryClient>,
   owner: string,
+  holdings: PaymentTokenHolding[],
   data: OwnerPayDelegates,
 ) {
+  queryClient.setQueryData(queryKeys.holdings.byOwner(owner), holdings);
+  queryClient.setQueryData(
+    queryKeys.phygitalToken.byOwner(owner),
+    data.tokens,
+  );
   for (const [mint, match] of data.byMint) {
     if (!match.token || !match.status) continue;
     queryClient.setQueryData(
@@ -32,52 +34,29 @@ function seedDelegateStatus(
   }
 }
 
-/** Wallet-scoped Pay scan: owned tokens vs SPL ATA delegates. No accessory pick. */
+/** Wallet-scoped Pay scan: holdings ∩ owned tokens vs SPL ATA delegates. */
 export function useOwnerPayDelegates(
   owner: string | null,
   options?: { live?: boolean },
 ) {
   const live = options?.live !== false;
   const queryClient = useQueryClient();
-  const holdings = useTokenHoldings(owner, { live });
-  const tokensQuery = usePhygitalTokensByOwner(owner);
-  const mints = useMemo(
-    () => mintsFromHoldings(holdings.data),
-    [holdings.data],
-  );
-  const mintsKey = mints.join(",");
-  const tokens = tokensQuery.data ?? [];
-  const tokensKey = tokens.map((item) => String(item.address)).join(",");
 
-  const query = useQuery<OwnerPayDelegates, Error>({
-    queryKey: [
-      ...queryKeys.ownerPayDelegates.byOwner(owner),
-      mintsKey,
-      tokensKey,
-    ],
+  const query = useQuery({
+    queryKey: queryKeys.ownerPayDelegates.byOwner(owner),
     queryFn: async () => {
-      const result = await fetchOwnerPayDelegates(
-        address(owner!),
-        mints.map((m) => address(m)),
-        tokens,
-      );
-      seedDelegateStatus(queryClient, owner!, result);
+      const result = await fetchPayBootstrap(owner!);
+      seedPayBootstrap(queryClient, owner!, result.holdings, result.delegates);
       return result;
     },
-    enabled: Boolean(owner) && tokensQuery.isSuccess,
+    enabled: Boolean(owner),
     placeholderData: keepPreviousData,
     ...ownerQueryOptions(live),
   });
 
   return {
     ...query,
-    isPending:
-      Boolean(owner) &&
-      (tokensQuery.isPending || (tokensQuery.isSuccess && query.isPending)),
-    isLoading:
-      tokensQuery.isLoading ||
-      (tokensQuery.isSuccess && query.isLoading),
-    isError: holdings.isError || tokensQuery.isError || query.isError,
-    error: holdings.error ?? tokensQuery.error ?? query.error,
+    data: query.data?.delegates,
+    holdings: query.data?.holdings,
   };
 }

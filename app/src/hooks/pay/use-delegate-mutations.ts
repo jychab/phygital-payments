@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { address, type Address } from "@solana/kit";
 
-import { invalidateOwnerQueries, queryKeys, type MintDelegateStatus, type OwnerPayDelegates } from "@/lib/queries";
+import { invalidateOwnerQueries, queryKeys, type MintDelegateStatus, type PayBootstrap } from "@/lib/queries";
 import {
   buildDelegateInstructions,
   buildRevokeDelegateInstructions,
@@ -34,19 +34,22 @@ async function applyDelegateAfterSend(args: {
   const previous = args.queryClient.getQueryData<MintDelegateStatus>(args.key);
   args.queryClient.setQueryData<MintDelegateStatus>(args.key, args.apply);
 
-  const delegateQueries = args.queryClient.getQueriesData<OwnerPayDelegates>({
+  const delegateQueries = args.queryClient.getQueriesData<PayBootstrap>({
     queryKey: queryKeys.ownerPayDelegates.byOwner(args.owner),
   });
-  args.queryClient.setQueriesData<OwnerPayDelegates>(
+  args.queryClient.setQueriesData<PayBootstrap>(
     { queryKey: queryKeys.ownerPayDelegates.byOwner(args.owner) },
     (prev) => {
       if (!prev) return prev;
-      const byMint = new Map(prev.byMint);
+      const byMint = new Map(prev.delegates.byMint);
       byMint.set(args.mint, args.applyMatch(byMint.get(args.mint)));
       return {
         ...prev,
-        byMint,
-        tokenEnabled: [...byMint.values()].some(isOwnerPayMintEnabled),
+        delegates: {
+          ...prev.delegates,
+          byMint,
+          tokenEnabled: [...byMint.values()].some(isOwnerPayMintEnabled),
+        },
       };
     },
   );

@@ -1,7 +1,7 @@
 /** Client helpers for the payer-side preauth spending window. */
 
 import { API_KEY_NOT_SET_UP, readApiKey } from "@/lib/pay/api-key-store";
-import { queryFetch } from "@/lib/queries/http";
+import { queryFetch, readJson } from "@/lib/queries/http";
 import type {
   PreauthStatusCopy,
   PreauthStatusResult,
@@ -28,11 +28,7 @@ export async function requestPreauthForWallet(args: {
     method: "GET",
     headers: { "x-api-key": storedApiKey(args.wallet) },
   });
-  const body = (await res.json()) as PreauthResponse & { error?: string };
-  if (!res.ok) {
-    throw new Error(body.error ?? `Preauth failed (${res.status})`);
-  }
-  return body;
+  return readJson<PreauthResponse>(res, `Preauth failed (${res.status})`);
 }
 
 export async function waitPreauthStatusForWallet(args: {
@@ -48,11 +44,10 @@ export async function waitPreauthStatusForWallet(args: {
     headers: { "x-api-key": storedApiKey(args.wallet) },
     signal: args.signal,
   });
-  const body = (await res.json()) as PreauthStatusResult & { error?: string };
-  if (!res.ok) {
-    throw new Error(body.error ?? `Preauth status failed (${res.status})`);
-  }
-  return body;
+  return readJson<PreauthStatusResult>(
+    res,
+    `Preauth status failed (${res.status})`,
+  );
 }
 
 export async function cancelPreauthForWallet(args: {

@@ -21,8 +21,9 @@ const STORAGE_KEY = "phygital-pay.react-query";
  * v7: drop payContext + verifiedTokens persist (catalog is memory-only; holdings poll live).
  * v8: phygital-token-sdk 0.22 tokenType/mint (was assetType).
  * v9: drop asset query keys / wire fields (phygitalTokens + transfer.token).
+ * v10: ownerPayDelegates is Pay bootstrap (holdings + delegates).
  */
-const CACHE_BUSTER = "v9";
+const CACHE_BUSTER = "v10";
 
 export { CACHE_BUSTER };
 

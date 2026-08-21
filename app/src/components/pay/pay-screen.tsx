@@ -15,7 +15,7 @@ import { AccessoryIdentity } from "@/components/shared/accessory-identity";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus } from "@/hooks/pay/use-delegate-status";
 import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
-import { useVerifiedApiKey } from "@/hooks/pay/use-verified-api-key";
+import { usePreauthRequired } from "@/hooks/pay/use-preauth-required";
 import { invalidateOwnerQueries } from "@/lib/queries";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import {
@@ -31,6 +31,7 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 
 type PayNav =
   | { screen: "manage" }
+  | { screen: "setup-key" }
   | { screen: "need-accessory" }
   | { screen: "pick-limit"; holding: PaymentTokenHolding }
   | { screen: "limit"; holding: PaymentTokenHolding; tokenAddress: string }
@@ -47,7 +48,8 @@ export type PayScreenProps = {
 
 /**
  * Shared Pay surface for Home (`/`) and an owned accessory.
- * Setup order: API key → spending limit → Hold to Pay.
+ * Setup order: spending limit → Pay home. Confirm Payments off lands on
+ * Pay Settings; on lands on Hold to Pay.
  */
 export function PayScreen({
   owner,
@@ -59,7 +61,9 @@ export function PayScreen({
   const isRestoring = useIsRestoring();
   const queryOpts = { live: active };
   const delegates = useOwnerPayDelegates(owner, queryOpts);
-  const keyQuery = useVerifiedApiKey(owner);
+  const requiredQuery = usePreauthRequired(owner);
+  const confirmationRequired = requiredQuery.data?.required === true;
+  const keyReady = requiredQuery.data?.keyOk === true;
   const defaultMint = getDefaultMint();
   const pinnedDelegate = useDelegateStatus(
     tokenAddress ? owner : null,
@@ -70,8 +74,12 @@ export function PayScreen({
 
   const [nav, setNav] = useState<PayNav | null>(null);
 
+  const manageIsHome = !confirmationRequired;
   const tokens = delegates.data?.tokens ?? [];
   const defaultMintKey = String(defaultMint);
+  const defaultHolding = delegates.holdings?.find(
+    (holding) => holding.mint === defaultMintKey,
+  );
   const defaultWalletMatch = delegates.data?.byMint.get(defaultMintKey);
   const pinnedWalletMatch: OwnerPayMintMatch | undefined =
     tokenAddress && pinnedDelegate.data
@@ -116,10 +124,10 @@ export function PayScreen({
     setNav({ screen: "pick-limit", holding });
   }
 
-  const loading = isRestoring || keyQuery.isPending || limitLoading;
+  const loading = isRestoring || requiredQuery.isPending || limitLoading;
 
   const loadError =
-    keyQuery.error ??
+    requiredQuery.error ??
     (tokenAddress ? pinnedDelegate.error : null) ??
     delegates.error;
 
@@ -194,13 +202,25 @@ export function PayScreen({
     );
   }
 
-  if (nav?.screen === "manage") {
+  if (nav?.screen === "manage" || (manageIsHome && nav == null && limitReady)) {
     return (
       <ManagePayPanel
         owner={owner}
         live={active}
-        onBack={() => setNav(null)}
+        onBack={
+          manageIsHome && nav == null ? onExit : () => setNav(null)
+        }
         onEditTokenLimit={openLimit}
+      />
+    );
+  }
+
+  if (nav?.screen === "setup-key") {
+    return (
+      <ApiKeyPanel
+        owner={owner}
+        onStored={() => setNav(null)}
+        onBack={() => setNav(null)}
       />
     );
   }
@@ -211,6 +231,7 @@ export function PayScreen({
         owner={owner}
         tokenAddress={nav.tokenAddress}
         mint={defaultMintKey}
+        holding={defaultHolding}
         walletMatch={pinnedWalletMatch ?? defaultWalletMatch}
         live={active}
         onEnabled={onLimitEnabled}
@@ -220,10 +241,6 @@ export function PayScreen({
     );
   }
 
-  if (keyQuery.data !== true) {
-    return <ApiKeyPanel owner={owner} onBack={onExit} onSkip={onExit} />;
-  }
-
   if (!limitReady) {
     if (tokenAddress) {
       return (
@@ -231,6 +248,7 @@ export function PayScreen({
           owner={owner}
           tokenAddress={tokenAddress}
           mint={defaultMintKey}
+          holding={defaultHolding}
           walletMatch={pinnedWalletMatch ?? defaultWalletMatch}
           live={active}
           onEnabled={onLimitEnabled}
@@ -261,6 +279,7 @@ export function PayScreen({
         owner={owner}
         tokenAddress={String(tokens[0]!.address)}
         mint={defaultMintKey}
+        holding={defaultHolding}
         walletMatch={defaultWalletMatch}
         live={active}
         onEnabled={onLimitEnabled}
@@ -273,6 +292,10 @@ export function PayScreen({
   return (
     <HoldToPayPanel
       owner={owner}
+      confirmationRequired={confirmationRequired}
+      keyReady={keyReady}
+      holdings={delegates.holdings}
+      onSetupPhone={() => setNav({ screen: "setup-key" })}
       onManage={() => setNav({ screen: "manage" })}
       onBack={onExit}
     />

@@ -3,14 +3,21 @@
 import { useState } from "react";
 import { useIsRestoring } from "@tanstack/react-query";
 import { Check, LoaderCircle } from "lucide-react";
+import { toast } from "sonner";
 
 import { ApiKeyPanel } from "@/components/pay/api-key-panel";
 import { BackLink } from "@/components/shared/back-link";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
+import { SettingsListRow } from "@/components/shared/settings-list-row";
 import { TokenListRow } from "@/components/shared/token-chip";
+import { ExpectedWalletConnect } from "@/components/shared/wallet-notices";
 import { Button } from "@/components/ui/button";
+import {
+  usePreauthRequired,
+  useSetPreauthRequired,
+} from "@/hooks/pay/use-preauth-required";
 import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
-import { usePayTokenContext } from "@/hooks/tokens/use-payment-tokens";
+import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import {
   isOwnerPayMintEnabled,
@@ -20,9 +27,10 @@ import {
   isDefaultMint,
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
-import { shortAddress } from "@/lib/utils";
+import { toUserErrorMessage } from "@/lib/user-errors";
+import { cn, shortAddress } from "@/lib/utils";
 
-/** Tokens, spending limits, and this browser's Pay key. */
+/** Tokens, spending limits, and Confirm Payments. */
 export function ManagePayPanel({
   owner,
   onBack,
@@ -30,12 +38,14 @@ export function ManagePayPanel({
   live = true,
 }: {
   owner: string;
-  onBack: () => void;
+  onBack?: () => void;
   onEditTokenLimit: (holding: PaymentTokenHolding) => void;
   live?: boolean;
 }) {
   const [manageKeys, setManageKeys] = useState(false);
   const delegates = useOwnerPayDelegates(owner, { live });
+  const requiredQuery = usePreauthRequired(owner);
+  const confirmationOn = requiredQuery.data?.required === true;
   const enabledCount = [...(delegates.data?.byMint.values() ?? [])].filter(
     isOwnerPayMintEnabled,
   ).length;
@@ -52,9 +62,9 @@ export function ManagePayPanel({
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <div className="flex items-center justify-between gap-2">
-        <BackLink onClick={onBack} />
-        <QueryRefreshButton owner={owner} />
+      <div className="flex items-center gap-2">
+        {onBack ? <BackLink onClick={onBack} /> : null}
+        <QueryRefreshButton owner={owner} className="ml-auto" />
       </div>
 
       <div className="space-y-1.5 text-center">
@@ -62,7 +72,9 @@ export function ManagePayPanel({
           Pay Settings
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Set spending limits, or use Pay on another phone.
+          {confirmationOn
+            ? "Set spending limits, or use Pay on another phone."
+            : "Set spending limits."}
         </p>
       </div>
 
@@ -82,18 +94,96 @@ export function ManagePayPanel({
         {enabledCount === 1 ? "" : "s"} enabled
       </p>
 
+      <div className="space-y-1">
+        <p className="px-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          Confirmation
+        </p>
+        <ConfirmPaymentsRow
+          owner={owner}
+          on={confirmationOn}
+          pending={requiredQuery.isPending}
+        />
+      </div>
+
       <div className="mt-auto flex flex-col gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="w-full"
-          onClick={() => setManageKeys(true)}
-        >
-          Use on Another Phone
-        </Button>
+        {confirmationOn ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="w-full"
+            onClick={() => setManageKeys(true)}
+          >
+            Use on Another Phone
+          </Button>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+function ConfirmPaymentsRow({
+  owner,
+  on,
+  pending,
+}: {
+  owner: string;
+  on: boolean;
+  pending: boolean;
+}) {
+  const { setRequired } = useSetPreauthRequired();
+  const { matched, ownerShort } = useExpectedWallet(owner);
+  const [busy, setBusy] = useState(false);
+
+  async function onToggle() {
+    if (!matched) return;
+    try {
+      setBusy(true);
+      await setRequired(owner, !on);
+    } catch (error) {
+      toast.error(toUserErrorMessage(error, "Couldn’t update confirmation."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!matched) {
+    return (
+      <div className="px-3 py-2">
+        <ExpectedWalletConnect
+          owner={owner}
+          hint={`Connect ${ownerShort} to change confirmation.`}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <SettingsListRow
+      title="Confirm Payments"
+      subtitle={
+        on
+          ? "Press Pay on this phone before a tap goes through."
+          : "Hold your accessory to their phone to pay."
+      }
+      truncate={false}
+      onSelect={() => void onToggle()}
+      disabled={busy || pending}
+      trailing={
+        busy || pending ? (
+          <LoaderCircle className="size-3.5 animate-spin text-muted-foreground" />
+        ) : (
+          <span
+            className={cn(
+              "text-[11px] font-medium",
+              on ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            {on ? "On" : "Off"}
+          </span>
+        )
+      }
+    />
   );
 }
 
@@ -107,10 +197,9 @@ function ManagePayTokens({
   live?: boolean;
 }) {
   const isRestoring = useIsRestoring();
-  const payContext = usePayTokenContext(owner, { live });
   const delegates = useOwnerPayDelegates(owner, { live });
 
-  if (isRestoring || payContext.isLoading || delegates.isLoading) {
+  if (isRestoring || delegates.isLoading) {
     return (
       <div className="flex justify-center py-6 text-muted-foreground">
         <LoaderCircle className="size-4 animate-spin" />
@@ -118,7 +207,7 @@ function ManagePayTokens({
     );
   }
 
-  const list = payContext.data?.holdings ?? [];
+  const list = delegates.holdings ?? [];
   if (list.length === 0) {
     return (
       <p className="px-2 py-4 text-center text-xs text-muted-foreground">

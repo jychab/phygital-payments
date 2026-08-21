@@ -23,6 +23,7 @@ export function AuthenticAccessoryPanel({
   onHoldToCheck,
   onClaim,
   onPay,
+  payLabel = "Pay",
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
@@ -30,6 +31,7 @@ export function AuthenticAccessoryPanel({
   onHoldToCheck?: () => void;
   onClaim?: () => void;
   onPay?: () => void;
+  payLabel?: string;
 }) {
   const unclaimed = isUnclaimedToken(token);
   const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
@@ -102,7 +104,7 @@ export function AuthenticAccessoryPanel({
                 className="w-full"
                 onClick={onPay}
               >
-                Pay
+                {payLabel}
               </Button>
             </>
           ) : null}

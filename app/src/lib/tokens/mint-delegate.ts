@@ -255,8 +255,8 @@ const EMPTY_MINT_MATCH: OwnerPayMintMatch = { token: null, status: null };
 
 /**
  * Wallet-scoped Pay read: owned tokens × SPL ATA delegates.
- * Caller supplies tokens (shared `phygitalToken.byOwner` cache). A mint is
- * enabled iff its ATA delegate is some owned token's PDA.
+ * Pay UI loads this via `GET /api/pay/bootstrap`. A mint is enabled iff
+ * its ATA delegate is some owned token's PDA.
  */
 export async function fetchOwnerPayDelegates(
   owner: Address,

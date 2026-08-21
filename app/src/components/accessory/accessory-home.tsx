@@ -11,6 +11,7 @@ import { PrivyGate } from "@/app/privy-wallet-root";
 import { CenteredStatus } from "@/components/layout/gate-message";
 import { useAccessoryPayOpen } from "@/hooks/accessory/use-accessory-pay-open";
 import { useAuthenticateAccessory } from "@/hooks/accessory/use-authenticate-accessory";
+import { usePreauthRequired } from "@/hooks/pay/use-preauth-required";
 import {
   tokenAllowsPay,
   isUnclaimedToken,
@@ -34,6 +35,10 @@ export function AccessoryHome({
   const inApp = useIsInAppBrowser();
   const { authenticate, pending } = useAuthenticateAccessory();
   const [showPay, setShowPay] = useAccessoryPayOpen();
+  const owner = String(token.currentOwner);
+  const canPay = token.isLocked && tokenAllowsPay(token);
+  const requiredQuery = usePreauthRequired(canPay ? owner : null);
+  const confirmationRequired = requiredQuery.data?.required === true;
 
   const [liveConfirmed, setLiveConfirmed] = useState(liveConfirmedProp);
   const [showClaim, setShowClaim] = useState(false);
@@ -76,7 +81,6 @@ export function AccessoryHome({
   }
 
   if (showPay) {
-    const owner = String(token.currentOwner);
     return (
       <PrivyGate
         fallback={
@@ -115,7 +119,8 @@ export function AccessoryHome({
       holdError={holdError}
       onHoldToCheck={() => void onHoldToCheck()}
       onClaim={() => setShowClaim(true)}
-      onPay={tokenAllowsPay(token) ? () => setShowPay(true) : undefined}
+      onPay={canPay ? () => setShowPay(true) : undefined}
+      payLabel={confirmationRequired ? "Pay" : "Pay Settings"}
     />
   );
 }

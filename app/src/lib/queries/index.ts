@@ -6,7 +6,8 @@
  * `Cache-Control: private, no-store`.
  *
  * Domain code lives next to the matching UI folder:
- *   lib/pay + hooks/pay         This Browser (Pay key), Hold to Pay, limits
+ *   lib/pay + hooks/pay         This Browser (Pay key), Hold to Pay, limits,
+ *                               Pay bootstrap (holdings ∩ delegates)
  *   lib/collect + hooks/collect `/collect` receive + ATA setup
  *   lib/accessory + hooks/accessory  NFC tap, Hold to Check, claim, `/accessory?token=`
  *   lib/home + hooks/home       Activity + Accessories tab
@@ -21,12 +22,13 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import {
   fetchMintDelegateStatus,
-  fetchOwnerPayDelegates,
   resolveMintProgram,
   type MintDelegateStatus,
   type OwnerPayDelegates,
   type TokenProgram,
 } from "@/lib/tokens/mint-delegate";
+import { fetchPayBootstrapClient } from "@/lib/pay/pay-bootstrap-client";
+import type { PayBootstrap } from "@/lib/pay/pay-bootstrap-wire";
 import {
   fetchRecipientAtaStatus,
   type RecipientAtaStatus,
@@ -125,6 +127,12 @@ export const queryKeys = {
       [...queryKeys.apiKey.all(), wallet] as const,
   },
 
+  preauthRequired: {
+    all: () => ["preauthRequired"] as const,
+    byWallet: (wallet: string | null) =>
+      [...queryKeys.preauthRequired.all(), wallet] as const,
+  },
+
   phygitalToken: {
     all: () => ["phygitalTokens"] as const,
     byIdentifier: (identifier: string | null) =>
@@ -148,7 +156,8 @@ export function isOwnerDataQuery(
     root === "holdings" ||
     root === "delegateStatus" ||
     root === "ownerPayDelegates" ||
-    root === "history"
+    root === "history" ||
+    root === "preauthRequired"
   ) {
     return queryKey[1] === owner;
   }
@@ -229,7 +238,9 @@ export function fetchDelegateStatus(
   return fetchMintDelegateStatus(owner, mint, token);
 }
 
-export { fetchOwnerPayDelegates };
+export function fetchPayBootstrap(owner: string): Promise<PayBootstrap> {
+  return fetchPayBootstrapClient(owner);
+}
 
 export function fetchAtaStatus(args: {
   owner: Address;
@@ -259,6 +270,7 @@ export type {
   Collectible,
   MintDelegateStatus,
   OwnerPayDelegates,
+  PayBootstrap,
   RecipientAtaStatus,
   TokenProgram,
   PaymentRecord,

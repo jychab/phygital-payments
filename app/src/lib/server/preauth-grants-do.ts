@@ -18,9 +18,15 @@ import {
 export type PreauthGrantsStub = {
   rotate(): Promise<{ gen: number }>;
   currentGeneration(): Promise<number>;
+  getPayState(): Promise<{ required: boolean; generation: number }>;
+  setRequired(args: { required: boolean }): Promise<{
+    required: boolean;
+    gen: number;
+    issued: boolean;
+  }>;
   open(args: { gen: number }): Promise<PreauthGrant>;
-  cancel(): Promise<void>;
-  claim(args: { jobId: string }): Promise<{ grantId: string }>;
+  cancel(args: { gen: number }): Promise<void>;
+  claim(args: { jobId: string }): Promise<{ grantId: string | null }>;
   consume(args: { grantId: string }): Promise<void>;
   releaseClaim(args: { grantId: string }): Promise<void>;
   status(args: { grantId: string; gen: number }): Promise<PreauthStatusResult>;

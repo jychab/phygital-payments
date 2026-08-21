@@ -11,7 +11,6 @@ import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenSymbol } from "@/components/shared/token-chip";
 import { formatCountdown } from "@/components/shared/expiry-countdown";
 import { Button } from "@/components/ui/button";
-import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
 import {
   cancelPreauthForWallet,
   requestPreauthForWallet,
@@ -20,7 +19,7 @@ import {
 } from "@/lib/pay/preauth-client";
 import { invalidateOwnerQueries } from "@/lib/queries";
 import { formatTokenAmount } from "@/lib/tokens/mint-delegate";
-import { resolvePaymentToken } from "@/lib/tokens/payment-token";
+import { resolvePaymentToken, type PaymentTokenHolding } from "@/lib/tokens/payment-token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { shortAddress } from "@/lib/utils";
 
@@ -39,21 +38,28 @@ function isAbortError(error: unknown): boolean {
 }
 
 /**
- * Hold to Pay: open a spending window, then wait on `/api/preauth/status`
- * for cancelled, replaced, expired, or webhook success. Mint and amount are
- * chosen by Collect and capped on-chain by the token's spending limit.
+ * Pay home: ready to tap, or Press Pay when Confirm Payments is on.
+ * Mint and amount are chosen by Collect and capped on-chain by the token's
+ * spending limit.
  */
 export function HoldToPayPanel({
   owner,
+  confirmationRequired,
+  keyReady,
+  holdings,
+  onSetupPhone,
   onManage,
   onBack,
 }: {
   owner: string;
+  confirmationRequired: boolean;
+  keyReady: boolean;
+  holdings?: PaymentTokenHolding[];
+  onSetupPhone?: () => void;
   onManage?: () => void;
   onBack?: () => void;
 }) {
   const queryClient = useQueryClient();
-  const verified = useVerifiedTokens();
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [grantId, setGrantId] = useState<string | null>(null);
@@ -137,7 +143,7 @@ export function HoldToPayPanel({
   }
 
   if (phase === "success" && paid) {
-    const token = resolvePaymentToken(paid.mint, verified.data);
+    const token = resolvePaymentToken(paid.mint, holdings);
     const amountUi = /^\d+$/.test(paid.amount)
       ? formatTokenAmount(BigInt(paid.amount), token.decimals)
       : "—";
@@ -253,20 +259,36 @@ export function HoldToPayPanel({
       </div>
       <div className="flex flex-1 flex-col items-center justify-center text-center">
         <p className="max-w-64 text-sm text-muted-foreground">
-          Press Pay, then hold your accessory to their phone.
+          {!confirmationRequired
+            ? "Hold your accessory to their phone to pay."
+            : !keyReady
+              ? "Confirmation is on. Set up this phone to press Pay."
+              : "Press Pay, then hold your accessory to their phone."}
         </p>
       </div>
 
       <div className="mt-auto flex flex-col gap-2.5">
-        <Button
-          type="button"
-          size="lg"
-          className="w-full"
-          onClick={() => void onPay()}
-          disabled={busy}
-        >
-          {busy ? <LoaderCircle className="size-4 animate-spin" /> : "Pay"}
-        </Button>
+        {confirmationRequired && keyReady ? (
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={() => void onPay()}
+            disabled={busy}
+          >
+            {busy ? <LoaderCircle className="size-4 animate-spin" /> : "Pay"}
+          </Button>
+        ) : null}
+        {confirmationRequired && !keyReady && onSetupPhone ? (
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={onSetupPhone}
+          >
+            Continue
+          </Button>
+        ) : null}
         {onManage ? (
           <Button
             type="button"

@@ -56,6 +56,7 @@ describe("isPersistedQueryKey", () => {
     expect(isPersistedQueryKey(["pendingClaim", "token"])).toBe(false);
     expect(isPersistedQueryKey(["ataStatus", "owner", "mint"])).toBe(false);
     expect(isPersistedQueryKey(["mintProgram", "mint"])).toBe(false);
+    expect(isPersistedQueryKey(["preauthRequired", "owner"])).toBe(false);
   });
 });
 
@@ -72,6 +73,7 @@ describe("isOwnerDataQuery", () => {
     expect(isOwnerDataQuery(["phygitalTokens", "owner", "owner"], "owner")).toBe(
       true,
     );
+    expect(isOwnerDataQuery(["preauthRequired", "owner"], "owner")).toBe(true);
   });
 
   it("skips other wallets and one-shot queries", () => {

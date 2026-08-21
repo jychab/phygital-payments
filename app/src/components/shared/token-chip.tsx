@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
+import { SettingsListRow } from "@/components/shared/settings-list-row";
 import { Button } from "@/components/ui/button";
 import {
   isDefaultMint,
@@ -139,32 +140,23 @@ export function TokenListRow({
   trailing?: ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-        selected ? "bg-primary/10" : "hover:bg-muted/50",
-      )}
-    >
-      <TokenIcon token={token} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">
-          {token.symbol}
-        </p>
-        <p className="truncate text-[11px] text-muted-foreground">
-          {subtitle ?? token.name}
-        </p>
-      </div>
-      {trailing != null ? (
-        trailing
-      ) : selected ? (
-        <span className="text-[11px] font-medium text-primary">Selected</span>
-      ) : (
-        <span className="font-mono text-[10px] text-muted-foreground/70">
-          {shortAddress(token.mint, 4)}
-        </span>
-      )}
-    </button>
+    <SettingsListRow
+      leading={<TokenIcon token={token} />}
+      title={token.symbol}
+      subtitle={subtitle ?? token.name}
+      selected={selected}
+      onSelect={onSelect}
+      trailing={
+        trailing != null ? (
+          trailing
+        ) : selected ? (
+          <span className="text-[11px] font-medium text-primary">Selected</span>
+        ) : (
+          <span className="font-mono text-[10px] text-muted-foreground/70">
+            {shortAddress(token.mint, 4)}
+          </span>
+        )
+      }
+    />
   );
 }

@@ -7,6 +7,7 @@ import {
   type GrantPaymentStamp,
   type PreauthGrant,
 } from "./preauth-grant-types";
+import { resolveRequirePreauth } from "../shared/preauth-required";
 import {
   GRANT_NOT_FOUND,
   closeGrantForReplacement,
@@ -24,6 +25,7 @@ import {
 
 const GRANTS_KEY = "grants";
 const GENERATION_KEY = "generation";
+const REQUIRED_KEY = "requirePreauth";
 
 function isAbortError(error: unknown): boolean {
   return (
@@ -36,6 +38,8 @@ function isAbortError(error: unknown): boolean {
 export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
   private generation: number | undefined;
   private grants: StoredGrant[] | undefined;
+  /** `null` = never toggled (migrate from generation). */
+  private requirePreauth: boolean | null | undefined;
   /** One controller per grantId — concurrent /status waiters share it. */
   private readonly waiters = new Map<string, AbortController>();
 
@@ -51,6 +55,42 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
   async currentGeneration(): Promise<number> {
     await this.loadState();
     return this.generation!;
+  }
+
+  async getPayState(): Promise<{ required: boolean; generation: number }> {
+    await this.loadState();
+    return {
+      required: resolveRequirePreauth(this.requirePreauth, this.generation!),
+      generation: this.generation!,
+    };
+  }
+
+  /**
+   * Persist the Confirm Payments toggle. Turning on with generation 0 also
+   * issues the first API-key generation so this phone can press Pay.
+   */
+  async setRequired(args: { required: boolean }): Promise<{
+    required: boolean;
+    gen: number;
+    issued: boolean;
+  }> {
+    await this.loadState();
+    const issued = args.required && this.generation === 0;
+    this.requirePreauth = args.required;
+    if (issued) {
+      this.generation = 1;
+      await this.ctx.storage.put({
+        [REQUIRED_KEY]: args.required,
+        [GENERATION_KEY]: 1,
+      });
+    } else {
+      await this.ctx.storage.put(REQUIRED_KEY, args.required);
+    }
+    return {
+      required: args.required,
+      gen: this.generation!,
+      issued,
+    };
   }
 
   async open(args: { gen: number }): Promise<PreauthGrant> {
@@ -78,8 +118,9 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
   }
 
   /** Cancel any open spending window (Pay panel Cancel / reopen). */
-  async cancel(): Promise<void> {
+  async cancel(args: { gen: number }): Promise<void> {
     await this.loadState();
+    this.assertGeneration(args.gen);
     const now = Math.floor(Date.now() / 1000);
     const grant = currentActiveGrant(this.grants!, now);
     if (!grant) return;
@@ -90,11 +131,14 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
   }
 
   /**
-   * Atomically claim the active grant for a transfer job (single-use in-flight).
-   * Mint and amount are enforced on-chain (delegate + balance), not here.
+   * Claim the active grant when Confirm Payments is on. Returns `grantId: null`
+   * when the setting is off so settle can skip without a second RPC.
    */
-  async claim(args: { jobId: string }): Promise<{ grantId: string }> {
+  async claim(args: { jobId: string }): Promise<{ grantId: string | null }> {
     await this.loadState();
+    if (!resolveRequirePreauth(this.requirePreauth, this.generation!)) {
+      return { grantId: null };
+    }
     const now = Math.floor(Date.now() / 1000);
     const grant = currentActiveGrant(this.grants!, now);
     if (!grant) {
@@ -197,11 +241,23 @@ export class PreauthGrantsDO extends DurableObject<CloudflareEnv> {
   }
 
   private async loadState(): Promise<void> {
-    if (this.grants != null && this.generation != null) return;
+    if (
+      this.grants != null &&
+      this.generation != null &&
+      this.requirePreauth !== undefined
+    ) {
+      return;
+    }
 
-    const stored = await this.ctx.storage.get([GENERATION_KEY, GRANTS_KEY]);
+    const stored = await this.ctx.storage.get([
+      GENERATION_KEY,
+      GRANTS_KEY,
+      REQUIRED_KEY,
+    ]);
     this.generation = (stored.get(GENERATION_KEY) as number | undefined) ?? 0;
     this.grants = (stored.get(GRANTS_KEY) as StoredGrant[] | undefined) ?? [];
+    const required = stored.get(REQUIRED_KEY);
+    this.requirePreauth = typeof required === "boolean" ? required : null;
   }
 
   private async persistGrants(): Promise<void> {

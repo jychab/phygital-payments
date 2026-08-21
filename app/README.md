@@ -48,11 +48,11 @@ Routes live in `src/app`. Each has a top-level `*App` component. Domain code
 
 Shared Pay UI (Home tab and owned accessory) is `PayScreen` in `components/pay/`:
 
-- `pay-screen.tsx` — orchestrator (API key → spending limit → Hold to Pay)
-- `hold-to-pay-panel.tsx` — open a spending window
+- `pay-screen.tsx` — orchestrator (spending limit → Pay home)
+- `hold-to-pay-panel.tsx` — ready to tap, or Press Pay when Confirm Payments is on
 - `spending-limit-panel.tsx` — per-accessory token allowance
-- `manage-pay-panel.tsx` — tokens + API key
-- `api-key-panel.tsx` — paste / issue / rotate
+- `manage-pay-panel.tsx` — spending limits + Confirm Payments
+- `api-key-panel.tsx` — paste / issue / rotate (only after confirmation is on)
 
 Owned-accessory home after a check or claim is `AccessoryHome` (`accessory/accessory-home.tsx`).
 One `PrivyProvider` lives in `PrivyWalletRoot` (root layout). Home, `/accessory` claim
@@ -67,11 +67,11 @@ The connected wallet is always passed as `owner` (not `recipient` / `expectedOwn
 
 Connect a wallet via Privy, then use tabs:
 
-- **Pay** — **Pay** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC accessory. If Pay isn't configured, the tab offers **Manage API Keys** (paste a key, or wallet-sign to issue one; the API key is stored in localStorage on this phone).
+- **Pay** — After a spending limit: confirmation off (default) opens **Pay Settings**; confirmation on opens Hold to Pay (**Pay**, then tap). Requires a spending limit and at least one NFC accessory.
 - **Accessories** — list of NFC accessories for this wallet. Hold an accessory on `/accessory` to check it, then claim it to this wallet if you want.
 - **Activity** — recent payments for the connected wallet.
 
-Pay settings (spending limits, token management) live on Home. The API key is stored in **localStorage** on this phone after **Manage API Keys**.
+Pay settings (spending limits, Confirm Payments) are the Pay tab when confirmation is off, and **Pay Settings** from Hold to Pay when it is on. Turning confirmation on wallet-signs and may issue an API key stored in **localStorage** on this phone. **Use on Another Phone** (copy/paste/rotate) appears only while confirmation is on.
 
 ### Collect (`/collect`)
 
@@ -93,13 +93,13 @@ Authenticity first. Claim and Pay are optional.
 
 1. **Hold to Check** (no URL) or silent URL verify → **Verified**
 2. **Unclaimed / unlocked** — optional **Claim to wallet** (WebAuthn tap, then `/accessory?token=` to connect and confirm)
-3. **Locked and payment-capable** — **Collect** and **Pay** (same Pay tab as Home). Connect a wallet only when signing a limit or issuing a key.
+3. **Locked and payment-capable** — **Collect** and **Pay** (same Pay tab as Home). Connect a wallet only when signing a limit or turning on Confirm Payments.
 
-API keys live in localStorage on this phone, keyed by wallet. **Manage API Keys** copies, pastes, or issues/rotates a key. Setting a spending limit requires a balance for that token in the linked wallet.
+API keys live in localStorage on this phone, keyed by wallet, and are only needed when Confirm Payments is on. **Use on Another Phone** copies, pastes, or issues/rotates a key. Setting a spending limit requires a balance for that token in the linked wallet.
 
 ### Open a spending window (API key)
 
-In-app Pay calls `GET /api/preauth/open` with the stored API key. Integrators can do the same:
+In-app Pay calls `GET /api/preauth/open` with the stored API key **when Confirm Payments is on**. Integrators can do the same. Settlement does **not** require an open window unless that setting is on for the payer wallet.
 
 ```
 GET /api/preauth/open
@@ -135,7 +135,7 @@ Keep the HTTP connection open for the full window. Example: `curl --max-time 150
 
 Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey>` (rejects rotated keys).
 
-The API key is stored in plaintext in localStorage on this phone. Use **Rotate API key** in **Manage API Keys** if leaked.
+The API key is stored in plaintext in localStorage on this phone. Use **Start over** in **Use on Another Phone** if leaked. `/api/preauth/open` only gates Revi-sponsored settlement when Confirm Payments is on for that wallet.
 
 ```bash
 curl -H "x-api-key: ppk_…" "https://<host>/api/preauth/open"

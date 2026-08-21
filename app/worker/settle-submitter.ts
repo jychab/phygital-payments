@@ -297,9 +297,7 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     try {
       grantClaims = await this.authorizeBatch(batch);
       const signature = await sendSponsoredBatch(this.env, batch, ctx);
-      for (const job of batch) {
-        await this.finish(job, "confirmed", { signature });
-      }
+      await this.finishMany(batch, "confirmed", { signature });
       void this.consumeGrants(grantClaims).catch((error) => {
         console.error("Failed to consume preauth grants", error);
       });
@@ -320,6 +318,8 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
       }
 
       const retryAt = Date.now();
+      const retryPuts: Record<string, TransferJob> = {};
+      const failed: TransferJob[] = [];
       for (const job of batch) {
         const canRetry =
           transient &&
@@ -328,10 +328,16 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
         if (canRetry) {
           job.status = "queued";
           job.error = message;
-          await this.ctx.storage.put(`${JOB_PREFIX}${job.id}`, job);
+          retryPuts[`${JOB_PREFIX}${job.id}`] = job;
         } else {
-          await this.finish(job, "failed", { error: message });
+          failed.push(job);
         }
+      }
+      if (Object.keys(retryPuts).length > 0) {
+        await this.ctx.storage.put(retryPuts);
+      }
+      if (failed.length > 0) {
+        await this.finishMany(failed, "failed", { error: message });
       }
 
       if (batch.some((j) => j.status === "queued")) {
@@ -344,20 +350,26 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
   }
 
   /**
-   * Fail closed: each job atomically claims a single-use preauth grant for
-   * `transfer.owner`. Same-batch / concurrent peers lose the claim race.
-   * Verifier gating happens in {@link flush} (external → fail; only
-   * Revi-eligible jobs reach this method).
+   * When Confirm Payments is on, each job atomically claims a single-use
+   * preauth grant for `transfer.owner`. Same-batch / concurrent peers lose
+   * the claim race. Off wallets return `grantId: null` (one RPC, then skipped
+   * for later jobs from the same owner).
    */
   private async authorizeBatch(batch: TransferJob[]): Promise<GrantClaim[]> {
     const claims: GrantClaim[] = [];
+    const skipWallet = new Set<string>();
     try {
       for (const job of batch) {
-        const stub = this.preauthGrantsStub(job.transfer.owner);
-        const { grantId } = await stub.claim({
+        const owner = job.transfer.owner;
+        if (skipWallet.has(owner)) continue;
+        const { grantId } = await this.preauthGrantsStub(owner).claim({
           jobId: job.id,
         });
-        claims.push({ grantId, wallet: job.transfer.owner });
+        if (grantId == null) {
+          skipWallet.add(owner);
+          continue;
+        }
+        claims.push({ grantId, wallet: owner });
       }
       return claims;
     } catch (error) {
@@ -430,11 +442,26 @@ export class TransferSubmitterDO extends DurableObject<CloudflareEnv> {
     status: JobStatus,
     patch: { signature?: string; error?: string },
   ): Promise<void> {
-    job.status = status;
-    if (patch.signature) job.signature = patch.signature;
-    if (patch.error) job.error = patch.error;
-    await this.ctx.storage.put(`${JOB_PREFIX}${job.id}`, job);
-    if (isTerminal(status)) this.notify(job.id);
+    await this.finishMany([job], status, patch);
+  }
+
+  private async finishMany(
+    jobs: TransferJob[],
+    status: JobStatus,
+    patch: { signature?: string; error?: string },
+  ): Promise<void> {
+    if (jobs.length === 0) return;
+    const puts: Record<string, TransferJob> = {};
+    for (const job of jobs) {
+      job.status = status;
+      if (patch.signature) job.signature = patch.signature;
+      if (patch.error) job.error = patch.error;
+      puts[`${JOB_PREFIX}${job.id}`] = job;
+    }
+    await this.ctx.storage.put(puts);
+    if (isTerminal(status)) {
+      for (const job of jobs) this.notify(job.id);
+    }
   }
 
   // --- cached inputs --------------------------------------------------------

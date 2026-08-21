@@ -85,7 +85,7 @@ async function fetchVerifiedTokensFromNetwork(): Promise<PaymentToken[]> {
 
 /**
  * Jupiter verified classic-SPL tokens. Isolate-level cache (15 min) coalesces
- * Jupiter calls across `/api/tokens/verified` and `/holdings`.
+ * Jupiter calls across `/api/tokens/verified`, `/holdings`, and Pay bootstrap.
  * Browser cache is React Query only — this is not an HTTP cache.
  */
 export async function fetchVerifiedTokens(): Promise<PaymentToken[]> {
