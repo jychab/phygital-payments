@@ -4,12 +4,12 @@ import { QUERY_NO_STORE } from "@/lib/queries/http";
 import {
   evaluateCounter,
   TAP_SESSION_TTL_MS,
-} from "@/lib/device/tap/counter-session";
+} from "@/lib/accessory/tap/counter-session";
 import {
   readCounterSession,
   writeCounterSession,
-} from "@/lib/device/tap/counter-store";
-import { verifyDynamicUrlWithoutCounterCheck } from "@/lib/device/tap/verify-dynamic-url";
+} from "@/lib/accessory/tap/counter-store";
+import { verifyDynamicUrlWithoutCounterCheck } from "@/lib/accessory/tap/verify-dynamic-url";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 function json(body: unknown, status = 200) {
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
       return json(
         {
           isVerified: false,
-          error: "This tap was already used. Hold your device to this phone again.",
+          error: "This tap was already used. Hold your accessory to this phone again.",
         },
         409,
       );

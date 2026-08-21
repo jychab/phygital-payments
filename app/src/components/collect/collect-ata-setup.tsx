@@ -22,7 +22,7 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 
 /**
  * In-place receive-account setup on `/collect`. Same connect → sign flow as
- * device claim (`FinishClaimPanel`): Connect wallet, then confirm the tx.
+ * accessory claim (`FinishClaimPanel`): Connect wallet, then confirm the tx.
  */
 export function CollectAtaSetup({
   recipient,

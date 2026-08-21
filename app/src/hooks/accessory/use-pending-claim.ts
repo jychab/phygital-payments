@@ -2,10 +2,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchPendingClaim } from "@/lib/device/pending-claim-client";
+import { fetchPendingClaim } from "@/lib/accessory/pending-claim-client";
 import { queryKeys, queryOptions } from "@/lib/queries";
 
-/** Load a Safari tap proof for `/device?token=`. */
+/** Load a Safari tap proof for `/accessory?token=`. */
 export function usePendingClaim(token: string | null) {
   return useQuery({
     queryKey: queryKeys.pendingClaim.byToken(token),

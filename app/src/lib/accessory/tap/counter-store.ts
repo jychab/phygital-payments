@@ -5,7 +5,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
   parseCounterState,
   type CounterState,
-} from "@/lib/device/tap/counter-session";
+} from "@/lib/accessory/tap/counter-session";
 
 /**
  * KV-backed counter session for tap anti-replay.

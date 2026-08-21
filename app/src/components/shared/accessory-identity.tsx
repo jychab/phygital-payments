@@ -6,8 +6,8 @@ import { Lock, LockOpen, Nfc } from "lucide-react";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { cn, shortAddress } from "@/lib/utils";
 
-/** NFC icon + passkey label + lock state — Devices list and Pay device picker. */
-export function DeviceIdentity({
+/** NFC icon + passkey label + lock state — Accessories list and Pay accessory picker. */
+export function AccessoryIdentity({
   token,
   className,
   trailing,

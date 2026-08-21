@@ -1,19 +1,11 @@
-import { queryFetch } from "@/lib/queries/http";
+import { queryFetch, readJson } from "@/lib/queries/http";
 import type {
   CreatePendingClaimResponse,
   PendingClaimRecord,
   PendingClaimView,
 } from "../../../shared/pending-claim-wire";
 
-async function readJson<T>(res: Response, fallback: string): Promise<T> {
-  const body = (await res.json().catch(() => ({}))) as T & { error?: string };
-  if (!res.ok) {
-    throw new Error(body.error ?? fallback);
-  }
-  return body;
-}
-
-/** Client for `/api/claim/pending` — Safari tap handoff to `/device?token=`. */
+/** Client for `/api/claim/pending` — Safari tap handoff to `/accessory?token=`. */
 export async function createPendingClaim(
   body: Omit<PendingClaimRecord, "createdAtMs">,
 ): Promise<CreatePendingClaimResponse> {

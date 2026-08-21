@@ -23,7 +23,7 @@ const WalletChip = dynamic(
 
 export type WalletActionsMode = "full" | "display-only" | "hidden";
 
-export type AppMode = "Home" | "Collect" | "Device";
+export type AppMode = "Home" | "Collect" | "Accessory";
 
 export type ModeNavItem = {
   mode: "Home" | "Collect";

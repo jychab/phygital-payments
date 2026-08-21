@@ -39,12 +39,12 @@ const RULES: Rule[] = [
   {
     test: /already on that wallet/i,
     title: "Already Added",
-    body: "This device is already on that wallet.",
+    body: "This accessory is already on that wallet.",
   },
   {
-    test: /device is locked|unlock it before moving|unlock it before claiming/i,
-    title: "Device Locked",
-    body: "Unlock this device, then try again.",
+    test: /accessory is locked|unlock it before moving|unlock it before claiming/i,
+    title: "Accessory Locked",
+    body: "Unlock this accessory, then try again.",
   },
   {
     test: /recipient token account is missing|token account is missing\. create it/i,
@@ -54,12 +54,12 @@ const RULES: Rule[] = [
   {
     test: /preauth grant already used/i,
     title: "Already Used",
-    body: "Ask them to press Pay again, then hold their device here.",
+    body: "Ask them to press Pay again, then hold their accessory here.",
   },
   {
     test: /no active preauth grant|missing preauth/i,
     title: "Pay Isn’t Ready",
-    body: "Ask them to press Pay on their phone, then hold their device here.",
+    body: "Ask them to press Pay on their phone, then hold their accessory here.",
   },
   {
     test: /not the SPL delegate|haven't enabled this token for Pay|enable this token for Pay/i,
@@ -97,7 +97,7 @@ const RULES: Rule[] = [
     body: "Check what you pasted and try again.",
   },
   {
-    test: /missing x-api-key header|missing preauth api key|enable Pay on this device|Pay isn't set up on this phone|Pay isn't set up in this browser|Pay isn't turned on here/i,
+    test: /missing x-api-key header|missing preauth api key|Pay isn't set up on this phone|Pay isn't set up in this browser|Pay isn't turned on here/i,
     title: "Pay Isn’t Set Up",
     body: "Turn on Pay here first.",
   },
@@ -124,7 +124,7 @@ const RULES: Rule[] = [
   {
     test: /tap proof expired|slot hash no longer valid/i,
     title: "This Expired",
-    body: "Hold your device to this phone again.",
+    body: "Hold your accessory to this phone again.",
   },
   {
     test: /slot hashes|slot hash/i,
@@ -137,44 +137,44 @@ const RULES: Rule[] = [
     body: "Try again.",
   },
   {
-    test: /no locked (pass|device|NFC device)|lock the device/i,
-    title: "Device Isn’t Ready",
-    body: "Ask them to lock this device, then try again.",
+    test: /no locked NFC accessory|lock the accessory/i,
+    title: "Accessory Isn’t Ready",
+    body: "Ask them to lock this accessory, then try again.",
   },
   {
     test: /token is not lockable|TokenIsNotLockable/i,
     title: "Can’t Lock",
-    body: "This device can’t be locked.",
+    body: "This accessory can’t be locked.",
   },
   {
     test: /owner mismatch|OwnerMismatch/i,
     title: "Wrong Wallet",
-    body: "Connect the wallet that owns this device.",
+    body: "Connect the wallet that owns this accessory.",
   },
   {
     test: /belongs to the receiving wallet|collect a payment from yourself/i,
-    title: "That’s Your Device",
-    body: "You can’t collect a payment from your own device.",
+    title: "That’s Your Accessory",
+    body: "You can’t collect a payment from your own accessory.",
   },
   {
     test: /this tap was already used/i,
     title: "Already Used",
-    body: "Hold your device to this phone again.",
+    body: "Hold your accessory to this phone again.",
   },
   {
-    test: /this is not the same NFC device/i,
+    test: /this is not the same NFC accessory/i,
     title: "Couldn’t Verify",
-    body: "Hold the same device against the back of your phone.",
+    body: "Hold the same accessory against the back of your phone.",
   },
   {
-    test: /couldn't verify this NFC device|message mismatch/i,
+    test: /couldn't verify this NFC accessory|message mismatch/i,
     title: "Couldn’t Verify",
     body: "Hold it flat against the back of your phone and try again.",
   },
   {
     test: /isn't set up|not registered/i,
     title: "Not Set Up",
-    body: "This device isn’t set up yet.",
+    body: "This accessory isn’t set up yet.",
   },
   {
     test: /missing tap parameters|verification failed|invalid signature/i,
@@ -187,9 +187,9 @@ const RULES: Rule[] = [
     body: "Connect your wallet to continue.",
   },
   {
-    test: /(pass|device|NFC device) not found|missing passkey/i,
-    title: "Device Not Found",
-    body: "Hold your device to this phone again.",
+    test: /NFC accessory not found|accessory not found|missing passkey/i,
+    title: "Accessory Not Found",
+    body: "Hold your accessory to this phone again.",
   },
   {
     test: /only classic spl|token-2022/i,

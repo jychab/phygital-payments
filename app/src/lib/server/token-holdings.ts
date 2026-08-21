@@ -10,7 +10,7 @@ import {
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
 import { fetchVerifiedTokens } from "@/lib/server/verified-tokens";
-import { RPC_URL } from "@/lib/solana/cluster";
+import { postDasRpc } from "@/lib/server/das-rpc";
 
 type DasAsset = {
   id?: string;
@@ -29,40 +29,23 @@ type DasAsset = {
 
 type DasResponse = {
   items?: DasAsset[];
-  result?: { items?: DasAsset[] };
-  error?: { message?: string };
 };
 
 async function fetchAssetsByOwner(owner: string): Promise<DasAsset[]> {
-  const res = await fetch(RPC_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: "holdings",
-      method: "getAssetsByOwner",
-      params: {
-        ownerAddress: owner,
-        page: 1,
-        limit: 1000,
-        displayOptions: {
-          showFungible: true,
-          showZeroBalance: false,
-        },
+  const result = await postDasRpc<DasResponse>({
+    method: "getAssetsByOwner",
+    id: "holdings",
+    params: {
+      ownerAddress: owner,
+      page: 1,
+      limit: 1000,
+      displayOptions: {
+        showFungible: true,
+        showZeroBalance: false,
       },
-    }),
-    cache: "no-store",
+    },
   });
-
-  if (!res.ok) {
-    throw new Error(`Holdings RPC failed (${res.status})`);
-  }
-
-  const body = (await res.json()) as DasResponse;
-  if (body.error?.message) {
-    throw new Error(body.error.message);
-  }
-  const items = body.result?.items ?? body.items ?? [];
+  const items = result?.items ?? [];
   return Array.isArray(items) ? items : [];
 }
 

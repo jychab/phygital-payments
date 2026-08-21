@@ -46,7 +46,7 @@ function GoogleMark({ className }: { className?: string }) {
 }
 
 /**
- * Session wallet control for Privy routes (Home, `/collect`, `/device`).
+ * Session wallet control for Privy routes (Home, `/collect`, `/accessory`).
  * Embeds use a sealed display chip instead.
  */
 export function WalletChip({ className }: { className?: string }) {

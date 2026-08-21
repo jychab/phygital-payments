@@ -13,8 +13,8 @@ const HomeWalletShell = dynamic(
 );
 
 /**
- * Route `/` — Pay, Devices, and Activity tabs (Privy).
- * NFC devices and first-time setup start by tapping a tag (opens `/device`).
+ * Route `/` — Pay, Accessories, and Activity tabs (Privy).
+ * NFC accessories and first-time setup start by tapping a tag (opens `/accessory`).
  */
 export function HomeApp() {
   return <HomeWalletShell />;

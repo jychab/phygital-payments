@@ -37,7 +37,7 @@ export function ExpiryCountdown({
   return (
     <p className={className}>
       {expired
-        ? "This expired. Hold your device to your phone again."
+        ? "This expired. Hold your accessory to your phone again."
         : `Finish within ${formatRemaining(remainingMs)}`}
     </p>
   );

@@ -91,7 +91,7 @@ function syncCollectUrl(args: {
 /**
  * Collect receive UI. Settle-to wallet is the resolved `recipient` (session
  * wallet or `?recipient=`). Merchant chooses mint. Missing ATA connects in
- * place (device-setup flow).
+ * place (accessory-setup flow).
  */
 export function CollectPanel({
   paymentRequest,
@@ -332,7 +332,7 @@ export function CollectPanel({
         </div>
         <NfcHoldStatus
           size="lg"
-          title={phase === "confirming" ? "Processing" : "Hold Their Device Here"}
+          title={phase === "confirming" ? "Processing" : "Hold Their Accessory Here"}
           body={
             phase === "confirming"
               ? "Just a moment."
@@ -380,7 +380,7 @@ export function CollectPanel({
       <div className="space-y-1 text-center">
         <p className="text-sm font-medium text-foreground">Collect</p>
         <p className="text-xs text-muted-foreground">
-          Enter an amount, then hold their device to this phone.
+          Enter an amount, then hold their accessory to this phone.
         </p>
       </div>
 

@@ -5,15 +5,15 @@ import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle, Wallet } from "lucide-react";
 
-import { DeviceHome } from "@/components/device/device-home";
+import { AccessoryHome } from "@/components/accessory/accessory-home";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
 import { ExpiryCountdown } from "@/components/shared/expiry-countdown";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
-import { consumePendingClaim } from "@/lib/device/pending-claim-client";
-import { usePendingClaim } from "@/hooks/device/use-pending-claim";
-import { usePhygitalTokenByAddress } from "@/hooks/device/use-phygital-token";
-import { assertClaimReady, finishClaim } from "@/lib/device/claim";
+import { consumePendingClaim } from "@/lib/accessory/pending-claim-client";
+import { usePendingClaim } from "@/hooks/accessory/use-pending-claim";
+import { usePhygitalTokenByAddress } from "@/hooks/accessory/use-phygital-token";
+import { assertClaimReady, finishClaim } from "@/lib/accessory/claim";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { invalidateOwnerQueries, queryKeys } from "@/lib/queries";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
@@ -22,7 +22,7 @@ import { address as toAddress } from "@solana/kit";
 
 type Phase = "confirming" | "done" | null;
 
-/** `/device?token=` — confirm claim in the wallet, then owned-device home. */
+/** `/accessory?token=` — confirm claim in the wallet, then owned-accessory home. */
 export function FinishClaimPanel() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -45,7 +45,7 @@ export function FinishClaimPanel() {
 
     const phygitalToken = tokenQuery.data;
     if (!phygitalToken) {
-      setError("Still loading device info. Try again in a moment.");
+      setError("Still loading accessory info. Try again in a moment.");
       return;
     }
 
@@ -53,7 +53,7 @@ export function FinishClaimPanel() {
       assertClaimReady(phygitalToken, signer.address);
     } catch (err) {
       setError(
-        toUserErrorMessage(err, "Couldn’t add this device. Try again."),
+        toUserErrorMessage(err, "Couldn’t add this accessory. Try again."),
       );
       return;
     }
@@ -106,7 +106,7 @@ export function FinishClaimPanel() {
       <GateMessage
         icon={<Wallet className="size-5 text-destructive" />}
         title="Can’t finish"
-        body="This link is missing. Hold your device to your phone again."
+        body="This link is missing. Hold your accessory to your phone again."
         destructive
       />
     );
@@ -124,7 +124,7 @@ export function FinishClaimPanel() {
 
   if (phase === "done" && claimedOwner && tokenQuery.data) {
     return (
-      <DeviceHome
+      <AccessoryHome
         token={{
           ...tokenQuery.data,
           currentOwner: toAddress(claimedOwner),
@@ -150,7 +150,7 @@ export function FinishClaimPanel() {
         title="Can’t finish"
         body={toUserErrorMessage(
           pendingQuery.error,
-          "This expired. Hold your device to your phone again.",
+          "This expired. Hold your accessory to your phone again.",
         )}
         destructive
       />
@@ -164,7 +164,7 @@ export function FinishClaimPanel() {
           Link your wallet
         </p>
         <p className="mx-auto max-w-72 text-sm text-muted-foreground">
-          Connect the wallet that should own this device, then confirm.
+          Connect the wallet that should own this accessory, then confirm.
           You&apos;ll pay a small network fee.
         </p>
       </div>
@@ -183,7 +183,7 @@ export function FinishClaimPanel() {
         <GateMessage
           icon={<Wallet className="size-5 text-muted-foreground" />}
           title="Connect your wallet"
-          body="This wallet will own the device."
+          body="This wallet will own the accessory."
           action={
             <Button
               type="button"

@@ -43,7 +43,7 @@ const privyConfig: PrivyClientConfig = {
 
 /**
  * The one `PrivyProvider` for the app. Mounted from `PrivyWalletRoot` after a
- * route asks for it (`PrivyGate`). Do not wrap this again on Home / Device /
+ * route asks for it (`PrivyGate`). Do not wrap this again on Home / Accessory /
  * Collect. Dynamic-imported so `@privy-io/react-auth` never runs on the server.
  */
 export function PrivyWalletProvider({ children }: { children: ReactNode }) {

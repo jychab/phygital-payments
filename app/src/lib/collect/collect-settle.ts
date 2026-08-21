@@ -192,7 +192,7 @@ async function buildReceiveTransfer(args: {
   const session = await beginVerify({ messageHash });
 
   const response = await authenticatePasskeyForVerify(session);
-  // Card UX: leave "Hold NFC device" the moment the tap returns; RPC/submit = Confirming.
+  // Card UX: leave "Hold NFC accessory" the moment the tap returns; RPC/submit = Confirming.
   args.onPasskeyComplete?.();
 
   const { tokenPda, clientDataJson } = await buildVerifyArgs(response);
@@ -200,12 +200,12 @@ async function buildReceiveTransfer(args: {
   const { data: token } = await fetchPhygitalToken(rpc, tokenPda);
   if (token.tokenType !== PhygitalTokenType.Controlled || !token.isLocked) {
     throw new Error(
-      "No locked NFC device found for this tap. Lock the device before collecting payment.",
+      "No locked NFC accessory found for this tap. Lock the accessory before collecting payment.",
     );
   }
   if (token.owner === recipient) {
     throw new Error(
-      "This NFC device belongs to the receiving wallet — you can’t collect a payment from yourself.",
+      "This NFC accessory belongs to the receiving wallet — you can’t collect a payment from yourself.",
     );
   }
 

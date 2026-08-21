@@ -1,5 +1,5 @@
 /**
- * Wire types for claim handoff (Safari NFC tap → `/device?token=`).
+ * Wire types for claim handoff (Safari NFC tap → `/accessory?token=`).
  */
 
 import { getBase58Decoder, getBase58Encoder } from "@solana/kit";
@@ -29,7 +29,6 @@ export type PendingClaimView = PendingClaimRecord & {
 
 export type CreatePendingClaimResponse = {
   token: string;
-  finishUrl: string;
   expiresAtMs: number;
 };
 

@@ -1,6 +1,6 @@
 # Phygital Pay
 
-Next.js app for enabling tap-to-pay on a phygital NFC device and receiving tap-authorized transfers. Runs standalone with Privy for login and Solana wallets.
+Next.js app for enabling tap-to-pay on a phygital NFC accessory and receiving tap-authorized transfers. Runs standalone with Privy for login and Solana wallets.
 
 ## Setup
 
@@ -44,19 +44,19 @@ Routes live in `src/app`. Each has a top-level `*App` component. Domain code
 |-------|-----------|--------|
 | `/` | `HomeApp` | `home/` |
 | `/collect` | `CollectApp` | `collect/` |
-| `/device` | `DeviceTapApp` | `device/` |
+| `/accessory` | `AccessoryApp` | `accessory/` |
 
-Shared Pay UI (Home tab and owned device) is `PayScreen` in `components/pay/`:
+Shared Pay UI (Home tab and owned accessory) is `PayScreen` in `components/pay/`:
 
 - `pay-screen.tsx` — orchestrator (API key → spending limit → Hold to Pay)
 - `hold-to-pay-panel.tsx` — open a spending window
-- `spending-limit-panel.tsx` — per-device token allowance
+- `spending-limit-panel.tsx` — per-accessory token allowance
 - `manage-pay-panel.tsx` — tokens + API key
 - `api-key-panel.tsx` — paste / issue / rotate
 
-Owned-device home after a check or claim is `DeviceHome` (`device/device-home.tsx`).
-One `PrivyProvider` lives in `PrivyWalletRoot` (root layout). Home, `/device` claim
-finish, and non-embed Collect ask for it via `PrivyGate`. The `/device` authenticity
+Owned-accessory home after a check or claim is `AccessoryHome` (`accessory/accessory-home.tsx`).
+One `PrivyProvider` lives in `PrivyWalletRoot` (root layout). Home, `/accessory` claim
+finish, and non-embed Collect ask for it via `PrivyGate`. The `/accessory` authenticity
 path does not load Privy until Pay. Collect embeds do not load
 the Privy SDK. Do not wrap `PrivyWalletProvider` again on a route.
 The connected wallet is always passed as `owner` (not `recipient` / `expectedOwner`), except Collect's settle-to address which stays `recipient`.
@@ -67,8 +67,8 @@ The connected wallet is always passed as `owner` (not `recipient` / `expectedOwn
 
 Connect a wallet via Privy, then use tabs:
 
-- **Pay** — **Pay** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC device. If Pay isn't configured, the tab offers **Manage API Keys** (paste a key, or wallet-sign to issue one; the API key is stored in localStorage on this phone).
-- **Devices** — list of NFC devices for this wallet. Hold a device on `/device` to check it, then claim it to this wallet if you want.
+- **Pay** — **Pay** opens a spending window, then **Hold to Pay** at the merchant. Requires a spending limit and at least one NFC accessory. If Pay isn't configured, the tab offers **Manage API Keys** (paste a key, or wallet-sign to issue one; the API key is stored in localStorage on this phone).
+- **Accessories** — list of NFC accessories for this wallet. Hold an accessory on `/accessory` to check it, then claim it to this wallet if you want.
 - **Activity** — recent payments for the connected wallet.
 
 Pay settings (spending limits, token management) live on Home. The API key is stored in **localStorage** on this phone after **Manage API Keys**.
@@ -79,20 +79,20 @@ Destination flow. The settle-to wallet comes from the **connected wallet** or `?
 
 - Header shows the same wallet chip as Home. Connect on `/collect` with no `?recipient=` to start collecting to that wallet.
 - Enter an amount, then hold NFC. Must run in Safari/Chrome (not a wallet in-app browser).
-- If the wallet has no receive account for the selected token yet, Collect shows **Connect wallet** on the same page (same flow as device setup). After the matching wallet connects, create the receive account, then collect.
+- If the wallet has no receive account for the selected token yet, Collect shows **Connect wallet** on the same page (same flow as accessory setup). After the matching wallet connects, create the receive account, then collect.
 - Missing or invalid `?recipient=` with no connected wallet prompts to connect (or shows an error in embeds).
 - Connected Collect shows the Home/Collect dropdown. Embeds stay sealed (static Collect label, display-only destination chip, no dropdown).
 
 Activity lives on Home, not Collect.
 
-### Device (`/device`)
+### Accessory (`/accessory`)
 
 Authenticity first. Claim and Pay are optional.
 
-`/device` with no tap params shows **Hold to Check** (live WebAuthn in the browser). A signed NFC URL (`/device?pk=&s=&c=&n=`) verifies silently, then shows **Verified**. Optional **Hold to Check** upgrades the subtitle to **Confirmed just now.** Privy is not loaded until Pay or `/device?token=`.
+`/accessory` with no tap params shows **Hold to Check** (live WebAuthn in the browser). A signed NFC URL (`/accessory?pk=&s=&c=&n=`) verifies silently, then shows **Verified**. Optional **Hold to Check** upgrades the subtitle to **Confirmed just now.** Privy is not loaded until Pay or `/accessory?token=`.
 
 1. **Hold to Check** (no URL) or silent URL verify → **Verified**
-2. **Unclaimed / unlocked** — optional **Claim to wallet** (WebAuthn tap, then `/device?token=` to connect and confirm)
+2. **Unclaimed / unlocked** — optional **Claim to wallet** (WebAuthn tap, then `/accessory?token=` to connect and confirm)
 3. **Locked and payment-capable** — **Collect** and **Pay** (same Pay tab as Home). Connect a wallet only when signing a limit or issuing a key.
 
 API keys live in localStorage on this phone, keyed by wallet. **Manage API Keys** copies, pastes, or issues/rotates a key. Setting a spending limit requires a balance for that token in the linked wallet.
@@ -155,7 +155,7 @@ Requirements when embedded:
 - `?recipient=<solana-address>` is **required** (invalid/missing → error screen)
 - Optional `?amount=`
 - Wallet connect / disconnect is disabled
-- Only the payment-link receive UI is shown (`/device` is blocked in iframes)
+- Only the payment-link receive UI is shown (`/accessory` is blocked in iframes)
 
 Example:
 

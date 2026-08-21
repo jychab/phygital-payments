@@ -24,10 +24,10 @@ function emitPayOpen() {
 }
 
 /**
- * Pay on `/device` after an NFC tap. Stored on the URL so it survives the
+ * Pay on `/accessory` after an NFC tap. Stored on the URL so it survives the
  * tree remount when Privy first loads (tap paths skip Privy until Pay).
  */
-export function useDevicePayOpen(): [boolean, (open: boolean) => void] {
+export function useAccessoryPayOpen(): [boolean, (open: boolean) => void] {
   const open = useSyncExternalStore(
     subscribePayOpen,
     payOpenFromLocation,

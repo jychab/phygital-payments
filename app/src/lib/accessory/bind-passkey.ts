@@ -1,10 +1,10 @@
 /**
  * Bind a verified WebAuthn passkey to an expected chip (URL path)
- * or accept it as discovery (cold `/device`).
+ * or accept it as discovery (cold `/accessory`).
  */
 
-export const PASSKEY_MISMATCH = "This is not the same NFC device.";
-export const PASSKEY_NOT_VERIFIED = "Couldn't verify this NFC device.";
+export const PASSKEY_MISMATCH = "This is not the same NFC accessory.";
+export const PASSKEY_NOT_VERIFIED = "Couldn't verify this NFC accessory.";
 
 export function bindVerifiedPasskey(
   result: { isVerified: boolean; secp256r1PublicKey: string },

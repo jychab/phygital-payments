@@ -141,7 +141,7 @@ function ManagePayTokens({
             key={holding.mint}
             holding={holding}
             match={match}
-            device={
+            accessory={
               tokenAddress
                 ? tokensByAddress.get(String(tokenAddress))
                 : undefined
@@ -157,25 +157,25 @@ function ManagePayTokens({
 function ManagePayTokenRow({
   holding,
   match,
-  device,
+  accessory,
   onEditLimit,
 }: {
   holding: PaymentTokenHolding;
   match: OwnerPayMintMatch | undefined;
-  device: PhygitalToken | undefined;
+  accessory: PhygitalToken | undefined;
   onEditLimit: (holding: PaymentTokenHolding) => void;
 }) {
   const enabled = isOwnerPayMintEnabled(match);
   const usdc = isDefaultMint(holding.mint);
-  const deviceLabel = device
-    ? shortAddress(device.secp256r1PublicKey, 4)
+  const accessoryLabel = accessory
+    ? shortAddress(accessory.secp256r1PublicKey, 4)
     : null;
   const limitLabel = usdc
     ? `Limit $${match?.status?.delegatedAmountUi ?? "—"}`
     : `Limit ${match?.status?.delegatedAmountUi ?? "—"}`;
   const subtitle = enabled
-    ? deviceLabel
-      ? `${limitLabel} · ${deviceLabel} · ${holding.balanceUi} available`
+    ? accessoryLabel
+      ? `${limitLabel} · ${accessoryLabel} · ${holding.balanceUi} available`
       : `${limitLabel} · ${holding.balanceUi} available`
     : `No limit · ${holding.balanceUi} available`;
 

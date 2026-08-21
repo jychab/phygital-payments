@@ -8,8 +8,8 @@
  * Domain code lives next to the matching UI folder:
  *   lib/pay + hooks/pay         This Browser (Pay key), Hold to Pay, limits
  *   lib/collect + hooks/collect `/collect` receive + ATA setup
- *   lib/device + hooks/device   NFC tap, Hold to Check, claim, `/device?token=`
- *   lib/home + hooks/home       Activity + Devices tab
+ *   lib/accessory + hooks/accessory  NFC tap, Hold to Check, claim, `/accessory?token=`
+ *   lib/home + hooks/home       Activity + Accessories tab
  *   lib/tokens + hooks/tokens   mint catalog, holdings (`use-payment-tokens`)
  *   lib/server                  API routes only (`import "server-only"`)
  *   hooks/wallet                Privy address, expected-wallet match, query refresh
@@ -39,12 +39,14 @@ import {
   fetchHoldingsClient,
   fetchVerifiedTokensClient,
 } from "@/lib/tokens/verified-tokens-client";
+import { fetchDasCollectibleClient } from "@/lib/tokens/das-collectible-client";
+import type { Collectible } from "@/lib/tokens/collectible";
 import type {
   PaymentToken,
   PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
 
-export { queryFetch } from "./http";
+export { queryFetch, readJson } from "./http";
 
 // ============================================================================
 // Query keys
@@ -79,6 +81,12 @@ export const queryKeys = {
 
   verifiedTokens: {
     all: () => ["verifiedTokens"] as const,
+  },
+
+  dasCollectible: {
+    all: () => ["dasCollectible"] as const,
+    byMint: (mint: string | null) =>
+      [...queryKeys.dasCollectible.all(), mint] as const,
   },
 
   ataStatus: {
@@ -243,7 +251,12 @@ export function fetchHoldings(owner: string): Promise<PaymentTokenHolding[]> {
   return fetchHoldingsClient(owner);
 }
 
+export function fetchDasCollectible(mint: string): Promise<Collectible | null> {
+  return fetchDasCollectibleClient(mint);
+}
+
 export type {
+  Collectible,
   MintDelegateStatus,
   OwnerPayDelegates,
   RecipientAtaStatus,

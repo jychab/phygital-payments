@@ -6,7 +6,7 @@ import { LoaderCircle, Lock, LockOpen, Nfc, Trash2 } from "lucide-react";
 import { PhygitalTokenType } from "phygital-token-sdk";
 
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
-import { DeviceIdentity } from "@/components/shared/device-identity";
+import { AccessoryIdentity } from "@/components/shared/accessory-identity";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,8 +17,8 @@ import { usePhygitalTokensByOwner } from "@/hooks/home/use-phygital-tokens-by-ow
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
-/** Home → Devices tab: lock / unlock / remove NFC devices for this wallet. */
-export function DevicesPanel({ owner }: { owner: string }) {
+/** Home → Accessories tab: lock / unlock / remove NFC accessories for this wallet. */
+export function AccessoriesPanel({ owner }: { owner: string }) {
   const isRestoring = useIsRestoring();
   const tokensQuery = usePhygitalTokensByOwner(owner);
   const setLock = useSetLockStateMutation(owner);
@@ -26,7 +26,7 @@ export function DevicesPanel({ owner }: { owner: string }) {
 
   const header = (
     <div className="flex items-center justify-between gap-2">
-      <p className="text-sm font-medium text-foreground">Your devices</p>
+      <p className="text-sm font-medium text-foreground">Your accessories</p>
       <QueryRefreshButton owner={owner} />
     </div>
   );
@@ -35,7 +35,7 @@ export function DevicesPanel({ owner }: { owner: string }) {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading your devices…</p>
+        <p className="text-sm text-muted-foreground">Loading your accessories…</p>
       </CenteredStatus>
     );
   }
@@ -46,7 +46,7 @@ export function DevicesPanel({ owner }: { owner: string }) {
         {header}
         <GateMessage
           icon={<Nfc className="size-5 text-destructive" />}
-          title="Couldn’t load devices"
+          title="Couldn’t load accessories"
           body={toUserErrorMessage(
             tokensQuery.error,
             "Check your connection and try again.",
@@ -76,8 +76,8 @@ export function DevicesPanel({ owner }: { owner: string }) {
         {header}
         <GateMessage
           icon={<Nfc className="size-5 text-muted-foreground" />}
-          title="No devices yet"
-          body="Hold a device to the back of your phone to add it to this wallet."
+          title="No accessories yet"
+          body="Hold an accessory to the back of your phone to add it to this wallet."
         />
       </div>
     );
@@ -87,7 +87,7 @@ export function DevicesPanel({ owner }: { owner: string }) {
     <div className="flex flex-1 flex-col gap-3">
       {header}
       <p className="text-sm text-muted-foreground">
-        Lock a device to pay with it. Remove it if you want someone else to add it.
+        Lock an accessory to pay with it. Remove it if you want someone else to add it.
       </p>
       <ul className="flex flex-col gap-2">
         {tokens.map((token) => (
@@ -130,14 +130,14 @@ function TokenRow({
         token: token.address,
         isLocked: !token.isLocked,
       });
-      toast.success(token.isLocked ? "Device unlocked" : "Device locked");
+      toast.success(token.isLocked ? "Accessory unlocked" : "Accessory locked");
     } catch (error) {
       toast.error(
         toUserErrorMessage(
           error,
           token.isLocked
-            ? "Couldn’t unlock this device"
-            : "Couldn’t lock this device",
+            ? "Couldn’t unlock this accessory"
+            : "Couldn’t lock this accessory",
         ),
       );
     }
@@ -145,22 +145,22 @@ function TokenRow({
 
   async function onRemoveOwnership() {
     const confirmed = window.confirm(
-      "Remove this device from your wallet? Anyone will be able to add it.",
+      "Remove this accessory from your wallet? Anyone will be able to add it.",
     );
     if (!confirmed) return;
     try {
       await removeOwnership.mutateAsync({ token: token.address });
-      toast.success("Device removed");
+      toast.success("Accessory removed");
     } catch (error) {
       toast.error(
-        toUserErrorMessage(error, "Couldn’t remove this device"),
+        toUserErrorMessage(error, "Couldn’t remove this accessory"),
       );
     }
   }
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border/50 bg-muted/20 px-3.5 py-3">
-      <DeviceIdentity token={token} />
+      <AccessoryIdentity token={token} />
       <div className="flex flex-wrap gap-2">
         {canToggleLock ? (
           <Button

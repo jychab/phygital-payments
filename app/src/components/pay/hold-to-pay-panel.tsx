@@ -253,7 +253,7 @@ export function HoldToPayPanel({
       </div>
       <div className="flex flex-1 flex-col items-center justify-center text-center">
         <p className="max-w-64 text-sm text-muted-foreground">
-          Press Pay, then hold your device to their phone.
+          Press Pay, then hold your accessory to their phone.
         </p>
       </div>
 

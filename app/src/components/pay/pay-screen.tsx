@@ -11,7 +11,7 @@ import { HoldToPayPanel } from "@/components/pay/hold-to-pay-panel";
 import { ManagePayPanel } from "@/components/pay/manage-pay-panel";
 import { SpendingLimitPanel } from "@/components/pay/spending-limit-panel";
 import { BackLink } from "@/components/shared/back-link";
-import { DeviceIdentity } from "@/components/shared/device-identity";
+import { AccessoryIdentity } from "@/components/shared/accessory-identity";
 import { Button } from "@/components/ui/button";
 import { useDelegateStatus } from "@/hooks/pay/use-delegate-status";
 import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
@@ -31,14 +31,14 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 
 type PayNav =
   | { screen: "manage" }
-  | { screen: "need-device" }
+  | { screen: "need-accessory" }
   | { screen: "pick-limit"; holding: PaymentTokenHolding }
   | { screen: "limit"; holding: PaymentTokenHolding; tokenAddress: string }
   | { screen: "first-limit"; tokenAddress: string };
 
 export type PayScreenProps = {
   owner: string;
-  /** When set (owned device), spending limit is bound to this NFC token PDA. */
+  /** When set (owned accessory), spending limit is bound to this NFC token PDA. */
   tokenAddress?: string;
   onExit?: () => void;
   /** When false, owner queries fetch once without background polling. */
@@ -46,12 +46,12 @@ export type PayScreenProps = {
 };
 
 /**
- * Shared Pay surface for Home (`/`) and owned Device.
+ * Shared Pay surface for Home (`/`) and an owned accessory.
  * Setup order: API key → spending limit → Hold to Pay.
  */
 export function PayScreen({
   owner,
-  tokenAddress: deviceTokenAddress,
+  tokenAddress,
   onExit,
   active = true,
 }: PayScreenProps) {
@@ -62,8 +62,8 @@ export function PayScreen({
   const keyQuery = useVerifiedApiKey(owner);
   const defaultMint = getDefaultMint();
   const pinnedDelegate = useDelegateStatus(
-    deviceTokenAddress ? owner : null,
-    deviceTokenAddress ?? null,
+    tokenAddress ? owner : null,
+    tokenAddress ?? null,
     defaultMint,
     queryOpts,
   );
@@ -74,13 +74,13 @@ export function PayScreen({
   const defaultMintKey = String(defaultMint);
   const defaultWalletMatch = delegates.data?.byMint.get(defaultMintKey);
   const pinnedWalletMatch: OwnerPayMintMatch | undefined =
-    deviceTokenAddress && pinnedDelegate.data
-      ? { token: deviceTokenAddress as Address, status: pinnedDelegate.data }
+    tokenAddress && pinnedDelegate.data
+      ? { token: tokenAddress as Address, status: pinnedDelegate.data }
       : undefined;
-  const limitReady = deviceTokenAddress
+  const limitReady = tokenAddress
     ? isDelegateEnabled(pinnedDelegate.data)
     : delegates.data?.tokenEnabled === true;
-  const limitLoading = deviceTokenAddress
+  const limitLoading = tokenAddress
     ? pinnedDelegate.isLoading
     : delegates.isPending;
 
@@ -97,12 +97,12 @@ export function PayScreen({
       setNav({ screen: "limit", holding, tokenAddress: String(existingToken) });
       return;
     }
-    if (deviceTokenAddress) {
-      setNav({ screen: "limit", holding, tokenAddress: deviceTokenAddress });
+    if (tokenAddress) {
+      setNav({ screen: "limit", holding, tokenAddress });
       return;
     }
     if (tokens.length === 0) {
-      setNav({ screen: "need-device" });
+      setNav({ screen: "need-accessory" });
       return;
     }
     if (tokens.length === 1) {
@@ -120,7 +120,7 @@ export function PayScreen({
 
   const loadError =
     keyQuery.error ??
-    (deviceTokenAddress ? pinnedDelegate.error : null) ??
+    (tokenAddress ? pinnedDelegate.error : null) ??
     delegates.error;
 
   if (loading) {
@@ -159,13 +159,13 @@ export function PayScreen({
     );
   }
 
-  if (nav?.screen === "need-device") {
-    return <NeedDeviceGate onBack={() => setNav(null)} />;
+  if (nav?.screen === "need-accessory") {
+    return <NeedAccessoryGate onBack={() => setNav(null)} />;
   }
 
   if (nav?.screen === "pick-limit") {
     return (
-      <PayDevicePicker
+      <PayAccessoryPicker
         tokens={tokens}
         onSelect={(tokenAddress) => {
           setNav({
@@ -225,11 +225,11 @@ export function PayScreen({
   }
 
   if (!limitReady) {
-    if (deviceTokenAddress) {
+    if (tokenAddress) {
       return (
         <SpendingLimitPanel
           owner={owner}
-          tokenAddress={deviceTokenAddress}
+          tokenAddress={tokenAddress}
           mint={defaultMintKey}
           walletMatch={pinnedWalletMatch ?? defaultWalletMatch}
           live={active}
@@ -241,12 +241,12 @@ export function PayScreen({
     }
 
     if (tokens.length === 0) {
-      return <NeedDeviceGate onBack={onExit ?? (() => setNav(null))} />;
+      return <NeedAccessoryGate onBack={onExit ?? (() => setNav(null))} />;
     }
 
     if (tokens.length > 1) {
       return (
-        <PayDevicePicker
+        <PayAccessoryPicker
           tokens={tokens}
           onSelect={(tokenAddress) =>
             setNav({ screen: "first-limit", tokenAddress })
@@ -279,13 +279,13 @@ export function PayScreen({
   );
 }
 
-function NeedDeviceGate({ onBack }: { onBack: () => void }) {
+function NeedAccessoryGate({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-1 flex-col gap-5">
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
-        title="Add a device first"
-        body="Hold a device to the back of your phone to add it to this wallet."
+        title="Add an accessory first"
+        body="Hold an accessory to the back of your phone to add it to this wallet."
         action={
           <Button
             type="button"
@@ -302,7 +302,7 @@ function NeedDeviceGate({ onBack }: { onBack: () => void }) {
   );
 }
 
-function PayDevicePicker({
+function PayAccessoryPicker({
   tokens,
   onSelect,
   onBack,
@@ -320,10 +320,10 @@ function PayDevicePicker({
       ) : null}
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
-          Choose a Device
+          Choose an Accessory
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          This limit is for one device. Only that device can pay with this
+          This limit is for one accessory. Only that accessory can pay with this
           token.
         </p>
       </div>
@@ -335,7 +335,7 @@ function PayDevicePicker({
               onClick={() => onSelect(String(item.address))}
               className="flex w-full rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
             >
-              <DeviceIdentity token={item} />
+              <AccessoryIdentity token={item} />
             </button>
           </li>
         ))}

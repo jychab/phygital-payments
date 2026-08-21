@@ -10,12 +10,12 @@ import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { BackLink } from "@/components/shared/back-link";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
-import { createPendingClaim } from "@/lib/device/pending-claim-client";
+import { createPendingClaim } from "@/lib/accessory/pending-claim-client";
 import {
   assertCaptureReady,
   captureClaimTap,
-  deviceClaimHref,
-} from "@/lib/device/claim";
+  accessoryClaimHref,
+} from "@/lib/accessory/claim";
 import { serializePendingClaimSession } from "../../../shared/pending-claim-wire";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
@@ -23,7 +23,7 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 type Stage = "ready" | "reading";
 
 /**
- * Safari NFC tap, then replace to `/device?token=` for wallet connect.
+ * Safari NFC tap, then replace to `/accessory?token=` for wallet connect.
  */
 export function ClaimPanel({
   token,
@@ -48,7 +48,7 @@ export function ClaimPanel({
       assertCaptureReady(token);
     } catch (err) {
       setError(
-        toUserErrorMessage(err, "Couldn’t add this device. Try again."),
+        toUserErrorMessage(err, "Couldn’t add this accessory. Try again."),
       );
       return;
     }
@@ -71,13 +71,13 @@ export function ClaimPanel({
         auth,
       });
 
-      router.replace(deviceClaimHref(pending.token));
+      router.replace(accessoryClaimHref(pending.token));
     } catch (err) {
       setStage("ready");
       setError(
         toUserErrorMessage(
           err,
-          "Couldn’t read the device. Turn on NFC and hold it to the back of your phone.",
+          "Couldn’t read the accessory. Turn on NFC and hold it to the back of your phone.",
         ),
       );
     }
@@ -85,7 +85,7 @@ export function ClaimPanel({
 
   if (inApp) {
     return (
-      <InAppBrowserGate body="To add a device, open this page in Safari or Chrome." />
+      <InAppBrowserGate body="To add an accessory, open this page in Safari or Chrome." />
     );
   }
 
@@ -105,7 +105,7 @@ export function ClaimPanel({
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
         title={title}
-        body="Hold your device to this phone, then connect the wallet that should own it."
+        body="Hold your accessory to this phone, then connect the wallet that should own it."
         action={
           <div className="flex w-full max-w-64 flex-col gap-3">
             {error ? (

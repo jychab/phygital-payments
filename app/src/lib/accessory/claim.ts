@@ -10,9 +10,9 @@ import type { PhygitalToken } from "@/lib/phygital/token";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { sendTransaction } from "@/lib/solana/tx";
 
-/** `/device?token=` — pending claim (same-tab or wallet in-app browser). */
-export function deviceClaimHref(token: string): string {
-  return `/device?token=${encodeURIComponent(token)}`;
+/** `/accessory?token=` — pending claim (same-tab or wallet in-app browser). */
+export function accessoryClaimHref(token: string): string {
+  return `/accessory?token=${encodeURIComponent(token)}`;
 }
 
 /** Pre-NFC checks from cached token view — run before showing NFC hold UI. */
@@ -21,7 +21,7 @@ export function assertCaptureReady(
 ): void {
   if (token.isLocked) {
     throw new Error(
-      "This NFC device is locked. Unlock it before claiming it to a wallet.",
+      "This NFC accessory is locked. Unlock it before claiming it to a wallet.",
     );
   }
 }
@@ -33,7 +33,7 @@ export function assertClaimReady(
 ): void {
   assertCaptureReady(token);
   if (token.currentOwner === recipient) {
-    throw new Error("This NFC device is already on that wallet.");
+    throw new Error("This NFC accessory is already on that wallet.");
   }
 }
 

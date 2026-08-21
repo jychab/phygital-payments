@@ -7,14 +7,14 @@ import { PrivyGate } from "@/app/privy-wallet-root";
 import { AppCard, AppShell, homeCollectModeNav } from "@/components/layout/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
-import { DevicesPanel } from "@/components/home/devices-panel";
+import { AccessoriesPanel } from "@/components/home/accessories-panel";
 import { HistoryPanel } from "@/components/home/history-panel";
 import { PayScreen } from "@/components/pay/pay-screen";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 
-type HomeTab = "pay" | "devices" | "history";
+type HomeTab = "pay" | "accessories" | "history";
 
 /**
  * Home UI. Loaded from `HomeApp` with `ssr: false` so Privy hooks never run
@@ -65,14 +65,14 @@ function HomeScreen() {
           <GateMessage
             icon={<Wallet className="size-5 text-muted-foreground" />}
             title="Connect your wallet"
-            body="Connect to pay, see your devices, and check activity."
+            body="Connect to pay, see your accessories, and check activity."
           />
         </AppCard>
       ) : (
         <Tabs
           value={tab}
           onValueChange={(value) => {
-            if (value === "pay" || value === "devices" || value === "history") {
+            if (value === "pay" || value === "accessories" || value === "history") {
               setTab(value);
             }
           }}
@@ -87,11 +87,11 @@ function HomeScreen() {
               Pay
             </TabsTrigger>
             <TabsTrigger
-              value="devices"
+              value="accessories"
               className="h-full gap-1.5 rounded-xl text-[0.8125rem] data-active:shadow-[0_1px_2px_oklch(0_0_0/0.25)]"
             >
               <Nfc className="size-3.5 opacity-70" />
-              Devices
+              Accessories
             </TabsTrigger>
             <TabsTrigger
               value="history"
@@ -110,10 +110,10 @@ function HomeScreen() {
               <PayScreen owner={address} active={tab === "pay"} />
             </TabsContent>
             <TabsContent
-              value="devices"
+              value="accessories"
               className="mt-0 flex flex-1 flex-col outline-none data-[state=inactive]:hidden"
             >
-              <DevicesPanel owner={address} />
+              <AccessoriesPanel owner={address} />
             </TabsContent>
             <TabsContent
               value="history"

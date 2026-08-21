@@ -4,7 +4,7 @@ import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 
 import { invalidateOwnerQueries, isOwnerDataQuery } from "@/lib/queries";
 
-/** Force-refetch holdings, limits, history, and devices for `owner`. */
+/** Force-refetch holdings, limits, history, and accessories for `owner`. */
 export function useOwnerQueryRefresh(owner: string | null) {
   const queryClient = useQueryClient();
   const isFetching =

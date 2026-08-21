@@ -32,7 +32,7 @@ function seedDelegateStatus(
   }
 }
 
-/** Wallet-scoped Pay scan: owned tokens vs SPL ATA delegates. No device pick. */
+/** Wallet-scoped Pay scan: owned tokens vs SPL ATA delegates. No accessory pick. */
 export function useOwnerPayDelegates(
   owner: string | null,
   options?: { live?: boolean },

@@ -38,6 +38,7 @@ const PERSISTED_QUERY_ROOTS = new Set([
   "delegateStatus",
   "ownerPayDelegates",
   "phygitalTokens",
+  "dasCollectible",
 ]);
 
 function isTaggedBigInt(value: object): value is TaggedBigInt {

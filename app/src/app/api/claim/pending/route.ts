@@ -5,18 +5,12 @@ import {
   consumePendingClaim,
   readPendingClaim,
   writePendingClaim,
-} from "@/lib/device/pending-claim-store";
+} from "@/lib/accessory/pending-claim-store";
 import { toUserErrorMessage } from "@/lib/user-errors";
-import { deviceClaimHref } from "@/lib/device/claim";
 import {
   parseCreatePendingClaimRequest,
   type CreatePendingClaimResponse,
 } from "../../../../../shared/pending-claim-wire";
-
-function absoluteFinishUrl(req: Request, token: string): string {
-  const origin = new URL(req.url).origin;
-  return `${origin}${deviceClaimHref(token)}`;
-}
 
 function tokenFromRequest(req: Request): string | null {
   return new URL(req.url).searchParams.get("token")?.trim() || null;
@@ -41,7 +35,6 @@ export async function POST(req: Request) {
 
     const response: CreatePendingClaimResponse = {
       token,
-      finishUrl: absoluteFinishUrl(req, token),
       expiresAtMs: stored.expiresAtMs,
     };
     return NextResponse.json(response);
@@ -50,7 +43,7 @@ export async function POST(req: Request) {
       {
         error: toUserErrorMessage(
           err,
-          "Couldn’t save this. Hold your device to your phone again.",
+          "Couldn’t save this. Hold your accessory to your phone again.",
         ),
       },
       { status: 500 },
@@ -58,7 +51,7 @@ export async function POST(req: Request) {
   }
 }
 
-/** Load a pending tap proof for `/device?token=`. */
+/** Load a pending tap proof for `/accessory?token=`. */
 export async function GET(req: Request) {
   try {
     const token = tokenFromRequest(req);
@@ -74,7 +67,7 @@ export async function GET(req: Request) {
       return NextResponse.json(
         {
           error:
-            "This expired. Hold your device to your phone again.",
+            "This expired. Hold your accessory to your phone again.",
         },
         { status: 410, headers: QUERY_NO_STORE },
       );

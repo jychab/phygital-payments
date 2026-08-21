@@ -5,7 +5,7 @@ import { CheckCircle2, LoaderCircle, Nfc } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-/** Shared NFC hold / processing status used by claim, pay, receive, and device check. */
+/** Shared NFC hold / processing status used by claim, pay, receive, and accessory check. */
 export function NfcHoldStatus({
   title,
   body,

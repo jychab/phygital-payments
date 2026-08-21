@@ -45,6 +45,7 @@ describe("isPersistedQueryKey", () => {
     );
     expect(isPersistedQueryKey(["phygitalTokens", "owner", "owner"])).toBe(true);
     expect(isPersistedQueryKey(["ownerPayDelegates", "owner"])).toBe(true);
+    expect(isPersistedQueryKey(["dasCollectible", "mint"])).toBe(true);
   });
 
   it("skips growing or one-shot caches", () => {
@@ -81,5 +82,6 @@ describe("isOwnerDataQuery", () => {
     expect(isOwnerDataQuery(["tapVerify", "pk=1"], "owner")).toBe(false);
     expect(isOwnerDataQuery(["payContext", "owner"], "owner")).toBe(false);
     expect(isOwnerDataQuery(["verifiedTokens"], "owner")).toBe(false);
+    expect(isOwnerDataQuery(["dasCollectible", "mint"], "owner")).toBe(false);
   });
 });

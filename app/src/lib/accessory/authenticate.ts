@@ -1,13 +1,13 @@
 import { startAuthentication, verifyResponse } from "phygital-token-sdk";
 
-import { bindVerifiedPasskey } from "@/lib/device/bind-passkey";
+import { bindVerifiedPasskey } from "@/lib/accessory/bind-passkey";
 
 /**
  * Live NFC check in the browser: local challenge → `startAuthentication` →
  * `verifyResponse`. Pass `expectedPublicKey` after a signed URL so the live
  * tap must be this chip.
  */
-export async function authenticateDevice(args?: {
+export async function authenticateAccessory(args?: {
   expectedPublicKey?: string;
   onPasskeyComplete?: () => void;
 }): Promise<{ secp256r1PublicKey: string }> {

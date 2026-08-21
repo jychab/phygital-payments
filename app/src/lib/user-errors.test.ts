@@ -61,13 +61,13 @@ describe("toUserFacingError", () => {
 
   it("maps a passkey mismatch to Couldn’t Verify", () => {
     expect(
-      toUserErrorMessage(new Error("This is not the same NFC device.")),
+      toUserErrorMessage(new Error("This is not the same NFC accessory.")),
     ).toBe("Couldn’t Verify");
   });
 
   it("maps an unverified live check", () => {
     const facing = toUserFacingError(
-      new Error("Couldn't verify this NFC device."),
+      new Error("Couldn't verify this NFC accessory."),
     );
     expect(facing.title).toBe("Couldn’t Verify");
   });

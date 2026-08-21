@@ -1,21 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useIsRestoring } from "@tanstack/react-query";
-import { LoaderCircle, ShieldAlert } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 
-import { AuthenticDevicePanel } from "@/components/device/authentic-device-panel";
-import { ClaimPanel } from "@/components/device/claim-panel";
+import { AuthenticAccessoryPanel } from "@/components/accessory/authentic-accessory-panel";
+import { ClaimPanel } from "@/components/accessory/claim-panel";
 import { PayScreen } from "@/components/pay/pay-screen";
 import { WalletSyncGate } from "@/components/shared/wallet-sync-gate";
 import { PrivyGate } from "@/app/privy-wallet-root";
-import {
-  CenteredStatus,
-  GateMessage,
-} from "@/components/layout/gate-message";
-import { useDevicePayOpen } from "@/hooks/device/use-device-pay-open";
-import { usePhygitalTokenByAddress } from "@/hooks/device/use-phygital-token";
-import { useAuthenticateDevice } from "@/hooks/device/use-authenticate-device";
+import { CenteredStatus } from "@/components/layout/gate-message";
+import { useAccessoryPayOpen } from "@/hooks/accessory/use-accessory-pay-open";
+import { useAuthenticateAccessory } from "@/hooks/accessory/use-authenticate-accessory";
 import {
   tokenAllowsPay,
   isUnclaimedToken,
@@ -27,47 +22,9 @@ import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 
 /**
- * `/device?owner=&phygital=` — load the on-chain token, then Authentic.
- */
-export function DeviceHomeByAddress({
-  tokenAddress,
-}: {
-  owner: string;
-  tokenAddress: string;
-}) {
-  const isRestoring = useIsRestoring();
-  const tokenQuery = usePhygitalTokenByAddress(tokenAddress);
-
-  if (isRestoring || tokenQuery.isLoading) {
-    return (
-      <CenteredStatus>
-        <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Checking…</p>
-      </CenteredStatus>
-    );
-  }
-
-  if (tokenQuery.isError || !tokenQuery.data) {
-    return (
-      <GateMessage
-        icon={<ShieldAlert className="size-5 text-destructive" />}
-        title="Not Set Up"
-        body={toUserErrorMessage(
-          tokenQuery.error,
-          "This device isn’t set up yet.",
-        )}
-        destructive
-      />
-    );
-  }
-
-  return <DeviceHome token={tokenQuery.data} />;
-}
-
-/**
  * Authentic home after a check or claim. Pay loads Privy only when opened.
  */
-export function DeviceHome({
+export function AccessoryHome({
   token,
   liveConfirmed: liveConfirmedProp = false,
 }: {
@@ -75,8 +32,8 @@ export function DeviceHome({
   liveConfirmed?: boolean;
 }) {
   const inApp = useIsInAppBrowser();
-  const { authenticate, pending } = useAuthenticateDevice();
-  const [showPay, setShowPay] = useDevicePayOpen();
+  const { authenticate, pending } = useAuthenticateAccessory();
+  const [showPay, setShowPay] = useAccessoryPayOpen();
 
   const [liveConfirmed, setLiveConfirmed] = useState(liveConfirmedProp);
   const [showClaim, setShowClaim] = useState(false);
@@ -104,7 +61,7 @@ export function DeviceHome({
 
   if (showInAppGate) {
     return (
-      <InAppBrowserGate body="To check a device, open this page in Safari or Chrome." />
+      <InAppBrowserGate body="To check an accessory, open this page in Safari or Chrome." />
     );
   }
 
@@ -152,7 +109,7 @@ export function DeviceHome({
   }
 
   return (
-    <AuthenticDevicePanel
+    <AuthenticAccessoryPanel
       token={token}
       liveConfirmed={liveConfirmed}
       holdError={holdError}

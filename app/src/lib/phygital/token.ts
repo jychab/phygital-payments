@@ -1,6 +1,7 @@
 import { address, type Address, type Rpc, type SolanaRpcApi } from "@solana/kit";
 import {
   fetchAllTokensFromOwner,
+  fetchMaybePhygitalToken,
   fetchPhygitalToken as fetchPhygitalTokenAccount,
   fetchTokenByIdentifier,
   findTokenPda,
@@ -56,16 +57,19 @@ export async function fetchPhygitalToken(
 
 /**
  * Load token by passkey public key (WebAuthn `verifyResponse` result).
- * PDA is seeded by the passkey, not the chip identifier.
+ * PDA is seeded by the passkey, not the chip identifier. `null` when the
+ * account does not exist yet.
  */
-export async function fetchPhygitalTokenByPasskey(
+export async function fetchMaybePhygitalTokenByPasskey(
   rpc: Rpc<SolanaRpcApi>,
   secp256r1PublicKey: string,
-): Promise<PhygitalToken> {
+): Promise<PhygitalToken | null> {
   const tokenAddress = await findTokenPda(
     parseSecp256r1Pubkey(secp256r1PublicKey),
   );
-  return fetchPhygitalToken(rpc, tokenAddress);
+  const account = await fetchMaybePhygitalToken(rpc, tokenAddress);
+  if (!account.exists) return null;
+  return phygitalTokenFromAccount(tokenAddress, account.data);
 }
 
 /**
@@ -105,7 +109,17 @@ export function isUnclaimedToken(
   return token.currentOwner === DEFAULT_TOKEN_OWNER;
 }
 
-/** Controlled devices can open Pay (spending limit / Hold to Pay). */
+/**
+ * True when on-chain `mint` is set (not `Pubkey::default()` / system program).
+ * Unset mint is the same sentinel as unclaimed `owner`.
+ */
+export function tokenHasLinkedMint(
+  token: Pick<PhygitalToken, "mint">,
+): boolean {
+  return token.mint !== DEFAULT_TOKEN_OWNER;
+}
+
+/** Controlled accessories can open Pay (spending limit / Hold to Pay). */
 export function tokenAllowsPay(
   token: Pick<PhygitalToken, "tokenType">,
 ): boolean {

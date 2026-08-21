@@ -5,7 +5,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Phygital Pay",
-  description: "Tap to pay with your device",
+  description: "Tap to pay with your accessory",
 };
 
 export default function RootLayout({

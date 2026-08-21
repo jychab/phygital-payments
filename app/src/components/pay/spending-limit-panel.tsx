@@ -44,7 +44,7 @@ function tryUiAmountToRaw(amount: string, decimals: number): bigint | null {
 }
 
 /**
- * Set or update the spending limit for one mint on one NFC device
+ * Set or update the spending limit for one mint on one NFC accessory
  * (program-authority SPL delegate).
  */
 export function SpendingLimitPanel({
@@ -246,7 +246,7 @@ export function SpendingLimitPanel({
           Set Spending Limit
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Payments from this device can use up to this much{" "}
+          Payments from this accessory can use up to this much{" "}
           <TokenSymbol
             token={token}
             size="xs"
