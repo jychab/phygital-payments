@@ -19,6 +19,6 @@ export function usePhygitalTokensByOwner(owner: string | null) {
       return fetchPhygitalTokensByOwner(getSolanaRpc(), address(owner));
     },
     enabled: Boolean(owner),
-    ...queryOptions.default,
+    ...queryOptions.volatile,
   });
 }

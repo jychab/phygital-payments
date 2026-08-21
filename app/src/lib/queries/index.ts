@@ -188,6 +188,34 @@ export function invalidateOwnerQueries(
   });
 }
 
+/** Token account reads keyed by address / identifier / passkey / owner. */
+export function invalidatePhygitalTokenQueries(
+  queryClient: QueryClient,
+  token: {
+    address: string;
+    identifier: string;
+    secp256r1PublicKey: string;
+    currentOwner?: string | null;
+  },
+): Promise<void> {
+  return Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.phygitalToken.byAddress(token.address),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.phygitalToken.byIdentifier(token.identifier),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.phygitalToken.byPasskey(token.secp256r1PublicKey),
+    }),
+    token.currentOwner
+      ? queryClient.invalidateQueries({
+          queryKey: queryKeys.phygitalToken.byOwner(token.currentOwner),
+        })
+      : Promise.resolve(),
+  ]).then(() => undefined);
+}
+
 // ============================================================================
 // Option presets (staleTime tuned per data volatility)
 // ============================================================================
@@ -206,6 +234,17 @@ export const queryOptions = {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     refetchInterval: 60 * SECOND,
+  },
+  /**
+   * Ownership / token accounts that change in another browser (wallet IAB)
+   * or via an NFC tap that cannot invalidate this tab's cache. Persist may
+   * paint instantly; always refetch on mount/focus/reconnect.
+   */
+  volatile: {
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   },
   /** Changes after user actions; mutations already invalidate. */
   default: { refetchOnWindowFocus: false, staleTime: 5 * MINUTE },

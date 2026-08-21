@@ -21,7 +21,7 @@ export function usePhygitalToken(identifier: string | null) {
       return fetchPhygitalTokenByIdentifier(getSolanaRpc(), identifier);
     },
     enabled: Boolean(identifier),
-    ...queryOptions.default,
+    ...queryOptions.volatile,
   });
 }
 
@@ -34,7 +34,7 @@ export function usePhygitalTokenByAddress(tokenAddress: string | null) {
       return fetchPhygitalToken(getSolanaRpc(), address(tokenAddress));
     },
     enabled: Boolean(tokenAddress),
-    ...queryOptions.default,
+    ...queryOptions.volatile,
   });
 }
 
@@ -50,6 +50,6 @@ export function usePhygitalTokenByPasskey(secp256r1PublicKey: string | null) {
       );
     },
     enabled: Boolean(secp256r1PublicKey),
-    ...queryOptions.default,
+    ...queryOptions.volatile,
   });
 }

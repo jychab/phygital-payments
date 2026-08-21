@@ -122,13 +122,16 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
     );
   }
 
-  if (tokenQuery.data) {
+  if (tokenQuery.isFetchedAfterMount && tokenQuery.data) {
     return <AccessoryHome token={tokenQuery.data} liveConfirmed />;
   }
 
   const checking =
     busy ||
-    (Boolean(passkey) && (tokenQuery.isPending || tokenQuery.isFetching));
+    (Boolean(passkey) &&
+      (tokenQuery.isPending ||
+        tokenQuery.isFetching ||
+        !tokenQuery.isFetchedAfterMount));
   if (checking) {
     return (
       <NfcHoldStatus
@@ -152,7 +155,7 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
     );
   }
 
-  if (passkey && tokenQuery.data === null) {
+  if (passkey && tokenQuery.isFetchedAfterMount && tokenQuery.data === null) {
     return (
       <NfcHoldStatus
         size="lg"
@@ -192,7 +195,11 @@ function AccessoryFlow({ pk }: { pk: string | null }) {
   const isRestoring = useIsRestoring();
   const tokenQuery = usePhygitalToken(pk);
 
-  if (isRestoring || tokenQuery.isLoading) {
+  if (
+    isRestoring ||
+    tokenQuery.isLoading ||
+    !tokenQuery.isFetchedAfterMount
+  ) {
     return (
       <CenteredStatus>
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />

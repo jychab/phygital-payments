@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
 import { type PersistedClient } from "@tanstack/react-query-persist-client";
 
 import {
@@ -6,7 +7,11 @@ import {
   isPersistedQueryKey,
   serializeQueryCache,
 } from "./persist";
-import { isOwnerDataQuery } from "./index";
+import {
+  invalidatePhygitalTokenQueries,
+  isOwnerDataQuery,
+  queryKeys,
+} from "./index";
 
 function roundTrip(value: unknown): unknown {
   const client = { payload: value } as unknown as PersistedClient;
@@ -85,5 +90,27 @@ describe("isOwnerDataQuery", () => {
     expect(isOwnerDataQuery(["payContext", "owner"], "owner")).toBe(false);
     expect(isOwnerDataQuery(["verifiedTokens"], "owner")).toBe(false);
     expect(isOwnerDataQuery(["dasCollectible", "mint"], "owner")).toBe(false);
+  });
+});
+
+describe("invalidatePhygitalTokenQueries", () => {
+  it("invalidates address, identifier, passkey, and owner keys", async () => {
+    const queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+
+    await invalidatePhygitalTokenQueries(queryClient, {
+      address: "token",
+      identifier: "pk",
+      secp256r1PublicKey: "passkey",
+      currentOwner: "owner",
+    });
+
+    const keys = invalidate.mock.calls.map((call) => call[0]?.queryKey);
+    expect(keys).toEqual([
+      queryKeys.phygitalToken.byAddress("token"),
+      queryKeys.phygitalToken.byIdentifier("pk"),
+      queryKeys.phygitalToken.byPasskey("passkey"),
+      queryKeys.phygitalToken.byOwner("owner"),
+    ]);
   });
 });

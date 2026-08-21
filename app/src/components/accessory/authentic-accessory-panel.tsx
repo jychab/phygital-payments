@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { CollectibleHero } from "@/components/accessory/collectible-hero";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
+import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import { useDasCollectible } from "@/hooks/accessory/use-das-collectible";
 import { collectHref } from "@/lib/collect/payment-request";
@@ -45,6 +46,7 @@ export function AuthenticAccessoryPanel({
 
   const status = (
     <AccessoryStatus
+      token={token}
       unclaimed={unclaimed}
       owner={String(token.currentOwner)}
       liveConfirmed={liveConfirmed}
@@ -115,12 +117,14 @@ export function AuthenticAccessoryPanel({
 }
 
 function AccessoryStatus({
+  token,
   unclaimed,
   owner,
   liveConfirmed,
   holdError,
   onHoldToCheck,
 }: {
+  token: PhygitalToken;
   unclaimed: boolean;
   owner: string;
   liveConfirmed: boolean;
@@ -129,11 +133,14 @@ function AccessoryStatus({
 }) {
   return (
     <div className="flex w-full max-w-64 flex-col items-center gap-2">
-      <p className="text-xs text-muted-foreground">
-        {unclaimed
-          ? "Not linked to a wallet."
-          : `Linked to ${shortAddress(owner)}.`}
-      </p>
+      <div className="flex items-center gap-0.5">
+        <p className="text-xs text-muted-foreground">
+          {unclaimed
+            ? "Not linked to a wallet."
+            : `Linked to ${shortAddress(owner)}.`}
+        </p>
+        <PhygitalTokenRefreshButton token={token} />
+      </div>
       {!liveConfirmed && onHoldToCheck ? (
         <Button
           type="button"

@@ -15,7 +15,11 @@ import { usePendingClaim } from "@/hooks/accessory/use-pending-claim";
 import { usePhygitalTokenByAddress } from "@/hooks/accessory/use-phygital-token";
 import { assertClaimReady, finishClaim } from "@/lib/accessory/claim";
 import { toUserErrorMessage } from "@/lib/user-errors";
-import { invalidateOwnerQueries, queryKeys } from "@/lib/queries";
+import {
+  invalidateOwnerQueries,
+  invalidatePhygitalTokenQueries,
+  queryKeys,
+} from "@/lib/queries";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
 import { address as toAddress } from "@solana/kit";
@@ -70,18 +74,11 @@ export function FinishClaimPanel() {
 
       invalidateOwnerQueries(queryClient, address);
       await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.phygitalToken.byAddress(pending.session.token),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.phygitalToken.byIdentifier(
-            phygitalToken.identifier,
-          ),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.phygitalToken.byPasskey(
-            phygitalToken.secp256r1PublicKey,
-          ),
+        invalidatePhygitalTokenQueries(queryClient, {
+          address: String(pending.session.token),
+          identifier: phygitalToken.identifier,
+          secp256r1PublicKey: phygitalToken.secp256r1PublicKey,
+          currentOwner: address,
         }),
         queryClient.invalidateQueries({
           queryKey: queryKeys.pendingClaim.byToken(claimToken),

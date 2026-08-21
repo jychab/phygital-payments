@@ -6,13 +6,14 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 
 import { PrivyWalletRoot } from "./privy-wallet-root";
 import { Toaster } from "@/components/ui/sonner";
+import { useResumeQueryRefresh } from "@/hooks/layout/use-resume-query-refresh";
 import {
   CACHE_BUSTER,
   QUERY_CACHE_MAX_AGE_MS,
   createQueryPersister,
   shouldDehydrateQuery,
 } from "@/lib/queries/persist";
-import { queryOptions } from "@/lib/queries";
+import { queryKeys, queryOptions } from "@/lib/queries";
 
 /**
  * Shared by all routes: React Query (localStorage-persisted, only browser cache) + toasts.
@@ -42,11 +43,23 @@ export function AppProviders({ children }: { children: ReactNode }) {
         buster: CACHE_BUSTER,
         dehydrateOptions: { shouldDehydrateQuery },
       }}
+      onSuccess={() => {
+        // Restored snapshots can predate a claim in a wallet in-app browser.
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.phygitalToken.all(),
+        });
+      }}
     >
       <PrivyWalletRoot>
+        <ResumeQueryRefresh />
         {children}
         <Toaster richColors position="top-center" />
       </PrivyWalletRoot>
     </PersistQueryClientProvider>
   );
+}
+
+function ResumeQueryRefresh() {
+  useResumeQueryRefresh();
+  return null;
 }
