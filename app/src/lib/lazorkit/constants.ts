@@ -26,9 +26,6 @@ export const SYSVAR_INSTRUCTIONS_ADDRESS = address(
 export const SECP256R1_PROGRAM_ADDRESS = address(
   "Secp256r1SigVerify1111111111111111111111111",
 );
-export const ASSOCIATED_TOKEN_PROGRAM_ADDRESS = address(
-  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-);
 
 export const DISC_CREATE_WALLET = 0;
 export const DISC_EXECUTE = 4;

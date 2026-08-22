@@ -4,8 +4,8 @@ import { AppProviders } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Phygital Pay",
-  description: "Tap to pay with your accessory",
+  title: "Accessory",
+  description: "Check if this accessory is genuine, then claim it to a wallet",
 };
 
 export default function RootLayout({

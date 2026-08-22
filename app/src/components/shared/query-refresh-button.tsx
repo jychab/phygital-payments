@@ -4,11 +4,7 @@ import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useOwnerQueryRefresh } from "@/hooks/wallet/use-owner-query-refresh";
-import {
-  invalidatePhygitalTokenQueries,
-  queryKeys,
-} from "@/lib/queries";
+import { invalidatePhygitalTokenQueries, queryKeys } from "@/lib/queries";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { cn } from "@/lib/utils";
 
@@ -33,25 +29,6 @@ function RefreshIconButton({
     >
       <RefreshCw className={cn("size-3.5", isFetching && "animate-spin")} />
     </Button>
-  );
-}
-
-/** Icon control to refetch owner-scoped queries while they are still stale. */
-export function QueryRefreshButton({
-  owner,
-  className,
-}: {
-  owner: string;
-  className?: string;
-}) {
-  const { isFetching, refresh } = useOwnerQueryRefresh(owner);
-
-  return (
-    <RefreshIconButton
-      isFetching={isFetching}
-      onRefresh={refresh}
-      className={className}
-    />
   );
 }
 

@@ -1,6 +1,5 @@
 import { address, type Address, type Rpc, type SolanaRpcApi } from "@solana/kit";
 import {
-  fetchAllTokensFromOwner,
   fetchMaybePhygitalToken,
   fetchPhygitalToken as fetchPhygitalTokenAccount,
   fetchTokenByIdentifier,
@@ -37,8 +36,8 @@ export function phygitalTokenFromAccount(
   return {
     tokenType: account.tokenType,
     identifier: bytesToBase64Url(new Uint8Array(account.identifier[0])),
-    secp256r1PublicKey: bytesToBase64Url(new Uint8Array(account.publicKey[0])),
     address: tokenAddress,
+    secp256r1PublicKey: bytesToBase64Url(new Uint8Array(account.publicKey[0])),
     isLocked: account.isLocked,
     currentOwner: account.owner,
     lastSignCount: account.lastSignCount,
@@ -88,20 +87,6 @@ export async function fetchPhygitalTokenByIdentifier(
   return phygitalTokenFromAccount(tokenAddress, account);
 }
 
-/** All phygital tokens whose on-chain `owner` matches `owner`. */
-export async function fetchPhygitalTokensByOwner(
-  rpc: Rpc<SolanaRpcApi>,
-  owner: Address,
-): Promise<PhygitalToken[]> {
-  const accounts = await fetchAllTokensFromOwner(owner, rpc);
-  return Promise.all(
-    accounts.map(async (account) => {
-      const tokenAddress = await findTokenPda(account.publicKey);
-      return phygitalTokenFromAccount(tokenAddress, account);
-    }),
-  );
-}
-
 /** True when no wallet has claimed the token yet. */
 export function isUnclaimedToken(
   token: Pick<PhygitalToken, "currentOwner">,
@@ -117,11 +102,4 @@ export function tokenHasLinkedMint(
   token: Pick<PhygitalToken, "mint">,
 ): boolean {
   return token.mint !== DEFAULT_TOKEN_OWNER;
-}
-
-/** Controlled accessories can open Pay (spending limit / Hold to Pay). */
-export function tokenAllowsPay(
-  token: Pick<PhygitalToken, "tokenType">,
-): boolean {
-  return token.tokenType === PhygitalTokenType.Controlled;
 }

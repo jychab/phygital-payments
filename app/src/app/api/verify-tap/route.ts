@@ -17,12 +17,12 @@ function json(body: unknown, status = 200) {
 }
 
 /**
- * Verify an NFC dynamic-URL tap (`pk`/`s`/`c`/`n`) for Enable Pay.
+ * Verify an NFC dynamic-URL tap (`pk`/`s`/`c`/`n`) for Hold to Check.
  *
  * Signature check, then monotonic counter anti-replay against the shared
- * `revibase_counter` KV (same store as vault / developer). A new counter
- * (strictly greater than the stored max) advances KV. The same counter may
- * re-verify inside a short grace window (page remount); after that it fails.
+ * `revibase_counter` KV. A new counter (strictly greater than the stored max)
+ * advances KV. The same counter may re-verify inside a short grace window
+ * (page remount); after that it fails.
  */
 export async function GET(req: Request) {
   try {

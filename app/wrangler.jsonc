@@ -14,18 +14,6 @@
       "service": "phygital-payments-app"
     }
   ],
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "TRANSFER_SUBMITTER",
-        "class_name": "TransferSubmitterDO"
-      },
-      {
-        "name": "PREAUTH_GRANTS",
-        "class_name": "PreauthGrantsDO"
-      }
-    ]
-  },
   "migrations": [
     {
       "tag": "v1",
@@ -34,24 +22,16 @@
     {
       "tag": "v2",
       "new_sqlite_classes": ["PreauthGrantsDO"]
-    }
-  ],
-  "d1_databases": [
+    },
     {
-      "binding": "phygital_payments",
-      "database_name": "phygital-payments",
-      "database_id": "af13f14e-e6e8-4652-8a08-e7780c06a0c7",
-      "migrations_dir": "d1/migrations"
+      "tag": "v3",
+      "deleted_classes": ["TransferSubmitterDO", "PreauthGrantsDO"]
     }
   ],
   "kv_namespaces": [
     {
       "binding": "revibase_counter",
       "id": "a9aa768ab4854f11ac0314170849c172"
-    },
-    {
-      "binding": "pending_claim",
-      "id": "8c7da72631dc4aa98aebd5295eb319bc"
     }
   ],
   "vars": {

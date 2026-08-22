@@ -1,43 +1,51 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Nfc } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Fingerprint, LoaderCircle, Nfc } from "lucide-react";
+import type { TransferSession } from "phygital-token-sdk";
 
-import { GateMessage } from "@/components/layout/gate-message";
-import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
+import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { BackLink } from "@/components/shared/back-link";
 import { Button } from "@/components/ui/button";
-import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
-import { createPendingClaim } from "@/lib/accessory/pending-claim-client";
+import { useSmartWallet } from "@/hooks/wallet/use-smart-wallet";
 import {
   assertCaptureReady,
+  assertClaimReady,
   captureClaimTap,
-  accessoryClaimHref,
+  finishClaim,
 } from "@/lib/accessory/claim";
-import { serializePendingClaimSession } from "../../../shared/pending-claim-wire";
+import { invalidatePhygitalTokenQueries } from "@/lib/queries";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
-type Stage = "ready" | "reading";
+type Stage = "ready" | "reading" | "confirm" | "confirming";
+
+type CapturedTap = {
+  session: TransferSession;
+  auth: Awaited<ReturnType<typeof captureClaimTap>>["auth"];
+};
 
 /**
- * Safari NFC tap, then replace to `/accessory?token=` for wallet connect.
+ * NFC tap, then create a passkey and confirm with Face ID in the same tab.
  */
 export function ClaimPanel({
   token,
   unclaimed = false,
   onBack,
+  onClaimed,
 }: {
   token: PhygitalToken;
   unclaimed?: boolean;
   onBack?: () => void;
+  onClaimed: (owner: string) => void;
 }) {
-  const router = useRouter();
-  const inApp = useIsInAppBrowser();
+  const queryClient = useQueryClient();
+  const { address, isConnected, ready, connect, session } = useSmartWallet();
 
   const [stage, setStage] = useState<Stage>("ready");
+  const [captured, setCaptured] = useState<CapturedTap | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const title = unclaimed ? "Add to Wallet" : "Move to a New Wallet";
@@ -55,7 +63,7 @@ export function ClaimPanel({
 
     setStage("reading");
     try {
-      const { session, auth } = await captureClaimTap({
+      const tap = await captureClaimTap({
         token: token.address,
         onPasskeyComplete: () => {
           try {
@@ -65,13 +73,8 @@ export function ClaimPanel({
           }
         },
       });
-
-      const pending = await createPendingClaim({
-        session: serializePendingClaimSession(session),
-        auth,
-      });
-
-      router.replace(accessoryClaimHref(pending.token));
+      setCaptured(tap);
+      setStage("confirm");
     } catch (err) {
       setStage("ready");
       setError(
@@ -83,10 +86,42 @@ export function ClaimPanel({
     }
   }
 
-  if (inApp) {
-    return (
-      <InAppBrowserGate body="To add an accessory, open this page in Safari or Chrome." />
-    );
+  async function onFinish() {
+    if (!session || !address || !captured) return;
+    setError(null);
+
+    try {
+      assertClaimReady(token, session.vaultPda);
+    } catch (err) {
+      setError(
+        toUserErrorMessage(err, "Couldn’t add this accessory. Try again."),
+      );
+      return;
+    }
+
+    setStage("confirming");
+    try {
+      await finishClaim({
+        session: captured.session,
+        auth: captured.auth,
+        smartWallet: session,
+      });
+      await invalidatePhygitalTokenQueries(queryClient, {
+        address: String(token.address),
+        identifier: token.identifier,
+        secp256r1PublicKey: token.secp256r1PublicKey,
+        currentOwner: address,
+      });
+      onClaimed(address);
+    } catch (err) {
+      setStage("confirm");
+      setError(
+        toUserErrorMessage(
+          err,
+          "That didn't go through. Confirm with Face ID and try again.",
+        ),
+      );
+    }
   }
 
   if (stage === "reading") {
@@ -96,6 +131,84 @@ export function ClaimPanel({
         body="Keep holding until it reads."
         pulsing
       />
+    );
+  }
+
+  if (stage === "confirming") {
+    return (
+      <NfcHoldStatus
+        title="Confirm with Face ID…"
+        body="Approve the passkey prompt to continue."
+        busy
+      />
+    );
+  }
+
+  if (stage === "confirm") {
+    const needsPasskey = !isConnected || !address;
+    return (
+      <div className="flex flex-1 flex-col gap-5 py-2">
+        {onBack ? (
+          <BackLink
+            onClick={() => {
+              setCaptured(null);
+              setError(null);
+              setStage("ready");
+              onBack();
+            }}
+          />
+        ) : null}
+        <div className="space-y-1.5 text-center">
+          <p className="text-base font-medium text-foreground">
+            {needsPasskey ? "Create a passkey" : "Confirm with Face ID"}
+          </p>
+          <p className="mx-auto max-w-72 text-sm text-muted-foreground">
+            {needsPasskey
+              ? "This passkey will own the accessory. Confirm with Face ID — network fees are covered."
+              : "Approve with Face ID — network fees are covered."}
+          </p>
+        </div>
+
+        {!ready ? (
+          <CenteredStatus>
+            <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          </CenteredStatus>
+        ) : needsPasskey ? (
+          <GateMessage
+            icon={<Fingerprint className="size-5 text-muted-foreground" />}
+            title="Create a passkey"
+            body="This passkey will own the accessory."
+            action={
+              <Button
+                type="button"
+                size="lg"
+                className="w-full"
+                onClick={connect}
+              >
+                Create a passkey
+              </Button>
+            }
+          />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {error ? (
+              <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
+                {error}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              disabled={!session}
+              onClick={() => void onFinish()}
+            >
+              {error ? "Try again" : "Confirm with Face ID"}
+            </Button>
+          </div>
+        )}
+      </div>
     );
   }
 

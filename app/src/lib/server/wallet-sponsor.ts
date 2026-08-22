@@ -1,7 +1,6 @@
 import "server-only";
 
 import { address, type Address, type Instruction } from "@solana/kit";
-import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 import { PHYGITAL_TOKEN_PROGRAM_ADDRESS } from "phygital-token-sdk";
 
 import {
@@ -9,7 +8,6 @@ import {
   type SponsoredInstructionWire,
 } from "../../../shared/sponsor-wire";
 import {
-  ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
   LAZORKIT_PROGRAM_DEVNET,
   LAZORKIT_PROGRAM_MAINNET,
   SECP256R1_PROGRAM_ADDRESS,
@@ -24,8 +22,6 @@ const ALLOWED_PROGRAMS = new Set<string>([
   String(SYSTEM_PROGRAM_ADDRESS),
   String(SECP256R1_PROGRAM_ADDRESS),
   String(PHYGITAL_TOKEN_PROGRAM_ADDRESS),
-  String(TOKEN_PROGRAM_ADDRESS),
-  String(ASSOCIATED_TOKEN_PROGRAM_ADDRESS),
   COMPUTE_BUDGET_PROGRAM,
 ]);
 

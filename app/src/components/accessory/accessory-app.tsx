@@ -2,17 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { useIsRestoring } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 
 import { AccessoryHome } from "@/components/accessory/accessory-home";
-import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
+import { AppBoot } from "@/components/layout/app-shell";
 import { CenteredStatus } from "@/components/layout/gate-message";
-import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
-import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
-import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import {
   usePhygitalToken,
   usePhygitalTokenByPasskey,
@@ -26,34 +22,13 @@ const AccessoryWalletShell = dynamic(
     import("@/components/accessory/accessory-wallet-shell").then(
       (m) => m.AccessoryWalletShell,
     ),
-  { ssr: false, loading: () => <EmbedBoot /> },
+  { ssr: false, loading: () => <AppBoot /> },
 );
 
 /**
- * Route `/accessory` — Hold to Check, signed NFC URL, or wallet finish.
+ * Route `/accessory` — Hold to Check or signed NFC URL.
  */
 export function AccessoryApp() {
-  const embedded = useIsEmbedded();
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token")?.trim() ?? "";
-
-  if (embedded === null) {
-    return <EmbedBoot />;
-  }
-
-  if (embedded) {
-    return (
-      <EmbedError
-        title="Can’t open here"
-        body="Open this on your phone, not in this window."
-      />
-    );
-  }
-
-  if (token) {
-    return <AccessoryWalletShell token={token} />;
-  }
-
   return (
     <AccessoryWalletShell>
       <AccessoryNfcApp />
@@ -85,19 +60,13 @@ function AccessoryNfcApp() {
 }
 
 function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
-  const inApp = useIsInAppBrowser();
   const { authenticate } = useAuthenticateAccessory();
-  const [showInAppGate, setShowInAppGate] = useState(false);
   const [busy, setBusy] = useState(false);
   const [passkey, setPasskey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const tokenQuery = usePhygitalTokenByPasskey(passkey);
 
   async function onCheck() {
-    if (inApp) {
-      setShowInAppGate(true);
-      return;
-    }
     setError(null);
     setPasskey(null);
     setBusy(true);
@@ -114,12 +83,6 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
     } finally {
       setBusy(false);
     }
-  }
-
-  if (showInAppGate) {
-    return (
-      <InAppBrowserGate body="To check an accessory, open this page in Safari or Chrome." />
-    );
   }
 
   if (tokenQuery.isFetchedAfterMount && tokenQuery.data) {

@@ -42,7 +42,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
         dehydrateOptions: { shouldDehydrateQuery },
       }}
       onSuccess={() => {
-        // Restored snapshots can predate a claim in a wallet in-app browser.
+        // Restored snapshots can predate a claim in another tab.
         void queryClient.invalidateQueries({
           queryKey: queryKeys.phygitalToken.all(),
         });

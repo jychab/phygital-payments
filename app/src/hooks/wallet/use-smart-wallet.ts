@@ -6,7 +6,6 @@ import type { Address } from "@solana/kit";
 
 import { toast } from "sonner";
 
-import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import { clearAppClientStorage } from "@/lib/wallet/clear-client-session";
 import { createAndConnectSmartWallet } from "@/lib/lazorkit/connect";
 import {
@@ -32,7 +31,6 @@ export type SmartWallet = {
  * App passkey session. `address` is the LazorKit vault PDA (token.owner).
  */
 export function useSmartWallet(): SmartWallet {
-  const embedded = useIsEmbedded();
   const queryClient = useQueryClient();
   const [session, setSession] = useState<SmartWalletSession | null>(null);
   const [ready, setReady] = useState(false);
@@ -51,7 +49,6 @@ export function useSmartWallet(): SmartWallet {
   }, []);
 
   const connect = useCallback(() => {
-    if (embedded) return;
     if (session || connecting) return;
     setConnecting(true);
     void createAndConnectSmartWallet()
@@ -64,7 +61,7 @@ export function useSmartWallet(): SmartWallet {
       .finally(() => {
         setConnecting(false);
       });
-  }, [embedded, session, connecting]);
+  }, [session, connecting]);
 
   const disconnect = useCallback(async () => {
     setSession(null);

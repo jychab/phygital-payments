@@ -10,10 +10,3 @@ NEXTJS_ENV=development
 
 # Worker secrets (Wrangler / OpenNext)
 # FEE_PAYER_SECRET_KEY=
-# HELIUS_WEBHOOK_AUTH=
-
-# HMAC secret for device pay keys (required for Pay provision + open)
-# PAY_HMAC_SECRET=
-
-# Token catalog (optional — without these, Collect falls back to USDC-only)
-# JUPITER_API_KEY=

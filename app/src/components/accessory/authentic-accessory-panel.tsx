@@ -1,15 +1,11 @@
 "use client";
 
-import Link from "next/link";
-
 import { CollectibleHero } from "@/components/accessory/collectible-hero";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import { useDasCollectible } from "@/hooks/accessory/use-das-collectible";
-import { collectHref } from "@/lib/collect/payment-request";
 import {
-  tokenAllowsPay,
   tokenHasLinkedMint,
   isUnclaimedToken,
   type PhygitalToken,
@@ -23,21 +19,15 @@ export function AuthenticAccessoryPanel({
   holdError,
   onHoldToCheck,
   onClaim,
-  onPay,
-  payLabel = "Pay",
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
   holdError?: string | null;
   onHoldToCheck?: () => void;
   onClaim?: () => void;
-  onPay?: () => void;
-  payLabel?: string;
 }) {
   const unclaimed = isUnclaimedToken(token);
   const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
-  const canPay = token.isLocked && tokenAllowsPay(token) && Boolean(onPay);
-  const collectUrl = collectHref({ recipient: String(token.currentOwner) });
   const linkedMint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const collectible = useDasCollectible(linkedMint).data;
   const genuine = liveConfirmed
@@ -74,42 +64,17 @@ export function AuthenticAccessoryPanel({
         />
       )}
 
-      {canClaim || canPay ? (
+      {canClaim ? (
         <div className="mt-auto flex flex-col gap-2.5 pt-2 motion-safe:animate-[wallet-rise_0.5s_cubic-bezier(0.22,1,0.36,1)_both]">
-          {canClaim ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="lg"
-              className="w-full"
-              onClick={onClaim}
-            >
-              Add to Wallet
-            </Button>
-          ) : null}
-
-          {canPay ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="w-full"
-                asChild
-              >
-                <Link href={collectUrl}>Collect</Link>
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="lg"
-                className="w-full"
-                onClick={onPay}
-              >
-                {payLabel}
-              </Button>
-            </>
-          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="w-full"
+            onClick={onClaim}
+          >
+            Add to Wallet
+          </Button>
         </div>
       ) : null}
     </div>

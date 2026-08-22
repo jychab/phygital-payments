@@ -6,13 +6,7 @@ import {
   parseTransferOwnershipInstruction,
   type TransferSession,
 } from "phygital-token-sdk";
-import {
-  address,
-  createNoopSigner,
-  getBase58Encoder,
-  type Address,
-} from "@solana/kit";
-import type { PendingClaimRecord } from "../../../shared/pending-claim-wire";
+import { createNoopSigner, type Address } from "@solana/kit";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { executeAsVault } from "@/lib/lazorkit/execute-as-vault";
@@ -21,10 +15,9 @@ import type { SmartWalletSession } from "@/lib/lazorkit/credential-store";
 /** NFC secp256r1 is two top-level ixs before transfer_ownership (via Execute). */
 export const CLAIM_VERIFY_RELATIVE_INDEX = -2;
 
-/** `/accessory?token=` — pending claim (same-tab or wallet in-app browser). */
-export function accessoryClaimHref(token: string): string {
-  return `/accessory?token=${encodeURIComponent(token)}`;
-}
+type TransferAuth = Awaited<
+  ReturnType<typeof authenticatePasskeyForTransfer>
+>;
 
 /** Pre-NFC checks from cached token view — run before showing NFC hold UI. */
 export function assertCaptureReady(
@@ -37,7 +30,7 @@ export function assertCaptureReady(
   }
 }
 
-/** Pre-submit checks at wallet finish — recipient must differ from current owner. */
+/** Pre-submit checks — recipient must differ from current owner. */
 export function assertClaimReady(
   token: Pick<PhygitalToken, "isLocked" | "currentOwner">,
   recipient: Address,
@@ -48,13 +41,13 @@ export function assertClaimReady(
   }
 }
 
-/** Safari step: NFC tap only — no wallet connect or submit. */
+/** NFC tap: begin transfer + authenticate the accessory. */
 export async function captureClaimTap(args: {
   token: Address;
   onPasskeyComplete?: () => void;
 }): Promise<{
   session: TransferSession;
-  auth: PendingClaimRecord["auth"];
+  auth: TransferAuth;
 }> {
   const session = await beginTransfer({
     rpc: getSolanaRpc(),
@@ -63,18 +56,6 @@ export async function captureClaimTap(args: {
   const auth = await authenticatePasskeyForTransfer(session);
   args.onPasskeyComplete?.();
   return { session, auth };
-}
-
-function hydrateTransferSession(
-  json: PendingClaimRecord["session"],
-): TransferSession {
-  return {
-    rpc: getSolanaRpc(),
-    token: address(json.token),
-    slotNumber: BigInt(json.slotNumber),
-    slotHash: new Uint8Array(getBase58Encoder().encode(json.slotHash)),
-    challenge: new Uint8Array(getBase58Encoder().encode(json.challenge)),
-  };
 }
 
 export function transferOwnershipForVault(args: {
@@ -95,16 +76,15 @@ export function transferOwnershipForVault(args: {
   });
 }
 
-/** Vault step: NFC verify (prefix) + Execute CPI transfer_ownership. */
-export async function finishClaim(
-  args: Omit<PendingClaimRecord, "createdAtMs"> & {
-    smartWallet: SmartWalletSession;
-  },
-): Promise<{ signature: string }> {
-  const session = hydrateTransferSession(args.session);
+/** NFC verify (prefix) + Execute CPI transfer_ownership to the vault. */
+export async function finishClaim(args: {
+  session: TransferSession;
+  auth: TransferAuth;
+  smartWallet: SmartWalletSession;
+}): Promise<{ signature: string }> {
   const vault = args.smartWallet.vaultPda;
   const instructions = await completeTransfer(
-    session,
+    args.session,
     args.auth,
     createNoopSigner(vault),
   );
@@ -117,7 +97,7 @@ export async function finishClaim(
     transferIx as Parameters<typeof parseTransferOwnershipInstruction>[0],
   );
   const inner = transferOwnershipForVault({
-    token: session.token,
+    token: args.session.token,
     slotNumber: parsed.data.slotNumber,
     vaultPda: vault,
     secp256r1VerifyArgs: {

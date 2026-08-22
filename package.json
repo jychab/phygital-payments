@@ -6,10 +6,6 @@
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "idl:sync": "cp target/idl/phygital_payments.json idl/phygital_payments.json",
-    "generate:client": "codama run js && node clients/js/phygital-payments/scripts/add-import-extensions.mjs",
-    "build:client": "pnpm --filter phygital-payments-sdk build",
-    "build:program": "anchor build && pnpm idl:sync && pnpm generate:client && pnpm build:client",
     "dev": "pnpm --filter app dev",
     "build:app": "pnpm --filter app build",
     "preview:app": "pnpm --filter app preview",
@@ -33,7 +29,6 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "@reown/appkit",
       "bufferutil",
       "esbuild",
       "keccak",

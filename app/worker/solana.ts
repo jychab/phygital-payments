@@ -21,22 +21,12 @@ import {
   type SolanaRpcApi,
   type TransactionSigner,
 } from "@solana/kit";
-import { getSecp256r1VerifyInstruction } from "phygital-token-sdk";
-import {
-  getTransferInstruction,
-  PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
-} from "phygital-payments-sdk";
 
 import {
-  base64ToBytes,
   COMPUTE_UNIT_MARGIN,
   CONFIRM_TIMEOUT_MS,
   MAX_COMPUTE_UNITS,
   PRIORITY_FEE_MICRO_LAMPORTS,
-  SINGLE_JOB_COMPUTE_UNITS,
-  type Secp256r1VerifyEntryWire,
-  type TransferAccountsWire,
-  type TransferJob,
 } from "./types";
 
 /** Blockhash lifetime shape accepted by the transaction builder. */
@@ -44,13 +34,12 @@ export type BlockhashLifetime = Parameters<
   typeof setTransactionMessageLifetimeUsingBlockhash
 >[0];
 
-/** Precomputed, reusable inputs the DO caches across flushes. */
+/** Precomputed, reusable inputs for a sponsored submit. */
 export type SendContext = {
   signer: TransactionSigner;
   latestBlockhash: BlockhashLifetime;
 };
 
-// Cache RPC clients across simulate → send → confirm. Keyed by URL.
 let rpcCache: { url: string; rpc: Rpc<SolanaRpcApi> } | undefined;
 let rpcSubscriptionsCache:
   | { url: string; subs: ReturnType<typeof createSolanaRpcSubscriptions> }
@@ -94,7 +83,6 @@ export async function getFeePayerSigner(
   return signer;
 }
 
-/** Fetch a fresh blockhash lifetime (the DO caches the result). */
 export async function fetchLatestBlockhash(
   env: CloudflareEnv,
 ): Promise<BlockhashLifetime> {
@@ -102,63 +90,10 @@ export async function fetchLatestBlockhash(
   return value;
 }
 
-export function entryFromWire(wire: Secp256r1VerifyEntryWire) {
-  return {
-    publicKey: base64ToBytes(wire.publicKey),
-    signature: base64ToBytes(wire.signature),
-    message: base64ToBytes(wire.message),
-  };
-}
-
-export function buildTransferIx(
-  transfer: TransferAccountsWire,
-  verifyArgsRelativeIndex: number,
-  signedMessageIndex: number,
-  feePayer: TransactionSigner,
-): Instruction {
-  return getTransferInstruction({
-    verifier: feePayer,
-    config: address(transfer.config),
-    ownerVerifier: address(transfer.ownerVerifier),
-    token: address(transfer.token),
-    mint: address(transfer.mint),
-    recipient: address(transfer.recipient),
-    programAuthority: address(transfer.programAuthority),
-    senderTokenAccount: address(transfer.senderTokenAccount),
-    recipientTokenAccount: address(transfer.recipientTokenAccount),
-    tokenProgram: address(transfer.tokenProgram),
-    amount: BigInt(transfer.amount),
-    verifyArgsRelativeIndex,
-    signedMessageIndex,
-    clientDataJson: base64ToBytes(transfer.clientDataJson),
-    slotNumber: BigInt(transfer.slotNumber),
-  });
-}
-
-export function validateTransferWire(transfer: TransferAccountsWire): void {
-  if (
-    !transfer.token ||
-    !transfer.owner ||
-    !transfer.mint ||
-    !transfer.recipient ||
-    !transfer.ownerVerifier ||
-    !transfer.config
-  ) {
-    throw new Error("Transfer accounts incomplete");
-  }
-  // Soft check — full program id validation
-  void PHYGITAL_PAYMENTS_PROGRAM_ADDRESS;
-  BigInt(transfer.amount);
-  BigInt(transfer.slotNumber);
-}
-
-// --- Compute budget (hand-rolled: kit-7-native, stable, zero deps) ----------
-
 const COMPUTE_BUDGET_PROGRAM = address(
   "ComputeBudget111111111111111111111111111111",
 );
 
-/** ComputeBudget: SetComputeUnitLimit (instruction tag 0x02, u32 units LE). */
 function setComputeUnitLimitIx(units: number): Instruction {
   const data = new Uint8Array(5);
   data[0] = 0x02;
@@ -166,7 +101,6 @@ function setComputeUnitLimitIx(units: number): Instruction {
   return { programAddress: COMPUTE_BUDGET_PROGRAM, data };
 }
 
-/** ComputeBudget: SetComputeUnitPrice (instruction tag 0x03, u64 µlamports LE). */
 function setComputeUnitPriceIx(microLamports: bigint): Instruction {
   const data = new Uint8Array(9);
   data[0] = 0x03;
@@ -174,13 +108,6 @@ function setComputeUnitPriceIx(microLamports: bigint): Instruction {
   return { programAddress: COMPUTE_BUDGET_PROGRAM, data };
 }
 
-// --- Submission -------------------------------------------------------------
-
-/**
- * Submit failure classified as either a permanent (on-chain / program) error
- * that should fail the batch immediately, or a transient (network / RPC /
- * blockhash) error that is worth retrying while the jobs are still fresh.
- */
 export class SubmitError extends Error {
   readonly transient: boolean;
   constructor(message: string, transient: boolean) {
@@ -190,24 +117,6 @@ export class SubmitError extends Error {
   }
 }
 
-/** secp verify + one transfer per job, wired to the shared verify instruction. */
-function buildCoreInstructions(
-  jobs: TransferJob[],
-  feePayer: TransactionSigner,
-): Instruction[] {
-  const entries = jobs.map((job) => entryFromWire(job.secpEntry));
-  const secpIx = getSecp256r1VerifyInstruction(entries);
-  const transferIxs = jobs.map((job, i) =>
-    buildTransferIx(job.transfer, -(i + 1), i, feePayer),
-  );
-  return [secpIx, ...transferIxs];
-}
-
-/**
- * Authoritative simulation of the final batched transaction. Returns the
- * compute units consumed so we can size a tight CU limit + priority fee.
- * Throws a permanent SubmitError if the program rejects the batch.
- */
 async function simulateBatch(
   env: CloudflareEnv,
   core: Instruction[],
@@ -218,8 +127,10 @@ async function simulateBatch(
     (m) => setTransactionMessageFeePayer(feePayer, m),
     (m) =>
       setTransactionMessageLifetimeUsingBlockhash(
-        // Placeholder — replaceRecentBlockhash swaps in a live one.
-        { blockhash: "11111111111111111111111111111111", lastValidBlockHeight: 0n } as BlockhashLifetime,
+        {
+          blockhash: "11111111111111111111111111111111",
+          lastValidBlockHeight: 0n,
+        } as BlockhashLifetime,
         m,
       ),
     (m) =>
@@ -257,11 +168,10 @@ async function simulateBatch(
   }
 
   const consumed = Number(sim.value.unitsConsumed ?? 0);
-  const sized = Math.ceil(consumed * COMPUTE_UNIT_MARGIN) + 450; // +CB ix overhead
+  const sized = Math.ceil(consumed * COMPUTE_UNIT_MARGIN) + 450;
   return Math.min(Math.max(sized, 1), MAX_COMPUTE_UNITS);
 }
 
-/** Build + fee-payer-sign the final tx (branded Kit types preserved). */
 async function buildAndSign(
   ctx: SendContext,
   computeUnitLimit: number,
@@ -289,27 +199,8 @@ async function buildAndSign(
 }
 
 /**
- * Simulate → size compute budget → send (skipPreflight) → await `confirmed`.
- */
-export async function sendSponsoredBatch(
-  env: CloudflareEnv,
-  jobs: TransferJob[],
-  ctx: SendContext,
-): Promise<Signature> {
-  if (jobs.length === 0) {
-    throw new SubmitError("No jobs to submit", false);
-  }
-  const core = buildCoreInstructions(jobs, ctx.signer);
-  const computeUnitLimit =
-    jobs.length === 1
-      ? Math.min(SINGLE_JOB_COMPUTE_UNITS, MAX_COMPUTE_UNITS)
-      : await simulateBatch(env, core, ctx.signer.address);
-  return sendSponsoredCore(env, core, ctx, computeUnitLimit);
-}
-
-/**
  * Simulate, fee-payer-sign, and confirm an already-built instruction list
- * (LazorKit createWallet / Execute, ATA create).
+ * (LazorKit createWallet / Execute).
  */
 export async function sendSponsoredInstructions(
   env: CloudflareEnv,
@@ -359,7 +250,6 @@ async function sendSponsoredCore(
   return signature;
 }
 
-/** The blockhash is dead once the chain passes its lastValidBlockHeight. */
 async function blockhashExpired(
   env: CloudflareEnv,
   lastValidBlockHeight: bigint,
@@ -368,18 +258,10 @@ async function blockhashExpired(
   return height > lastValidBlockHeight;
 }
 
-/** Whether an observed status has reached `confirmed` (or `finalized`). */
 function isConfirmed(observed: string | null | undefined): boolean {
   return observed === "confirmed" || observed === "finalized";
 }
 
-/**
- * Await `confirmed` via WebSocket signature subscription (premium RPC), with a
- * getSignatureStatuses polling fallback if the subscription can't be opened.
- * Both paths share one wall-clock deadline (so the total budget is a single
- * CONFIRM_TIMEOUT_MS, not double) and give up early — as a transient error —
- * once the tx's blockhash can no longer land.
- */
 async function confirmSignature(
   env: CloudflareEnv,
   signature: Signature,
@@ -389,7 +271,7 @@ async function confirmSignature(
   try {
     await confirmViaSubscription(env, signature, lastValidBlockHeight, deadline);
   } catch (error) {
-    if (error instanceof SubmitError) throw error; // on-chain / expiry — don't retry here
+    if (error instanceof SubmitError) throw error;
     await confirmViaPolling(env, signature, lastValidBlockHeight, deadline);
   }
 }
@@ -402,8 +284,6 @@ async function confirmViaSubscription(
 ): Promise<void> {
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), Math.max(0, deadline - Date.now()));
-  // Watchdog: abort (and flag) as soon as the blockhash can no longer land, so
-  // a never-landing tx requeues promptly instead of waiting out the deadline.
   let expired = false;
   const watchdog = setInterval(() => {
     void blockhashExpired(env, lastValidBlockHeight)
@@ -413,7 +293,7 @@ async function confirmViaSubscription(
           abort.abort();
         }
       })
-      .catch(() => {}); // transient lookup failure — ignore, keep waiting
+      .catch(() => {});
   }, 2000);
   try {
     const notifications = await getRpcSubscriptions(env)
@@ -426,7 +306,7 @@ async function confirmViaSubscription(
           false,
         );
       }
-      return; // confirmed
+      return;
     }
     if (expired) {
       throw new SubmitError("Blockhash expired before confirmation", true);
@@ -461,17 +341,14 @@ async function confirmViaPolling(
       if (isConfirmed(status?.confirmationStatus)) {
         return;
       }
-      // Not confirmed yet — if the blockhash is dead, it never will be. Retry.
       if (await blockhashExpired(env, lastValidBlockHeight)) {
         throw new SubmitError("Blockhash expired before confirmation", true);
       }
     } catch (error) {
       if (error instanceof SubmitError) throw error;
-      // transient lookup failure — keep polling
     }
     await new Promise((r) => setTimeout(r, 300));
   }
-  // Landed but not observed confirmed in time — treat as transient (retryable).
   throw new SubmitError("Timed out waiting for confirmation", true);
 }
 
@@ -479,7 +356,6 @@ function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-/** Heuristic: does this send/preflight error look retryable? */
 function isTransientRpcError(message: string): boolean {
   const m = message.toLowerCase();
   return (

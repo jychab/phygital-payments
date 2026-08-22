@@ -1,0 +1,985 @@
+{
+  "address": "LazorjRFNavitUaBu5m3WaNPjU1maipvSW2rZfAFAKi",
+  "metadata": {
+    "name": "lazorkit_program",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "create_wallet",
+      "discriminator": [
+        82,
+        172,
+        128,
+        18,
+        161,
+        207,
+        88,
+        63
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Payer and rent contributor"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wallet",
+          "docs": [
+            "Wallet PDA"
+          ],
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "Vault PDA"
+          ],
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "docs": [
+            "Initial owner authority PDA"
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System Program"
+          ]
+        },
+        {
+          "name": "rent_sysvar",
+          "docs": [
+            "Rent Sysvar"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "user_seed",
+          "type": "bytes"
+        },
+        {
+          "name": "auth_type",
+          "type": "u8"
+        },
+        {
+          "name": "auth_pubkey",
+          "type": {
+            "array": [
+              "u8",
+              33
+            ]
+          }
+        },
+        {
+          "name": "credential_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "add_authority",
+      "discriminator": [
+        229,
+        9,
+        106,
+        73,
+        91,
+        213,
+        109,
+        183
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Payer and rent contributor"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wallet",
+          "docs": [
+            "Wallet PDA"
+          ]
+        },
+        {
+          "name": "admin_authority",
+          "docs": [
+            "Admin authority PDA authorizing this action (counter incremented)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "new_authority",
+          "docs": [
+            "New authority PDA to be created"
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System Program"
+          ]
+        },
+        {
+          "name": "rent_sysvar",
+          "docs": [
+            "Rent Sysvar"
+          ]
+        },
+        {
+          "name": "authorizer_signer",
+          "docs": [
+            "Optional signer for Ed25519 authentication"
+          ],
+          "signer": true,
+          "optional": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_type",
+          "type": "u8"
+        },
+        {
+          "name": "new_pubkey",
+          "type": {
+            "array": [
+              "u8",
+              33
+            ]
+          }
+        },
+        {
+          "name": "new_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "new_role",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "remove_authority",
+      "discriminator": [
+        242,
+        104,
+        208,
+        132,
+        190,
+        250,
+        74,
+        216
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Transaction payer"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wallet",
+          "docs": [
+            "Wallet PDA"
+          ]
+        },
+        {
+          "name": "admin_authority",
+          "docs": [
+            "Admin authority PDA authorizing this action (counter incremented)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "target_authority",
+          "docs": [
+            "Authority PDA to be removed"
+          ],
+          "writable": true
+        },
+        {
+          "name": "refund_destination",
+          "docs": [
+            "Account to receive rent refund"
+          ],
+          "writable": true
+        },
+        {
+          "name": "auth_extra",
+          "docs": [
+            "Ed25519: signer keypair | Secp256r1: sysvar_instructions"
+          ],
+          "optional": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "transfer_ownership",
+      "discriminator": [
+        65,
+        177,
+        215,
+        73,
+        53,
+        45,
+        99,
+        47
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Payer and rent contributor"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wallet",
+          "docs": [
+            "Wallet PDA"
+          ]
+        },
+        {
+          "name": "current_owner_authority",
+          "docs": [
+            "Current owner authority PDA"
+          ],
+          "writable": true
+        },
+        {
+          "name": "new_owner_authority",
+          "docs": [
+            "New owner authority PDA to be created"
+          ],
+          "writable": true
+        },
+        {
+          "name": "refund_destination",
+          "docs": [
+            "Account to receive rent refund from closed current owner"
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System Program"
+          ]
+        },
+        {
+          "name": "rent_sysvar",
+          "docs": [
+            "Rent Sysvar"
+          ]
+        },
+        {
+          "name": "authorizer_signer",
+          "docs": [
+            "Optional signer for Ed25519 authentication"
+          ],
+          "signer": true,
+          "optional": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_type",
+          "type": "u8"
+        },
+        {
+          "name": "new_pubkey",
+          "type": {
+            "array": [
+              "u8",
+              33
+            ]
+          }
+        },
+        {
+          "name": "new_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "execute",
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Transaction payer"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wallet",
+          "docs": [
+            "Wallet PDA"
+          ]
+        },
+        {
+          "name": "authority",
+          "docs": [
+            "Authority or Session PDA authorizing execution (counter incremented)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "Vault PDA (signer for CPI, lamports debited)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "sysvar_instructions",
+          "docs": [
+            "Sysvar Instructions (required for Secp256r1)"
+          ],
+          "optional": true
+        }
+      ],
+      "args": [
+        {
+          "name": "instructions",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "create_session",
+      "discriminator": [
+        242,
+        193,
+        143,
+        179,
+        150,
+        25,
+        122,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Transaction payer and rent contributor"
+          ],
+          "signer": true
+        },
+        {
+          "name": "wallet",
+          "docs": [
+            "Wallet PDA"
+          ]
+        },
+        {
+          "name": "admin_authority",
+          "docs": [
+            "Admin/Owner authority PDA authorizing logic (counter incremented)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "session",
+          "docs": [
+            "New session PDA to be created"
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System Program"
+          ]
+        },
+        {
+          "name": "rent_sysvar",
+          "docs": [
+            "Rent Sysvar"
+          ]
+        },
+        {
+          "name": "authorizer_signer",
+          "docs": [
+            "Optional signer for Ed25519 authentication"
+          ],
+          "signer": true,
+          "optional": true
+        }
+      ],
+      "args": [
+        {
+          "name": "session_key",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "expires_at",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "authorize",
+      "discriminator": [
+        173,
+        193,
+        102,
+        210,
+        219,
+        137,
+        113,
+        120
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Payer and rent contributor"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wallet",
+          "docs": [
+            "Wallet PDA"
+          ]
+        },
+        {
+          "name": "authority",
+          "docs": [
+            "Authority PDA (counter incremented)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "deferred_exec",
+          "docs": [
+            "DeferredExec PDA to be created"
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System Program"
+          ]
+        },
+        {
+          "name": "rent_sysvar",
+          "docs": [
+            "Rent Sysvar"
+          ]
+        },
+        {
+          "name": "sysvar_instructions",
+          "docs": [
+            "Sysvar Instructions (for Secp256r1 precompile introspection)"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "instructions_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "accounts_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "expiry_offset",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "execute_deferred",
+      "discriminator": [
+        193,
+        60,
+        238,
+        113,
+        170,
+        85,
+        51,
+        254
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Transaction payer"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wallet",
+          "docs": [
+            "Wallet PDA"
+          ]
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "Vault PDA (signer for CPI)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "deferred_exec",
+          "docs": [
+            "DeferredExec PDA (read and closed)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "refund_destination",
+          "docs": [
+            "Account to receive rent refund from closed DeferredExec"
+          ],
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "instructions",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "reclaim_deferred",
+      "discriminator": [
+        158,
+        3,
+        251,
+        8,
+        45,
+        151,
+        175,
+        46
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Original payer (must match stored payer)"
+          ],
+          "signer": true
+        },
+        {
+          "name": "deferred_exec",
+          "docs": [
+            "Expired DeferredExec PDA to close"
+          ],
+          "writable": true
+        },
+        {
+          "name": "refund_destination",
+          "docs": [
+            "Account to receive rent refund"
+          ],
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "revoke_session",
+      "discriminator": [
+        86,
+        92,
+        198,
+        120,
+        144,
+        2,
+        7,
+        194
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Transaction payer"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "wallet",
+          "docs": [
+            "Wallet PDA"
+          ]
+        },
+        {
+          "name": "admin_authority",
+          "docs": [
+            "Owner/Admin authority PDA (counter incremented for Secp256r1)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "session",
+          "docs": [
+            "Session PDA to revoke"
+          ],
+          "writable": true
+        },
+        {
+          "name": "refund_destination",
+          "docs": [
+            "Account to receive rent refund"
+          ],
+          "writable": true
+        },
+        {
+          "name": "auth_extra",
+          "docs": [
+            "Ed25519: signer keypair | Secp256r1: sysvar_instructions"
+          ],
+          "optional": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_protocol",
+      "discriminator": [
+        188,
+        233,
+        252,
+        106,
+        134,
+        146,
+        202,
+        91
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Payer and rent contributor"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "protocol_config",
+          "docs": [
+            "ProtocolConfig PDA"
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System Program"
+          ]
+        },
+        {
+          "name": "rent_sysvar",
+          "docs": [
+            "Rent Sysvar"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "admin",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "treasury",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "creation_fee",
+          "type": "u64"
+        },
+        {
+          "name": "execution_fee",
+          "type": "u64"
+        },
+        {
+          "name": "num_shards",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "update_protocol",
+      "discriminator": [
+        206,
+        25,
+        218,
+        114,
+        109,
+        41,
+        74,
+        173
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "docs": [
+            "Protocol admin"
+          ],
+          "signer": true
+        },
+        {
+          "name": "protocol_config",
+          "docs": [
+            "ProtocolConfig PDA"
+          ],
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "creation_fee",
+          "type": "u64"
+        },
+        {
+          "name": "execution_fee",
+          "type": "u64"
+        },
+        {
+          "name": "enabled",
+          "type": "u8"
+        },
+        {
+          "name": "new_treasury",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "register_payer",
+      "discriminator": [
+        109,
+        51,
+        195,
+        149,
+        23,
+        54,
+        172,
+        171
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Payer and rent contributor; the FeeRecord is keyed by this pubkey"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "fee_record",
+          "docs": [
+            "FeeRecord PDA derived from [\"fee_record\", payer]"
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System Program"
+          ]
+        },
+        {
+          "name": "rent_sysvar",
+          "docs": [
+            "Rent Sysvar"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "withdraw_treasury",
+      "discriminator": [
+        40,
+        63,
+        122,
+        158,
+        144,
+        216,
+        83,
+        96
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "docs": [
+            "Protocol admin"
+          ],
+          "signer": true
+        },
+        {
+          "name": "protocol_config",
+          "docs": [
+            "ProtocolConfig PDA"
+          ]
+        },
+        {
+          "name": "treasury_shard",
+          "docs": [
+            "TreasuryShard PDA"
+          ],
+          "writable": true
+        },
+        {
+          "name": "treasury",
+          "docs": [
+            "Treasury destination"
+          ],
+          "writable": true
+        },
+        {
+          "name": "rent_sysvar",
+          "docs": [
+            "Rent Sysvar"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_treasury_shard",
+      "discriminator": [
+        194,
+        21,
+        159,
+        33,
+        113,
+        235,
+        208,
+        128
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Payer and rent contributor"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "protocol_config",
+          "docs": [
+            "ProtocolConfig PDA"
+          ]
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Protocol admin"
+          ],
+          "signer": true
+        },
+        {
+          "name": "treasury_shard",
+          "docs": [
+            "TreasuryShard PDA"
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System Program"
+          ]
+        },
+        {
+          "name": "rent_sysvar",
+          "docs": [
+            "Rent Sysvar"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "shard_id",
+          "type": "u8"
+        }
+      ]
+    }
+  ]
+}

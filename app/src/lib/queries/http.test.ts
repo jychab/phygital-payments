@@ -13,10 +13,10 @@ describe("queryFetch", () => {
       .mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await queryFetch("/api/tokens/verified", { cache: "force-cache" });
+    await queryFetch("/api/verify-tap", { cache: "force-cache" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/tokens/verified",
+      "/api/verify-tap",
       expect.objectContaining({ cache: "no-store" }),
     );
   });

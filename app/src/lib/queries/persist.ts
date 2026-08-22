@@ -22,8 +22,9 @@ const STORAGE_KEY = "phygital-pay.react-query";
  * v8: phygital-token-sdk 0.22 tokenType/mint (was assetType).
  * v9: drop asset query keys / wire fields (phygitalTokens + transfer.token).
  * v10: ownerPayDelegates is Pay bootstrap (holdings + delegates).
+ * v11: drop pay/collect/history persist roots (claim + Hold to Check only).
  */
-const CACHE_BUSTER = "v10";
+const CACHE_BUSTER = "v11";
 
 export { CACHE_BUSTER };
 
@@ -34,13 +35,7 @@ type TaggedBigInt = { [BIGINT_TAG]: string };
 type TaggedMap = { [MAP_TAG]: [unknown, unknown][] };
 
 /** Roots worth instant paint. Must match `queryKeys` in `./index.ts`. */
-const PERSISTED_QUERY_ROOTS = new Set([
-  "holdings",
-  "delegateStatus",
-  "ownerPayDelegates",
-  "phygitalTokens",
-  "dasCollectible",
-]);
+const PERSISTED_QUERY_ROOTS = new Set(["phygitalTokens", "dasCollectible"]);
 
 function isTaggedBigInt(value: object): value is TaggedBigInt {
   return BIGINT_TAG in value && typeof (value as TaggedBigInt)[BIGINT_TAG] === "string";
