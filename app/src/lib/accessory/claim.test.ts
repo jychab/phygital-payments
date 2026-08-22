@@ -1,10 +1,11 @@
-import { address, createNoopSigner } from "@solana/kit";
+import { address } from "@solana/kit";
 import {
   getTransferOwnershipInstruction,
   parseTransferOwnershipInstruction,
 } from "phygital-token-sdk";
 import { describe, expect, it } from "vitest";
 
+import { createAddressSigner } from "@/lib/solana/address-signer";
 import { CLAIM_VERIFY_RELATIVE_INDEX, transferOwnershipForVault } from "./claim";
 
 const vault = address("2qLZosEYxN4Bp7dGySYgjWEmXR9jQ4za6hr2AFocUHxU");
@@ -29,7 +30,7 @@ describe("claim transfer_ownership relative index", () => {
 
   it("SDK default remains -1 (used only when NFC immediately precedes the ix)", () => {
     const ix = getTransferOwnershipInstruction({
-      recipient: createNoopSigner(vault),
+      recipient: createAddressSigner(vault),
       token,
       slotNumber: 1n,
       secp256r1VerifyArgs: {

@@ -6,16 +6,19 @@
  * `Cache-Control: private, no-store`.
  *
  * Domain code lives next to the matching UI folder:
- *   lib/accessory + hooks/accessory  NFC tap, Hold to Check, claim
+ *   lib/accessory + hooks/accessory  NFC tap, claim
+ *   hooks/card                       Hold to Check, DAS collectible
  *   lib/server                       API routes only (`import "server-only"`)
  *   hooks/wallet                     passkey smart wallet
  *   hooks/layout                     page-show / persist refresh
  */
 
 import type { QueryClient } from "@tanstack/react-query";
+import type { Address } from "@solana/kit";
 
 import { fetchDasCollectibleClient } from "@/lib/tokens/das-collectible-client";
 import type { Collectible } from "@/lib/tokens/collectible";
+import type { PhygitalToken } from "@/lib/phygital/token";
 
 export { queryFetch, readJson } from "./http";
 
@@ -57,6 +60,23 @@ export function invalidatePhygitalTokenQueries(
       queryKey: queryKeys.phygitalToken.byPasskey(token.secp256r1PublicKey),
     }),
   ]).then(() => undefined);
+}
+
+export function setPhygitalTokenOwner(
+  queryClient: QueryClient,
+  token: Pick<PhygitalToken, "identifier" | "secp256r1PublicKey">,
+  currentOwner: Address,
+): void {
+  const patch = (prev: PhygitalToken | null | undefined) =>
+    prev ? { ...prev, currentOwner } : prev;
+  queryClient.setQueryData(
+    queryKeys.phygitalToken.byIdentifier(token.identifier),
+    patch,
+  );
+  queryClient.setQueryData(
+    queryKeys.phygitalToken.byPasskey(token.secp256r1PublicKey),
+    patch,
+  );
 }
 
 const SECOND = 1000;

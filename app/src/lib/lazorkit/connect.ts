@@ -18,17 +18,16 @@ import {
   relyingPartyId,
   type CreatedPasskey,
 } from "./passkey";
-import { feePayerAddress, sponsorInstructions } from "./sponsor";
+import { sponsoredFeePayerSigner, sponsorInstructions } from "./sponsor";
 
 export async function ensureSmartWallet(
   passkey: CreatedPasskey,
 ): Promise<SmartWalletSession> {
   const programAddress = lazorkitProgramAddress();
-  const userSeed = await userSeedFromPubkey(
-    passkey.compressedPubkey,
-    USER_SEED_DOMAIN,
-  );
-  const credHash = await credentialIdHash(passkey.credentialId);
+  const [userSeed, credHash] = await Promise.all([
+    userSeedFromPubkey(passkey.compressedPubkey, USER_SEED_DOMAIN),
+    credentialIdHash(passkey.credentialId),
+  ]);
   const pdas = await findLazorKitPdas({
     userSeed,
     credentialIdHash: credHash,
@@ -41,7 +40,7 @@ export async function ensureSmartWallet(
   if (!value) {
     await sponsorInstructions([
       buildCreateWalletInstruction({
-        payer: feePayerAddress(),
+        payer: sponsoredFeePayerSigner(),
         pdas,
         userSeed,
         credentialIdHash: credHash,

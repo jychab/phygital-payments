@@ -23,6 +23,8 @@ import {
 } from "lazor-kit";
 import { describe, expect, it } from "vitest";
 
+import { createAddressSigner } from "@/lib/solana/address-signer";
+import { isParsableInstruction } from "@/lib/solana/parsable-instruction";
 import { USER_SEED_DOMAIN } from "./constants";
 
 const payer = address("2qLZosEYxN4Bp7dGySYgjWEmXR9jQ4za6hr2AFocUHxU");
@@ -55,7 +57,7 @@ describe("buildCreateWalletInstruction", () => {
     const pubkey = new Uint8Array(33).fill(3);
     pubkey[0] = 2;
     const ix = buildCreateWalletInstruction({
-      payer,
+      payer: createAddressSigner(payer),
       pdas: {
         walletPda: wallet,
         vaultPda: vault,
@@ -69,6 +71,9 @@ describe("buildCreateWalletInstruction", () => {
       compressedPubkey: pubkey,
       programAddress: program,
     });
+    if (!isParsableInstruction(ix)) {
+      throw new Error("createWallet ix is missing accounts or data");
+    }
     const parsed = parseCreateWalletInstruction(ix);
     expect([...parsed.data.discriminator]).toEqual([
       ...CREATE_WALLET_DISCRIMINATOR,
@@ -227,6 +232,7 @@ describe("assembleExecuteInstructions", () => {
     });
     const { executeIx } = await assembleExecuteInstructions({
       prepared,
+      payer: createAddressSigner(payer),
       authPrefix: prefix,
       compressedPubkey: new Uint8Array(33).fill(2),
       signatureDer: Uint8Array.from([
@@ -238,6 +244,9 @@ describe("assembleExecuteInstructions", () => {
       authenticatorData: new Uint8Array(37).fill(0x11),
       clientDataJSON: new TextEncoder().encode("{}"),
     });
+    if (!isParsableInstruction(executeIx)) {
+      throw new Error("execute ix is missing accounts or data");
+    }
     const parsed = parseExecuteInstruction(executeIx);
     expect([...parsed.data.discriminator]).toEqual([...EXECUTE_DISCRIMINATOR]);
     expect(parsed.accounts.payer.address).toBe(payer);

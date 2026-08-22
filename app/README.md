@@ -42,20 +42,23 @@ Routes live in `src/app`. Domain code (`components/`, `hooks/`, `lib/`) uses the
 
 | Route | Component | Folder |
 |-------|-----------|--------|
-| `/` | `AccessoryApp` | `accessory/` |
-| `/cards` | `AccessoryApp` (minted) | `accessory/` |
+| `/` | `AccessoryApp` (passkey-gated) | `accessory/` |
+| `/card` | `CardApp` (public, minted) | `card/` |
 
 ## Accessory (`/`)
 
-Authenticity first. Claim is optional. Default accessories have no mint — this route does not look one up.
+Passkey-gated. Restore a LazorKit session or create one with Face ID. Default accessories have no mint — this route does not look one up.
 
-`/` with no tap params shows **Hold to Check** (live WebAuthn in the browser). A signed NFC URL (`/?pk=&s=&c=&n=`) verifies silently, then shows **Verified**. Optional **Hold to Check** upgrades the subtitle to **Confirmed just now.**
+A signed NFC URL (`/?pk=&s=&c=&n=`) verifies silently after sign-in. Live Hold to Check is not used here — the tap signature is enough.
 
-1. **Hold to Check** (no URL) or silent URL verify → **Verified**
-2. **Unclaimed / unlocked** — optional **Add to Wallet** (NFC tap, then create a passkey and confirm with Face ID on the same screen)
+1. **Sign in** with a passkey (creates a LazorKit wallet if needed)
+2. **Tap** (signed URL) → load the on-chain token
+3. **Controlled + unclaimed** — **Add to Wallet** (NFC tap, then confirm with Face ID)
+4. **Controlled + claimed by someone else** — show that owner address
+5. **Controlled + claimed by this vault** — LazorKit wallet UI (placeholder)
 
-Locked accessories cannot be claimed from this app.
+Bearer tokens are not this route. Locked accessories cannot be claimed from this app.
 
-## Cards (`/cards`)
+## Card (`/card`)
 
-Same check/claim flow for accessories that have a mint attached. After verify, DAS metadata is loaded and collectible art is shown when it exists. NFC URLs can point here directly (`/cards?pk=&s=&c=&n=`).
+Public — no passkey required to check. Live **Hold to Check** (WebAuthn) or a signed NFC URL, then the same claim flow for accessories that have a mint attached. After verify, DAS metadata is loaded and collectible art is shown when it exists. NFC URLs can point here directly (`/card?pk=&s=&c=&n=`). After a URL tap, optional **Hold to Check** upgrades the subtitle to **Confirmed just now.**

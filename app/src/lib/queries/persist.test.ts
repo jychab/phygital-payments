@@ -1,13 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { type PersistedClient } from "@tanstack/react-query-persist-client";
+import { address } from "@solana/kit";
 
 import {
   deserializeQueryCache,
   isPersistedQueryKey,
   serializeQueryCache,
 } from "./persist";
-import { invalidatePhygitalTokenQueries, queryKeys } from "./index";
+import { invalidatePhygitalTokenQueries, queryKeys, setPhygitalTokenOwner } from "./index";
 
 function roundTrip(value: unknown): unknown {
   const client = { payload: value } as unknown as PersistedClient;
@@ -59,5 +60,38 @@ describe("invalidatePhygitalTokenQueries", () => {
       queryKeys.phygitalToken.byIdentifier("pk"),
       queryKeys.phygitalToken.byPasskey("passkey"),
     ]);
+  });
+});
+
+describe("setPhygitalTokenOwner", () => {
+  it("patches identifier and passkey cache entries", () => {
+    const queryClient = new QueryClient();
+    const token = {
+      identifier: "pk",
+      secp256r1PublicKey: "passkey",
+      currentOwner: "11111111111111111111111111111111",
+    };
+    const owner = address("2qLZosEYxN4Bp7dGySYgjWEmXR9jQ4za6hr2AFocUHxU");
+    queryClient.setQueryData(
+      queryKeys.phygitalToken.byIdentifier("pk"),
+      token,
+    );
+    queryClient.setQueryData(
+      queryKeys.phygitalToken.byPasskey("passkey"),
+      token,
+    );
+
+    setPhygitalTokenOwner(queryClient, token, owner);
+
+    expect(
+      queryClient.getQueryData(queryKeys.phygitalToken.byIdentifier("pk")),
+    ).toMatchObject({
+      currentOwner: owner,
+    });
+    expect(
+      queryClient.getQueryData(queryKeys.phygitalToken.byPasskey("passkey")),
+    ).toMatchObject({
+      currentOwner: owner,
+    });
   });
 });

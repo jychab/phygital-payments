@@ -13,7 +13,7 @@ export function useDasCollectible(mint: string | null) {
   return useQuery<Collectible | null, Error>({
     queryKey: queryKeys.dasCollectible.byMint(mint),
     queryFn: () => {
-      if (!mint) return null;
+      if (!mint) throw new Error("Missing mint");
       return fetchDasCollectible(mint);
     },
     enabled: Boolean(mint),

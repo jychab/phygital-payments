@@ -1,10 +1,10 @@
 "use client";
 
-import { CollectibleHero } from "@/components/accessory/collectible-hero";
+import { CollectibleHero } from "@/components/card/collectible-hero";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
-import { useDasCollectible } from "@/hooks/accessory/use-das-collectible";
+import { useDasCollectible } from "@/hooks/card/use-das-collectible";
 import {
   tokenHasLinkedMint,
   isUnclaimedToken,
@@ -12,38 +12,29 @@ import {
 } from "@/lib/phygital/token";
 import { shortAddress } from "@/lib/utils";
 
-/** Verified accessory — `/cards` shows collectible art when DAS metadata exists. */
-export function AuthenticAccessoryPanel({
+export function AuthenticCardPanel({
   token,
   liveConfirmed,
-  showCollectible = false,
   holdError,
   onHoldToCheck,
   onClaim,
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
-  showCollectible?: boolean;
-  holdError?: string | null;
-  onHoldToCheck?: () => void;
-  onClaim?: () => void;
+  holdError: string | null;
+  onHoldToCheck: () => void;
+  onClaim: () => void;
 }) {
-  const unclaimed = isUnclaimedToken(token);
-  const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
-  const linkedMint =
-    showCollectible && tokenHasLinkedMint(token) ? String(token.mint) : null;
+  const canClaim = !token.isLocked;
+  const linkedMint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const collectible = useDasCollectible(linkedMint).data;
   const genuine = liveConfirmed
     ? "Confirmed just now."
-    : showCollectible
-      ? "This card is genuine."
-      : "This accessory is genuine.";
+    : "This card is genuine.";
 
   const status = (
-    <AccessoryStatus
+    <CardStatus
       token={token}
-      unclaimed={unclaimed}
-      owner={String(token.currentOwner)}
       liveConfirmed={liveConfirmed}
       holdError={holdError}
       onHoldToCheck={onHoldToCheck}
@@ -86,21 +77,20 @@ export function AuthenticAccessoryPanel({
   );
 }
 
-function AccessoryStatus({
+function CardStatus({
   token,
-  unclaimed,
-  owner,
   liveConfirmed,
   holdError,
   onHoldToCheck,
 }: {
   token: PhygitalToken;
-  unclaimed: boolean;
-  owner: string;
   liveConfirmed: boolean;
-  holdError?: string | null;
-  onHoldToCheck?: () => void;
+  holdError: string | null;
+  onHoldToCheck: () => void;
 }) {
+  const unclaimed = isUnclaimedToken(token);
+  const owner = String(token.currentOwner);
+
   return (
     <div className="flex w-full max-w-64 flex-col items-center gap-2">
       <div className="flex items-center gap-0.5">
@@ -111,7 +101,7 @@ function AccessoryStatus({
         </p>
         <PhygitalTokenRefreshButton token={token} />
       </div>
-      {!liveConfirmed && onHoldToCheck ? (
+      {!liveConfirmed ? (
         <Button
           type="button"
           variant="ghost"

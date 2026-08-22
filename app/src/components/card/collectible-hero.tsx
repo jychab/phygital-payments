@@ -17,6 +17,7 @@ export function CollectibleHero({ collectible }: { collectible: Collectible }) {
           <img
             src={src}
             alt={collectible.name}
+            fetchPriority="high"
             referrerPolicy="no-referrer"
             onError={() => setFailedSrc(src)}
             className="size-full object-contain"

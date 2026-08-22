@@ -1,13 +1,12 @@
-import { createNoopSigner, type Address, type Instruction } from "@solana/kit";
+import type { Address, Instruction, TransactionSigner } from "@solana/kit";
 
 import { AUTH_TYPE_SECP256R1 } from "./constants";
 import { getCreateWalletInstruction } from "./generated/instructions/createWallet";
 import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "./generated/programs/lazorkitProgram";
 import type { LazorKitPdas } from "./pdas";
 
-/** Convenience builder: Address payer (sponsored) instead of a TransactionSigner. */
 export function buildCreateWalletInstruction(args: {
-  payer: Address;
+  payer: TransactionSigner;
   pdas: LazorKitPdas;
   userSeed: Uint8Array;
   credentialIdHash: Uint8Array;
@@ -23,7 +22,7 @@ export function buildCreateWalletInstruction(args: {
   }
   return getCreateWalletInstruction(
     {
-      payer: createNoopSigner(args.payer),
+      payer: args.payer,
       wallet: args.pdas.walletPda,
       vault: args.pdas.vaultPda,
       authority: args.pdas.authorityPda,

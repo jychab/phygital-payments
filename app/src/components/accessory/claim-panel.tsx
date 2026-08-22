@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Fingerprint, LoaderCircle, Nfc } from "lucide-react";
+import { Fingerprint, Nfc } from "lucide-react";
 import type { TransferSession } from "phygital-token-sdk";
 
-import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
+import { GateMessage, WalletBusyStatus } from "@/components/layout/gate-message";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { BackLink } from "@/components/shared/back-link";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import {
   captureClaimTap,
   finishClaim,
 } from "@/lib/accessory/claim";
-import { invalidatePhygitalTokenQueries } from "@/lib/queries";
+import { invalidatePhygitalTokenQueries, setPhygitalTokenOwner } from "@/lib/queries";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
@@ -39,10 +39,11 @@ export function ClaimPanel({
   token: PhygitalToken;
   unclaimed?: boolean;
   onBack?: () => void;
-  onClaimed: (owner: string) => void;
+  onClaimed?: () => void;
 }) {
   const queryClient = useQueryClient();
-  const { address, isConnected, ready, connect, session } = useSmartWallet();
+  const { isConnected, ready, connecting, connect, session } =
+    useSmartWallet();
 
   const [stage, setStage] = useState<Stage>("ready");
   const [captured, setCaptured] = useState<CapturedTap | null>(null);
@@ -65,13 +66,6 @@ export function ClaimPanel({
     try {
       const tap = await captureClaimTap({
         token: token.address,
-        onPasskeyComplete: () => {
-          try {
-            navigator.vibrate?.(30);
-          } catch {
-            /* ignore */
-          }
-        },
       });
       setCaptured(tap);
       setStage("confirm");
@@ -87,7 +81,7 @@ export function ClaimPanel({
   }
 
   async function onFinish() {
-    if (!session || !address || !captured) return;
+    if (!session || !captured) return;
     setError(null);
 
     try {
@@ -106,11 +100,12 @@ export function ClaimPanel({
         auth: captured.auth,
         smartWallet: session,
       });
+      setPhygitalTokenOwner(queryClient, token, session.vaultPda);
       await invalidatePhygitalTokenQueries(queryClient, {
         identifier: token.identifier,
         secp256r1PublicKey: token.secp256r1PublicKey,
       });
-      onClaimed(address);
+      onClaimed?.();
     } catch (err) {
       setStage("confirm");
       setError(
@@ -143,7 +138,7 @@ export function ClaimPanel({
   }
 
   if (stage === "confirm") {
-    const needsPasskey = !isConnected || !address;
+    const needsPasskey = !isConnected;
     return (
       <div className="flex flex-1 flex-col gap-5 py-2">
         {onBack ? (
@@ -167,11 +162,8 @@ export function ClaimPanel({
           </p>
         </div>
 
-        {!ready ? (
-          <CenteredStatus>
-            <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Loading…</p>
-          </CenteredStatus>
+        {!ready || connecting ? (
+          <WalletBusyStatus connecting={connecting} />
         ) : needsPasskey ? (
           <GateMessage
             icon={<Fingerprint className="size-5 text-muted-foreground" />}

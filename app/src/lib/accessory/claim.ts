@@ -6,9 +6,12 @@ import {
   parseTransferOwnershipInstruction,
   type TransferSession,
 } from "phygital-token-sdk";
-import { createNoopSigner, type Address } from "@solana/kit";
+import type { Address } from "@solana/kit";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { getSolanaRpc } from "@/lib/solana/rpc";
+import { createAddressSigner } from "@/lib/solana/address-signer";
+import { isParsableInstruction } from "@/lib/solana/parsable-instruction";
+import { hapticTap } from "@/lib/accessory/haptic";
 import { executeAsVault } from "@/lib/lazorkit/execute-as-vault";
 import type { SmartWalletSession } from "@/lib/lazorkit/credential-store";
 
@@ -18,6 +21,14 @@ export const CLAIM_VERIFY_RELATIVE_INDEX = -2;
 type TransferAuth = Awaited<
   ReturnType<typeof authenticatePasskeyForTransfer>
 >;
+
+/** Vault PDA signs transfer_ownership via LazorKit Execute CPI, not locally. */
+function vaultSigner(vaultPda: Address) {
+  return createAddressSigner(
+    vaultPda,
+    "Vault signs via LazorKit Execute CPI",
+  );
+}
 
 /** Pre-NFC checks from cached token view — run before showing NFC hold UI. */
 export function assertCaptureReady(
@@ -44,7 +55,6 @@ export function assertClaimReady(
 /** NFC tap: begin transfer + authenticate the accessory. */
 export async function captureClaimTap(args: {
   token: Address;
-  onPasskeyComplete?: () => void;
 }): Promise<{
   session: TransferSession;
   auth: TransferAuth;
@@ -54,7 +64,7 @@ export async function captureClaimTap(args: {
     token: args.token,
   });
   const auth = await authenticatePasskeyForTransfer(session);
-  args.onPasskeyComplete?.();
+  hapticTap();
   return { session, auth };
 }
 
@@ -69,7 +79,7 @@ export function transferOwnershipForVault(args: {
   vaultPda: Address;
 }) {
   return getTransferOwnershipInstruction({
-    recipient: createNoopSigner(args.vaultPda),
+    recipient: vaultSigner(args.vaultPda),
     token: args.token,
     slotNumber: args.slotNumber,
     secp256r1VerifyArgs: args.secp256r1VerifyArgs,
@@ -86,16 +96,14 @@ export async function finishClaim(args: {
   const instructions = await completeTransfer(
     args.session,
     args.auth,
-    createNoopSigner(vault),
+    vaultSigner(vault),
   );
   const nfcVerify = instructions[0];
   const transferIx = instructions[1];
-  if (!nfcVerify || !transferIx) {
+  if (!nfcVerify || !transferIx || !isParsableInstruction(transferIx)) {
     throw new Error("Claim transaction was incomplete");
   }
-  const parsed = parseTransferOwnershipInstruction(
-    transferIx as Parameters<typeof parseTransferOwnershipInstruction>[0],
-  );
+  const parsed = parseTransferOwnershipInstruction(transferIx);
   const inner = transferOwnershipForVault({
     token: args.session.token,
     slotNumber: parsed.data.slotNumber,

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { LoaderCircle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -9,6 +10,26 @@ export function CenteredStatus({ children }: { children: ReactNode }) {
     <div className="flex flex-1 flex-col items-center justify-center gap-3 py-14 text-center">
       {children}
     </div>
+  );
+}
+
+export function CheckingStatus() {
+  return (
+    <CenteredStatus>
+      <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">Checking…</p>
+    </CenteredStatus>
+  );
+}
+
+export function WalletBusyStatus({ connecting }: { connecting: boolean }) {
+  return (
+    <CenteredStatus>
+      <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">
+        {connecting ? "Confirm with Face ID…" : "Loading…"}
+      </p>
+    </CenteredStatus>
   );
 }
 

@@ -1,13 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Address } from "@solana/kit";
 
 import { toast } from "sonner";
 
 import { clearAppClientStorage } from "@/lib/wallet/clear-client-session";
-import { createAndConnectSmartWallet } from "@/lib/lazorkit/connect";
 import {
   clearSmartWalletSession,
   loadSmartWalletSession,
@@ -16,21 +22,17 @@ import {
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 export type SmartWallet = {
-  address: string | null;
-  vaultPda: Address | null;
-  walletPda: Address | null;
-  authorityPda: Address | null;
   session: SmartWalletSession | null;
   isConnected: boolean;
   ready: boolean;
+  connecting: boolean;
   connect: () => void;
   disconnect: () => Promise<void>;
 };
 
-/**
- * App passkey session. `address` is the LazorKit vault PDA (token.owner).
- */
-export function useSmartWallet(): SmartWallet {
+const SmartWalletContext = createContext<SmartWallet | null>(null);
+
+export function SmartWalletProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [session, setSession] = useState<SmartWalletSession | null>(null);
   const [ready, setReady] = useState(false);
@@ -51,7 +53,8 @@ export function useSmartWallet(): SmartWallet {
   const connect = useCallback(() => {
     if (session || connecting) return;
     setConnecting(true);
-    void createAndConnectSmartWallet()
+    void import("@/lib/lazorkit/connect")
+      .then(({ createAndConnectSmartWallet }) => createAndConnectSmartWallet())
       .then((next) => {
         setSession(next);
       })
@@ -70,17 +73,29 @@ export function useSmartWallet(): SmartWallet {
     queryClient.clear();
   }, [queryClient]);
 
-  const address = session ? String(session.vaultPda) : null;
+  const value = useMemo<SmartWallet>(
+    () => ({
+      session,
+      isConnected: Boolean(session),
+      ready,
+      connecting,
+      connect,
+      disconnect,
+    }),
+    [session, ready, connecting, connect, disconnect],
+  );
 
-  return {
-    address,
-    vaultPda: session?.vaultPda ?? null,
-    walletPda: session?.walletPda ?? null,
-    authorityPda: session?.authorityPda ?? null,
-    session,
-    isConnected: Boolean(session),
-    ready: ready && !connecting,
-    connect,
-    disconnect,
-  };
+  return (
+    <SmartWalletContext.Provider value={value}>
+      {children}
+    </SmartWalletContext.Provider>
+  );
+}
+
+export function useSmartWallet(): SmartWallet {
+  const ctx = useContext(SmartWalletContext);
+  if (!ctx) {
+    throw new Error("useSmartWallet must be used within SmartWalletProvider");
+  }
+  return ctx;
 }

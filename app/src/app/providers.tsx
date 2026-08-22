@@ -6,6 +6,7 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 
 import { Toaster } from "@/components/ui/sonner";
 import { useResumeQueryRefresh } from "@/hooks/layout/use-resume-query-refresh";
+import { SmartWalletProvider } from "@/hooks/wallet/use-smart-wallet";
 import {
   CACHE_BUSTER,
   QUERY_CACHE_MAX_AGE_MS,
@@ -14,9 +15,6 @@ import {
 } from "@/lib/queries/persist";
 import { queryKeys, queryOptions } from "@/lib/queries";
 
-/**
- * Shared by all routes: React Query (localStorage-persisted, only browser cache) + toasts.
- */
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -48,9 +46,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
         });
       }}
     >
+      <SmartWalletProvider>
         <ResumeQueryRefresh />
         {children}
         <Toaster richColors position="top-center" />
+      </SmartWalletProvider>
     </PersistQueryClientProvider>
   );
 }

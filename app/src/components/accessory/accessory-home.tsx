@@ -1,88 +1,41 @@
 "use client";
 
-import { useState } from "react";
-import { address as toAddress } from "@solana/kit";
+import { CircleAlert } from "lucide-react";
 
-import { AuthenticAccessoryPanel } from "@/components/accessory/authentic-accessory-panel";
+import { AccessoryWalletPanel } from "@/components/accessory/accessory-wallet-panel";
 import { ClaimPanel } from "@/components/accessory/claim-panel";
-import { useAuthenticateAccessory } from "@/hooks/accessory/use-authenticate-accessory";
-import { isUnclaimedToken, type PhygitalToken } from "@/lib/phygital/token";
-import { toUserErrorMessage } from "@/lib/user-errors";
-import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
+import { OwnedByOtherPanel } from "@/components/accessory/owned-by-other-panel";
+import { CheckingStatus, GateMessage } from "@/components/layout/gate-message";
+import { useSmartWallet } from "@/hooks/wallet/use-smart-wallet";
+import { accessoryHomeView } from "@/lib/accessory/home-view";
+import type { PhygitalToken } from "@/lib/phygital/token";
 
-/**
- * Authentic home after a check or claim.
- */
-export function AccessoryHome({
-  token,
-  liveConfirmed: liveConfirmedProp = false,
-  showCollectible = false,
-}: {
-  token: PhygitalToken;
-  liveConfirmed?: boolean;
-  /** `/cards` only — `/` never looks up a linked mint. */
-  showCollectible?: boolean;
-}) {
-  const { authenticate, pending } = useAuthenticateAccessory();
+export function AccessoryHome({ token }: { token: PhygitalToken }) {
+  const { session } = useSmartWallet();
 
-  const [liveConfirmed, setLiveConfirmed] = useState(liveConfirmedProp);
-  const [showClaim, setShowClaim] = useState(false);
-  const [claimedOwner, setClaimedOwner] = useState<string | null>(null);
-  const [holdError, setHoldError] = useState<string | null>(null);
-
-  const viewToken = claimedOwner
-    ? { ...token, currentOwner: toAddress(claimedOwner) }
-    : token;
-
-  async function onHoldToCheck() {
-    setHoldError(null);
-    try {
-      await authenticate({ expectedPublicKey: token.secp256r1PublicKey });
-      setLiveConfirmed(true);
-    } catch (err) {
-      setHoldError(
-        toUserErrorMessage(
-          err,
-          "Hold it flat against the back of your phone and try again.",
-        ),
-      );
-    }
+  if (!session) {
+    return <CheckingStatus />;
   }
 
-  if (showClaim) {
-    return (
-      <ClaimPanel
-        token={viewToken}
-        unclaimed={isUnclaimedToken(viewToken)}
-        onBack={() => setShowClaim(false)}
-        onClaimed={(owner) => {
-          setClaimedOwner(owner);
-          setShowClaim(false);
-          setLiveConfirmed(true);
-        }}
-      />
-    );
+  const view = accessoryHomeView(token, session.vaultPda);
+
+  if (view === "claim") {
+    return <ClaimPanel token={token} unclaimed />;
   }
 
-  if (pending) {
-    return (
-      <NfcHoldStatus
-        size="lg"
-        busy
-        title="Hold Still…"
-        body="Keep holding until it reads."
-      />
-    );
+  if (view === "foreign-owner") {
+    return <OwnedByOtherPanel owner={String(token.currentOwner)} />;
+  }
+
+  if (view === "wallet") {
+    return <AccessoryWalletPanel />;
   }
 
   return (
-    <AuthenticAccessoryPanel
-      token={viewToken}
-      liveConfirmed={liveConfirmed}
-      showCollectible={showCollectible}
-      holdError={holdError}
-      onHoldToCheck={() => void onHoldToCheck()}
-      onClaim={() => setShowClaim(true)}
+    <GateMessage
+      icon={<CircleAlert className="size-5 text-muted-foreground" />}
+      title="Not a wallet accessory"
+      body="This accessory isn’t set up for this app."
     />
   );
 }

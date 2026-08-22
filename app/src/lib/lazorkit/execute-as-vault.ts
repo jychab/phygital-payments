@@ -10,7 +10,7 @@ import { getSolanaRpc } from "@/lib/solana/rpc";
 import { lazorkitProgramAddress } from "./constants";
 import type { SmartWalletSession } from "./credential-store";
 import { getPasskeyAssertion } from "./passkey";
-import { feePayerAddress, sponsorInstructions } from "./sponsor";
+import { sponsoredFeePayerSigner, sponsorInstructions } from "./sponsor";
 
 export type ExecuteAsVaultArgs = {
   session: SmartWalletSession;
@@ -44,13 +44,13 @@ async function fetchSlot(): Promise<bigint> {
 export async function executeAsVault(
   args: ExecuteAsVaultArgs,
 ): Promise<{ signature: string }> {
-  const payer = feePayerAddress();
+  const payer = sponsoredFeePayerSigner();
   const [counter, slot] = await Promise.all([
     fetchAuthorityCounter(args.session.authorityPda),
     fetchSlot(),
   ]);
   const prepared = await prepareExecute({
-    payer,
+    payer: payer.address,
     walletPda: args.session.walletPda,
     authorityPda: args.session.authorityPda,
     vaultPda: args.session.vaultPda,
@@ -60,7 +60,7 @@ export async function executeAsVault(
   const nextCounter = (counter + 1) >>> 0;
   const { challenge, authPrefix } = await buildExecuteChallenge({
     prepared,
-    payer,
+    payer: payer.address,
     slot,
     nextCounter,
   });
@@ -71,6 +71,7 @@ export async function executeAsVault(
   });
   const { secpIx, executeIx } = await assembleExecuteInstructions({
     prepared,
+    payer,
     authPrefix,
     compressedPubkey: args.session.compressedPubkey,
     signatureDer: assertion.signatureDer,

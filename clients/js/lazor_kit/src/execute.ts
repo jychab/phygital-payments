@@ -1,4 +1,4 @@
-import { createNoopSigner, type Address, type Instruction } from "@solana/kit";
+import type { Address, Instruction, TransactionSigner } from "@solana/kit";
 
 import { concatBytes, derEcdsaToRawLowS } from "./bytes";
 import { hashPackedAccounts, packExecute, type PackedExecute } from "./compact";
@@ -67,17 +67,17 @@ export async function buildExecuteChallenge(args: {
 
 export async function assembleExecuteInstructions(args: {
   prepared: PreparedExecute;
+  payer: TransactionSigner;
   authPrefix: Uint8Array;
   compressedPubkey: Uint8Array;
   signatureDer: Uint8Array;
   authenticatorData: Uint8Array;
   clientDataJSON: Uint8Array;
 }): Promise<{ secpIx: Instruction; executeIx: Instruction }> {
-  const payer = args.prepared.accounts[0]?.address;
   const wallet = args.prepared.accounts[1]?.address;
   const authority = args.prepared.accounts[2]?.address;
   const vault = args.prepared.accounts[3]?.address;
-  if (!payer || !wallet || !authority || !vault) {
+  if (!wallet || !authority || !vault) {
     throw new Error("Execute account list is incomplete");
   }
   const clientHash = await clientDataHash(args.clientDataJSON);
@@ -95,7 +95,7 @@ export async function assembleExecuteInstructions(args: {
   });
   const base = getExecuteInstruction(
     {
-      payer: createNoopSigner(payer),
+      payer: args.payer,
       wallet,
       authority,
       vault,
