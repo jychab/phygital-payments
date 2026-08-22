@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "lazor-kit": ["../clients/js/lazor_kit/src/index.ts"]
     }
   },
   "include": [

@@ -1,14 +1,14 @@
 {
-  "idl": "idl/phygital_payments.json",
+  "idl": "idl/lazor_kit.json",
   "before": [],
   "scripts": {
     "js": {
       "from": "@codama/renderers-js",
       "args": [
-        "clients/js/phygital-payments",
+        "clients/js/lazor_kit",
         {
           "formatCode": true,
-          "syncPackageJson": true,
+          "syncPackageJson": false,
           "kitImportStrategy": "rootOnly",
           "dependencyVersions": {
             "@solana/kit": "^7.0.0"

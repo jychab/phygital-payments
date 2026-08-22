@@ -1,25 +1,29 @@
-import { address } from "@solana/kit";
-import { describe, expect, it } from "vitest";
-
-import { encodeCreateWalletData } from "./create-wallet";
+import { AccountRole, address, type Instruction } from "@solana/kit";
 import {
-  parseCompactInstructions,
-  serializeCompactInstructions,
-  packExecute,
-  hashPackedAccounts,
-} from "./compact";
-import { AUTH_TYPE_SECP256R1, DISC_CREATE_WALLET, USER_SEED_DOMAIN } from "./constants";
-import { userSeedFromPubkey } from "./pdas";
-import {
+  AUTH_TYPE_SECP256R1,
+  CREATE_WALLET_DISCRIMINATOR,
+  EXECUTE_DISCRIMINATOR,
   SECP_MESSAGE_OFFSET,
   SECP_PUBKEY_OFFSET,
   SECP_SIG_OFFSET,
+  assembleExecuteInstructions,
+  buildCreateWalletInstruction,
   buildLazorKitSecp256r1Instruction,
   encodeAuthPrefix,
   executeChallengeHash,
-} from "./secp256r1";
-import { AccountRole, type Instruction } from "@solana/kit";
-import { sha256 } from "./bytes";
+  hashPackedAccounts,
+  packExecute,
+  parseCompactInstructions,
+  parseCreateWalletInstruction,
+  parseExecuteInstruction,
+  prepareExecute,
+  serializeCompactInstructions,
+  sha256,
+  userSeedFromPubkey,
+} from "lazor-kit";
+import { describe, expect, it } from "vitest";
+
+import { USER_SEED_DOMAIN } from "./constants";
 
 const payer = address("2qLZosEYxN4Bp7dGySYgjWEmXR9jQ4za6hr2AFocUHxU");
 const wallet = address("LazorjRFNavitUaBu5m3WaNPjU1maipvSW2rZfAFAKi");
@@ -27,13 +31,14 @@ const authority = address("FLb7fyAtkfA4TSa2uYcAT8QKHd2pkoMHgmqfnXFXo7ao");
 const vault = address("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 const tokenProgram = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const token = address("So11111111111111111111111111111111111111112");
+const program = address("LazorjRFNavitUaBu5m3WaNPjU1maipvSW2rZfAFAKi");
 
 describe("userSeedFromPubkey", () => {
   it("is sha256(domain || compressed pubkey)", async () => {
     const pubkey = new Uint8Array(33);
     pubkey[0] = 2;
     pubkey.fill(7, 1);
-    const seed = await userSeedFromPubkey(pubkey);
+    const seed = await userSeedFromPubkey(pubkey, USER_SEED_DOMAIN);
     const domain = new TextEncoder().encode(USER_SEED_DOMAIN);
     const preimage = new Uint8Array(domain.length + pubkey.length);
     preimage.set(domain);
@@ -43,27 +48,40 @@ describe("userSeedFromPubkey", () => {
   });
 });
 
-describe("encodeCreateWalletData", () => {
-  it("matches create_wallet.rs fixed 40-byte header + secp payload + rpId", () => {
+describe("buildCreateWalletInstruction", () => {
+  it("encodes create_wallet through the generated client", () => {
     const userSeed = new Uint8Array(32).fill(1);
     const cred = new Uint8Array(32).fill(2);
     const pubkey = new Uint8Array(33).fill(3);
     pubkey[0] = 2;
-    const data = encodeCreateWalletData({
+    const ix = buildCreateWalletInstruction({
+      payer,
+      pdas: {
+        walletPda: wallet,
+        vaultPda: vault,
+        authorityPda: authority,
+        walletBump: 255,
+        vaultBump: 254,
+        authorityBump: 253,
+      },
       userSeed,
       credentialIdHash: cred,
       compressedPubkey: pubkey,
-      rpId: "example.com",
-      authBump: 0,
+      programAddress: program,
     });
-    expect(data[0]).toBe(DISC_CREATE_WALLET);
-    expect(data.subarray(1, 33)).toEqual(userSeed);
-    expect(data[33]).toBe(AUTH_TYPE_SECP256R1);
-    expect(data[34]).toBe(0);
-    expect(data.subarray(41, 73)).toEqual(cred);
-    expect(data.subarray(73, 106)).toEqual(pubkey);
-    expect(data[106]).toBe("example.com".length);
-    expect(new TextDecoder().decode(data.subarray(107))).toBe("example.com");
+    const parsed = parseCreateWalletInstruction(ix);
+    expect([...parsed.data.discriminator]).toEqual([
+      ...CREATE_WALLET_DISCRIMINATOR,
+    ]);
+    expect(parsed.data.authType).toBe(AUTH_TYPE_SECP256R1);
+    expect([...parsed.data.userSeed]).toEqual([...userSeed]);
+    expect([...parsed.data.credentialHash]).toEqual([...cred]);
+    expect([...parsed.data.authPubkey]).toEqual([...pubkey]);
+    expect(parsed.accounts.payer.address).toBe(payer);
+    expect(parsed.accounts.wallet.address).toBe(wallet);
+    expect(parsed.accounts.vault.address).toBe(vault);
+    expect(parsed.accounts.authority.address).toBe(authority);
+    expect(ix.programAddress).toBe(program);
   });
 });
 
@@ -148,9 +166,9 @@ describe("execute challenge hash", () => {
     expect(prefix.length).toBe(14);
     const compact = Uint8Array.from([1, 0, 0, 0, 0]);
     const accountsHash = new Uint8Array(32).fill(9);
-    const program = address("LazorjRFNavitUaBu5m3WaNPjU1maipvSW2rZfAFAKi");
+    const disc = Uint8Array.from(EXECUTE_DISCRIMINATOR);
     const hash = await executeChallengeHash({
-      discriminator: 4,
+      discriminator: disc,
       authPrefix: prefix,
       compactBytes: compact,
       accountsHash,
@@ -160,7 +178,7 @@ describe("execute challenge hash", () => {
     });
     expect(hash.length).toBe(32);
     const again = await executeChallengeHash({
-      discriminator: 4,
+      discriminator: disc,
       authPrefix: prefix,
       compactBytes: compact,
       accountsHash,
@@ -170,7 +188,7 @@ describe("execute challenge hash", () => {
     });
     expect([...hash]).toEqual([...again]);
     const other = await executeChallengeHash({
-      discriminator: 4,
+      discriminator: disc,
       authPrefix: prefix,
       compactBytes: compact,
       accountsHash,
@@ -179,5 +197,58 @@ describe("execute challenge hash", () => {
       programAddress: program,
     });
     expect([...hash]).not.toEqual([...other]);
+  });
+});
+
+describe("assembleExecuteInstructions", () => {
+  it("encodes execute through the generated client and keeps remaining accounts", async () => {
+    const inner: Instruction[] = [
+      {
+        programAddress: tokenProgram,
+        accounts: [
+          { address: vault, role: AccountRole.READONLY_SIGNER },
+          { address: token, role: AccountRole.WRITABLE },
+        ],
+        data: Uint8Array.from([1, 2, 3]),
+      },
+    ];
+    const prepared = await prepareExecute({
+      payer,
+      walletPda: wallet,
+      authorityPda: authority,
+      vaultPda: vault,
+      inner,
+      programAddress: program,
+    });
+    const prefix = encodeAuthPrefix({
+      slot: 1n,
+      counter: 1,
+      sysvarIxIndex: 4,
+    });
+    const { executeIx } = await assembleExecuteInstructions({
+      prepared,
+      authPrefix: prefix,
+      compressedPubkey: new Uint8Array(33).fill(2),
+      signatureDer: Uint8Array.from([
+        0x30, 0x44, 0x02, 0x20,
+        ...new Uint8Array(32).fill(1),
+        0x02, 0x20,
+        ...new Uint8Array(32).fill(2),
+      ]),
+      authenticatorData: new Uint8Array(37).fill(0x11),
+      clientDataJSON: new TextEncoder().encode("{}"),
+    });
+    const parsed = parseExecuteInstruction(executeIx);
+    expect([...parsed.data.discriminator]).toEqual([...EXECUTE_DISCRIMINATOR]);
+    expect(parsed.accounts.payer.address).toBe(payer);
+    expect(parsed.accounts.wallet.address).toBe(wallet);
+    expect(parsed.accounts.authority.address).toBe(authority);
+    expect(parsed.accounts.vault.address).toBe(vault);
+    expect(executeIx.accounts?.some((account) => account.address === token)).toBe(
+      true,
+    );
+    expect(
+      executeIx.accounts?.some((account) => account.address === tokenProgram),
+    ).toBe(true);
   });
 });

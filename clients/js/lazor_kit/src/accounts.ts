@@ -1,12 +1,12 @@
 import { getAddressDecoder, type Address } from "@solana/kit";
 
+import { readU32Le } from "./bytes";
 import {
   AUTHORITY_DISCRIMINATOR,
   AUTHORITY_HEADER_SIZE,
   AUTHORITY_SECP_SIZE,
   WALLET_DISCRIMINATOR,
 } from "./constants";
-import { readU32Le } from "./bytes";
 
 export type AuthorityAccount = {
   discriminator: number;
@@ -21,7 +21,9 @@ export type AuthorityAccount = {
   rpIdHash: Uint8Array;
 };
 
-export function decodeWalletAccount(data: Uint8Array): { discriminator: number } {
+export function decodeWalletAccount(data: Uint8Array): {
+  discriminator: number;
+} {
   if (data.length < 1 || data[0] !== WALLET_DISCRIMINATOR) {
     throw new Error("Not a LazorKit wallet account");
   }
@@ -47,7 +49,10 @@ export function decodeAuthorityAccount(data: Uint8Array): AuthorityAccount {
     version: data[4]!,
     counter: readU32Le(data, 8),
     wallet,
-    credentialIdHash: data.slice(AUTHORITY_HEADER_SIZE, AUTHORITY_HEADER_SIZE + 32),
+    credentialIdHash: data.slice(
+      AUTHORITY_HEADER_SIZE,
+      AUTHORITY_HEADER_SIZE + 32,
+    ),
     compressedPubkey: data.slice(
       AUTHORITY_HEADER_SIZE + 32,
       AUTHORITY_HEADER_SIZE + 65,

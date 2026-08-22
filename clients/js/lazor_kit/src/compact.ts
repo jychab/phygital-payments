@@ -6,12 +6,12 @@ import {
   type Instruction,
 } from "@solana/kit";
 
+import { concatBytes, encodeU16Le, sha256Concat } from "./bytes";
 import {
   EXECUTE_FIXED_ACCOUNT_COUNT,
   SYSVAR_INSTRUCTIONS_ADDRESS,
 } from "./constants";
 import { addressBytes } from "./pdas";
-import { concatBytes, encodeU16Le, sha256Concat } from "./bytes";
 
 export type CompactInstruction = {
   programIdIndex: number;
@@ -135,8 +135,6 @@ export function packExecute(args: {
       }
       return existing;
     }
-    // Remaining accounts must not be tx signers unless they are the fee-payer
-    // (already at index 0). Vault signing is applied on-chain during CPI.
     const remainingRole = isSignerRole(role)
       ? isWritableRole(role)
         ? AccountRole.WRITABLE
@@ -154,7 +152,9 @@ export function packExecute(args: {
     for (const meta of ix.accounts ?? []) {
       const writable = isWritableRole(meta.role);
       const signer = isSignerRole(meta.role);
-      accountIndexes.push(pushAccount(meta.address, roleFromFlags(writable, signer)));
+      accountIndexes.push(
+        pushAccount(meta.address, roleFromFlags(writable, signer)),
+      );
     }
     compact.push({
       programIdIndex,

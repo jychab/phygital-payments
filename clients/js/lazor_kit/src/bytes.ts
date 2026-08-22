@@ -36,23 +36,20 @@ export function encodeU16Le(value: number): Uint8Array {
   return out;
 }
 
-export function encodeU32Le(value: number): Uint8Array {
-  const out = new Uint8Array(4);
-  new DataView(out.buffer).setUint32(0, value, true);
-  return out;
-}
-
-export function encodeU64Le(value: bigint): Uint8Array {
-  const out = new Uint8Array(8);
-  new DataView(out.buffer).setBigUint64(0, value, true);
-  return out;
-}
-
 export function readU32Le(data: Uint8Array, offset: number): number {
   return new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(
     offset,
     true,
   );
+}
+
+export function bytesToBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 /** P-256 curve order. */
@@ -110,14 +107,10 @@ export function derEcdsaToRawLowS(der: Uint8Array): Uint8Array {
   return concatBytes([r, bigIntTo32(s)]);
 }
 
-const SPKI_P256_PREFIX = Uint8Array.from([
-  0x30, 0x59, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01,
-  0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07, 0x03, 0x42, 0x00,
-  0x04,
-]);
-
 /** Uncompressed SPKI / 0x04||x||y → 33-byte compressed secp256r1 key. */
-export function compressP256PublicKey(spkiOrUncompressed: Uint8Array): Uint8Array {
+export function compressP256PublicKey(
+  spkiOrUncompressed: Uint8Array,
+): Uint8Array {
   let uncompressed = spkiOrUncompressed;
   if (
     uncompressed.length === 91 &&
@@ -138,6 +131,5 @@ export function compressP256PublicKey(spkiOrUncompressed: Uint8Array): Uint8Arra
   ) {
     return uncompressed;
   }
-  void SPKI_P256_PREFIX;
   throw new Error("Unsupported P-256 public key encoding");
 }

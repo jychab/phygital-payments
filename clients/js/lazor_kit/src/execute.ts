@@ -1,12 +1,17 @@
-import { type Address, type Instruction } from "@solana/kit";
+import { createNoopSigner, type Address, type Instruction } from "@solana/kit";
 
-import {
-  DISC_EXECUTE,
-  EXECUTE_SYSVAR_IX_INDEX,
-  lazorkitProgramAddress,
-} from "./constants";
 import { concatBytes, derEcdsaToRawLowS } from "./bytes";
 import { hashPackedAccounts, packExecute, type PackedExecute } from "./compact";
+import {
+  EXECUTE_FIXED_ACCOUNT_COUNT,
+  EXECUTE_SYSVAR_IX_INDEX,
+  SYSVAR_INSTRUCTIONS_ADDRESS,
+} from "./constants";
+import {
+  EXECUTE_DISCRIMINATOR,
+  getExecuteInstruction,
+} from "./generated/instructions/execute";
+import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "./generated/programs/lazorkitProgram";
 import {
   buildLazorKitSecp256r1Instruction,
   clientDataHash,
@@ -33,7 +38,7 @@ export async function prepareExecute(args: {
   return {
     ...packed,
     accountsHash,
-    programAddress: args.programAddress ?? lazorkitProgramAddress(),
+    programAddress: args.programAddress ?? LAZORKIT_PROGRAM_PROGRAM_ADDRESS,
   };
 }
 
@@ -49,7 +54,7 @@ export async function buildExecuteChallenge(args: {
     sysvarIxIndex: EXECUTE_SYSVAR_IX_INDEX,
   });
   const challenge = await executeChallengeHash({
-    discriminator: DISC_EXECUTE,
+    discriminator: Uint8Array.from(EXECUTE_DISCRIMINATOR),
     authPrefix,
     compactBytes: args.prepared.compactBytes,
     accountsHash: args.prepared.accountsHash,
@@ -68,6 +73,13 @@ export async function assembleExecuteInstructions(args: {
   authenticatorData: Uint8Array;
   clientDataJSON: Uint8Array;
 }): Promise<{ secpIx: Instruction; executeIx: Instruction }> {
+  const payer = args.prepared.accounts[0]?.address;
+  const wallet = args.prepared.accounts[1]?.address;
+  const authority = args.prepared.accounts[2]?.address;
+  const vault = args.prepared.accounts[3]?.address;
+  if (!payer || !wallet || !authority || !vault) {
+    throw new Error("Execute account list is incomplete");
+  }
   const clientHash = await clientDataHash(args.clientDataJSON);
   const signature = derEcdsaToRawLowS(args.signatureDer);
   const secpIx = buildLazorKitSecp256r1Instruction({
@@ -81,14 +93,22 @@ export async function assembleExecuteInstructions(args: {
     authenticatorData: args.authenticatorData,
     clientDataJSON: args.clientDataJSON,
   });
+  const base = getExecuteInstruction(
+    {
+      payer: createNoopSigner(payer),
+      wallet,
+      authority,
+      vault,
+      sysvarInstructions: SYSVAR_INSTRUCTIONS_ADDRESS,
+      instructions: concatBytes([args.prepared.compactBytes, authPayload]),
+    },
+    { programAddress: args.prepared.programAddress },
+  );
+  const remaining = args.prepared.accounts.slice(EXECUTE_FIXED_ACCOUNT_COUNT);
   const executeIx: Instruction = {
-    programAddress: args.prepared.programAddress,
-    accounts: args.prepared.accounts,
-    data: concatBytes([
-      Uint8Array.of(DISC_EXECUTE),
-      args.prepared.compactBytes,
-      authPayload,
-    ]),
+    programAddress: base.programAddress,
+    accounts: [...base.accounts, ...remaining],
+    data: base.data,
   };
   return { secpIx, executeIx };
 }

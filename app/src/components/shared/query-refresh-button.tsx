@@ -41,8 +41,6 @@ export function PhygitalTokenRefreshButton({
   className?: string;
 }) {
   const queryClient = useQueryClient();
-  const address = String(token.address);
-  const owner = String(token.currentOwner);
   const isFetching =
     useIsFetching({ queryKey: queryKeys.phygitalToken.all() }) > 0;
 
@@ -51,10 +49,8 @@ export function PhygitalTokenRefreshButton({
       isFetching={isFetching}
       onRefresh={() =>
         invalidatePhygitalTokenQueries(queryClient, {
-          address,
           identifier: token.identifier,
           secp256r1PublicKey: token.secp256r1PublicKey,
-          currentOwner: owner,
         })
       }
       className={className}

@@ -4,10 +4,16 @@ import { type ReactNode } from "react";
 
 import { AppCard, AppShell } from "@/components/layout/app-shell";
 
-/** Chrome for `/accessory`. Authenticity and claim skip loading a passkey until needed. */
-export function AccessoryWalletShell({ children }: { children: ReactNode }) {
+/** Chrome for `/` and `/cards`. Authenticity and claim skip loading a passkey until needed. */
+export function AccessoryWalletShell({
+  children,
+  modeLabel = "Accessory",
+}: {
+  children: ReactNode;
+  modeLabel?: string;
+}) {
   return (
-    <AppShell modeLabel="Accessory">
+    <AppShell modeLabel={modeLabel}>
       <AppCard>{children}</AppCard>
     </AppShell>
   );

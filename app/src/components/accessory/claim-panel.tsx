@@ -107,10 +107,8 @@ export function ClaimPanel({
         smartWallet: session,
       });
       await invalidatePhygitalTokenQueries(queryClient, {
-        address: String(token.address),
         identifier: token.identifier,
         secp256r1PublicKey: token.secp256r1PublicKey,
-        currentOwner: address,
       });
       onClaimed(address);
     } catch (err) {

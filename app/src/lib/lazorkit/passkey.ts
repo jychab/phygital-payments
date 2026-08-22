@@ -1,4 +1,4 @@
-import { compressP256PublicKey } from "./bytes";
+import { compressP256PublicKey } from "lazor-kit";
 
 const ES256 = -7;
 

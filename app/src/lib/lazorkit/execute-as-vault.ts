@@ -1,11 +1,16 @@
 import type { Instruction } from "@solana/kit";
+import {
+  assembleExecuteInstructions,
+  buildExecuteChallenge,
+  decodeAuthorityAccount,
+  prepareExecute,
+} from "lazor-kit";
 
 import { getSolanaRpc } from "@/lib/solana/rpc";
-import { decodeAuthorityAccount } from "./accounts";
-import { assembleExecuteInstructions, buildExecuteChallenge, prepareExecute } from "./execute";
+import { lazorkitProgramAddress } from "./constants";
+import type { SmartWalletSession } from "./credential-store";
 import { getPasskeyAssertion } from "./passkey";
 import { feePayerAddress, sponsorInstructions } from "./sponsor";
-import type { SmartWalletSession } from "./credential-store";
 
 export type ExecuteAsVaultArgs = {
   session: SmartWalletSession;
@@ -50,6 +55,7 @@ export async function executeAsVault(
     authorityPda: args.session.authorityPda,
     vaultPda: args.session.vaultPda,
     inner: args.inner,
+    programAddress: lazorkitProgramAddress(),
   });
   const nextCounter = (counter + 1) >>> 0;
   const { challenge, authPrefix } = await buildExecuteChallenge({

@@ -1,9 +1,14 @@
 import { getBase64Encoder } from "@solana/kit";
+import {
+  buildCreateWalletInstruction,
+  credentialIdHash,
+  decodeWalletAccount,
+  findLazorKitPdas,
+  userSeedFromPubkey,
+} from "lazor-kit";
 
 import { getSolanaRpc } from "@/lib/solana/rpc";
-import { decodeWalletAccount } from "./accounts";
-import { lazorkitProgramAddress } from "./constants";
-import { getCreateWalletInstruction } from "./create-wallet";
+import { lazorkitProgramAddress, USER_SEED_DOMAIN } from "./constants";
 import {
   saveSmartWalletSession,
   type SmartWalletSession,
@@ -13,17 +18,21 @@ import {
   relyingPartyId,
   type CreatedPasskey,
 } from "./passkey";
-import { credentialIdHash, findLazorKitPdas, userSeedFromPubkey } from "./pdas";
 import { feePayerAddress, sponsorInstructions } from "./sponsor";
 
 export async function ensureSmartWallet(
   passkey: CreatedPasskey,
 ): Promise<SmartWalletSession> {
-  const userSeed = await userSeedFromPubkey(passkey.compressedPubkey);
+  const programAddress = lazorkitProgramAddress();
+  const userSeed = await userSeedFromPubkey(
+    passkey.compressedPubkey,
+    USER_SEED_DOMAIN,
+  );
   const credHash = await credentialIdHash(passkey.credentialId);
   const pdas = await findLazorKitPdas({
     userSeed,
     credentialIdHash: credHash,
+    programAddress,
   });
 
   const { value } = await getSolanaRpc()
@@ -31,17 +40,17 @@ export async function ensureSmartWallet(
     .send();
   if (!value) {
     await sponsorInstructions([
-      getCreateWalletInstruction({
+      buildCreateWalletInstruction({
         payer: feePayerAddress(),
         pdas,
         userSeed,
         credentialIdHash: credHash,
         compressedPubkey: passkey.compressedPubkey,
-        rpId: passkey.rpId,
+        programAddress,
       }),
     ]);
   } else {
-    if (value.owner !== lazorkitProgramAddress()) {
+    if (value.owner !== programAddress) {
       throw new Error("Wallet address is already in use");
     }
     const raw = Array.isArray(value.data) ? value.data[0] : value.data;

@@ -4,8 +4,8 @@ import {
   type Address,
 } from "@solana/kit";
 
-import { lazorkitProgramAddress, USER_SEED_DOMAIN } from "./constants";
 import { sha256 } from "./bytes";
+import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "./generated/programs/lazorkitProgram";
 
 export function addressBytes(value: Address): Uint8Array {
   return new Uint8Array(getAddressEncoder().encode(value));
@@ -13,11 +13,12 @@ export function addressBytes(value: Address): Uint8Array {
 
 export async function userSeedFromPubkey(
   compressedPubkey: Uint8Array,
+  domain: string,
 ): Promise<Uint8Array> {
-  const domain = new TextEncoder().encode(USER_SEED_DOMAIN);
-  const preimage = new Uint8Array(domain.length + compressedPubkey.length);
-  preimage.set(domain);
-  preimage.set(compressedPubkey, domain.length);
+  const domainBytes = new TextEncoder().encode(domain);
+  const preimage = new Uint8Array(domainBytes.length + compressedPubkey.length);
+  preimage.set(domainBytes);
+  preimage.set(compressedPubkey, domainBytes.length);
   return sha256(preimage);
 }
 
@@ -41,7 +42,7 @@ export async function findVaultAndAuthorityPdas(args: {
   credentialIdHash: Uint8Array;
   programAddress?: Address;
 }): Promise<{ vaultPda: Address; authorityPda: Address }> {
-  const programAddress = args.programAddress ?? lazorkitProgramAddress();
+  const programAddress = args.programAddress ?? LAZORKIT_PROGRAM_PROGRAM_ADDRESS;
   const [vaultPda] = await getProgramDerivedAddress({
     programAddress,
     seeds: [new TextEncoder().encode("vault"), addressBytes(args.walletPda)],
@@ -62,7 +63,7 @@ export async function findLazorKitPdas(args: {
   credentialIdHash: Uint8Array;
   programAddress?: Address;
 }): Promise<LazorKitPdas> {
-  const programAddress = args.programAddress ?? lazorkitProgramAddress();
+  const programAddress = args.programAddress ?? LAZORKIT_PROGRAM_PROGRAM_ADDRESS;
   const [walletPda, walletBump] = await getProgramDerivedAddress({
     programAddress,
     seeds: [new TextEncoder().encode("wallet"), args.userSeed],

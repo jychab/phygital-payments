@@ -1,9 +1,13 @@
 import { type Address, type Instruction } from "@solana/kit";
 
+import {
+  bytesToBase64Url,
+  concatBytes,
+  encodeU16Le,
+  sha256,
+} from "./bytes";
 import { SECP256R1_PROGRAM_ADDRESS } from "./constants";
-import { concatBytes, encodeU16Le, sha256 } from "./bytes";
 import { addressBytes } from "./pdas";
-import { bytesToBase64Url } from "../../../shared/base64";
 
 /** LazorKit-custom secp256r1 precompile offsets (not the generic layout). */
 export const SECP_HEADER = 2;
@@ -81,10 +85,11 @@ export function encodeAuthPayload(args: {
 
 /**
  * SHA256(disc || auth[:14] || signed_payload || payer || counter || program_id)
- * where signed_payload = compact || accounts_hash.
+ * where disc is the 8-byte execute discriminator and signed_payload is
+ * compact || accounts_hash.
  */
 export async function executeChallengeHash(args: {
-  discriminator: number;
+  discriminator: Uint8Array;
   authPrefix: Uint8Array;
   compactBytes: Uint8Array;
   accountsHash: Uint8Array;
@@ -95,7 +100,7 @@ export async function executeChallengeHash(args: {
   const counterBytes = new Uint8Array(4);
   new DataView(counterBytes.buffer).setUint32(0, args.counter, true);
   const preimage = concatBytes([
-    Uint8Array.of(args.discriminator),
+    args.discriminator,
     args.authPrefix,
     args.compactBytes,
     args.accountsHash,

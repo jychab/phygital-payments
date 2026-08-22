@@ -1,7 +1,6 @@
 import { address, type Address, type Rpc, type SolanaRpcApi } from "@solana/kit";
 import {
   fetchMaybePhygitalToken,
-  fetchPhygitalToken as fetchPhygitalTokenAccount,
   fetchTokenByIdentifier,
   findTokenPda,
   parseSecp256r1Pubkey,
@@ -43,15 +42,6 @@ export function phygitalTokenFromAccount(
     lastSignCount: account.lastSignCount,
     mint: account.mint,
   };
-}
-
-/** Load token by on-chain PDA. */
-export async function fetchPhygitalToken(
-  rpc: Rpc<SolanaRpcApi>,
-  tokenAddress: Address,
-): Promise<PhygitalToken> {
-  const { data } = await fetchPhygitalTokenAccount(rpc, tokenAddress);
-  return phygitalTokenFromAccount(tokenAddress, data);
 }
 
 /**

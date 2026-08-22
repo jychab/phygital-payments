@@ -16,9 +16,12 @@ import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 export function AccessoryHome({
   token,
   liveConfirmed: liveConfirmedProp = false,
+  showCollectible = false,
 }: {
   token: PhygitalToken;
   liveConfirmed?: boolean;
+  /** `/cards` only — `/` never looks up a linked mint. */
+  showCollectible?: boolean;
 }) {
   const { authenticate, pending } = useAuthenticateAccessory();
 
@@ -76,6 +79,7 @@ export function AccessoryHome({
     <AuthenticAccessoryPanel
       token={viewToken}
       liveConfirmed={liveConfirmed}
+      showCollectible={showCollectible}
       holdError={holdError}
       onHoldToCheck={() => void onHoldToCheck()}
       onClaim={() => setShowClaim(true)}

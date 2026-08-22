@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 import { isMainnet } from "@/lib/solana/cluster";
 
-/** Chrome for `/accessory`: mode label and cluster badge. */
+/** Chrome for `/` and `/cards`: mode label and cluster badge. */
 export function AppShell({
   children,
   modeLabel,
@@ -45,10 +45,10 @@ export function AppCard({ children }: { children: ReactNode }) {
   );
 }
 
-/** Empty chrome while `/accessory` hydrates. */
-export function AppBoot() {
+/** Empty chrome while `/` or `/cards` hydrates. */
+export function AppBoot({ modeLabel = "Accessory" }: { modeLabel?: string }) {
   return (
-    <AppShell modeLabel="Accessory">
+    <AppShell modeLabel={modeLabel}>
       <AppCard>
         <div className="flex flex-1 flex-col items-center justify-center py-14" />
       </AppCard>

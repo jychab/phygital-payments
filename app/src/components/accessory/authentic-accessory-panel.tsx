@@ -12,27 +12,32 @@ import {
 } from "@/lib/phygital/token";
 import { shortAddress } from "@/lib/utils";
 
-/** Verified accessory — collectible art when DAS metadata exists, else NFC ring. */
+/** Verified accessory — `/cards` shows collectible art when DAS metadata exists. */
 export function AuthenticAccessoryPanel({
   token,
   liveConfirmed,
+  showCollectible = false,
   holdError,
   onHoldToCheck,
   onClaim,
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
+  showCollectible?: boolean;
   holdError?: string | null;
   onHoldToCheck?: () => void;
   onClaim?: () => void;
 }) {
   const unclaimed = isUnclaimedToken(token);
   const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
-  const linkedMint = tokenHasLinkedMint(token) ? String(token.mint) : null;
+  const linkedMint =
+    showCollectible && tokenHasLinkedMint(token) ? String(token.mint) : null;
   const collectible = useDasCollectible(linkedMint).data;
   const genuine = liveConfirmed
     ? "Confirmed just now."
-    : "This accessory is genuine.";
+    : showCollectible
+      ? "This card is genuine."
+      : "This accessory is genuine.";
 
   const status = (
     <AccessoryStatus

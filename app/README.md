@@ -42,16 +42,20 @@ Routes live in `src/app`. Domain code (`components/`, `hooks/`, `lib/`) uses the
 
 | Route | Component | Folder |
 |-------|-----------|--------|
-| `/` | redirects to `/accessory` | — |
-| `/accessory` | `AccessoryApp` | `accessory/` |
+| `/` | `AccessoryApp` | `accessory/` |
+| `/cards` | `AccessoryApp` (minted) | `accessory/` |
 
-## Accessory (`/accessory`)
+## Accessory (`/`)
 
-Authenticity first. Claim is optional.
+Authenticity first. Claim is optional. Default accessories have no mint — this route does not look one up.
 
-`/accessory` with no tap params shows **Hold to Check** (live WebAuthn in the browser). A signed NFC URL (`/accessory?pk=&s=&c=&n=`) verifies silently, then shows **Verified**. Optional **Hold to Check** upgrades the subtitle to **Confirmed just now.**
+`/` with no tap params shows **Hold to Check** (live WebAuthn in the browser). A signed NFC URL (`/?pk=&s=&c=&n=`) verifies silently, then shows **Verified**. Optional **Hold to Check** upgrades the subtitle to **Confirmed just now.**
 
 1. **Hold to Check** (no URL) or silent URL verify → **Verified**
 2. **Unclaimed / unlocked** — optional **Add to Wallet** (NFC tap, then create a passkey and confirm with Face ID on the same screen)
 
 Locked accessories cannot be claimed from this app.
+
+## Cards (`/cards`)
+
+Same check/claim flow for accessories that have a mint attached. After verify, DAS metadata is loaded and collectible art is shown when it exists. NFC URLs can point here directly (`/cards?pk=&s=&c=&n=`).

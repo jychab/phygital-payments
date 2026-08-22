@@ -33,7 +33,7 @@ describe("serializeQueryCache / deserializeQueryCache", () => {
 
 describe("isPersistedQueryKey", () => {
   it("allows instant-paint roots", () => {
-    expect(isPersistedQueryKey(["phygitalTokens", "address", "token"])).toBe(
+    expect(isPersistedQueryKey(["phygitalTokens", "identifier", "pk"])).toBe(
       true,
     );
     expect(isPersistedQueryKey(["dasCollectible", "mint"])).toBe(true);
@@ -45,20 +45,17 @@ describe("isPersistedQueryKey", () => {
 });
 
 describe("invalidatePhygitalTokenQueries", () => {
-  it("invalidates address, identifier, and passkey keys", async () => {
+  it("invalidates identifier and passkey keys", async () => {
     const queryClient = new QueryClient();
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
 
     await invalidatePhygitalTokenQueries(queryClient, {
-      address: "token",
       identifier: "pk",
       secp256r1PublicKey: "passkey",
-      currentOwner: "owner",
     });
 
     const keys = invalidate.mock.calls.map((call) => call[0]?.queryKey);
     expect(keys).toEqual([
-      queryKeys.phygitalToken.byAddress("token"),
       queryKeys.phygitalToken.byIdentifier("pk"),
       queryKeys.phygitalToken.byPasskey("passkey"),
     ]);

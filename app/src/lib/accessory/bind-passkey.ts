@@ -1,6 +1,6 @@
 /**
  * Bind a verified WebAuthn passkey to an expected chip (URL path)
- * or accept it as discovery (cold `/accessory`).
+ * or accept it as discovery (cold `/`).
  */
 
 export const PASSKEY_MISMATCH = "This is not the same NFC accessory.";

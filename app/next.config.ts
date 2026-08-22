@@ -39,7 +39,7 @@ void initOpenNextCloudflareForDev();
 const workspaceRoot = path.join(__dirname, "..");
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["phygital-token-sdk"],
+  transpilePackages: ["phygital-token-sdk", "lazor-kit"],
   outputFileTracingRoot: workspaceRoot,
   turbopack: {
     root: workspaceRoot,

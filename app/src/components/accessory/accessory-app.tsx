@@ -26,40 +26,48 @@ const AccessoryWalletShell = dynamic(
 );
 
 /**
- * Route `/accessory` — Hold to Check or signed NFC URL.
+ * Hold to Check or signed NFC URL.
+ * `/` never looks up a mint; `/cards` shows collectible art when one is linked.
  */
-export function AccessoryApp() {
+export function AccessoryApp({
+  showCollectible = false,
+  modeLabel = "Accessory",
+}: {
+  showCollectible?: boolean;
+  modeLabel?: string;
+}) {
   return (
-    <AccessoryWalletShell>
-      <AccessoryNfcApp />
+    <AccessoryWalletShell modeLabel={modeLabel}>
+      <AccessoryNfcApp showCollectible={showCollectible} />
     </AccessoryWalletShell>
   );
 }
 
-function AccessoryNfcApp() {
+function AccessoryNfcApp({ showCollectible }: { showCollectible: boolean }) {
   const { pk, hasTapProof, verify, verifyPending } = useTapVerify();
 
   if (!hasTapProof) {
-    return <HoldToCheckLanding />;
+    return <HoldToCheckLanding showCollectible={showCollectible} />;
   }
 
   if (verifyPending || verify === "pending") {
-    return (
-      <CenteredStatus>
-        <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Checking…</p>
-      </CenteredStatus>
-    );
+    return <CheckingStatus />;
   }
 
   if (verify !== "verified") {
-    return <HoldToCheckLanding failed />;
+    return <HoldToCheckLanding showCollectible={showCollectible} failed />;
   }
 
-  return <AccessoryFlow pk={pk} />;
+  return <AccessoryFlow pk={pk} showCollectible={showCollectible} />;
 }
 
-function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
+function HoldToCheckLanding({
+  showCollectible,
+  failed = false,
+}: {
+  showCollectible: boolean;
+  failed?: boolean;
+}) {
   const { authenticate } = useAuthenticateAccessory();
   const [busy, setBusy] = useState(false);
   const [passkey, setPasskey] = useState<string | null>(null);
@@ -86,7 +94,13 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
   }
 
   if (tokenQuery.isFetchedAfterMount && tokenQuery.data) {
-    return <AccessoryHome token={tokenQuery.data} liveConfirmed />;
+    return (
+      <AccessoryHome
+        token={tokenQuery.data}
+        liveConfirmed
+        showCollectible={showCollectible}
+      />
+    );
   }
 
   const checking =
@@ -154,7 +168,13 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
   );
 }
 
-function AccessoryFlow({ pk }: { pk: string | null }) {
+function AccessoryFlow({
+  pk,
+  showCollectible,
+}: {
+  pk: string | null;
+  showCollectible: boolean;
+}) {
   const isRestoring = useIsRestoring();
   const tokenQuery = usePhygitalToken(pk);
 
@@ -163,12 +183,7 @@ function AccessoryFlow({ pk }: { pk: string | null }) {
     tokenQuery.isLoading ||
     !tokenQuery.isFetchedAfterMount
   ) {
-    return (
-      <CenteredStatus>
-        <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Checking…</p>
-      </CenteredStatus>
-    );
+    return <CheckingStatus />;
   }
 
   if (tokenQuery.isError || !tokenQuery.data) {
@@ -182,5 +197,16 @@ function AccessoryFlow({ pk }: { pk: string | null }) {
     );
   }
 
-  return <AccessoryHome token={tokenQuery.data} />;
+  return (
+    <AccessoryHome token={tokenQuery.data} showCollectible={showCollectible} />
+  );
+}
+
+function CheckingStatus() {
+  return (
+    <CenteredStatus>
+      <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">Checking…</p>
+    </CenteredStatus>
+  );
 }

@@ -38,25 +38,18 @@ export const queryKeys = {
       [...queryKeys.phygitalToken.all(), "identifier", identifier] as const,
     byPasskey: (secp256r1PublicKey: string | null) =>
       [...queryKeys.phygitalToken.all(), "passkey", secp256r1PublicKey] as const,
-    byAddress: (token: string | null) =>
-      [...queryKeys.phygitalToken.all(), "address", token] as const,
   },
 };
 
-/** Token account reads keyed by address / identifier / passkey. */
+/** Token account reads keyed by identifier / passkey. */
 export function invalidatePhygitalTokenQueries(
   queryClient: QueryClient,
   token: {
-    address: string;
     identifier: string;
     secp256r1PublicKey: string;
-    currentOwner?: string | null;
   },
 ): Promise<void> {
   return Promise.all([
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.phygitalToken.byAddress(token.address),
-    }),
     queryClient.invalidateQueries({
       queryKey: queryKeys.phygitalToken.byIdentifier(token.identifier),
     }),

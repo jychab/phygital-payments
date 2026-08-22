@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      "lazor-kit": path.resolve(__dirname, "../clients/js/lazor_kit/src/index.ts"),
     },
   },
 });
