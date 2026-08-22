@@ -26,12 +26,12 @@ const RULES: Rule[] = [
   {
     test: /already on that wallet/i,
     title: "Already Added",
-    body: "This accessory is already on that wallet.",
+    body: "This phygital token is already on that wallet.",
   },
   {
-    test: /accessory is locked|unlock it before moving|unlock it before claiming/i,
-    title: "Accessory Locked",
-    body: "This accessory is locked and can’t be claimed from this app.",
+    test: /phygital token is locked|unlock it before moving|unlock it before claiming/i,
+    title: "Phygital Locked",
+    body: "This phygital token is locked and can’t be claimed from this app.",
   },
   {
     test: /user rejected|rejected the request|transaction cancelled|signing was cancelled|user closed|closed the flow|user_exited/i,
@@ -51,7 +51,7 @@ const RULES: Rule[] = [
   {
     test: /tap proof expired|slot hash no longer valid/i,
     title: "This Expired",
-    body: "Hold your accessory to this phone again.",
+    body: "Hold your phygital to this phone again.",
   },
   {
     test: /slot hashes|slot hash/i,
@@ -61,27 +61,27 @@ const RULES: Rule[] = [
   {
     test: /owner mismatch|OwnerMismatch/i,
     title: "Wrong Wallet",
-    body: "Connect the wallet that owns this accessory.",
+    body: "Connect the wallet that owns this phygital.",
   },
   {
     test: /this tap was already used/i,
     title: "Already Used",
-    body: "Hold your accessory to this phone again.",
+    body: "Hold your phygital to this phone again.",
   },
   {
-    test: /this is not the same NFC accessory/i,
+    test: /this is not the same phygital token/i,
     title: "Couldn’t Verify",
-    body: "Hold the same accessory against the back of your phone.",
+    body: "Hold the same phygital against the back of your phone.",
   },
   {
-    test: /couldn't verify this NFC accessory|message mismatch/i,
+    test: /couldn't verify this phygital token|message mismatch/i,
     title: "Couldn’t Verify",
     body: "Hold it flat against the back of your phone and try again.",
   },
   {
     test: /isn't set up|not registered/i,
     title: "Not Set Up",
-    body: "This accessory isn’t set up yet.",
+    body: "This phygital token isn’t set up yet.",
   },
   {
     test: /missing tap parameters|verification failed|invalid signature/i,
@@ -94,9 +94,9 @@ const RULES: Rule[] = [
     body: "Create a passkey to continue.",
   },
   {
-    test: /NFC accessory not found|accessory not found|missing passkey/i,
-    title: "Accessory Not Found",
-    body: "Hold your accessory to this phone again.",
+    test: /phygital token not found|missing passkey/i,
+    title: "Phygital Not Found",
+    body: "Hold your phygital to this phone again.",
   },
 ];
 

@@ -10,3 +10,4 @@ NEXTJS_ENV=development
 
 # Worker secrets (Wrangler / OpenNext)
 # FEE_PAYER_SECRET_KEY=
+# WALLET_SESSION_SECRET=

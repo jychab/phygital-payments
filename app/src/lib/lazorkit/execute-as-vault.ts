@@ -7,6 +7,7 @@ import {
 } from "lazor-kit";
 
 import { getSolanaRpc } from "@/lib/solana/rpc";
+import { rpcAccountDataBytes } from "@/lib/solana/rpc-account-data";
 import { lazorkitProgramAddress } from "./constants";
 import type { SmartWalletSession } from "./credential-store";
 import { getPasskeyAssertion } from "./passkey";
@@ -27,8 +28,10 @@ async function fetchAuthorityCounter(
   if (!value) {
     throw new Error("Smart wallet is missing. Create a passkey again.");
   }
-  const raw = Array.isArray(value.data) ? value.data[0] : value.data;
-  const bytes = Uint8Array.from(atob(raw), (c) => c.charCodeAt(0));
+  const bytes = rpcAccountDataBytes(value.data);
+  if (!bytes) {
+    throw new Error("Smart wallet is missing. Create a passkey again.");
+  }
   return decodeAuthorityAccount(bytes).counter;
 }
 

@@ -7,6 +7,7 @@ import {
   SECP_PUBKEY_OFFSET,
   SECP_SIG_OFFSET,
   assembleExecuteInstructions,
+  assembleSessionExecute,
   buildCreateWalletInstruction,
   buildLazorKitSecp256r1Instruction,
   encodeAuthPrefix,
@@ -259,5 +260,42 @@ describe("assembleExecuteInstructions", () => {
     expect(
       executeIx.accounts?.some((account) => account.address === tokenProgram),
     ).toBe(true);
+  });
+});
+
+describe("assembleSessionExecute", () => {
+  it("packs inner ixs with session PDA as authority and session key as signer", () => {
+    const sessionKey = address("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+    const inner: Instruction[] = [
+      {
+        programAddress: tokenProgram,
+        accounts: [
+          { address: vault, role: AccountRole.WRITABLE_SIGNER },
+          { address: token, role: AccountRole.WRITABLE },
+        ],
+        data: Uint8Array.from([1, 2, 3]),
+      },
+    ];
+    const executeIx = assembleSessionExecute({
+      payer,
+      walletPda: wallet,
+      sessionPda: authority,
+      vaultPda: vault,
+      sessionPublicKey: sessionKey,
+      inner,
+      programAddress: program,
+    });
+    if (!isParsableInstruction(executeIx)) {
+      throw new Error("execute ix is missing accounts or data");
+    }
+    const parsed = parseExecuteInstruction(executeIx);
+    expect([...parsed.data.discriminator]).toEqual([...EXECUTE_DISCRIMINATOR]);
+    expect(parsed.accounts.authority.address).toBe(authority);
+    expect(parsed.accounts.vault.address).toBe(vault);
+    const sessionMeta = executeIx.accounts?.find(
+      (account) => account.address === sessionKey,
+    );
+    expect(sessionMeta).toBeDefined();
+    expect(sessionMeta?.role).toBe(AccountRole.READONLY_SIGNER);
   });
 });

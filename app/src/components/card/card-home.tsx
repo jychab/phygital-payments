@@ -5,14 +5,14 @@ import { useState } from "react";
 
 import { AuthenticCardPanel } from "@/components/card/authentic-card-panel";
 import { WalletBusyStatus } from "@/components/layout/gate-message";
-import { useAuthenticateAccessory } from "@/hooks/card/use-authenticate-accessory";
+import { useAuthenticatePhygital } from "@/hooks/phygital/use-authenticate-phygital";
 import { isUnclaimedToken, type PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 
 const ClaimPanel = dynamic(
   () =>
-    import("@/components/accessory/claim-panel").then((m) => m.ClaimPanel),
+    import("@/components/phygital/claim-panel").then((m) => m.ClaimPanel),
   { loading: () => <WalletBusyStatus connecting={false} /> },
 );
 
@@ -23,7 +23,7 @@ export function CardHome({
   token: PhygitalToken;
   liveConfirmed?: boolean;
 }) {
-  const { authenticate, pending } = useAuthenticateAccessory();
+  const { authenticate, pending } = useAuthenticatePhygital();
 
   const [liveConfirmed, setLiveConfirmed] = useState(liveConfirmedProp);
   const [showClaim, setShowClaim] = useState(false);

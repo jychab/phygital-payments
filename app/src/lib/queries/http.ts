@@ -11,7 +11,7 @@ export function queryFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
-  return fetch(input, { ...init, cache: "no-store" });
+  return fetch(input, { ...init, cache: "no-store", credentials: "include" });
 }
 
 /** Parse JSON and throw `body.error` when the response is not OK. */

@@ -101,11 +101,11 @@ export async function createPlatformPasskey(): Promise<CreatedPasskey> {
   const rpId = relyingPartyId();
   const credential = (await navigator.credentials.create({
     publicKey: {
-      rp: { name: "Accessory", id: rpId },
+      rp: { name: "Wallet", id: rpId },
       user: {
         id: asBuffer(randomBytes(32)),
-        name: "phygital",
-        displayName: "Accessory",
+        name: "wallet",
+        displayName: "Wallet",
       },
       challenge: asBuffer(randomBytes(32)),
       pubKeyCredParams: [{ type: "public-key", alg: ES256 }],

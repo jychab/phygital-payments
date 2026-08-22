@@ -1,4 +1,10 @@
-import type { Address, Instruction, TransactionSigner } from "@solana/kit";
+import {
+  AccountRole,
+  isWritableRole,
+  type Address,
+  type Instruction,
+  type TransactionSigner,
+} from "@solana/kit";
 
 import { concatBytes, derEcdsaToRawLowS } from "./bytes";
 import { hashPackedAccounts, packExecute, type PackedExecute } from "./compact";
@@ -111,4 +117,70 @@ export async function assembleExecuteInstructions(args: {
     data: base.data,
   };
   return { secpIx, executeIx };
+}
+
+function addressAsSigner(address: Address): TransactionSigner {
+  return {
+    address,
+    async signTransactions() {
+      throw new Error("This signer does not hold a key");
+    },
+  };
+}
+
+/**
+ * Pack `inner` into a LazorKit Execute authorized by a session PDA.
+ * Compact bytes only — no secp256r1 auth payload. The session public key
+ * is a remaining READONLY_SIGNER (or WRITABLE_SIGNER if already writable).
+ */
+export function assembleSessionExecute(args: {
+  payer: Address;
+  walletPda: Address;
+  sessionPda: Address;
+  vaultPda: Address;
+  sessionPublicKey: Address;
+  inner: readonly Instruction[];
+  programAddress?: Address;
+}): Instruction {
+  const programAddress = args.programAddress ?? LAZORKIT_PROGRAM_PROGRAM_ADDRESS;
+  const packed = packExecute({
+    payer: args.payer,
+    walletPda: args.walletPda,
+    authorityPda: args.sessionPda,
+    vaultPda: args.vaultPda,
+    inner: args.inner,
+  });
+  const base = getExecuteInstruction(
+    {
+      payer: addressAsSigner(args.payer),
+      wallet: args.walletPda,
+      authority: args.sessionPda,
+      vault: args.vaultPda,
+      sysvarInstructions: SYSVAR_INSTRUCTIONS_ADDRESS,
+      instructions: packed.compactBytes,
+    },
+    { programAddress },
+  );
+  const remaining = packed.accounts
+    .slice(EXECUTE_FIXED_ACCOUNT_COUNT)
+    .map((account) => {
+      if (account.address !== args.sessionPublicKey) return account;
+      return {
+        address: account.address,
+        role: isWritableRole(account.role)
+          ? AccountRole.WRITABLE_SIGNER
+          : AccountRole.READONLY_SIGNER,
+      };
+    });
+  if (!remaining.some((account) => account.address === args.sessionPublicKey)) {
+    remaining.push({
+      address: args.sessionPublicKey,
+      role: AccountRole.READONLY_SIGNER,
+    });
+  }
+  return {
+    programAddress: base.programAddress,
+    accounts: [...base.accounts, ...remaining],
+    data: base.data,
+  };
 }

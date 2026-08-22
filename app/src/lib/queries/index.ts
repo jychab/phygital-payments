@@ -6,7 +6,7 @@
  * `Cache-Control: private, no-store`.
  *
  * Domain code lives next to the matching UI folder:
- *   lib/accessory + hooks/accessory  NFC tap, claim
+ *   lib/phygital + hooks/phygital  NFC tap, claim
  *   hooks/card                       Hold to Check, DAS collectible
  *   lib/server                       API routes only (`import "server-only"`)
  *   hooks/wallet                     passkey smart wallet
@@ -41,6 +41,18 @@ export const queryKeys = {
       [...queryKeys.phygitalToken.all(), "identifier", identifier] as const,
     byPasskey: (secp256r1PublicKey: string | null) =>
       [...queryKeys.phygitalToken.all(), "passkey", secp256r1PublicKey] as const,
+  },
+
+  walletPortfolio: {
+    all: () => ["walletPortfolio"] as const,
+    byVault: (vault: string | null) =>
+      [...queryKeys.walletPortfolio.all(), vault] as const,
+  },
+
+  agentSession: {
+    all: () => ["agentSession"] as const,
+    byVault: (vault: string | null) =>
+      [...queryKeys.agentSession.all(), vault] as const,
   },
 };
 
@@ -94,6 +106,13 @@ export const queryOptions = {
     staleTime: 0,
     refetchOnMount: "always" as const,
     refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  },
+  /** Wallet balance / agent status — refetch after actions, not every focus. */
+  recent: {
+    staleTime: 30 * SECOND,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
     refetchOnReconnect: true,
   },
   /** Catalog / rarely changing metadata. */

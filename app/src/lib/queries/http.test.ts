@@ -17,7 +17,7 @@ describe("queryFetch", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/verify-tap",
-      expect.objectContaining({ cache: "no-store" }),
+      expect.objectContaining({ cache: "no-store", credentials: "include" }),
     );
   });
 });

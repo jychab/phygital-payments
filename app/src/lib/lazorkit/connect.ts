@@ -1,37 +1,32 @@
-import { getBase64Encoder } from "@solana/kit";
 import {
   buildCreateWalletInstruction,
-  credentialIdHash,
   decodeWalletAccount,
-  findLazorKitPdas,
-  userSeedFromPubkey,
 } from "lazor-kit";
 
 import { getSolanaRpc } from "@/lib/solana/rpc";
-import { lazorkitProgramAddress, USER_SEED_DOMAIN } from "./constants";
+import { rpcAccountDataBytes } from "@/lib/solana/rpc-account-data";
 import {
   saveSmartWalletSession,
+  loadSmartWalletSession,
   type SmartWalletSession,
 } from "./credential-store";
+import { queryFetch } from "@/lib/queries/http";
+import { bytesToBase64Url } from "../crypto/base64";
 import {
   createPlatformPasskey,
   relyingPartyId,
   type CreatedPasskey,
 } from "./passkey";
+import { resolveSmartWalletPdas } from "./resolve-pdas";
 import { sponsoredFeePayerSigner, sponsorInstructions } from "./sponsor";
+import { establishWalletSessionCookie } from "@/lib/wallet/wallet-session-client";
 
 export async function ensureSmartWallet(
   passkey: CreatedPasskey,
 ): Promise<SmartWalletSession> {
-  const programAddress = lazorkitProgramAddress();
-  const [userSeed, credHash] = await Promise.all([
-    userSeedFromPubkey(passkey.compressedPubkey, USER_SEED_DOMAIN),
-    credentialIdHash(passkey.credentialId),
-  ]);
-  const pdas = await findLazorKitPdas({
-    userSeed,
-    credentialIdHash: credHash,
-    programAddress,
+  const pdas = await resolveSmartWalletPdas({
+    compressedPubkey: passkey.compressedPubkey,
+    credentialId: passkey.credentialId,
   });
 
   const { value } = await getSolanaRpc()
@@ -42,18 +37,19 @@ export async function ensureSmartWallet(
       buildCreateWalletInstruction({
         payer: sponsoredFeePayerSigner(),
         pdas,
-        userSeed,
-        credentialIdHash: credHash,
+        userSeed: pdas.userSeed,
+        credentialIdHash: pdas.credentialIdHash,
         compressedPubkey: passkey.compressedPubkey,
-        programAddress,
+        programAddress: pdas.programAddress,
       }),
     ]);
   } else {
-    if (value.owner !== programAddress) {
+    if (value.owner !== String(pdas.programAddress)) {
       throw new Error("Wallet address is already in use");
     }
-    const raw = Array.isArray(value.data) ? value.data[0] : value.data;
-    decodeWalletAccount(new Uint8Array(getBase64Encoder().encode(raw)));
+    const bytes = rpcAccountDataBytes(value.data);
+    if (!bytes) throw new Error("Wallet address is already in use");
+    decodeWalletAccount(bytes);
   }
 
   const session: SmartWalletSession = {
@@ -62,13 +58,54 @@ export async function ensureSmartWallet(
     authorityPda: pdas.authorityPda,
     credentialId: passkey.credentialId,
     compressedPubkey: passkey.compressedPubkey,
-    userSeed,
+    userSeed: pdas.userSeed,
     rpId: passkey.rpId || relyingPartyId(),
   };
   await saveSmartWalletSession(session);
   return session;
 }
 
+async function registerPasskeyMapping(passkey: CreatedPasskey): Promise<void> {
+  await queryFetch("/api/wallet/passkey", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      credentialId: bytesToBase64Url(passkey.credentialId),
+      compressedPubkey: bytesToBase64Url(passkey.compressedPubkey),
+    }),
+  });
+}
+
+async function signInWithPasskey(
+  passkey: CreatedPasskey,
+): Promise<SmartWalletSession> {
+  const session = await ensureSmartWallet(passkey);
+  await establishWalletSessionCookie(session);
+  await registerPasskeyMapping(passkey);
+  return session;
+}
+
+async function tryRestoreWithLocalHint(
+  local: SmartWalletSession,
+): Promise<SmartWalletSession | null> {
+  try {
+    const session = await ensureSmartWallet({
+      credentialId: local.credentialId,
+      compressedPubkey: local.compressedPubkey,
+      rpId: local.rpId,
+    });
+    await establishWalletSessionCookie(session);
+    return session;
+  } catch {
+    return null;
+  }
+}
+
 export async function createAndConnectSmartWallet(): Promise<SmartWalletSession> {
-  return ensureSmartWallet(await createPlatformPasskey());
+  const local = await loadSmartWalletSession();
+  if (local) {
+    const restored = await tryRestoreWithLocalHint(local);
+    if (restored) return restored;
+  }
+  return signInWithPasskey(await createPlatformPasskey());
 }

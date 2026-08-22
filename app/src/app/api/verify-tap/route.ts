@@ -1,20 +1,14 @@
-import { NextResponse } from "next/server";
-
-import { QUERY_NO_STORE } from "@/lib/queries/http";
+import { apiJson } from "@/lib/server/api-response";
 import {
   evaluateCounter,
   TAP_SESSION_TTL_MS,
-} from "@/lib/accessory/tap/counter-session";
+} from "@/lib/phygital/tap/counter-session";
 import {
   readCounterSession,
   writeCounterSession,
-} from "@/lib/accessory/tap/counter-store";
-import { verifyDynamicUrlWithoutCounterCheck } from "@/lib/accessory/tap/verify-dynamic-url";
+} from "@/lib/phygital/tap/counter-store";
+import { verifyDynamicUrlWithoutCounterCheck } from "@/lib/phygital/tap/verify-dynamic-url";
 import { toUserErrorMessage } from "@/lib/user-errors";
-
-function json(body: unknown, status = 200) {
-  return NextResponse.json(body, { status, headers: QUERY_NO_STORE });
-}
 
 /**
  * Verify an NFC dynamic-URL tap (`pk`/`s`/`c`/`n`) for Hold to Check.
@@ -28,7 +22,7 @@ export async function GET(req: Request) {
   try {
     const params = new URL(req.url).searchParams;
     if (!["pk", "s", "c", "n"].every((k) => params.get(k))) {
-      return json(
+      return apiJson(
         { isVerified: false, error: "Missing tap parameters" },
         400,
       );
@@ -38,7 +32,7 @@ export async function GET(req: Request) {
       verifyDynamicUrlWithoutCounterCheck(params);
 
     if (!isVerified) {
-      return json({ isVerified: false, error: "Invalid signature" }, 400);
+      return apiJson({ isVerified: false, error: "Invalid signature" }, 400);
     }
 
     const now = Date.now();
@@ -46,10 +40,10 @@ export async function GET(req: Request) {
     const verdict = evaluateCounter(state, counter, now, TAP_SESSION_TTL_MS);
 
     if (verdict === "replay") {
-      return json(
+      return apiJson(
         {
           isVerified: false,
-          error: "This tap was already used. Hold your accessory to this phone again.",
+          error: "This tap was already used. Hold your phygital to this phone again.",
         },
         409,
       );
@@ -59,14 +53,14 @@ export async function GET(req: Request) {
       await writeCounterSession(secp256r1PublicKey, { c: counter, t: now });
     }
 
-    return json({
+    return apiJson({
       isVerified: true,
       secp256r1PublicKey,
       counter,
       reentry: verdict === "reentry",
     });
   } catch (err) {
-    return json(
+    return apiJson(
       {
         isVerified: false,
         error: toUserErrorMessage(

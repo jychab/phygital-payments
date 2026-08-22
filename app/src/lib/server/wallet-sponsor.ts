@@ -2,19 +2,27 @@ import "server-only";
 
 import { address, type Address, type Instruction } from "@solana/kit";
 import { PHYGITAL_TOKEN_PROGRAM_ADDRESS } from "phygital-token-sdk";
+import {
+  CREATE_SESSION_DISCRIMINATOR,
+  CREATE_WALLET_DISCRIMINATOR,
+  EXECUTE_DISCRIMINATOR,
+  REVOKE_SESSION_DISCRIMINATOR,
+} from "lazor-kit";
 
 import {
   instructionFromWire,
   type SponsoredInstructionWire,
 } from "../../../shared/sponsor-wire";
+import { COMPUTE_BUDGET_PROGRAM_ADDRESS } from "../../../shared/compute-budget";
+import { base64ToBytes } from "@/lib/crypto/base64";
 import {
   LAZORKIT_PROGRAM_DEVNET,
   LAZORKIT_PROGRAM_MAINNET,
   SECP256R1_PROGRAM_ADDRESS,
   SYSTEM_PROGRAM_ADDRESS,
 } from "@/lib/lazorkit/constants";
-
-const COMPUTE_BUDGET_PROGRAM = "ComputeBudget111111111111111111111111111111";
+import { bytesMatchPrefix } from "@/lib/solana/discriminator";
+import { isSystemTransferInstruction } from "@/lib/wallet/transfer-sol";
 
 const ALLOWED_PROGRAMS = new Set<string>([
   String(LAZORKIT_PROGRAM_DEVNET),
@@ -22,8 +30,20 @@ const ALLOWED_PROGRAMS = new Set<string>([
   String(SYSTEM_PROGRAM_ADDRESS),
   String(SECP256R1_PROGRAM_ADDRESS),
   String(PHYGITAL_TOKEN_PROGRAM_ADDRESS),
-  COMPUTE_BUDGET_PROGRAM,
+  COMPUTE_BUDGET_PROGRAM_ADDRESS,
 ]);
+
+const LAZORKIT_PROGRAMS = new Set([
+  String(LAZORKIT_PROGRAM_DEVNET),
+  String(LAZORKIT_PROGRAM_MAINNET),
+]);
+
+const LAZORKIT_DISCS = [
+  CREATE_WALLET_DISCRIMINATOR,
+  EXECUTE_DISCRIMINATOR,
+  CREATE_SESSION_DISCRIMINATOR,
+  REVOKE_SESSION_DISCRIMINATOR,
+];
 
 export class SponsorValidationError extends Error {
   constructor(message: string) {
@@ -44,6 +64,7 @@ export function validateSponsoredInstructions(
   }
 
   const feePayerStr = String(feePayer);
+
   return wires.map((wire, index) => {
     if (!wire?.programAddress || !Array.isArray(wire.accounts) || !wire.data) {
       throw new SponsorValidationError(`Instruction ${index} is malformed`);
@@ -52,6 +73,18 @@ export function validateSponsoredInstructions(
       throw new SponsorValidationError(
         `Program ${wire.programAddress} is not allowed`,
       );
+    }
+    const data = base64ToBytes(wire.data);
+    if (LAZORKIT_PROGRAMS.has(wire.programAddress)) {
+      if (!LAZORKIT_DISCS.some((disc) => bytesMatchPrefix(data, disc))) {
+        throw new SponsorValidationError("That wallet instruction isn’t allowed");
+      }
+    }
+    if (
+      wire.programAddress === String(SYSTEM_PROGRAM_ADDRESS) &&
+      isSystemTransferInstruction(data)
+    ) {
+      throw new SponsorValidationError("Direct SOL transfers aren't allowed");
     }
     for (const account of wire.accounts) {
       if (!account?.address) {

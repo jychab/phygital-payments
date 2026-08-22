@@ -4,8 +4,8 @@ import { AppProviders } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Accessory",
-  description: "Check if this accessory is genuine, then claim it to a wallet",
+  title: "Wallet",
+  description: "Your Face ID is this wallet. There is no recovery phrase.",
 };
 
 export default function RootLayout({

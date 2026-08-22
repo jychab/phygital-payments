@@ -44,7 +44,7 @@ export function AppCard({ children }: { children: ReactNode }) {
   );
 }
 
-export function AppBoot({ modeLabel = "Accessory" }: { modeLabel?: string }) {
+export function AppBoot({ modeLabel = "Wallet" }: { modeLabel?: string }) {
   return (
     <AppShell modeLabel={modeLabel}>
       <AppCard>

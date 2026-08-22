@@ -32,7 +32,7 @@ function RefreshIconButton({
   );
 }
 
-/** Refetch this accessory's on-chain token (ownership can change off-tab). */
+/** Refetch this phygital's on-chain token (ownership can change off-tab). */
 export function PhygitalTokenRefreshButton({
   token,
   className,

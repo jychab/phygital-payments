@@ -14,6 +14,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { clearAppClientStorage } from "@/lib/wallet/clear-client-session";
+import { clearWalletSessionCookie } from "@/lib/wallet/wallet-session-client";
+import { queryFetch, readJson } from "@/lib/queries/http";
+import { queryKeys } from "@/lib/queries";
 import {
   clearSmartWalletSession,
   loadSmartWalletSession,
@@ -40,10 +43,31 @@ export function SmartWalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    void loadSmartWalletSession().then((restored) => {
+    void loadSmartWalletSession().then(async (restored) => {
       if (cancelled) return;
-      setSession(restored);
+      if (restored) {
+        setSession(restored);
+      }
       setReady(true);
+      if (!restored) return;
+      try {
+        const res = await queryFetch("/api/wallet/session");
+        if (res.status === 401 || res.status === 403) {
+          await clearSmartWalletSession();
+          if (!cancelled) setSession(null);
+          return;
+        }
+        if (!res.ok) return;
+        const body = await readJson<{
+          session: { vaultPda: string } | null;
+        }>(res, "Couldn’t restore session");
+        if (body.session?.vaultPda !== String(restored.vaultPda)) {
+          await clearSmartWalletSession();
+          if (!cancelled) setSession(null);
+        }
+      } catch {
+        /* keep local session on transient network errors */
+      }
     });
     return () => {
       cancelled = true;
@@ -67,10 +91,12 @@ export function SmartWalletProvider({ children }: { children: ReactNode }) {
   }, [session, connecting]);
 
   const disconnect = useCallback(async () => {
+    await clearWalletSessionCookie();
     setSession(null);
     await clearSmartWalletSession();
     clearAppClientStorage();
-    queryClient.clear();
+    queryClient.removeQueries({ queryKey: queryKeys.walletPortfolio.all() });
+    queryClient.removeQueries({ queryKey: queryKeys.agentSession.all() });
   }, [queryClient]);
 
   const value = useMemo<SmartWallet>(

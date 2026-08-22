@@ -9,27 +9,29 @@ import {
 describe("toUserFacingError", () => {
   it("maps a passkey mismatch to Couldn’t Verify", () => {
     expect(
-      toUserErrorMessage(new Error("This is not the same NFC accessory.")),
+      toUserErrorMessage(new Error("This is not the same phygital token.")),
     ).toBe("Couldn’t Verify");
   });
 
   it("maps an unverified live check", () => {
     const facing = toUserFacingError(
-      new Error("Couldn't verify this NFC accessory."),
+      new Error("Couldn't verify this phygital token."),
     );
     expect(facing.title).toBe("Couldn’t Verify");
   });
 
-  it("maps a locked accessory", () => {
+  it("maps a locked phygital token", () => {
     const facing = toUserFacingError(
-      new Error("This NFC accessory is locked. Unlock it before claiming it to a wallet."),
+      new Error(
+        "This phygital token is locked. Unlock it before claiming it to a wallet.",
+      ),
     );
-    expect(facing.title).toBe("Accessory Locked");
+    expect(facing.title).toBe("Phygital Locked");
   });
 
   it("maps an already-claimed wallet", () => {
     const facing = toUserFacingError(
-      new Error("This NFC accessory is already on that wallet."),
+      new Error("This phygital token is already on that wallet."),
     );
     expect(facing.title).toBe("Already Added");
   });
@@ -46,7 +48,7 @@ describe("toUserErrorMessage", () => {
 describe("toUserFacingBody", () => {
   it("folds a replayed tap into one line", () => {
     expect(toUserFacingBody("This tap was already used.")).toBe(
-      "Already Used. Hold your accessory to this phone again.",
+      "Already Used. Hold your phygital to this phone again.",
     );
   });
 });

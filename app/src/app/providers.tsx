@@ -13,7 +13,7 @@ import {
   createQueryPersister,
   shouldDehydrateQuery,
 } from "@/lib/queries/persist";
-import { queryKeys, queryOptions } from "@/lib/queries";
+import { queryOptions } from "@/lib/queries";
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -38,12 +38,6 @@ export function AppProviders({ children }: { children: ReactNode }) {
         maxAge: QUERY_CACHE_MAX_AGE_MS,
         buster: CACHE_BUSTER,
         dehydrateOptions: { shouldDehydrateQuery },
-      }}
-      onSuccess={() => {
-        // Restored snapshots can predate a claim in another tab.
-        void queryClient.invalidateQueries({
-          queryKey: queryKeys.phygitalToken.all(),
-        });
       }}
     >
       <SmartWalletProvider>

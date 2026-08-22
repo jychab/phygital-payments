@@ -1,12 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-import { QUERY_NO_STORE } from "@/lib/queries/http";
-import { getErrorMessage } from "@/lib/utils";
+import { apiJson } from "@/lib/server/api-response";
 import {
   SponsorValidationError,
   validateSponsoredInstructions,
 } from "@/lib/server/wallet-sponsor";
+import { toUserErrorMessage } from "@/lib/user-errors";
 import type { SponsorRequest } from "../../../../../shared/sponsor-wire";
 import {
   assertFeePayerConfigured,
@@ -18,12 +17,8 @@ import {
 
 export const runtime = "nodejs";
 
-function json(body: unknown, status = 200) {
-  return NextResponse.json(body, { status, headers: QUERY_NO_STORE });
-}
-
 /** POST /api/wallet/sponsor — fee-payer signs an allowlisted instruction list. */
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const body = (await req.json()) as SponsorRequest;
     const env = getCloudflareContext().env;
@@ -34,18 +29,20 @@ export async function POST(req: NextRequest) {
     );
     const signer = await getFeePayerSigner(env);
     const latestBlockhash = await fetchLatestBlockhash(env);
-    const signature = await sendSponsoredInstructions(env, instructions, {
-      signer,
-      latestBlockhash,
-    });
-    return json({ signature });
+    const signature = await sendSponsoredInstructions(
+      env,
+      instructions,
+      { signer, latestBlockhash },
+      { confirm: false },
+    );
+    return apiJson({ signature });
   } catch (error) {
     if (error instanceof SponsorValidationError) {
-      return json({ error: error.message }, 400);
+      return apiJson({ error: error.message }, 400);
     }
     if (error instanceof SubmitError) {
-      return json({ error: error.message }, error.transient ? 503 : 400);
+      return apiJson({ error: error.message }, error.transient ? 503 : 400);
     }
-    return json({ error: getErrorMessage(error, "Internal error") }, 500);
+    return apiJson({ error: toUserErrorMessage(error, "Couldn’t submit") }, 500);
   }
 }

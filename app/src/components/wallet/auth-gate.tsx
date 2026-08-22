@@ -18,8 +18,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return (
       <GateMessage
         icon={<Fingerprint className="size-5 text-muted-foreground" />}
-        title="Sign in"
-        body="Use your passkey to continue. A wallet is created if you don’t have one yet — network fees are covered."
+        title="Continue with Face ID"
+        body="Your Face ID is this wallet. There is no recovery phrase. A wallet is created if you don’t have one yet — network fees are covered."
         action={
           <Button
             type="button"
@@ -27,7 +27,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
             className="w-full max-w-64"
             onClick={connect}
           >
-            Continue with passkey
+            Continue with Face ID
           </Button>
         }
       />

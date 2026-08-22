@@ -23,6 +23,11 @@ import {
 } from "@solana/kit";
 
 import {
+  defaultComputeBudgetIxs,
+  setComputeUnitLimitIx,
+  setComputeUnitPriceIx,
+} from "../shared/compute-budget";
+import {
   COMPUTE_UNIT_MARGIN,
   CONFIRM_TIMEOUT_MS,
   MAX_COMPUTE_UNITS,
@@ -61,12 +66,19 @@ export function getRpcSubscriptions(env: CloudflareEnv) {
   return rpcSubscriptionsCache.subs;
 }
 
+let feePayerSignerCache:
+  | { secret: string; signer: TransactionSigner }
+  | undefined;
+
 export async function getFeePayerSigner(
   env: CloudflareEnv,
 ): Promise<TransactionSigner> {
   const secret = env.FEE_PAYER_SECRET_KEY?.trim();
   if (!secret) {
     throw new Error("FEE_PAYER_SECRET_KEY is not configured");
+  }
+  if (feePayerSignerCache?.secret === secret) {
+    return feePayerSignerCache.signer;
   }
   const bytes = secret.startsWith("[")
     ? Uint8Array.from(JSON.parse(secret) as number[])
@@ -80,6 +92,7 @@ export async function getFeePayerSigner(
       "FEE_PAYER_SECRET_KEY does not match NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY",
     );
   }
+  feePayerSignerCache = { secret, signer };
   return signer;
 }
 
@@ -88,24 +101,6 @@ export async function fetchLatestBlockhash(
 ): Promise<BlockhashLifetime> {
   const { value } = await getRpc(env).getLatestBlockhash().send();
   return value;
-}
-
-const COMPUTE_BUDGET_PROGRAM = address(
-  "ComputeBudget111111111111111111111111111111",
-);
-
-function setComputeUnitLimitIx(units: number): Instruction {
-  const data = new Uint8Array(5);
-  data[0] = 0x02;
-  new DataView(data.buffer).setUint32(1, units, true);
-  return { programAddress: COMPUTE_BUDGET_PROGRAM, data };
-}
-
-function setComputeUnitPriceIx(microLamports: bigint): Instruction {
-  const data = new Uint8Array(9);
-  data[0] = 0x03;
-  new DataView(data.buffer).setBigUint64(1, microLamports, true);
-  return { programAddress: COMPUTE_BUDGET_PROGRAM, data };
 }
 
 export class SubmitError extends Error {
@@ -206,12 +201,13 @@ export async function sendSponsoredInstructions(
   env: CloudflareEnv,
   core: Instruction[],
   ctx: SendContext,
+  opts?: { confirm?: boolean },
 ): Promise<Signature> {
   if (core.length === 0) {
     throw new SubmitError("No instructions to submit", false);
   }
   const computeUnitLimit = await simulateBatch(env, core, ctx.signer.address);
-  return sendSponsoredCore(env, core, ctx, computeUnitLimit);
+  return sendSponsoredCore(env, core, ctx, computeUnitLimit, opts?.confirm !== false);
 }
 
 async function sendSponsoredCore(
@@ -219,6 +215,7 @@ async function sendSponsoredCore(
   core: Instruction[],
   ctx: SendContext,
   computeUnitLimit: number,
+  confirm = true,
 ): Promise<Signature> {
   let built: Awaited<ReturnType<typeof buildAndSign>>;
   try {
@@ -242,11 +239,13 @@ async function sendSponsoredCore(
     const message = errorMessage(error, "sendTransaction failed");
     throw new SubmitError(message, isTransientRpcError(message));
   }
-  await confirmSignature(
-    env,
-    signature,
-    ctx.latestBlockhash.lastValidBlockHeight,
-  );
+  if (confirm) {
+    await confirmSignature(
+      env,
+      signature,
+      ctx.latestBlockhash.lastValidBlockHeight,
+    );
+  }
   return signature;
 }
 

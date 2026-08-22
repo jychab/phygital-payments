@@ -1,11 +1,10 @@
 import { address, type Address } from "@solana/kit";
 
-import { bytesToBase64, base64ToBytes } from "../../../shared/base64";
+import { bytesToBase64, base64ToBytes } from "@/lib/crypto/base64";
 
 const DB_NAME = "phygital.lazorkit";
 const STORE = "session";
 const SESSION_KEY = "current";
-const LOCAL_KEY = "phygital.lazorkit.session";
 
 export type SmartWalletSession = {
   vaultPda: Address;
@@ -51,30 +50,6 @@ function fromWire(wire: SessionWire): SmartWalletSession {
   };
 }
 
-function readLocal(): SmartWalletSession | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(LOCAL_KEY);
-    if (!raw) return null;
-    return fromWire(JSON.parse(raw) as SessionWire);
-  } catch {
-    return null;
-  }
-}
-
-function writeLocal(session: SmartWalletSession | null): void {
-  if (typeof window === "undefined") return;
-  try {
-    if (!session) {
-      window.localStorage.removeItem(LOCAL_KEY);
-      return;
-    }
-    window.localStorage.setItem(LOCAL_KEY, JSON.stringify(toWire(session)));
-  } catch {
-    /* private mode */
-  }
-}
-
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 1);
@@ -116,29 +91,21 @@ async function idbSet(wire: SessionWire | null): Promise<void> {
       req.onerror = () => reject(req.error ?? new Error("IndexedDB write failed"));
     });
   } catch {
-    /* ignore */
+    /* private mode */
   }
 }
 
 export async function loadSmartWalletSession(): Promise<SmartWalletSession | null> {
-  const fromIdb = await idbGet();
-  if (fromIdb) {
-    const session = fromWire(fromIdb);
-    writeLocal(session);
-    return session;
-  }
-  return readLocal();
+  const wire = await idbGet();
+  return wire ? fromWire(wire) : null;
 }
 
 export async function saveSmartWalletSession(
   session: SmartWalletSession,
 ): Promise<void> {
-  const wire = toWire(session);
-  writeLocal(session);
-  await idbSet(wire);
+  await idbSet(toWire(session));
 }
 
 export async function clearSmartWalletSession(): Promise<void> {
-  writeLocal(null);
   await idbSet(null);
 }
