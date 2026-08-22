@@ -1,44 +1,25 @@
 "use client";
 
-import {
-  useSignMessage,
-  useWallets,
-} from "@privy-io/react-auth/solana";
-
-import { bytesToBase64 } from "@/lib/crypto/base64";
+import { useSmartWallet } from "@/hooks/wallet/use-smart-wallet";
+import { signSessionMessage } from "@/lib/lazorkit/sign-message";
 import { verifyStoredApiKey } from "@/lib/pay/api-key-client";
 import { storeApiKey } from "@/lib/pay/api-key-store";
 import { queryFetch } from "@/lib/queries/http";
+import type { SmartWalletSession } from "@/lib/lazorkit/credential-store";
 
-type ProvisionArgs = {
+async function provisionApiKey(args: {
+  session: SmartWalletSession;
   wallet: string;
-  signMessage: ReturnType<typeof useSignMessage>["signMessage"];
-  solanaWallet: NonNullable<ReturnType<typeof useWallets>["wallets"][number]>;
-  rotate?: boolean;
-};
-
-async function provisionApiKey(args: ProvisionArgs): Promise<string> {
+}): Promise<string> {
   const message = `phygital-pay:provision:${args.wallet}:${Date.now()}`;
-  const { signature } = await args.signMessage({
-    message: new TextEncoder().encode(message),
-    wallet: args.solanaWallet,
-    options: {
-      uiOptions: {
-        title: args.rotate ? "Start Over" : "Turn On Pay",
-        description: args.rotate
-          ? "Pay will stop in other browsers. This does not move funds."
-          : "Pay will work here. This does not move funds.",
-      },
-    },
-  });
+  const proof = await signSessionMessage(args.session, message);
 
   const res = await queryFetch("/api/preauth/provision", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      wallet: args.wallet,
       message,
-      signature: bytesToBase64(signature),
+      ...proof,
     }),
   });
   const body = (await res.json()) as { apiKey?: string; error?: string };
@@ -48,28 +29,30 @@ async function provisionApiKey(args: ProvisionArgs): Promise<string> {
   return body.apiKey;
 }
 
-async function provisionAndStoreApiKey(
-  args: ProvisionArgs,
-): Promise<void> {
+async function provisionAndStoreApiKey(args: {
+  session: SmartWalletSession;
+  wallet: string;
+  rotate?: boolean;
+}): Promise<void> {
   if (!args.rotate && (await verifyStoredApiKey(args.wallet))) {
     return;
   }
-  storeApiKey(args.wallet, await provisionApiKey(args));
+  storeApiKey(
+    args.wallet,
+    await provisionApiKey({ session: args.session, wallet: args.wallet }),
+  );
 }
 
-/** Wallet-sign a provision message, store the issued API key in this browser. */
+/** Face ID a provision message, store the issued API key in this browser. */
 export function useProvisionApiKey() {
-  const { wallets } = useWallets();
-  const { signMessage } = useSignMessage();
-  const solanaWallet = wallets[0] ?? null;
+  const { session } = useSmartWallet();
 
   return {
     async provisionKey(wallet: string, opts?: { rotate?: boolean }) {
-      if (!solanaWallet) throw new Error("Connect your wallet first");
+      if (!session) throw new Error("Create a passkey first");
       await provisionAndStoreApiKey({
+        session,
         wallet,
-        signMessage,
-        solanaWallet,
         rotate: opts?.rotate,
       });
     },

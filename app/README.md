@@ -1,6 +1,6 @@
 # Phygital Pay
 
-Next.js app for enabling tap-to-pay on a phygital NFC accessory and receiving tap-authorized transfers. Runs standalone with Privy for login and Solana wallets.
+Next.js app for enabling tap-to-pay on a phygital NFC accessory and receiving tap-authorized transfers. Users create a platform passkey; a LazorKit smart wallet (vault PDA) is the on-chain owner.
 
 ## Setup
 
@@ -9,8 +9,8 @@ From the repo root:
 ```bash
 pnpm install
 cp app/.dev.vars.example app/.dev.vars
-# set NEXT_PUBLIC_PRIVY_APP_ID (required)
 # set NEXT_PUBLIC_SOLANA_RPC_URL (optional; defaults to public Solana RPC)
+# set NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY / FEE_PAYER_SECRET_KEY (required to create wallets and sponsor txs)
 pnpm --filter app dev
 ```
 
@@ -29,11 +29,12 @@ Read **string vars/secrets** from `process.env`. Use `getCloudflareContext().env
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `NEXT_PUBLIC_PRIVY_APP_ID` | Yes | Privy app ID from the [Privy Dashboard](https://dashboard.privy.io) |
 | `NEXT_PUBLIC_SOLANA_CLUSTER` | No | `devnet` (default) or `mainnet` |
 | `NEXT_PUBLIC_SOLANA_RPC_URL` | No | Solana RPC HTTP URL |
+| `NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY` | Yes | Fee-payer that sponsors LazorKit createWallet / Execute and ATA create |
+| `FEE_PAYER_SECRET_KEY` | Yes | Matching secret (Wrangler / worker) |
 
-Configure the Privy app for Solana external wallet connectors. Login method: wallet connect only.
+Passkeys are bound to the page hostname (`rpId`). Localhost and production are different wallets.
 
 ## Code map
 
@@ -55,32 +56,28 @@ Shared Pay UI (Home tab and owned accessory) is `PayScreen` in `components/pay/`
 - `api-key-panel.tsx` — paste / issue / rotate (only after confirmation is on)
 
 Owned-accessory home after a check or claim is `AccessoryHome` (`accessory/accessory-home.tsx`).
-One `PrivyProvider` lives in `PrivyWalletRoot` (root layout). Home, `/accessory` claim
-finish, and non-embed Collect ask for it via `PrivyGate`. The `/accessory` authenticity
-path does not load Privy until Pay. Collect embeds do not load
-the Privy SDK. Do not wrap `PrivyWalletProvider` again on a route.
-The connected wallet is always passed as `owner` (not `recipient` / `expectedOwner`), except Collect's settle-to address which stays `recipient`.
+The connected address is the LazorKit **vault PDA** (`token.owner`), from `useSmartWallet` / `useSolanaAddress`. Collect embeds never load the passkey session. Collect’s settle-to address stays `recipient`.
 
 ## Modes
 
 ### Home (`/`)
 
-Connect a wallet via Privy, then use tabs:
+Create a passkey, then use tabs:
 
 - **Pay** — After a spending limit: confirmation off (default) opens **Pay Settings**; confirmation on opens Hold to Pay (**Pay**, then tap). Requires a spending limit and at least one NFC accessory.
-- **Accessories** — list of NFC accessories for this wallet. Hold an accessory on `/accessory` to check it, then claim it to this wallet if you want.
+- **Accessories** — list of NFC accessories for this vault. Hold an accessory on `/accessory` to check it, then claim it to this wallet if you want.
 - **Activity** — recent payments for the connected wallet.
 
-Pay settings (spending limits, Confirm Payments) are the Pay tab when confirmation is off, and **Pay Settings** from Hold to Pay when it is on. Turning confirmation on wallet-signs and may issue an API key stored in **localStorage** on this phone. **Use on Another Phone** (copy/paste/rotate) appears only while confirmation is on.
+Pay settings (spending limits, Confirm Payments) are the Pay tab when confirmation is off, and **Pay Settings** from Hold to Pay when it is on. Turning confirmation on uses Face ID (WebAuthn) and may issue an API key stored in **localStorage** on this phone. **Use on Another Phone** (copy/paste/rotate) appears only while confirmation is on.
 
 ### Collect (`/collect`)
 
-Destination flow. The settle-to wallet comes from the **connected wallet** or `?recipient=`. When both exist, they stay in sync (session wallet is the source of truth; the URL is updated to match).
+Destination flow. The settle-to wallet comes from the **connected vault** or `?recipient=`. When both exist, they stay in sync (session wallet is the source of truth; the URL is updated to match).
 
-- Header shows the same wallet chip as Home. Connect on `/collect` with no `?recipient=` to start collecting to that wallet.
+- Header shows the same wallet chip as Home. Create a passkey on `/collect` with no `?recipient=` to start collecting to that vault.
 - Enter an amount, then hold NFC. Must run in Safari/Chrome (not a wallet in-app browser).
-- If the wallet has no receive account for the selected token yet, Collect shows **Connect wallet** on the same page (same flow as accessory setup). After the matching wallet connects, create the receive account, then collect.
-- Missing or invalid `?recipient=` with no connected wallet prompts to connect (or shows an error in embeds).
+- If the wallet has no receive account for the selected token yet, Collect offers **Set up receiving** (fee-payer creates the ATA).
+- Missing or invalid `?recipient=` with no connected wallet prompts to create a passkey (or shows an error in embeds).
 - Connected Collect shows the Home/Collect dropdown. Embeds stay sealed (static Collect label, display-only destination chip, no dropdown).
 
 Activity lives on Home, not Collect.
@@ -89,13 +86,13 @@ Activity lives on Home, not Collect.
 
 Authenticity first. Claim and Pay are optional.
 
-`/accessory` with no tap params shows **Hold to Check** (live WebAuthn in the browser). A signed NFC URL (`/accessory?pk=&s=&c=&n=`) verifies silently, then shows **Verified**. Optional **Hold to Check** upgrades the subtitle to **Confirmed just now.** Privy is not loaded until Pay or `/accessory?token=`.
+`/accessory` with no tap params shows **Hold to Check** (live WebAuthn in the browser). A signed NFC URL (`/accessory?pk=&s=&c=&n=`) verifies silently, then shows **Verified**. Optional **Hold to Check** upgrades the subtitle to **Confirmed just now.**
 
 1. **Hold to Check** (no URL) or silent URL verify → **Verified**
-2. **Unclaimed / unlocked** — optional **Claim to wallet** (WebAuthn tap, then `/accessory?token=` to connect and confirm)
-3. **Locked and payment-capable** — **Collect** and **Pay** (same Pay tab as Home). Connect a wallet only when signing a limit or turning on Confirm Payments.
+2. **Unclaimed / unlocked** — optional **Claim** (NFC tap, then `/accessory?token=` to create a passkey and confirm with Face ID)
+3. **Locked and payment-capable** — **Collect** and **Pay** (same Pay tab as Home). Face ID is used when signing a limit or turning on Confirm Payments.
 
-API keys live in localStorage on this phone, keyed by wallet, and are only needed when Confirm Payments is on. **Use on Another Phone** copies, pastes, or issues/rotates a key. Setting a spending limit requires a balance for that token in the linked wallet.
+API keys live in localStorage on this phone, keyed by vault address, and are only needed when Confirm Payments is on. **Use on Another Phone** copies, pastes, or issues/rotates a key. Setting a spending limit requires a balance for that token in the vault.
 
 ### Open a spending window (API key)
 
@@ -144,7 +141,7 @@ curl --max-time 150 -H "x-api-key: ppk_…" "https://<host>/api/preauth/status?g
 
 ### Payment link (`/collect?recipient=<solana-address>`)
 
-Collect can also open from a payment link. Settles to `?recipient=` until a wallet is connected; connecting syncs the URL to that wallet. The header shows a wallet chip (embeds show a sealed destination chip). Optional `?amount=` prefills (and locks) the amount. Optional `?mint=` selects a Jupiter-verified classic SPL mint (defaults to USDC). Without a valid `?recipient=` or connected wallet, Collect prompts to connect. If the recipient has no receive account yet, Collect offers **Connect wallet** on the same page.
+Collect can also open from a payment link. Settles to `?recipient=` until a passkey session exists; connecting syncs the URL to that vault. The header shows a wallet chip (embeds show a sealed destination chip). Optional `?amount=` prefills (and locks) the amount. Optional `?mint=` selects a Jupiter-verified classic SPL mint (defaults to USDC). Without a valid `?recipient=` or connected wallet, Collect prompts to create a passkey. If the recipient has no receive account yet, Collect offers **Set up receiving**.
 
 ### iframe embed
 
@@ -154,8 +151,9 @@ Requirements when embedded:
 
 - `?recipient=<solana-address>` is **required** (invalid/missing → error screen)
 - Optional `?amount=`
-- Wallet connect / disconnect is disabled
+- Passkey connect / disconnect is disabled
 - Only the payment-link receive UI is shown (`/accessory` is blocked in iframes)
+- Missing ATAs can still be created (fee-payer sponsored)
 
 Example:
 

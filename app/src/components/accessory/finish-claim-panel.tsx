@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle, Wallet } from "lucide-react";
+import { LoaderCircle, Fingerprint } from "lucide-react";
 
 import { AccessoryHome } from "@/components/accessory/accessory-home";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
@@ -20,20 +20,18 @@ import {
   invalidatePhygitalTokenQueries,
   queryKeys,
 } from "@/lib/queries";
-import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
-import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
+import { useSmartWallet } from "@/hooks/wallet/use-smart-wallet";
 import { address as toAddress } from "@solana/kit";
 
 type Phase = "confirming" | "done" | null;
 
-/** `/accessory?token=` — confirm claim in the wallet, then owned-accessory home. */
+/** `/accessory?token=` — confirm claim with Face ID, then owned-accessory home. */
 export function FinishClaimPanel() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const claimToken = searchParams.get("token")?.trim() ?? "";
 
-  const { address, isConnected, ready, connect } = useSolanaAddress();
-  const signer = useWalletKitSigner();
+  const { address, isConnected, ready, connect, session } = useSmartWallet();
 
   const pendingQuery = usePendingClaim(claimToken || null);
   const pending = pendingQuery.data;
@@ -44,7 +42,7 @@ export function FinishClaimPanel() {
   const [claimedOwner, setClaimedOwner] = useState<string | null>(null);
 
   async function onFinish() {
-    if (!signer || !address || !pending) return;
+    if (!session || !address || !pending) return;
     setError(null);
 
     const phygitalToken = tokenQuery.data;
@@ -54,7 +52,7 @@ export function FinishClaimPanel() {
     }
 
     try {
-      assertClaimReady(phygitalToken, signer.address);
+      assertClaimReady(phygitalToken, session.vaultPda);
     } catch (err) {
       setError(
         toUserErrorMessage(err, "Couldn’t add this accessory. Try again."),
@@ -64,8 +62,8 @@ export function FinishClaimPanel() {
 
     setPhase("confirming");
     try {
-      const { session, auth } = pending;
-      await finishClaim({ session, auth, recipient: signer });
+      const { session: transferSession, auth } = pending;
+      await finishClaim({ session: transferSession, auth, smartWallet: session });
       try {
         await consumePendingClaim(claimToken);
       } catch {
@@ -92,7 +90,7 @@ export function FinishClaimPanel() {
       setError(
         toUserErrorMessage(
           err,
-          "That didn't go through. Approve in your wallet and try again.",
+          "That didn't go through. Confirm with Face ID and try again.",
         ),
       );
     }
@@ -101,7 +99,7 @@ export function FinishClaimPanel() {
   if (!claimToken) {
     return (
       <GateMessage
-        icon={<Wallet className="size-5 text-destructive" />}
+        icon={<Fingerprint className="size-5 text-destructive" />}
         title="Can’t finish"
         body="This link is missing. Hold your accessory to your phone again."
         destructive
@@ -112,8 +110,8 @@ export function FinishClaimPanel() {
   if (phase === "confirming") {
     return (
       <NfcHoldStatus
-        title="Confirm in wallet…"
-        body="Approve in your wallet to continue."
+        title="Confirm with Face ID…"
+        body="Approve the passkey prompt to continue."
         busy
       />
     );
@@ -143,7 +141,7 @@ export function FinishClaimPanel() {
   if (pendingQuery.isError || !pending) {
     return (
       <GateMessage
-        icon={<Wallet className="size-5 text-destructive" />}
+        icon={<Fingerprint className="size-5 text-destructive" />}
         title="Can’t finish"
         body={toUserErrorMessage(
           pendingQuery.error,
@@ -158,11 +156,11 @@ export function FinishClaimPanel() {
     <div className="flex flex-1 flex-col gap-5 py-2">
       <div className="space-y-1.5 text-center">
         <p className="text-base font-medium text-foreground">
-          Link your wallet
+          Create a passkey
         </p>
         <p className="mx-auto max-w-72 text-sm text-muted-foreground">
-          Connect the wallet that should own this accessory, then confirm.
-          You&apos;ll pay a small network fee.
+          This passkey will own the accessory. Confirm with Face ID — network
+          fees are covered.
         </p>
       </div>
 
@@ -174,13 +172,13 @@ export function FinishClaimPanel() {
       {!ready ? (
         <CenteredStatus>
           <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Loading wallet…</p>
+          <p className="text-sm text-muted-foreground">Loading…</p>
         </CenteredStatus>
       ) : !isConnected || !address ? (
         <GateMessage
-          icon={<Wallet className="size-5 text-muted-foreground" />}
-          title="Connect your wallet"
-          body="This wallet will own the accessory."
+          icon={<Fingerprint className="size-5 text-muted-foreground" />}
+          title="Create a passkey"
+          body="This passkey will own the accessory."
           action={
             <Button
               type="button"
@@ -188,7 +186,7 @@ export function FinishClaimPanel() {
               className="w-full"
               onClick={connect}
             >
-              Connect wallet
+              Create a passkey
             </Button>
           }
         />
@@ -203,10 +201,10 @@ export function FinishClaimPanel() {
             type="button"
             size="lg"
             className="w-full"
-            disabled={!signer || tokenQuery.isPending}
+            disabled={!session || tokenQuery.isPending}
             onClick={() => void onFinish()}
           >
-            {error ? "Try again" : "Confirm in wallet"}
+            {error ? "Try again" : "Confirm with Face ID"}
           </Button>
         </div>
       )}

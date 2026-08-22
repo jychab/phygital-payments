@@ -12,7 +12,6 @@ import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import { GateMessage } from "@/components/layout/gate-message";
-import { useBuyUsdc } from "@/hooks/wallet/use-buy-usdc";
 import { useDelegateStatus } from "@/hooks/pay/use-delegate-status";
 import { useMintProgram } from "@/hooks/tokens/use-mint-program";
 import {
@@ -25,11 +24,9 @@ import {
   type OwnerPayMintMatch,
 } from "@/lib/tokens/mint-delegate";
 import {
-  isDefaultMint,
   resolvePaymentToken,
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
-import { ONRAMP_DEFAULT_AMOUNT } from "@/lib/wallet/fiat-onramp";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 import { shortAddress } from "@/lib/utils";
@@ -41,6 +38,8 @@ function tryUiAmountToRaw(amount: string, decimals: number): bigint | null {
     return null;
   }
 }
+
+const DEFAULT_SPENDING_LIMIT = "50";
 
 /**
  * Set or update the spending limit for one mint on one NFC accessory
@@ -70,11 +69,8 @@ export function SpendingLimitPanel({
 }) {
   const { address: walletAddress, isConnected, matched, ownerShort } =
     useExpectedWallet(owner);
+  const [amount, setAmount] = useState(DEFAULT_SPENDING_LIMIT);
   const mintAddress = address(mint);
-  const [amount, setAmount] = useState(ONRAMP_DEFAULT_AMOUNT);
-  const { buyUsdc, pending: onrampPending } = useBuyUsdc(
-    matched ? owner : null,
-  );
 
   const seeded =
     walletMatch?.status &&
@@ -108,10 +104,8 @@ export function SpendingLimitPanel({
   const busy =
     setAllowance.isPending ||
     revoke.isPending ||
-    onrampPending ||
     (!seeded && statusQuery.isLoading);
   const decimals = mintQuery.data?.decimals ?? token.decimals;
-  const canBuyUsdc = isDefaultMint(mint) && matched;
 
   const limitRaw = tryUiAmountToRaw(amount, decimals);
 
@@ -195,37 +189,24 @@ export function SpendingLimitPanel({
         <GateMessage
           icon={<Coins className="size-5 text-muted-foreground" />}
           title={`Add ${token.symbol} first`}
-          body={
-            canBuyUsdc
-              ? "Add USDC to this wallet to set a spending limit."
-              : "Add some of this token to this wallet to set a spending limit."
-          }
+          body="Send this token to the passkey wallet, then set a spending limit."
           action={
-            canBuyUsdc || skipOrBack ? (
-              <div className="flex w-full max-w-xs flex-col gap-2">
-                {canBuyUsdc ? (
-                  <Button
-                    type="button"
-                    size="lg"
-                    className="w-full"
-                    onClick={() =>
-                      void buyUsdc(amount || ONRAMP_DEFAULT_AMOUNT)
-                    }
-                    disabled={busy}
-                  >
-                    {onrampPending ? (
-                      <>
-                        <LoaderCircle className="size-4 animate-spin" />
-                        Opening…
-                      </>
-                    ) : (
-                      "Buy USDC"
-                    )}
-                  </Button>
-                ) : null}
-                {skipOrBack}
-              </div>
-            ) : undefined
+            <div className="flex w-full max-w-xs flex-col gap-2">
+              <Button
+                type="button"
+                size="lg"
+                className="w-full"
+                onClick={() => {
+                  void navigator.clipboard.writeText(owner).then(
+                    () => toast.success("Address copied"),
+                    () => toast.error("Couldn’t copy address"),
+                  );
+                }}
+              >
+                Copy wallet address
+              </Button>
+              {skipOrBack}
+            </div>
           }
         />
       </div>
@@ -290,7 +271,7 @@ export function SpendingLimitPanel({
           {setAllowance.isPending ? (
             <>
               <LoaderCircle className="size-4 animate-spin" />
-              Confirm in wallet…
+              Confirm with Face ID…
             </>
           ) : hasDelegate && matched ? (
             <>

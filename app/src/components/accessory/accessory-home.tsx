@@ -1,14 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { LoaderCircle } from "lucide-react";
 
 import { AuthenticAccessoryPanel } from "@/components/accessory/authentic-accessory-panel";
 import { ClaimPanel } from "@/components/accessory/claim-panel";
 import { PayScreen } from "@/components/pay/pay-screen";
 import { WalletSyncGate } from "@/components/shared/wallet-sync-gate";
-import { PrivyGate } from "@/app/privy-wallet-root";
-import { CenteredStatus } from "@/components/layout/gate-message";
 import { useAccessoryPayOpen } from "@/hooks/accessory/use-accessory-pay-open";
 import { useAuthenticateAccessory } from "@/hooks/accessory/use-authenticate-accessory";
 import { usePreauthRequired } from "@/hooks/pay/use-preauth-required";
@@ -23,7 +20,7 @@ import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 
 /**
- * Authentic home after a check or claim. Pay loads Privy only when opened.
+ * Authentic home after a check or claim.
  */
 export function AccessoryHome({
   token,
@@ -82,22 +79,13 @@ export function AccessoryHome({
 
   if (showPay) {
     return (
-      <PrivyGate
-        fallback={
-          <CenteredStatus>
-            <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Loading Pay…</p>
-          </CenteredStatus>
-        }
-      >
-        <WalletSyncGate linkedOwner={owner}>
-          <PayScreen
-            owner={owner}
-            tokenAddress={String(token.address)}
-            onExit={() => setShowPay(false)}
-          />
-        </WalletSyncGate>
-      </PrivyGate>
+      <WalletSyncGate linkedOwner={owner}>
+        <PayScreen
+          owner={owner}
+          tokenAddress={String(token.address)}
+          onExit={() => setShowPay(false)}
+        />
+      </WalletSyncGate>
     );
   }
 

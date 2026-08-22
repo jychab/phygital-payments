@@ -98,7 +98,7 @@ export function CollectPanel({
   allowWalletSetup = false,
 }: {
   paymentRequest: PaymentRequest & { recipient: Address };
-  /** Non-embed Collect: Privy connect + create ATA in this panel. */
+  /** Create a missing ATA (fee-payer sponsored). Safe in embeds. */
   allowWalletSetup?: boolean;
 }) {
   const recipient = paymentRequest.recipient;

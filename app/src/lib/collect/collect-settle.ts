@@ -127,16 +127,16 @@ export async function fetchRecipientAtaStatus(args: {
 }
 
 /**
- * Create the recipient's token account. The connected wallet pays rent;
- * `owner` must be the token account owner (defaults to signer).
+ * Create the recipient's token account. The fee-payer pays rent;
+ * `owner` must be the token account owner (defaults to payer).
  */
 export async function buildCreateRecipientAtaInstructions(args: {
-  signer: TransactionSigner;
+  payer: TransactionSigner;
   mint: Address;
   owner?: Address;
 }): Promise<{ instructions: Instruction[]; ata: Address }> {
   const mint = args.mint;
-  const owner = args.owner ?? args.signer.address;
+  const owner = args.owner ?? args.payer.address;
   const status = await fetchRecipientAtaStatus({ mint, owner });
   if (status.exists) {
     return { instructions: [], ata: status.ata };
@@ -145,7 +145,7 @@ export async function buildCreateRecipientAtaInstructions(args: {
   return {
     instructions: [
       getCreateAssociatedTokenIdempotentInstruction({
-        payer: args.signer,
+        payer: args.payer,
         ata: status.ata,
         owner,
         mint,

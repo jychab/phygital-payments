@@ -182,9 +182,9 @@ const RULES: Rule[] = [
     body: "Hold it flat against the back of your phone and try again.",
   },
   {
-    test: /connect your wallet|connect a wallet|sign in to continue/i,
-    title: "Connect your wallet",
-    body: "Connect your wallet to continue.",
+    test: /connect your wallet|connect a wallet|sign in to continue|create a passkey first/i,
+    title: "Create a passkey",
+    body: "Create a passkey to continue.",
   },
   {
     test: /NFC accessory not found|accessory not found|missing passkey/i,

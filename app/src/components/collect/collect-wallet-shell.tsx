@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { LoaderCircle, Wallet } from "lucide-react";
 import type { Address } from "@solana/kit";
 
-import { PrivyGate } from "@/app/privy-wallet-root";
 import { CollectPanel } from "@/components/collect/collect-panel";
 import {
   AppCard,
@@ -12,6 +11,7 @@ import {
   homeCollectModeNav,
 } from "@/components/layout/app-shell";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
+import { Button } from "@/components/ui/button";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import {
   resolveCollectRecipient,
@@ -19,8 +19,8 @@ import {
 } from "@/lib/collect/payment-request";
 
 /**
- * Non-embed `/collect`. Loaded from `CollectApp` with `ssr: false` so Privy
- * hooks never run on the server. Recipient is the connected wallet, or
+ * Non-embed `/collect`. Loaded from `CollectApp` with `ssr: false` so passkey
+ * APIs never run on the server. Recipient is the connected vault, or
  * `?recipient=` when no session exists. Connecting writes the wallet into
  * the URL so the two stay in sync.
  */
@@ -29,15 +29,11 @@ export function CollectWalletShell({
 }: {
   paymentRequest: PaymentRequest;
 }) {
-  return (
-    <PrivyGate>
-      <CollectScreen paymentRequest={paymentRequest} />
-    </PrivyGate>
-  );
+  return <CollectScreen paymentRequest={paymentRequest} />;
 }
 
 function CollectScreen({ paymentRequest }: { paymentRequest: PaymentRequest }) {
-  const { address, isConnected, ready } = useSolanaAddress();
+  const { address, isConnected, ready, connect } = useSolanaAddress();
   const [linkRecipient, setLinkRecipient] = useState<Address | null>(
     paymentRequest.recipient,
   );
@@ -64,13 +60,23 @@ function CollectScreen({ paymentRequest }: { paymentRequest: PaymentRequest }) {
             <GateMessage
               icon={<Wallet className="size-5 text-muted-foreground" />}
               title="This payment link isn’t set up"
-              body="The link looks incomplete. Connect a wallet to collect, or ask for a new one."
+              body="The link looks incomplete. Create a passkey to collect, or ask for a new one."
             />
           ) : (
             <GateMessage
               icon={<Wallet className="size-5 text-muted-foreground" />}
-              title="Connect your wallet"
-              body="Connect to collect payments to this wallet."
+              title="Create a passkey"
+              body="Create a passkey to collect payments to this wallet."
+              action={
+                <Button
+                  type="button"
+                  size="lg"
+                  className="w-full"
+                  onClick={connect}
+                >
+                  Create a passkey
+                </Button>
+              }
             />
           )}
         </AppCard>

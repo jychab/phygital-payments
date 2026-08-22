@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { History, LoaderCircle, Nfc, Wallet } from "lucide-react";
 
-import { PrivyGate } from "@/app/privy-wallet-root";
 import { AppCard, AppShell, homeCollectModeNav } from "@/components/layout/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
 import { AccessoriesPanel } from "@/components/home/accessories-panel";
 import { HistoryPanel } from "@/components/home/history-panel";
 import { PayScreen } from "@/components/pay/pay-screen";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
@@ -17,20 +17,16 @@ import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 type HomeTab = "pay" | "accessories" | "history";
 
 /**
- * Home UI. Loaded from `HomeApp` with `ssr: false` so Privy hooks never run
- * on the server. Uses the root `PrivyProvider` via `PrivyGate`.
+ * Home UI. Loaded from `HomeApp` with `ssr: false` so passkey APIs never run
+ * on the server.
  */
 export function HomeWalletShell() {
-  return (
-    <PrivyGate>
-      <HomeScreen />
-    </PrivyGate>
-  );
+  return <HomeScreen />;
 }
 
 function HomeScreen() {
   const embedded = useIsEmbedded();
-  const { address, isConnected, ready } = useSolanaAddress();
+  const { address, isConnected, ready, connect } = useSolanaAddress();
   const [tab, setTab] = useState<HomeTab>("pay");
 
   if (embedded === null) {
@@ -64,8 +60,18 @@ function HomeScreen() {
         <AppCard>
           <GateMessage
             icon={<Wallet className="size-5 text-muted-foreground" />}
-            title="Connect your wallet"
-            body="Connect to pay, see your accessories, and check activity."
+            title="Create a passkey"
+            body="Create a passkey to pay, see your accessories, and check activity."
+            action={
+              <Button
+                type="button"
+                size="lg"
+                className="w-full"
+                onClick={connect}
+              >
+                Create a passkey
+              </Button>
+            }
           />
         </AppCard>
       ) : (

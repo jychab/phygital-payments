@@ -13,7 +13,7 @@
  *   lib/home + hooks/home       Activity + Accessories tab
  *   lib/tokens + hooks/tokens   mint catalog, holdings (`use-payment-tokens`)
  *   lib/server                  API routes only (`import "server-only"`)
- *   hooks/wallet                Privy address, expected-wallet match, query refresh
+ *   hooks/wallet                passkey smart wallet, expected-wallet match, query refresh
  *   hooks/layout                iframe / in-app browser
  */
 

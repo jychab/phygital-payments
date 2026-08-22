@@ -307,6 +307,22 @@ export async function sendSponsoredBatch(
   return sendSponsoredCore(env, core, ctx, computeUnitLimit);
 }
 
+/**
+ * Simulate, fee-payer-sign, and confirm an already-built instruction list
+ * (LazorKit createWallet / Execute, ATA create).
+ */
+export async function sendSponsoredInstructions(
+  env: CloudflareEnv,
+  core: Instruction[],
+  ctx: SendContext,
+): Promise<Signature> {
+  if (core.length === 0) {
+    throw new SubmitError("No instructions to submit", false);
+  }
+  const computeUnitLimit = await simulateBatch(env, core, ctx.signer.address);
+  return sendSponsoredCore(env, core, ctx, computeUnitLimit);
+}
+
 async function sendSponsoredCore(
   env: CloudflareEnv,
   core: Instruction[],

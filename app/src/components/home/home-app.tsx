@@ -13,7 +13,7 @@ const HomeWalletShell = dynamic(
 );
 
 /**
- * Route `/` — Pay, Accessories, and Activity tabs (Privy).
+ * Route `/` — Pay, Accessories, and Activity tabs (passkey smart wallet).
  * NFC accessories and first-time setup start by tapping a tag (opens `/accessory`).
  */
 export function HomeApp() {

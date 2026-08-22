@@ -1,6 +1,5 @@
 /**
- * Wipe app client storage on disconnect (preauth keys, etc.).
- * Does not touch Privy auth storage — `logout()` on the session hook does that.
+ * Wipe app client storage on disconnect (preauth keys, passkey session, etc.).
  */
 
 const APP_STORAGE_PREFIXES = ["phygital."] as const;

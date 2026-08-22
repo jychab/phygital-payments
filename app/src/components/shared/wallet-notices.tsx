@@ -40,7 +40,7 @@ export function ConnectWalletNotice({
         "rounded-xl border border-border/60 bg-muted/25 px-3 py-2 text-center text-xs text-muted-foreground"
       }
     >
-      {hint ?? `Connect ${ownerShort} above to continue.`}
+      {hint ?? `Create a passkey for ${ownerShort} above to continue.`}
     </p>
   );
 }
@@ -49,7 +49,7 @@ export function ConnectWalletNotice({
 export function ExpectedWalletConnect({
   owner,
   hint,
-  label = "Connect wallet",
+  label = "Create a passkey",
   disabled,
 }: {
   owner: string;

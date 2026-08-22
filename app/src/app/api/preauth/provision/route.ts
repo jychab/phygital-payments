@@ -5,7 +5,7 @@ import { getHmacSecret, getPreauthGrantsStub } from "@/lib/server/preauth-grants
 import {
   isWalletSignatureError,
   requireFreshTimestamp,
-  requireWalletSignature,
+  requirePasskeyAssertion,
 } from "@/lib/server/wallet-signature";
 import { getErrorMessage } from "@/lib/utils";
 import { signApiKey } from "../../../../../worker/api-key-hmac";
@@ -20,16 +20,35 @@ export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as {
       wallet?: string;
+      walletPda?: string;
+      credentialId?: string;
       message?: string;
       signature?: string;
+      authenticatorData?: string;
+      clientDataJSON?: string;
     };
     const wallet = body.wallet?.trim();
+    const walletPda = body.walletPda?.trim();
+    const credentialId = body.credentialId?.trim();
     const message = body.message?.trim();
     const signatureB64 = body.signature?.trim();
+    const authenticatorData = body.authenticatorData?.trim();
+    const clientDataJSON = body.clientDataJSON?.trim();
 
-    if (!wallet || !message || !signatureB64) {
+    if (
+      !wallet ||
+      !walletPda ||
+      !credentialId ||
+      !message ||
+      !signatureB64 ||
+      !authenticatorData ||
+      !clientDataJSON
+    ) {
       return json(
-        { error: "wallet, message, and signature are required" },
+        {
+          error:
+            "wallet, walletPda, credentialId, message, signature, authenticatorData, and clientDataJSON are required",
+        },
         400,
       );
     }
@@ -39,7 +58,15 @@ export async function POST(req: NextRequest) {
       return json({ error: "Invalid message" }, 400);
     }
     requireFreshTimestamp(message.slice(prefix.length));
-    requireWalletSignature({ wallet, message, signatureB64 });
+    await requirePasskeyAssertion({
+      wallet,
+      walletPda,
+      credentialIdB64: credentialId,
+      message,
+      authenticatorDataB64: authenticatorData,
+      clientDataJSONB64: clientDataJSON,
+      signatureB64,
+    });
 
     const { gen } = await getPreauthGrantsStub(wallet).rotate();
     const apiKey = await signApiKey(getHmacSecret(), wallet, gen);

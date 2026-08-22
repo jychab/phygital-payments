@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { address, type Address } from "@solana/kit";
+import { address, createNoopSigner, type Address } from "@solana/kit";
 
 import { invalidateOwnerQueries, queryKeys, type MintDelegateStatus, type PayBootstrap } from "@/lib/queries";
 import {
@@ -11,8 +11,9 @@ import {
   isOwnerPayMintEnabled,
   type OwnerPayMintMatch,
 } from "@/lib/tokens/mint-delegate";
-import { sendTransaction } from "@/lib/solana/tx";
-import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
+import { executeAsVault } from "@/lib/lazorkit/execute-as-vault";
+import { feePayerAddress } from "@/lib/lazorkit/sponsor";
+import { useSmartWallet } from "@/hooks/wallet/use-smart-wallet";
 
 type AllowanceOptions = {
   mint: Address | string;
@@ -78,7 +79,7 @@ export function useSetDelegateMutation(
   owner: string | null,
   options: AllowanceOptions,
 ) {
-  const signer = useWalletKitSigner();
+  const { session } = useSmartWallet();
   const queryClient = useQueryClient();
   const mintStr = String(options.mint);
   const tokenStr = String(options.token);
@@ -90,23 +91,25 @@ export function useSetDelegateMutation(
 
   return useMutation<string, Error, { rawAmount: bigint; decimals: number }>({
     mutationFn: async ({ rawAmount, decimals }) => {
-      if (!signer) throw new Error("Connect your wallet");
-      const { instructions } = await buildDelegateInstructions({
-        signer,
+      if (!session) throw new Error("Create a passkey first");
+      const { prefix, inner } = await buildDelegateInstructions({
+        owner: session.vaultPda,
+        payer: createNoopSigner(feePayerAddress()),
         rawAmount,
         mint: address(mintStr),
         token: address(tokenStr),
       });
-      const sent = await sendTransaction({
-        instructions,
-        feePayer: signer,
+      const sent = await executeAsVault({
+        session,
+        extraPrefix: prefix,
+        inner,
       });
       await applyDelegateAfterSend({
         queryClient,
         owner,
         mint: mintStr,
         key,
-        confirmed: sent.confirmed,
+        confirmed: Promise.resolve(),
         apply: (prev) =>
           prev
             ? {
@@ -146,7 +149,7 @@ export function useRevokeDelegateMutation(
   owner: string | null,
   options: AllowanceOptions,
 ) {
-  const signer = useWalletKitSigner();
+  const { session } = useSmartWallet();
   const queryClient = useQueryClient();
   const mintStr = String(options.mint);
   const tokenStr = String(options.token);
@@ -158,21 +161,21 @@ export function useRevokeDelegateMutation(
 
   return useMutation<string, Error, void>({
     mutationFn: async () => {
-      if (!signer) throw new Error("Connect your wallet");
-      const { instructions } = await buildRevokeDelegateInstructions({
-        signer,
+      if (!session) throw new Error("Create a passkey first");
+      const { inner } = await buildRevokeDelegateInstructions({
+        owner: session.vaultPda,
         mint: address(mintStr),
       });
-      const sent = await sendTransaction({
-        instructions,
-        feePayer: signer,
+      const sent = await executeAsVault({
+        session,
+        inner,
       });
       await applyDelegateAfterSend({
         queryClient,
         owner,
         mint: mintStr,
         key,
-        confirmed: sent.confirmed,
+        confirmed: Promise.resolve(),
         apply: (prev) =>
           prev
             ? {

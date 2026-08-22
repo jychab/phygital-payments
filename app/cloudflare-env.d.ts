@@ -12,7 +12,6 @@ interface __BaseEnv_CloudflareEnv {
 	NEXT_PUBLIC_SOLANA_RPC_URL: string;
 	NEXT_PUBLIC_SOLANA_CLUSTER: string;
 	NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY: string;
-	NEXT_PUBLIC_PRIVY_APP_ID: string;
 	JUPITER_API_KEY: string;
 	PAY_HMAC_SECRET: string;
 	TRANSFER_SUBMITTER: DurableObjectNamespace<import("./custom-worker").TransferSubmitterDO>;
@@ -31,7 +30,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "NEXTJS_ENV" | "FEE_PAYER_SECRET_KEY" | "HELIUS_WEBHOOK_AUTH" | "NEXT_PUBLIC_SOLANA_RPC_URL" | "NEXT_PUBLIC_SOLANA_CLUSTER" | "NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY" | "NEXT_PUBLIC_PRIVY_APP_ID" | "JUPITER_API_KEY" | "PAY_HMAC_SECRET">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "NEXTJS_ENV" | "FEE_PAYER_SECRET_KEY" | "HELIUS_WEBHOOK_AUTH" | "NEXT_PUBLIC_SOLANA_RPC_URL" | "NEXT_PUBLIC_SOLANA_CLUSTER" | "NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY" | "JUPITER_API_KEY" | "PAY_HMAC_SECRET">> {}
 }
 
 // Begin runtime types

@@ -2,7 +2,6 @@
 
 import { type ReactNode } from "react";
 
-import { PrivyGate } from "@/app/privy-wallet-root";
 import { FinishClaimPanel } from "@/components/accessory/finish-claim-panel";
 import {
   AppCard,
@@ -12,7 +11,7 @@ import {
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 
 /**
- * Chrome for `/accessory`. Authenticity (NFC children) skips Privy.
+ * Chrome for `/accessory`. Authenticity (NFC children) skips the passkey session.
  * `?token=` (claim handoff) still loads the wallet.
  */
 export function AccessoryWalletShell({
@@ -24,11 +23,9 @@ export function AccessoryWalletShell({
 }) {
   if (token) {
     return (
-      <PrivyGate>
-        <AccessoryChrome walletActions="full">
-          <FinishClaimPanel />
-        </AccessoryChrome>
-      </PrivyGate>
+      <AccessoryChrome walletActions="full">
+        <FinishClaimPanel />
+      </AccessoryChrome>
     );
   }
 

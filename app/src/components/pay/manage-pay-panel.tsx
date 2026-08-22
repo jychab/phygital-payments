@@ -152,7 +152,7 @@ function ConfirmPaymentsRow({
       <div className="px-3 py-2">
         <ExpectedWalletConnect
           owner={owner}
-          hint={`Connect ${ownerShort} to change confirmation.`}
+          hint={`Create a passkey for ${ownerShort} to change confirmation.`}
         />
       </div>
     );

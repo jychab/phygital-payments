@@ -1,46 +1,35 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Address } from "@solana/kit";
+import { createNoopSigner, type Address } from "@solana/kit";
 
 import { queryKeys, type RecipientAtaStatus } from "@/lib/queries";
 import { buildCreateRecipientAtaInstructions } from "@/lib/collect/collect-settle";
-import { sendTransaction } from "@/lib/solana/tx";
-import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
+import { feePayerAddress, sponsorInstructions } from "@/lib/lazorkit/sponsor";
 
 /**
- * Create the recipient's token account (connected wallet pays rent).
- * Status flips to ready after broadcast; confirm refreshes or rolls back.
+ * Create the recipient's token account (fee-payer sponsors rent).
  */
 export function useCreateAtaMutation(
   mint: Address,
   options?: { onSuccess?: () => void },
 ) {
-  const signer = useWalletKitSigner();
   const queryClient = useQueryClient();
 
   return useMutation<void, Error, { recipient: Address }>({
     mutationFn: async ({ recipient }) => {
-      if (!signer) throw new Error("Connect your wallet");
       const { instructions } = await buildCreateRecipientAtaInstructions({
-        signer,
+        payer: createNoopSigner(feePayerAddress()),
         mint,
         owner: recipient,
       });
       if (instructions.length === 0) return;
 
       const key = queryKeys.ataStatus.byOwnerMint(recipient, mint);
-      const sent = await sendTransaction({ instructions, feePayer: signer });
-      const previous = queryClient.getQueryData<RecipientAtaStatus>(key);
+      await sponsorInstructions(instructions);
       queryClient.setQueryData<RecipientAtaStatus>(key, (prev) =>
         prev ? { ...prev, exists: true } : prev,
       );
-      try {
-        await sent.confirmed;
-      } catch (error) {
-        if (previous !== undefined) queryClient.setQueryData(key, previous);
-        throw error;
-      }
       void queryClient.invalidateQueries({ queryKey: key });
     },
     onSuccess: () => options?.onSuccess?.(),

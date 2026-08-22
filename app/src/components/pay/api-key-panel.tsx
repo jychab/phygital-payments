@@ -174,7 +174,7 @@ export function ApiKeyPanel({
               provisionBusy={provisionBusy}
               idleLabel="Turn On Pay"
               busyLabel="Turning on…"
-              connectHint={`Connect ${ownerShort} to turn on Pay.`}
+              connectHint={`Create a passkey for ${ownerShort} to turn on Pay.`}
               onProvision={() => void onProvision(false)}
             />
             <Button
@@ -242,7 +242,7 @@ export function ApiKeyPanel({
             provisionBusy={provisionBusy}
             idleLabel="Start Over"
             busyLabel="Starting over…"
-            connectHint={`Connect ${ownerShort} to start over.`}
+            connectHint={`Create a passkey for ${ownerShort} to start over.`}
             onProvision={() => void onProvision(true)}
           />
         ) : null}

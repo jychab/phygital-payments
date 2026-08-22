@@ -2,13 +2,24 @@ import {
   authenticatePasskeyForTransfer,
   beginTransfer,
   completeTransfer,
+  getTransferOwnershipInstruction,
+  parseTransferOwnershipInstruction,
   type TransferSession,
 } from "phygital-token-sdk";
-import { address, getBase58Encoder, type Address, type TransactionSigner } from "@solana/kit";
+import {
+  address,
+  createNoopSigner,
+  getBase58Encoder,
+  type Address,
+} from "@solana/kit";
 import type { PendingClaimRecord } from "../../../shared/pending-claim-wire";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { getSolanaRpc } from "@/lib/solana/rpc";
-import { sendTransaction } from "@/lib/solana/tx";
+import { executeAsVault } from "@/lib/lazorkit/execute-as-vault";
+import type { SmartWalletSession } from "@/lib/lazorkit/credential-store";
+
+/** NFC secp256r1 is two top-level ixs before transfer_ownership (via Execute). */
+export const CLAIM_VERIFY_RELATIVE_INDEX = -2;
 
 /** `/accessory?token=` — pending claim (same-tab or wallet in-app browser). */
 export function accessoryClaimHref(token: string): string {
@@ -54,7 +65,6 @@ export async function captureClaimTap(args: {
   return { session, auth };
 }
 
-
 function hydrateTransferSession(
   json: PendingClaimRecord["session"],
 ): TransferSession {
@@ -67,20 +77,61 @@ function hydrateTransferSession(
   };
 }
 
-/** Wallet step: SDK completeTransfer (transfer_ownership) + recipient-signed submit. */
+export function transferOwnershipForVault(args: {
+  token: Address;
+  slotNumber: bigint;
+  secp256r1VerifyArgs: {
+    verifyArgsRelativeIndex: number | bigint;
+    signedMessageIndex: number;
+    clientDataJson: Uint8Array;
+  };
+  vaultPda: Address;
+}) {
+  return getTransferOwnershipInstruction({
+    recipient: createNoopSigner(args.vaultPda),
+    token: args.token,
+    slotNumber: args.slotNumber,
+    secp256r1VerifyArgs: args.secp256r1VerifyArgs,
+  });
+}
+
+/** Vault step: NFC verify (prefix) + Execute CPI transfer_ownership. */
 export async function finishClaim(
   args: Omit<PendingClaimRecord, "createdAtMs"> & {
-    recipient: TransactionSigner;
+    smartWallet: SmartWalletSession;
   },
 ): Promise<{ signature: string }> {
   const session = hydrateTransferSession(args.session);
-
-  const instructions = await completeTransfer(session, args.auth, args.recipient);
-
-  const { signature, confirmed } = await sendTransaction({
-    instructions,
-    feePayer: args.recipient,
+  const vault = args.smartWallet.vaultPda;
+  const instructions = await completeTransfer(
+    session,
+    args.auth,
+    createNoopSigner(vault),
+  );
+  const nfcVerify = instructions[0];
+  const transferIx = instructions[1];
+  if (!nfcVerify || !transferIx) {
+    throw new Error("Claim transaction was incomplete");
+  }
+  const parsed = parseTransferOwnershipInstruction(
+    transferIx as Parameters<typeof parseTransferOwnershipInstruction>[0],
+  );
+  const inner = transferOwnershipForVault({
+    token: session.token,
+    slotNumber: parsed.data.slotNumber,
+    vaultPda: vault,
+    secp256r1VerifyArgs: {
+      verifyArgsRelativeIndex: CLAIM_VERIFY_RELATIVE_INDEX,
+      signedMessageIndex: parsed.data.secp256r1VerifyArgs.signedMessageIndex,
+      clientDataJson: Uint8Array.from(
+        parsed.data.secp256r1VerifyArgs.clientDataJson,
+      ),
+    },
   });
-  await confirmed;
-  return { signature };
+
+  return executeAsVault({
+    session: args.smartWallet,
+    extraPrefix: [nfcVerify],
+    inner: [inner],
+  });
 }

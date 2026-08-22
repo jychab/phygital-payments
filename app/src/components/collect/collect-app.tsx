@@ -61,7 +61,7 @@ export function CollectApp({
       <AppCard>
         <CollectPanel
           paymentRequest={{ ...paymentRequest, recipient }}
-          allowWalletSetup={false}
+          allowWalletSetup
         />
       </AppCard>
     </AppShell>

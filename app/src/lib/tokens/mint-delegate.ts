@@ -1,4 +1,5 @@
 import {
+  createNoopSigner,
   lamports,
   unwrapOption,
   type Address,
@@ -331,69 +332,71 @@ function mintMatchFromAccount(args: {
   };
 }
 
-/** Approve program_authority as SPL delegate for `rawAmount` on the signer's mint ATA. */
+/** Approve program_authority as SPL delegate for `rawAmount` on the vault mint ATA. */
 export async function buildDelegateInstructions(args: {
-  signer: TransactionSigner;
+  owner: Address;
+  payer: TransactionSigner;
   rawAmount: bigint;
   mint: Address;
   token: Address;
-}): Promise<{ instructions: Instruction[] }> {
-  const { signer, rawAmount, mint, token } = args;
+}): Promise<{ prefix: Instruction[]; inner: Instruction[] }> {
+  const { owner, payer, rawAmount, mint, token } = args;
   const [resolved, programAuthority] = await Promise.all([
     resolveMintProgram(mint),
     findProgramAuthorityPda(token, PHYGITAL_PAYMENTS_PROGRAM_ADDRESS),
   ]);
   const { program, decimals } = resolved;
 
-  const sourceAta = await findAta(mint, signer.address, program);
-  const instructions: Instruction[] = [];
+  const sourceAta = await findAta(mint, owner, program);
+  const prefix: Instruction[] = [];
 
   const rpc = getSolanaRpc();
   const authorityInfo = await rpc
     .getAccountInfo(programAuthority, { encoding: "base64" })
     .send();
   if (!authorityInfo.value) {
-    instructions.push(
+    prefix.push(
       getTransferSolInstruction({
-        source: signer,
+        source: payer,
         destination: programAuthority,
         amount: lamports(RENT_EXEMPT_MIN),
       }),
     );
   }
 
-  instructions.push(
+  const inner: Instruction[] = [
     getApproveCheckedInstruction(
       {
         source: sourceAta,
         mint,
         delegate: programAuthority,
-        owner: signer,
+        owner: createNoopSigner(owner),
         amount: rawAmount,
         decimals,
       },
       { programAddress: program },
     ),
-  );
+  ];
 
-  return { instructions };
+  return { prefix, inner };
 }
 
-/** Revoke any SPL delegate on the signer's mint ATA. */
+/** Revoke any SPL delegate on the vault mint ATA. */
 export async function buildRevokeDelegateInstructions(args: {
-  signer: TransactionSigner;
+  owner: Address;
   mint: Address;
-}): Promise<{ instructions: Instruction[] }> {
-  const { signer, mint } = args;
+}): Promise<{ prefix: Instruction[]; inner: Instruction[] }> {
+  const { owner, mint } = args;
   const { program } = await resolveMintProgram(mint);
-  const sourceAta = await findAta(mint, signer.address, program);
+  const sourceAta = await findAta(mint, owner, program);
 
   return {
-    instructions: [
+    prefix: [],
+    inner: [
       getRevokeInstruction(
         {
           source: sourceAta,
-          owner: signer,
+          owner: createNoopSigner(owner),
         },
         { programAddress: program },
       ),
