@@ -1,5 +1,23 @@
 import { address } from "@solana/kit";
 
+/** Mainnet LazorKit program (program-v2). */
+export const LAZORKIT_PROGRAM_MAINNET_ADDRESS = address(
+  "LazorjRFNavitUaBu5m3WaNPjU1maipvSW2rZfAFAKi",
+);
+
+/** Devnet LazorKit program (program-v2 Shank IDL). */
+export const LAZORKIT_PROGRAM_DEVNET_ADDRESS = address(
+  "FLb7fyAtkfA4TSa2uYcAT8QKHd2pkoMHgmqfnXFXo7ao",
+);
+
+/** Default program id for generated instruction helpers (mainnet). */
+export const LAZORKIT_PROGRAM_PROGRAM_ADDRESS =
+  LAZORKIT_PROGRAM_MAINNET_ADDRESS;
+
+/** @deprecated Use LAZORKIT_PROGRAM_DEVNET_ADDRESS. */
+export const LAZORKIT_FOUNDATION_DEVNET_PROGRAM_ADDRESS =
+  LAZORKIT_PROGRAM_DEVNET_ADDRESS;
+
 export const SYSTEM_PROGRAM_ADDRESS = address(
   "11111111111111111111111111111111",
 );

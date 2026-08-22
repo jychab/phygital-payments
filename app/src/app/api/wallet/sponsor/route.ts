@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       body?.instructions ?? [],
       feePayer,
     );
+
     const signer = await getFeePayerSigner(env);
     const latestBlockhash = await fetchLatestBlockhash(env);
     const signature = await sendSponsoredInstructions(

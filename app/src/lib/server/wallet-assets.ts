@@ -1,6 +1,5 @@
 import "server-only";
 
-import { getAppKv } from "@/lib/server/app-kv";
 import { postDasRpc } from "@/lib/server/das-rpc";
 import type { WalletHolding, WalletPortfolio } from "@/lib/wallet/portfolio";
 
@@ -8,17 +7,6 @@ const PAGE_LIMIT = 100;
 const MAX_PAGES = 10;
 const MIN_USD_VALUE = 0.01;
 const WRAPPED_SOL_MINT = "So11111111111111111111111111111111111111112";
-const PORTFOLIO_CACHE_TTL_SEC = 30;
-
-const portfolioInflight = new Map<string, Promise<WalletPortfolio>>();
-
-function portfolioCacheKey(vaultPda: string) {
-  return `wallet:portfolio:${vaultPda}`;
-}
-
-export async function bustWalletPortfolioCache(vaultPda: string): Promise<void> {
-  await getAppKv().delete(portfolioCacheKey(vaultPda));
-}
 
 type DasTokenInfo = {
   balance?: number;
@@ -132,7 +120,6 @@ async function fetchAllDasAssets(ownerAddress: string): Promise<{
         limit: PAGE_LIMIT,
         displayOptions: {
           showFungible: true,
-          showNativeBalance: page === 1,
           showCollectionMetadata: true,
         },
       },
@@ -152,27 +139,7 @@ async function fetchAllDasAssets(ownerAddress: string): Promise<{
 export async function fetchWalletPortfolio(
   vaultPda: string,
 ): Promise<WalletPortfolio> {
-  const cacheKey = portfolioCacheKey(vaultPda);
-  const cached = await getAppKv().get(cacheKey, "json");
-  if (cached && typeof cached === "object") {
-    return cached as WalletPortfolio;
-  }
-
-  const pending = portfolioInflight.get(vaultPda);
-  if (pending) return pending;
-
-  const request = buildWalletPortfolio(vaultPda)
-    .then(async (portfolio) => {
-      await getAppKv().put(cacheKey, JSON.stringify(portfolio), {
-        expirationTtl: PORTFOLIO_CACHE_TTL_SEC,
-      });
-      return portfolio;
-    })
-    .finally(() => {
-      portfolioInflight.delete(vaultPda);
-    });
-  portfolioInflight.set(vaultPda, request);
-  return request;
+  return buildWalletPortfolio(vaultPda);
 }
 
 async function buildWalletPortfolio(vaultPda: string): Promise<WalletPortfolio> {

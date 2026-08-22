@@ -36,6 +36,12 @@ export function encodeU16Le(value: number): Uint8Array {
   return out;
 }
 
+export function encodeU64Le(value: bigint): Uint8Array {
+  const out = new Uint8Array(8);
+  new DataView(out.buffer).setBigUint64(0, value, true);
+  return out;
+}
+
 export function readU32Le(data: Uint8Array, offset: number): number {
   return new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(
     offset,

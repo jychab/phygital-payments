@@ -3,6 +3,7 @@ import {
   AUTH_TYPE_SECP256R1,
   CREATE_WALLET_DISCRIMINATOR,
   EXECUTE_DISCRIMINATOR,
+  LAZORKIT_PROGRAM_DEVNET_ADDRESS,
   SECP_MESSAGE_OFFSET,
   SECP_PUBKEY_OFFSET,
   SECP_SIG_OFFSET,
@@ -10,13 +11,12 @@ import {
   assembleSessionExecute,
   buildCreateWalletInstruction,
   buildLazorKitSecp256r1Instruction,
+  decodeExecutePayload,
   encodeAuthPrefix,
   executeChallengeHash,
   hashPackedAccounts,
   packExecute,
   parseCompactInstructions,
-  parseCreateWalletInstruction,
-  parseExecuteInstruction,
   prepareExecute,
   serializeCompactInstructions,
   sha256,
@@ -52,11 +52,35 @@ describe("userSeedFromPubkey", () => {
 });
 
 describe("buildCreateWalletInstruction", () => {
-  it("encodes create_wallet through the generated client", () => {
+  function expectNativeCreateWalletLayout(
+    data: Uint8Array,
+    args: {
+      userSeed: Uint8Array;
+      cred: Uint8Array;
+      pubkey: Uint8Array;
+      rpId: string;
+      authBump: number;
+    },
+  ) {
+    expect(data[0]).toBe(CREATE_WALLET_DISCRIMINATOR);
+    const body = data.slice(1);
+    expect([...body.slice(0, 32)]).toEqual([...args.userSeed]);
+    expect(body[32]).toBe(AUTH_TYPE_SECP256R1);
+    expect(body[33]).toBe(args.authBump);
+    expect([...body.slice(40, 72)]).toEqual([...args.cred]);
+    expect([...body.slice(72, 105)]).toEqual([...args.pubkey]);
+    expect(body[105]).toBe(args.rpId.length);
+    expect(
+      new TextDecoder().decode(body.slice(106, 106 + args.rpId.length)),
+    ).toBe(args.rpId);
+  }
+
+  it("encodes create_wallet with the on-chain CreateWalletArgs layout", () => {
     const userSeed = new Uint8Array(32).fill(1);
     const cred = new Uint8Array(32).fill(2);
     const pubkey = new Uint8Array(33).fill(3);
     pubkey[0] = 2;
+    const rpId = "localhost";
     const ix = buildCreateWalletInstruction({
       payer: createAddressSigner(payer),
       pdas: {
@@ -71,23 +95,57 @@ describe("buildCreateWalletInstruction", () => {
       credentialIdHash: cred,
       compressedPubkey: pubkey,
       programAddress: program,
+      rpId,
     });
     if (!isParsableInstruction(ix)) {
       throw new Error("createWallet ix is missing accounts or data");
     }
-    const parsed = parseCreateWalletInstruction(ix);
-    expect([...parsed.data.discriminator]).toEqual([
-      ...CREATE_WALLET_DISCRIMINATOR,
-    ]);
-    expect(parsed.data.authType).toBe(AUTH_TYPE_SECP256R1);
-    expect([...parsed.data.userSeed]).toEqual([...userSeed]);
-    expect([...parsed.data.credentialHash]).toEqual([...cred]);
-    expect([...parsed.data.authPubkey]).toEqual([...pubkey]);
-    expect(parsed.accounts.payer.address).toBe(payer);
-    expect(parsed.accounts.wallet.address).toBe(wallet);
-    expect(parsed.accounts.vault.address).toBe(vault);
-    expect(parsed.accounts.authority.address).toBe(authority);
+    expectNativeCreateWalletLayout(ix.data, {
+      userSeed,
+      cred,
+      pubkey,
+      rpId,
+      authBump: 253,
+    });
+    expect(ix.accounts?.[0]?.address).toBe(payer);
+    expect(ix.accounts?.[1]?.address).toBe(wallet);
+    expect(ix.accounts?.[2]?.address).toBe(vault);
+    expect(ix.accounts?.[3]?.address).toBe(authority);
     expect(ix.programAddress).toBe(program);
+  });
+
+  it("uses the same layout on devnet", () => {
+    const userSeed = new Uint8Array(32).fill(3);
+    const cred = new Uint8Array(32).fill(4);
+    const pubkey = new Uint8Array(33).fill(6);
+    pubkey[0] = 2;
+    const rpId = "localhost";
+    const ix = buildCreateWalletInstruction({
+      payer: createAddressSigner(payer),
+      pdas: {
+        walletPda: wallet,
+        vaultPda: vault,
+        authorityPda: authority,
+        walletBump: 255,
+        vaultBump: 254,
+        authorityBump: 123,
+      },
+      userSeed,
+      credentialIdHash: cred,
+      compressedPubkey: pubkey,
+      programAddress: LAZORKIT_PROGRAM_DEVNET_ADDRESS,
+      rpId,
+    });
+    if (!isParsableInstruction(ix)) {
+      throw new Error("createWallet ix is missing accounts or data");
+    }
+    expectNativeCreateWalletLayout(ix.data, {
+      userSeed,
+      cred,
+      pubkey,
+      rpId,
+      authBump: 123,
+    });
   });
 });
 
@@ -172,7 +230,7 @@ describe("execute challenge hash", () => {
     expect(prefix.length).toBe(14);
     const compact = Uint8Array.from([1, 0, 0, 0, 0]);
     const accountsHash = new Uint8Array(32).fill(9);
-    const disc = Uint8Array.from(EXECUTE_DISCRIMINATOR);
+    const disc = Uint8Array.of(EXECUTE_DISCRIMINATOR);
     const hash = await executeChallengeHash({
       discriminator: disc,
       authPrefix: prefix,
@@ -207,7 +265,7 @@ describe("execute challenge hash", () => {
 });
 
 describe("assembleExecuteInstructions", () => {
-  it("encodes execute through the generated client and keeps remaining accounts", async () => {
+  it("encodes native execute data and keeps remaining accounts", async () => {
     const inner: Instruction[] = [
       {
         programAddress: tokenProgram,
@@ -248,12 +306,16 @@ describe("assembleExecuteInstructions", () => {
     if (!isParsableInstruction(executeIx)) {
       throw new Error("execute ix is missing accounts or data");
     }
-    const parsed = parseExecuteInstruction(executeIx);
-    expect([...parsed.data.discriminator]).toEqual([...EXECUTE_DISCRIMINATOR]);
-    expect(parsed.accounts.payer.address).toBe(payer);
-    expect(parsed.accounts.wallet.address).toBe(wallet);
-    expect(parsed.accounts.authority.address).toBe(authority);
-    expect(parsed.accounts.vault.address).toBe(vault);
+    expect(executeIx.data[0]).toBe(EXECUTE_DISCRIMINATOR);
+    const payload = decodeExecutePayload(executeIx.data);
+    expect(payload.length).toBeGreaterThan(prepared.compactBytes.length);
+    expect([...payload.slice(0, prepared.compactBytes.length)]).toEqual([
+      ...prepared.compactBytes,
+    ]);
+    expect(executeIx.accounts?.[0]?.address).toBe(payer);
+    expect(executeIx.accounts?.[1]?.address).toBe(wallet);
+    expect(executeIx.accounts?.[2]?.address).toBe(authority);
+    expect(executeIx.accounts?.[3]?.address).toBe(vault);
     expect(executeIx.accounts?.some((account) => account.address === token)).toBe(
       true,
     );
@@ -288,10 +350,13 @@ describe("assembleSessionExecute", () => {
     if (!isParsableInstruction(executeIx)) {
       throw new Error("execute ix is missing accounts or data");
     }
-    const parsed = parseExecuteInstruction(executeIx);
-    expect([...parsed.data.discriminator]).toEqual([...EXECUTE_DISCRIMINATOR]);
-    expect(parsed.accounts.authority.address).toBe(authority);
-    expect(parsed.accounts.vault.address).toBe(vault);
+    expect(executeIx.data[0]).toBe(EXECUTE_DISCRIMINATOR);
+    const { instructions: compact } = parseCompactInstructions(
+      decodeExecutePayload(executeIx.data),
+    );
+    expect(compact.length).toBe(1);
+    expect(executeIx.accounts?.[2]?.address).toBe(authority);
+    expect(executeIx.accounts?.[3]?.address).toBe(vault);
     const sessionMeta = executeIx.accounts?.find(
       (account) => account.address === sessionKey,
     );

@@ -1,11 +1,15 @@
 import { cookies } from "next/headers";
 
+import { bytesToBase64Url } from "@/lib/crypto/base64";
+
 import { apiJson } from "@/lib/server/api-response";
 import {
   assertWalletAuthAssertion,
+  assertWalletRegistration,
   WalletAuthError,
   walletAuthErrorMessage,
   type WalletAuthAssertionWire,
+  type WalletRegistrationWire,
 } from "@/lib/server/wallet-auth";
 import { takeWalletAuthChallenge } from "@/lib/server/wallet-auth-store";
 import {
@@ -22,7 +26,38 @@ export const runtime = "nodejs";
 /** Face ID → HttpOnly JWT bound to this wallet. */
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as { walletAuth?: WalletAuthAssertionWire };
+    const body = (await req.json()) as {
+      walletAuth?: WalletAuthAssertionWire;
+      walletRegistration?: WalletRegistrationWire;
+    };
+
+    if (body.walletRegistration?.requestId) {
+      const stored = await takeWalletAuthChallenge(
+        body.walletRegistration.requestId,
+      );
+      if (!stored) {
+        throw new WalletAuthError("This expired. Try again.");
+      }
+      const wallet = await assertWalletRegistration(
+        body.walletRegistration,
+        stored.challenge,
+        req.headers.get("origin"),
+      );
+      const token = await signWalletSessionJwt({
+        vaultPda: wallet.vaultPda,
+        walletPda: wallet.walletPda,
+        authorityPda: wallet.authorityPda,
+      });
+      const cookieStore = await cookies();
+      cookieStore.set(walletSessionCookieOptions(token));
+      return apiJson({
+        vaultPda: String(wallet.vaultPda),
+        walletPda: String(wallet.walletPda),
+        authorityPda: String(wallet.authorityPda),
+        compressedPubkey: bytesToBase64Url(wallet.compressedPubkey),
+      });
+    }
+
     if (!body.walletAuth?.requestId) {
       throw new WalletAuthError("Confirm with Face ID first.");
     }
@@ -45,6 +80,7 @@ export async function POST(req: Request) {
       vaultPda: String(wallet.vaultPda),
       walletPda: String(wallet.walletPda),
       authorityPda: String(wallet.authorityPda),
+      compressedPubkey: bytesToBase64Url(wallet.compressedPubkey),
     });
   } catch (error) {
     if (error instanceof WalletAuthError) {

@@ -8,12 +8,10 @@
 
 import {
   combineCodec,
-  fixDecoderSize,
-  fixEncoderSize,
-  getBytesDecoder,
-  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU8Decoder,
+  getU8Encoder,
   SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
   SolanaError,
   transformEncoder,
@@ -38,13 +36,10 @@ import {
 } from "@solana/kit/program-client-core";
 import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "../programs";
 
-export const REMOVE_AUTHORITY_DISCRIMINATOR: ReadonlyUint8Array =
-  new Uint8Array([242, 104, 208, 132, 190, 250, 74, 216]);
+export const REMOVE_AUTHORITY_DISCRIMINATOR = 2;
 
 export function getRemoveAuthorityDiscriminatorBytes(): ReadonlyUint8Array {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(
-    REMOVE_AUTHORITY_DISCRIMINATOR,
-  );
+  return getU8Encoder().encode(REMOVE_AUTHORITY_DISCRIMINATOR);
 }
 
 export type RemoveAuthorityInstruction<
@@ -83,23 +78,19 @@ export type RemoveAuthorityInstruction<
     ]
   >;
 
-export type RemoveAuthorityInstructionData = {
-  discriminator: ReadonlyUint8Array;
-};
+export type RemoveAuthorityInstructionData = { discriminator: number };
 
 export type RemoveAuthorityInstructionDataArgs = {};
 
 export function getRemoveAuthorityInstructionDataEncoder(): FixedSizeEncoder<RemoveAuthorityInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]),
+    getStructEncoder([["discriminator", getU8Encoder()]]),
     (value) => ({ ...value, discriminator: REMOVE_AUTHORITY_DISCRIMINATOR }),
   );
 }
 
 export function getRemoveAuthorityInstructionDataDecoder(): FixedSizeDecoder<RemoveAuthorityInstructionData> {
-  return getStructDecoder([
-    ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
-  ]);
+  return getStructDecoder([["discriminator", getU8Decoder()]]);
 }
 
 export function getRemoveAuthorityInstructionDataCodec(): FixedSizeCodec<

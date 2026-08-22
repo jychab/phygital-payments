@@ -41,13 +41,10 @@ import {
 } from "@solana/kit/program-client-core";
 import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "../programs";
 
-export const TRANSFER_OWNERSHIP_DISCRIMINATOR: ReadonlyUint8Array =
-  new Uint8Array([65, 177, 215, 73, 53, 45, 99, 47]);
+export const TRANSFER_OWNERSHIP_DISCRIMINATOR = 3;
 
 export function getTransferOwnershipDiscriminatorBytes(): ReadonlyUint8Array {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(
-    TRANSFER_OWNERSHIP_DISCRIMINATOR,
-  );
+  return getU8Encoder().encode(TRANSFER_OWNERSHIP_DISCRIMINATOR);
 }
 
 export type TransferOwnershipInstruction<
@@ -98,7 +95,7 @@ export type TransferOwnershipInstruction<
   >;
 
 export type TransferOwnershipInstructionData = {
-  discriminator: ReadonlyUint8Array;
+  discriminator: number;
   newType: number;
   newPubkey: ReadonlyUint8Array;
   newHash: ReadonlyUint8Array;
@@ -113,7 +110,7 @@ export type TransferOwnershipInstructionDataArgs = {
 export function getTransferOwnershipInstructionDataEncoder(): FixedSizeEncoder<TransferOwnershipInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
-      ["discriminator", fixEncoderSize(getBytesEncoder(), 8)],
+      ["discriminator", getU8Encoder()],
       ["newType", getU8Encoder()],
       ["newPubkey", fixEncoderSize(getBytesEncoder(), 33)],
       ["newHash", fixEncoderSize(getBytesEncoder(), 32)],
@@ -124,7 +121,7 @@ export function getTransferOwnershipInstructionDataEncoder(): FixedSizeEncoder<T
 
 export function getTransferOwnershipInstructionDataDecoder(): FixedSizeDecoder<TransferOwnershipInstructionData> {
   return getStructDecoder([
-    ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
+    ["discriminator", getU8Decoder()],
     ["newType", getU8Decoder()],
     ["newPubkey", fixDecoderSize(getBytesDecoder(), 33)],
     ["newHash", fixDecoderSize(getBytesDecoder(), 32)],

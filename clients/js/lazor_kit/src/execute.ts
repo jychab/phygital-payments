@@ -11,13 +11,13 @@ import { hashPackedAccounts, packExecute, type PackedExecute } from "./compact";
 import {
   EXECUTE_FIXED_ACCOUNT_COUNT,
   EXECUTE_SYSVAR_IX_INDEX,
+  LAZORKIT_PROGRAM_PROGRAM_ADDRESS,
   SYSVAR_INSTRUCTIONS_ADDRESS,
 } from "./constants";
 import {
   EXECUTE_DISCRIMINATOR,
   getExecuteInstruction,
 } from "./generated/instructions/execute";
-import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "./generated/programs/lazorkitProgram";
 import {
   buildLazorKitSecp256r1Instruction,
   clientDataHash,
@@ -60,7 +60,7 @@ export async function buildExecuteChallenge(args: {
     sysvarIxIndex: EXECUTE_SYSVAR_IX_INDEX,
   });
   const challenge = await executeChallengeHash({
-    discriminator: Uint8Array.from(EXECUTE_DISCRIMINATOR),
+    discriminator: Uint8Array.of(EXECUTE_DISCRIMINATOR),
     authPrefix,
     compactBytes: args.prepared.compactBytes,
     accountsHash: args.prepared.accountsHash,
@@ -111,12 +111,14 @@ export async function assembleExecuteInstructions(args: {
     { programAddress: args.prepared.programAddress },
   );
   const remaining = args.prepared.accounts.slice(EXECUTE_FIXED_ACCOUNT_COUNT);
-  const executeIx: Instruction = {
-    programAddress: base.programAddress,
-    accounts: [...base.accounts, ...remaining],
-    data: base.data,
+  return {
+    secpIx,
+    executeIx: {
+      programAddress: base.programAddress,
+      accounts: [...base.accounts, ...remaining],
+      data: base.data,
+    },
   };
-  return { secpIx, executeIx };
 }
 
 function addressAsSigner(address: Address): TransactionSigner {
@@ -128,11 +130,6 @@ function addressAsSigner(address: Address): TransactionSigner {
   };
 }
 
-/**
- * Pack `inner` into a LazorKit Execute authorized by a session PDA.
- * Compact bytes only — no secp256r1 auth payload. The session public key
- * is a remaining READONLY_SIGNER (or WRITABLE_SIGNER if already writable).
- */
 export function assembleSessionExecute(args: {
   payer: Address;
   walletPda: Address;

@@ -157,7 +157,9 @@ async function simulateBatch(
   if (sim.value.err) {
     const logs = sim.value.logs?.join("\n") ?? "";
     throw new SubmitError(
-      `Simulation failed: ${JSON.stringify(sim.value.err)}${logs ? `\n${logs}` : ""}`,
+      `Simulation failed: ${JSON.stringify(sim.value.err, (_, v) =>
+        typeof v === "bigint" ? v.toString() : v,
+      )}${logs ? `\n${logs}` : ""}`,
       false,
     );
   }
@@ -207,7 +209,13 @@ export async function sendSponsoredInstructions(
     throw new SubmitError("No instructions to submit", false);
   }
   const computeUnitLimit = await simulateBatch(env, core, ctx.signer.address);
-  return sendSponsoredCore(env, core, ctx, computeUnitLimit, opts?.confirm !== false);
+  return sendSponsoredCore(
+    env,
+    core,
+    ctx,
+    computeUnitLimit,
+    opts?.confirm !== false,
+  );
 }
 
 async function sendSponsoredCore(
@@ -268,7 +276,12 @@ async function confirmSignature(
 ): Promise<void> {
   const deadline = Date.now() + CONFIRM_TIMEOUT_MS;
   try {
-    await confirmViaSubscription(env, signature, lastValidBlockHeight, deadline);
+    await confirmViaSubscription(
+      env,
+      signature,
+      lastValidBlockHeight,
+      deadline,
+    );
   } catch (error) {
     if (error instanceof SubmitError) throw error;
     await confirmViaPolling(env, signature, lastValidBlockHeight, deadline);
@@ -282,7 +295,10 @@ async function confirmViaSubscription(
   deadline: number,
 ): Promise<void> {
   const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), Math.max(0, deadline - Date.now()));
+  const timer = setTimeout(
+    () => abort.abort(),
+    Math.max(0, deadline - Date.now()),
+  );
   let expired = false;
   const watchdog = setInterval(() => {
     void blockhashExpired(env, lastValidBlockHeight)

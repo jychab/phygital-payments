@@ -42,7 +42,7 @@ export function ClaimPanel({
   onClaimed?: () => void;
 }) {
   const queryClient = useQueryClient();
-  const { isConnected, ready, connecting, connect, session } =
+  const { isConnected, ready, connecting, signUp, session } =
     useSmartWallet();
 
   const [stage, setStage] = useState<Stage>("ready");
@@ -174,7 +174,7 @@ export function ClaimPanel({
                 type="button"
                 size="lg"
                 className="w-full"
-                onClick={connect}
+                onClick={signUp}
               >
                 Create a passkey
               </Button>

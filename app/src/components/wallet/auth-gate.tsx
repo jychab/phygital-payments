@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useSmartWallet } from "@/hooks/wallet/use-smart-wallet";
 
 export function AuthGate({ children }: { children: ReactNode }) {
-  const { isConnected, ready, connecting, connect } = useSmartWallet();
+  const { isConnected, ready, connecting, signIn, signUp } = useSmartWallet();
 
   if (!ready || connecting) {
     return <WalletBusyStatus connecting={connecting} />;
@@ -18,17 +18,23 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return (
       <GateMessage
         icon={<Fingerprint className="size-5 text-muted-foreground" />}
-        title="Continue with Face ID"
-        body="Your Face ID is this wallet. There is no recovery phrase. A wallet is created if you don’t have one yet — network fees are covered."
+        title="Your Face ID is this wallet"
+        body="There is no recovery phrase. Network fees are covered."
         action={
-          <Button
-            type="button"
-            size="lg"
-            className="w-full max-w-64"
-            onClick={connect}
-          >
-            Continue with Face ID
-          </Button>
+          <div className="flex w-full max-w-64 flex-col gap-2">
+            <Button type="button" size="lg" className="w-full" onClick={signIn}>
+              Sign in with Face ID
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              className="w-full"
+              onClick={signUp}
+            >
+              Sign up with Face ID
+            </Button>
+          </div>
         }
       />
     );

@@ -41,14 +41,10 @@ import {
 } from "@solana/kit/program-client-core";
 import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "../programs";
 
-export const ADD_AUTHORITY_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([
-  229, 9, 106, 73, 91, 213, 109, 183,
-]);
+export const ADD_AUTHORITY_DISCRIMINATOR = 1;
 
 export function getAddAuthorityDiscriminatorBytes(): ReadonlyUint8Array {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(
-    ADD_AUTHORITY_DISCRIMINATOR,
-  );
+  return getU8Encoder().encode(ADD_AUTHORITY_DISCRIMINATOR);
 }
 
 export type AddAuthorityInstruction<
@@ -95,7 +91,7 @@ export type AddAuthorityInstruction<
   >;
 
 export type AddAuthorityInstructionData = {
-  discriminator: ReadonlyUint8Array;
+  discriminator: number;
   newType: number;
   newPubkey: ReadonlyUint8Array;
   newHash: ReadonlyUint8Array;
@@ -112,7 +108,7 @@ export type AddAuthorityInstructionDataArgs = {
 export function getAddAuthorityInstructionDataEncoder(): FixedSizeEncoder<AddAuthorityInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
-      ["discriminator", fixEncoderSize(getBytesEncoder(), 8)],
+      ["discriminator", getU8Encoder()],
       ["newType", getU8Encoder()],
       ["newPubkey", fixEncoderSize(getBytesEncoder(), 33)],
       ["newHash", fixEncoderSize(getBytesEncoder(), 32)],
@@ -124,7 +120,7 @@ export function getAddAuthorityInstructionDataEncoder(): FixedSizeEncoder<AddAut
 
 export function getAddAuthorityInstructionDataDecoder(): FixedSizeDecoder<AddAuthorityInstructionData> {
   return getStructDecoder([
-    ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
+    ["discriminator", getU8Decoder()],
     ["newType", getU8Decoder()],
     ["newPubkey", fixDecoderSize(getBytesDecoder(), 33)],
     ["newHash", fixDecoderSize(getBytesDecoder(), 32)],

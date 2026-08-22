@@ -8,12 +8,10 @@
 
 import {
   combineCodec,
-  fixDecoderSize,
-  fixEncoderSize,
-  getBytesDecoder,
-  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU8Decoder,
+  getU8Encoder,
   SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
   SolanaError,
   transformEncoder,
@@ -38,14 +36,10 @@ import {
 } from "@solana/kit/program-client-core";
 import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "../programs";
 
-export const REVOKE_SESSION_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([
-  86, 92, 198, 120, 144, 2, 7, 194,
-]);
+export const REVOKE_SESSION_DISCRIMINATOR = 9;
 
 export function getRevokeSessionDiscriminatorBytes(): ReadonlyUint8Array {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(
-    REVOKE_SESSION_DISCRIMINATOR,
-  );
+  return getU8Encoder().encode(REVOKE_SESSION_DISCRIMINATOR);
 }
 
 export type RevokeSessionInstruction<
@@ -84,23 +78,19 @@ export type RevokeSessionInstruction<
     ]
   >;
 
-export type RevokeSessionInstructionData = {
-  discriminator: ReadonlyUint8Array;
-};
+export type RevokeSessionInstructionData = { discriminator: number };
 
 export type RevokeSessionInstructionDataArgs = {};
 
 export function getRevokeSessionInstructionDataEncoder(): FixedSizeEncoder<RevokeSessionInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]),
+    getStructEncoder([["discriminator", getU8Encoder()]]),
     (value) => ({ ...value, discriminator: REVOKE_SESSION_DISCRIMINATOR }),
   );
 }
 
 export function getRevokeSessionInstructionDataDecoder(): FixedSizeDecoder<RevokeSessionInstructionData> {
-  return getStructDecoder([
-    ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
-  ]);
+  return getStructDecoder([["discriminator", getU8Decoder()]]);
 }
 
 export function getRevokeSessionInstructionDataCodec(): FixedSizeCodec<

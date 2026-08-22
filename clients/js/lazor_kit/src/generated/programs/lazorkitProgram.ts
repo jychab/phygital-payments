@@ -10,8 +10,7 @@ import {
   assertIsInstructionWithAccounts,
   containsBytes,
   extendClient,
-  fixEncoderSize,
-  getBytesEncoder,
+  getU8Encoder,
   SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_INSTRUCTION,
   SOLANA_ERROR__PROGRAM_CLIENTS__UNRECOGNIZED_INSTRUCTION_TYPE,
   SolanaError,
@@ -35,60 +34,40 @@ import {
   getCreateWalletInstruction,
   getExecuteDeferredInstruction,
   getExecuteInstruction,
-  getInitializeProtocolInstruction,
-  getInitializeTreasuryShardInstruction,
   getReclaimDeferredInstruction,
-  getRegisterPayerInstruction,
   getRemoveAuthorityInstruction,
   getRevokeSessionInstruction,
   getTransferOwnershipInstruction,
-  getUpdateProtocolInstruction,
-  getWithdrawTreasuryInstruction,
   parseAddAuthorityInstruction,
   parseAuthorizeInstruction,
   parseCreateSessionInstruction,
   parseCreateWalletInstruction,
   parseExecuteDeferredInstruction,
   parseExecuteInstruction,
-  parseInitializeProtocolInstruction,
-  parseInitializeTreasuryShardInstruction,
   parseReclaimDeferredInstruction,
-  parseRegisterPayerInstruction,
   parseRemoveAuthorityInstruction,
   parseRevokeSessionInstruction,
   parseTransferOwnershipInstruction,
-  parseUpdateProtocolInstruction,
-  parseWithdrawTreasuryInstruction,
   type AddAuthorityInput,
   type AuthorizeInput,
   type CreateSessionInput,
   type CreateWalletInput,
   type ExecuteDeferredInput,
   type ExecuteInput,
-  type InitializeProtocolInput,
-  type InitializeTreasuryShardInput,
   type ParsedAddAuthorityInstruction,
   type ParsedAuthorizeInstruction,
   type ParsedCreateSessionInstruction,
   type ParsedCreateWalletInstruction,
   type ParsedExecuteDeferredInstruction,
   type ParsedExecuteInstruction,
-  type ParsedInitializeProtocolInstruction,
-  type ParsedInitializeTreasuryShardInstruction,
   type ParsedReclaimDeferredInstruction,
-  type ParsedRegisterPayerInstruction,
   type ParsedRemoveAuthorityInstruction,
   type ParsedRevokeSessionInstruction,
   type ParsedTransferOwnershipInstruction,
-  type ParsedUpdateProtocolInstruction,
-  type ParsedWithdrawTreasuryInstruction,
   type ReclaimDeferredInput,
-  type RegisterPayerInput,
   type RemoveAuthorityInput,
   type RevokeSessionInput,
   type TransferOwnershipInput,
-  type UpdateProtocolInput,
-  type WithdrawTreasuryInput,
 } from "../instructions";
 
 export const LAZORKIT_PROGRAM_PROGRAM_ADDRESS =
@@ -105,181 +84,41 @@ export enum LazorkitProgramInstruction {
   ExecuteDeferred,
   ReclaimDeferred,
   RevokeSession,
-  InitializeProtocol,
-  UpdateProtocol,
-  RegisterPayer,
-  WithdrawTreasury,
-  InitializeTreasuryShard,
 }
 
 export function identifyLazorkitProgramInstruction(
   instruction: { data: ReadonlyUint8Array } | ReadonlyUint8Array,
 ): LazorkitProgramInstruction {
   const data = "data" in instruction ? instruction.data : instruction;
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([82, 172, 128, 18, 161, 207, 88, 63]),
-      ),
-      0,
-    )
-  ) {
+  if (containsBytes(data, getU8Encoder().encode(0), 0)) {
     return LazorkitProgramInstruction.CreateWallet;
   }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([229, 9, 106, 73, 91, 213, 109, 183]),
-      ),
-      0,
-    )
-  ) {
+  if (containsBytes(data, getU8Encoder().encode(1), 0)) {
     return LazorkitProgramInstruction.AddAuthority;
   }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([242, 104, 208, 132, 190, 250, 74, 216]),
-      ),
-      0,
-    )
-  ) {
+  if (containsBytes(data, getU8Encoder().encode(2), 0)) {
     return LazorkitProgramInstruction.RemoveAuthority;
   }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([65, 177, 215, 73, 53, 45, 99, 47]),
-      ),
-      0,
-    )
-  ) {
+  if (containsBytes(data, getU8Encoder().encode(3), 0)) {
     return LazorkitProgramInstruction.TransferOwnership;
   }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([130, 221, 242, 154, 13, 193, 189, 29]),
-      ),
-      0,
-    )
-  ) {
+  if (containsBytes(data, getU8Encoder().encode(4), 0)) {
     return LazorkitProgramInstruction.Execute;
   }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([242, 193, 143, 179, 150, 25, 122, 227]),
-      ),
-      0,
-    )
-  ) {
+  if (containsBytes(data, getU8Encoder().encode(5), 0)) {
     return LazorkitProgramInstruction.CreateSession;
   }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([173, 193, 102, 210, 219, 137, 113, 120]),
-      ),
-      0,
-    )
-  ) {
+  if (containsBytes(data, getU8Encoder().encode(6), 0)) {
     return LazorkitProgramInstruction.Authorize;
   }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([193, 60, 238, 113, 170, 85, 51, 254]),
-      ),
-      0,
-    )
-  ) {
+  if (containsBytes(data, getU8Encoder().encode(7), 0)) {
     return LazorkitProgramInstruction.ExecuteDeferred;
   }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([158, 3, 251, 8, 45, 151, 175, 46]),
-      ),
-      0,
-    )
-  ) {
+  if (containsBytes(data, getU8Encoder().encode(8), 0)) {
     return LazorkitProgramInstruction.ReclaimDeferred;
   }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([86, 92, 198, 120, 144, 2, 7, 194]),
-      ),
-      0,
-    )
-  ) {
+  if (containsBytes(data, getU8Encoder().encode(9), 0)) {
     return LazorkitProgramInstruction.RevokeSession;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([188, 233, 252, 106, 134, 146, 202, 91]),
-      ),
-      0,
-    )
-  ) {
-    return LazorkitProgramInstruction.InitializeProtocol;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([206, 25, 218, 114, 109, 41, 74, 173]),
-      ),
-      0,
-    )
-  ) {
-    return LazorkitProgramInstruction.UpdateProtocol;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([109, 51, 195, 149, 23, 54, 172, 171]),
-      ),
-      0,
-    )
-  ) {
-    return LazorkitProgramInstruction.RegisterPayer;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([40, 63, 122, 158, 144, 216, 83, 96]),
-      ),
-      0,
-    )
-  ) {
-    return LazorkitProgramInstruction.WithdrawTreasury;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([194, 21, 159, 33, 113, 235, 208, 128]),
-      ),
-      0,
-    )
-  ) {
-    return LazorkitProgramInstruction.InitializeTreasuryShard;
   }
   throw new SolanaError(
     SOLANA_ERROR__PROGRAM_CLIENTS__FAILED_TO_IDENTIFY_INSTRUCTION,
@@ -287,9 +126,7 @@ export function identifyLazorkitProgramInstruction(
   );
 }
 
-export type ParsedLazorkitProgramInstruction<
-  TProgram extends string = "LazorjRFNavitUaBu5m3WaNPjU1maipvSW2rZfAFAKi",
-> =
+export type ParsedLazorkitProgramInstruction<TProgram extends string = ""> =
   | ({
       instructionType: LazorkitProgramInstruction.CreateWallet;
     } & ParsedCreateWalletInstruction<TProgram>)
@@ -319,22 +156,7 @@ export type ParsedLazorkitProgramInstruction<
     } & ParsedReclaimDeferredInstruction<TProgram>)
   | ({
       instructionType: LazorkitProgramInstruction.RevokeSession;
-    } & ParsedRevokeSessionInstruction<TProgram>)
-  | ({
-      instructionType: LazorkitProgramInstruction.InitializeProtocol;
-    } & ParsedInitializeProtocolInstruction<TProgram>)
-  | ({
-      instructionType: LazorkitProgramInstruction.UpdateProtocol;
-    } & ParsedUpdateProtocolInstruction<TProgram>)
-  | ({
-      instructionType: LazorkitProgramInstruction.RegisterPayer;
-    } & ParsedRegisterPayerInstruction<TProgram>)
-  | ({
-      instructionType: LazorkitProgramInstruction.WithdrawTreasury;
-    } & ParsedWithdrawTreasuryInstruction<TProgram>)
-  | ({
-      instructionType: LazorkitProgramInstruction.InitializeTreasuryShard;
-    } & ParsedInitializeTreasuryShardInstruction<TProgram>);
+    } & ParsedRevokeSessionInstruction<TProgram>);
 
 export function parseLazorkitProgramInstruction<TProgram extends string>(
   instruction: Instruction<TProgram> & InstructionWithData<ReadonlyUint8Array>,
@@ -411,41 +233,6 @@ export function parseLazorkitProgramInstruction<TProgram extends string>(
         ...parseRevokeSessionInstruction(instruction),
       };
     }
-    case LazorkitProgramInstruction.InitializeProtocol: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: LazorkitProgramInstruction.InitializeProtocol,
-        ...parseInitializeProtocolInstruction(instruction),
-      };
-    }
-    case LazorkitProgramInstruction.UpdateProtocol: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: LazorkitProgramInstruction.UpdateProtocol,
-        ...parseUpdateProtocolInstruction(instruction),
-      };
-    }
-    case LazorkitProgramInstruction.RegisterPayer: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: LazorkitProgramInstruction.RegisterPayer,
-        ...parseRegisterPayerInstruction(instruction),
-      };
-    }
-    case LazorkitProgramInstruction.WithdrawTreasury: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: LazorkitProgramInstruction.WithdrawTreasury,
-        ...parseWithdrawTreasuryInstruction(instruction),
-      };
-    }
-    case LazorkitProgramInstruction.InitializeTreasuryShard: {
-      assertIsInstructionWithAccounts(instruction);
-      return {
-        instructionType: LazorkitProgramInstruction.InitializeTreasuryShard,
-        ...parseInitializeTreasuryShardInstruction(instruction),
-      };
-    }
     default:
       throw new SolanaError(
         SOLANA_ERROR__PROGRAM_CLIENTS__UNRECOGNIZED_INSTRUCTION_TYPE,
@@ -499,26 +286,6 @@ export type LazorkitProgramPluginInstructions = {
   revokeSession: (
     input: MakeOptional<RevokeSessionInput, "payer">,
   ) => ReturnType<typeof getRevokeSessionInstruction> &
-    SelfPlanAndSendFunctions;
-  initializeProtocol: (
-    input: MakeOptional<InitializeProtocolInput, "payer">,
-  ) => ReturnType<typeof getInitializeProtocolInstruction> &
-    SelfPlanAndSendFunctions;
-  updateProtocol: (
-    input: UpdateProtocolInput,
-  ) => ReturnType<typeof getUpdateProtocolInstruction> &
-    SelfPlanAndSendFunctions;
-  registerPayer: (
-    input: MakeOptional<RegisterPayerInput, "payer">,
-  ) => ReturnType<typeof getRegisterPayerInstruction> &
-    SelfPlanAndSendFunctions;
-  withdrawTreasury: (
-    input: WithdrawTreasuryInput,
-  ) => ReturnType<typeof getWithdrawTreasuryInstruction> &
-    SelfPlanAndSendFunctions;
-  initializeTreasuryShard: (
-    input: MakeOptional<InitializeTreasuryShardInput, "payer">,
-  ) => ReturnType<typeof getInitializeTreasuryShardInstruction> &
     SelfPlanAndSendFunctions;
 };
 
@@ -609,40 +376,6 @@ export function lazorkitProgramProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getRevokeSessionInstruction({
-                ...input,
-                payer: input.payer ?? client.payer,
-              }),
-            ),
-          initializeProtocol: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getInitializeProtocolInstruction({
-                ...input,
-                payer: input.payer ?? client.payer,
-              }),
-            ),
-          updateProtocol: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getUpdateProtocolInstruction(input),
-            ),
-          registerPayer: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getRegisterPayerInstruction({
-                ...input,
-                payer: input.payer ?? client.payer,
-              }),
-            ),
-          withdrawTreasury: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getWithdrawTreasuryInstruction(input),
-            ),
-          initializeTreasuryShard: (input) =>
-            addSelfPlanAndSendFunctions(
-              client,
-              getInitializeTreasuryShardInstruction({
                 ...input,
                 payer: input.payer ?? client.payer,
               }),

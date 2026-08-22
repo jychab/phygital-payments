@@ -1,13 +1,13 @@
-import { address, type Address } from "@solana/kit";
-import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "lazor-kit";
+import type { Address } from "@solana/kit";
+import {
+  LAZORKIT_PROGRAM_DEVNET_ADDRESS,
+  LAZORKIT_PROGRAM_MAINNET_ADDRESS,
+} from "lazor-kit";
 
 import { isMainnet } from "@/lib/solana/cluster";
 
-/** program-v2 foundation (no protocol fees). */
-export const LAZORKIT_PROGRAM_DEVNET = address(
-  "FLb7fyAtkfA4TSa2uYcAT8QKHd2pkoMHgmqfnXFXo7ao",
-);
-export const LAZORKIT_PROGRAM_MAINNET = LAZORKIT_PROGRAM_PROGRAM_ADDRESS;
+export const LAZORKIT_PROGRAM_DEVNET = LAZORKIT_PROGRAM_DEVNET_ADDRESS;
+export const LAZORKIT_PROGRAM_MAINNET = LAZORKIT_PROGRAM_MAINNET_ADDRESS;
 
 export function lazorkitProgramAddress(): Address {
   return isMainnet() ? LAZORKIT_PROGRAM_MAINNET : LAZORKIT_PROGRAM_DEVNET;

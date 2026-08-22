@@ -2,10 +2,15 @@ import { compressP256PublicKey } from "lazor-kit";
 
 const ES256 = -7;
 
-export type CreatedPasskey = {
+export type PasskeyIdentity = {
   credentialId: Uint8Array;
   compressedPubkey: Uint8Array;
   rpId: string;
+};
+
+export type CreatedPasskey = PasskeyIdentity & {
+  authenticatorData: Uint8Array;
+  clientDataJSON: Uint8Array;
 };
 
 export type PasskeyAssertion = {
@@ -94,7 +99,9 @@ function compressedFromAttestation(
   throw new Error("Couldn’t read the passkey public key");
 }
 
-export async function createPlatformPasskey(): Promise<CreatedPasskey> {
+export async function createPlatformPasskey(args: {
+  challenge: Uint8Array;
+}): Promise<CreatedPasskey> {
   if (typeof navigator === "undefined" || !navigator.credentials?.create) {
     throw new Error("Passkeys are not supported in this browser");
   }
@@ -107,7 +114,7 @@ export async function createPlatformPasskey(): Promise<CreatedPasskey> {
         name: "wallet",
         displayName: "Wallet",
       },
-      challenge: asBuffer(randomBytes(32)),
+      challenge: asBuffer(args.challenge),
       pubKeyCredParams: [{ type: "public-key", alg: ES256 }],
       authenticatorSelection: {
         authenticatorAttachment: "platform",
@@ -125,6 +132,8 @@ export async function createPlatformPasskey(): Promise<CreatedPasskey> {
     credentialId: new Uint8Array(credential.rawId),
     compressedPubkey: compressedFromAttestation(response),
     rpId,
+    authenticatorData: new Uint8Array(response.getAuthenticatorData()),
+    clientDataJSON: new Uint8Array(response.clientDataJSON),
   };
 }
 

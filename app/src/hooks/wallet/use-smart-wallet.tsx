@@ -29,7 +29,8 @@ export type SmartWallet = {
   isConnected: boolean;
   ready: boolean;
   connecting: boolean;
-  connect: () => void;
+  signIn: () => void;
+  signUp: () => void;
   disconnect: () => Promise<void>;
 };
 
@@ -74,21 +75,36 @@ export function SmartWalletProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const connect = useCallback(() => {
-    if (session || connecting) return;
-    setConnecting(true);
-    void import("@/lib/lazorkit/connect")
-      .then(({ createAndConnectSmartWallet }) => createAndConnectSmartWallet())
-      .then((next) => {
-        setSession(next);
-      })
-      .catch((error) => {
-        toast.error(toUserErrorMessage(error, "Couldn’t create a passkey"));
-      })
-      .finally(() => {
-        setConnecting(false);
-      });
-  }, [session, connecting]);
+  const runAuth = useCallback(
+    (mode: "signIn" | "signUp") => {
+      if (session || connecting) return;
+      setConnecting(true);
+      void import("@/lib/lazorkit/connect")
+        .then((mod) =>
+          mode === "signIn" ? mod.signInSmartWallet() : mod.signUpSmartWallet(),
+        )
+        .then((next) => {
+          setSession(next);
+        })
+        .catch((error) => {
+          toast.error(
+            toUserErrorMessage(
+              error,
+              mode === "signIn"
+                ? "Couldn't sign in with Face ID"
+                : "Couldn't create a passkey",
+            ),
+          );
+        })
+        .finally(() => {
+          setConnecting(false);
+        });
+    },
+    [session, connecting],
+  );
+
+  const signIn = useCallback(() => runAuth("signIn"), [runAuth]);
+  const signUp = useCallback(() => runAuth("signUp"), [runAuth]);
 
   const disconnect = useCallback(async () => {
     await clearWalletSessionCookie();
@@ -105,10 +121,11 @@ export function SmartWalletProvider({ children }: { children: ReactNode }) {
       isConnected: Boolean(session),
       ready,
       connecting,
-      connect,
+      signIn,
+      signUp,
       disconnect,
     }),
-    [session, ready, connecting, connect, disconnect],
+    [session, ready, connecting, signIn, signUp, disconnect],
   );
 
   return (

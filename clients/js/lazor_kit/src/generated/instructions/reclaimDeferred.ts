@@ -8,12 +8,10 @@
 
 import {
   combineCodec,
-  fixDecoderSize,
-  fixEncoderSize,
-  getBytesDecoder,
-  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU8Decoder,
+  getU8Encoder,
   SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
   SolanaError,
   transformEncoder,
@@ -37,13 +35,10 @@ import {
 } from "@solana/kit/program-client-core";
 import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "../programs";
 
-export const RECLAIM_DEFERRED_DISCRIMINATOR: ReadonlyUint8Array =
-  new Uint8Array([158, 3, 251, 8, 45, 151, 175, 46]);
+export const RECLAIM_DEFERRED_DISCRIMINATOR = 8;
 
 export function getReclaimDeferredDiscriminatorBytes(): ReadonlyUint8Array {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(
-    RECLAIM_DEFERRED_DISCRIMINATOR,
-  );
+  return getU8Encoder().encode(RECLAIM_DEFERRED_DISCRIMINATOR);
 }
 
 export type ReclaimDeferredInstruction<
@@ -70,23 +65,19 @@ export type ReclaimDeferredInstruction<
     ]
   >;
 
-export type ReclaimDeferredInstructionData = {
-  discriminator: ReadonlyUint8Array;
-};
+export type ReclaimDeferredInstructionData = { discriminator: number };
 
 export type ReclaimDeferredInstructionDataArgs = {};
 
 export function getReclaimDeferredInstructionDataEncoder(): FixedSizeEncoder<ReclaimDeferredInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([["discriminator", fixEncoderSize(getBytesEncoder(), 8)]]),
+    getStructEncoder([["discriminator", getU8Encoder()]]),
     (value) => ({ ...value, discriminator: RECLAIM_DEFERRED_DISCRIMINATOR }),
   );
 }
 
 export function getReclaimDeferredInstructionDataDecoder(): FixedSizeDecoder<ReclaimDeferredInstructionData> {
-  return getStructDecoder([
-    ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
-  ]);
+  return getStructDecoder([["discriminator", getU8Decoder()]]);
 }
 
 export function getReclaimDeferredInstructionDataCodec(): FixedSizeCodec<

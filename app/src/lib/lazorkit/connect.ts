@@ -5,24 +5,28 @@ import {
 
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { rpcAccountDataBytes } from "@/lib/solana/rpc-account-data";
+import { base64UrlToBytes } from "@/lib/crypto/base64";
 import {
   saveSmartWalletSession,
   loadSmartWalletSession,
   type SmartWalletSession,
 } from "./credential-store";
-import { queryFetch } from "@/lib/queries/http";
-import { bytesToBase64Url } from "../crypto/base64";
 import {
   createPlatformPasskey,
   relyingPartyId,
-  type CreatedPasskey,
+  type PasskeyIdentity,
 } from "./passkey";
 import { resolveSmartWalletPdas } from "./resolve-pdas";
 import { sponsoredFeePayerSigner, sponsorInstructions } from "./sponsor";
-import { establishWalletSessionCookie } from "@/lib/wallet/wallet-session-client";
+import {
+  establishWalletSessionCookie,
+  establishWalletSessionFromDiscoverablePasskey,
+  establishWalletSessionFromRegistration,
+} from "@/lib/wallet/wallet-session-client";
+import { fetchWalletAuthChallenge } from "@/lib/wallet/wallet-auth-client";
 
 export async function ensureSmartWallet(
-  passkey: CreatedPasskey,
+  passkey: PasskeyIdentity,
 ): Promise<SmartWalletSession> {
   const pdas = await resolveSmartWalletPdas({
     compressedPubkey: passkey.compressedPubkey,
@@ -41,6 +45,7 @@ export async function ensureSmartWallet(
         credentialIdHash: pdas.credentialIdHash,
         compressedPubkey: passkey.compressedPubkey,
         programAddress: pdas.programAddress,
+        rpId: passkey.rpId || relyingPartyId(),
       }),
     ]);
   } else {
@@ -65,24 +70,48 @@ export async function ensureSmartWallet(
   return session;
 }
 
-async function registerPasskeyMapping(passkey: CreatedPasskey): Promise<void> {
-  await queryFetch("/api/wallet/passkey", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      credentialId: bytesToBase64Url(passkey.credentialId),
-      compressedPubkey: bytesToBase64Url(passkey.compressedPubkey),
-    }),
-  });
+/** True when WebAuthn has no matching credential (or the user dismissed the prompt). */
+function isPasskeyUnavailable(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const name = "name" in error ? String((error as { name?: string }).name) : "";
+  return name === "NotAllowedError" || name === "AbortError";
 }
 
-async function signInWithPasskey(
-  passkey: CreatedPasskey,
-): Promise<SmartWalletSession> {
+async function registerAndConnectPasskey(): Promise<SmartWalletSession> {
+  const { requestId, challenge } = await fetchWalletAuthChallenge();
+  const passkey = await createPlatformPasskey({
+    challenge: base64UrlToBytes(challenge),
+  });
   const session = await ensureSmartWallet(passkey);
-  await establishWalletSessionCookie(session);
-  await registerPasskeyMapping(passkey);
+  await establishWalletSessionFromRegistration({ requestId, passkey });
   return session;
+}
+
+/**
+ * Prefer signing in with an existing discoverable passkey.
+ * Returns null when none is available.
+ */
+async function trySignInWithDiscoverablePasskey(): Promise<SmartWalletSession | null> {
+  try {
+    const signedIn = await establishWalletSessionFromDiscoverablePasskey();
+    return ensureSmartWallet({
+      credentialId: signedIn.credentialId,
+      compressedPubkey: base64UrlToBytes(signedIn.compressedPubkey),
+      rpId: relyingPartyId(),
+    });
+  } catch (error) {
+    if (isPasskeyUnavailable(error)) return null;
+    const message = error instanceof Error ? error.message : "";
+    // No server mapping yet (or stale challenge).
+    if (
+      message.includes("Unknown passkey") ||
+      message.includes("expired") ||
+      message.includes("Confirm with Face ID")
+    ) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 async function tryRestoreWithLocalHint(
@@ -101,11 +130,21 @@ async function tryRestoreWithLocalHint(
   }
 }
 
-export async function createAndConnectSmartWallet(): Promise<SmartWalletSession> {
+/** Sign in with an existing Face ID passkey. Does not create a new wallet. */
+export async function signInSmartWallet(): Promise<SmartWalletSession> {
   const local = await loadSmartWalletSession();
   if (local) {
     const restored = await tryRestoreWithLocalHint(local);
     if (restored) return restored;
   }
-  return signInWithPasskey(await createPlatformPasskey());
+
+  const signedIn = await trySignInWithDiscoverablePasskey();
+  if (signedIn) return signedIn;
+
+  throw new Error("No wallet found for this Face ID. Sign up to create one.");
+}
+
+/** Sign up: create a new Face ID passkey and smart wallet. */
+export async function signUpSmartWallet(): Promise<SmartWalletSession> {
+  return registerAndConnectPasskey();
 }

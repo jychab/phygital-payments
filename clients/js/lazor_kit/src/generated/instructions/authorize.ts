@@ -16,6 +16,8 @@ import {
   getStructEncoder,
   getU16Decoder,
   getU16Encoder,
+  getU8Decoder,
+  getU8Encoder,
   SOLANA_ERROR__PROGRAM_CLIENTS__INSUFFICIENT_ACCOUNT_METAS,
   SolanaError,
   transformEncoder,
@@ -40,12 +42,10 @@ import {
 } from "@solana/kit/program-client-core";
 import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "../programs";
 
-export const AUTHORIZE_DISCRIMINATOR: ReadonlyUint8Array = new Uint8Array([
-  173, 193, 102, 210, 219, 137, 113, 120,
-]);
+export const AUTHORIZE_DISCRIMINATOR = 6;
 
 export function getAuthorizeDiscriminatorBytes(): ReadonlyUint8Array {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(AUTHORIZE_DISCRIMINATOR);
+  return getU8Encoder().encode(AUTHORIZE_DISCRIMINATOR);
 }
 
 export type AuthorizeInstruction<
@@ -92,7 +92,7 @@ export type AuthorizeInstruction<
   >;
 
 export type AuthorizeInstructionData = {
-  discriminator: ReadonlyUint8Array;
+  discriminator: number;
   instructionsHash: ReadonlyUint8Array;
   accountsHash: ReadonlyUint8Array;
   expiryOffset: number;
@@ -107,7 +107,7 @@ export type AuthorizeInstructionDataArgs = {
 export function getAuthorizeInstructionDataEncoder(): FixedSizeEncoder<AuthorizeInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
-      ["discriminator", fixEncoderSize(getBytesEncoder(), 8)],
+      ["discriminator", getU8Encoder()],
       ["instructionsHash", fixEncoderSize(getBytesEncoder(), 32)],
       ["accountsHash", fixEncoderSize(getBytesEncoder(), 32)],
       ["expiryOffset", getU16Encoder()],
@@ -118,7 +118,7 @@ export function getAuthorizeInstructionDataEncoder(): FixedSizeEncoder<Authorize
 
 export function getAuthorizeInstructionDataDecoder(): FixedSizeDecoder<AuthorizeInstructionData> {
   return getStructDecoder([
-    ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
+    ["discriminator", getU8Decoder()],
     ["instructionsHash", fixDecoderSize(getBytesDecoder(), 32)],
     ["accountsHash", fixDecoderSize(getBytesDecoder(), 32)],
     ["expiryOffset", getU16Decoder()],

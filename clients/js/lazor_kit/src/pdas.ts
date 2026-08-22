@@ -5,7 +5,7 @@ import {
 } from "@solana/kit";
 
 import { sha256 } from "./bytes";
-import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "./generated/programs/lazorkitProgram";
+import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "./constants";
 
 export function addressBytes(value: Address): Uint8Array {
   return new Uint8Array(getAddressEncoder().encode(value));

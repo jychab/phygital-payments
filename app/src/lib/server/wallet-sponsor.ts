@@ -21,7 +21,6 @@ import {
   SECP256R1_PROGRAM_ADDRESS,
   SYSTEM_PROGRAM_ADDRESS,
 } from "@/lib/lazorkit/constants";
-import { bytesMatchPrefix } from "@/lib/solana/discriminator";
 import { isSystemTransferInstruction } from "@/lib/wallet/transfer-sol";
 
 const ALLOWED_PROGRAMS = new Set<string>([
@@ -44,6 +43,10 @@ const LAZORKIT_DISCS = [
   CREATE_SESSION_DISCRIMINATOR,
   REVOKE_SESSION_DISCRIMINATOR,
 ];
+
+function matchesU8Discriminator(data: Uint8Array, disc: number): boolean {
+  return data.length > 0 && data[0] === disc;
+}
 
 export class SponsorValidationError extends Error {
   constructor(message: string) {
@@ -76,7 +79,7 @@ export function validateSponsoredInstructions(
     }
     const data = base64ToBytes(wire.data);
     if (LAZORKIT_PROGRAMS.has(wire.programAddress)) {
-      if (!LAZORKIT_DISCS.some((disc) => bytesMatchPrefix(data, disc))) {
+      if (!LAZORKIT_DISCS.some((disc) => matchesU8Discriminator(data, disc))) {
         throw new SponsorValidationError("That wallet instruction isn’t allowed");
       }
     }

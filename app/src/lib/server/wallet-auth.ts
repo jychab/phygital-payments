@@ -2,11 +2,11 @@ import "server-only";
 
 import { p256 } from "@noble/curves/nist.js";
 import type { Address } from "@solana/kit";
-import { concatBytes, derEcdsaToRawLowS, sha256 } from "lazor-kit";
+import { compressP256PublicKey, concatBytes, derEcdsaToRawLowS, sha256 } from "lazor-kit";
 
-import { base64ToBytes, base64UrlToBytes } from "@/lib/crypto/base64";
+import { base64ToBytes, base64UrlToBytes, bytesToBase64Url } from "@/lib/crypto/base64";
 import { resolveSmartWalletPdas } from "@/lib/lazorkit/resolve-pdas";
-import { getPasskeyMapping } from "./passkey-map";
+import { getPasskeyMapping, putPasskeyMapping } from "./passkey-map";
 
 export class WalletAuthError extends Error {
   constructor(message: string) {
@@ -22,6 +22,15 @@ export type WalletAuthAssertionWire = {
   authenticatorData?: string;
   clientDataJSON?: string;
   signature?: string;
+};
+
+export type WalletRegistrationWire = {
+  requestId?: string;
+  credentialId?: string;
+  compressedPubkey?: string;
+  authenticatorData?: string;
+  clientDataJSON?: string;
+  rpId?: string;
 };
 
 export type ResolvedWalletSession = {
@@ -79,6 +88,167 @@ export async function resolveWalletFromCredential(
   if (!compressedPubkey) {
     throw new WalletAuthError("Unknown passkey");
   }
+  const pdas = await resolveSmartWalletPdas({ compressedPubkey, credentialId });
+  return {
+    vaultPda: pdas.vaultPda,
+    walletPda: pdas.walletPda,
+    authorityPda: pdas.authorityPda,
+    compressedPubkey,
+  };
+}
+
+function findCoseBytes(cose: Uint8Array, key: number): Uint8Array | null {
+  for (let i = 0; i < cose.length - 3; i++) {
+    if (cose[i] === key && (cose[i + 1]! & 0xe0) === 0x40) {
+      const n = cose[i + 1]! & 0x1f;
+      if (n === 24) {
+        const len = cose[i + 2]!;
+        if (i + 3 + len <= cose.length) return cose.slice(i + 3, i + 3 + len);
+      } else if (n < 24) {
+        if (i + 2 + n <= cose.length) return cose.slice(i + 2, i + 2 + n);
+      }
+    }
+  }
+  return null;
+}
+
+function compressedPubkeyFromAuthenticatorData(
+  authenticatorData: Uint8Array,
+): { credentialId: Uint8Array; compressedPubkey: Uint8Array } {
+  if (authenticatorData.length < 37) {
+    throw new WalletAuthError("Invalid passkey proof");
+  }
+  const flags = authenticatorData[32]!;
+  if ((flags & 0x04) === 0) {
+    throw new WalletAuthError("Confirm with Face ID first.");
+  }
+  if ((flags & 0x40) === 0) {
+    throw new WalletAuthError("Invalid passkey proof");
+  }
+  let offset = 37 + 16;
+  if (authenticatorData.length < offset + 2) {
+    throw new WalletAuthError("Invalid passkey proof");
+  }
+  const credIdLen =
+    (authenticatorData[offset]! << 8) | authenticatorData[offset + 1]!;
+  offset += 2;
+  if (authenticatorData.length < offset + credIdLen) {
+    throw new WalletAuthError("Invalid passkey proof");
+  }
+  const credentialId = authenticatorData.slice(offset, offset + credIdLen);
+  offset += credIdLen;
+  const cose = authenticatorData.subarray(offset);
+  const x = findCoseBytes(cose, 0x21);
+  const y = findCoseBytes(cose, 0x22);
+  if (!x || !y || x.length !== 32 || y.length !== 32) {
+    throw new WalletAuthError("Invalid passkey proof");
+  }
+  const uncompressed = new Uint8Array(65);
+  uncompressed[0] = 0x04;
+  uncompressed.set(x, 1);
+  uncompressed.set(y, 33);
+  return {
+    credentialId,
+    compressedPubkey: compressP256PublicKey(uncompressed),
+  };
+}
+
+async function verifyWebAuthnRegistration(args: {
+  challengeBase64Url: string;
+  rpId: string;
+  expectedOrigin?: string | null;
+  authenticatorData: Uint8Array;
+  clientDataJSON: Uint8Array;
+  credentialId: Uint8Array;
+  compressedPubkey: Uint8Array;
+}): Promise<void> {
+  let clientData: { type?: string; challenge?: string; origin?: string };
+  try {
+    clientData = JSON.parse(new TextDecoder().decode(args.clientDataJSON)) as {
+      type?: string;
+      challenge?: string;
+      origin?: string;
+    };
+  } catch {
+    throw new WalletAuthError("Invalid passkey proof");
+  }
+  if (clientData.type !== "webauthn.create") {
+    throw new WalletAuthError("Invalid passkey proof");
+  }
+  if (clientData.challenge !== args.challengeBase64Url) {
+    throw new WalletAuthError("This expired. Try again.");
+  }
+  if (
+    args.expectedOrigin &&
+    clientData.origin &&
+    clientData.origin !== args.expectedOrigin
+  ) {
+    throw new WalletAuthError("Invalid passkey proof");
+  }
+
+  const rpIdHash = await sha256(new TextEncoder().encode(args.rpId));
+  if (
+    args.authenticatorData.length < 32 ||
+    !timingSafeEqual(args.authenticatorData.slice(0, 32), rpIdHash)
+  ) {
+    throw new WalletAuthError("Invalid passkey proof");
+  }
+
+  const extracted = compressedPubkeyFromAuthenticatorData(args.authenticatorData);
+  if (
+    bytesToBase64Url(extracted.credentialId) !==
+    bytesToBase64Url(args.credentialId)
+  ) {
+    throw new WalletAuthError("Invalid passkey proof");
+  }
+  if (
+    bytesToBase64Url(extracted.compressedPubkey) !==
+    bytesToBase64Url(args.compressedPubkey)
+  ) {
+    throw new WalletAuthError("Invalid passkey proof");
+  }
+}
+
+function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i]! ^ b[i]!;
+  return diff === 0;
+}
+
+export async function assertWalletRegistration(
+  wire: WalletRegistrationWire,
+  challengeBase64Url: string,
+  expectedOrigin?: string | null,
+): Promise<ResolvedWalletSession> {
+  if (
+    !wire.requestId ||
+    !wire.credentialId ||
+    !wire.compressedPubkey ||
+    !wire.authenticatorData ||
+    !wire.clientDataJSON ||
+    !wire.rpId
+  ) {
+    throw new WalletAuthError("Missing passkey proof");
+  }
+
+  const credentialId = base64UrlToBytes(wire.credentialId);
+  const compressedPubkey = base64UrlToBytes(wire.compressedPubkey);
+  if (compressedPubkey.length !== 33) {
+    throw new WalletAuthError("Invalid passkey proof");
+  }
+
+  await verifyWebAuthnRegistration({
+    challengeBase64Url,
+    rpId: wire.rpId,
+    expectedOrigin,
+    authenticatorData: base64ToBytes(wire.authenticatorData),
+    clientDataJSON: base64ToBytes(wire.clientDataJSON),
+    credentialId,
+    compressedPubkey,
+  });
+
+  await putPasskeyMapping({ credentialId, compressedPubkey });
   const pdas = await resolveSmartWalletPdas({ compressedPubkey, credentialId });
   return {
     vaultPda: pdas.vaultPda,

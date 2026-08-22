@@ -1,8 +1,7 @@
 import type { Address, Instruction, TransactionSigner } from "@solana/kit";
 
-import { AUTH_TYPE_SECP256R1 } from "./constants";
+import { AUTH_TYPE_SECP256R1, LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "./constants";
 import { getCreateWalletInstruction } from "./generated/instructions/createWallet";
-import { LAZORKIT_PROGRAM_PROGRAM_ADDRESS } from "./generated/programs/lazorkitProgram";
 import type { LazorKitPdas } from "./pdas";
 
 export function buildCreateWalletInstruction(args: {
@@ -12,6 +11,7 @@ export function buildCreateWalletInstruction(args: {
   credentialIdHash: Uint8Array;
   compressedPubkey: Uint8Array;
   programAddress?: Address;
+  rpId: string;
 }): Instruction {
   if (args.userSeed.length !== 32) throw new Error("userSeed must be 32 bytes");
   if (args.credentialIdHash.length !== 32) {
@@ -20,6 +20,11 @@ export function buildCreateWalletInstruction(args: {
   if (args.compressedPubkey.length !== 33) {
     throw new Error("compressedPubkey must be 33 bytes");
   }
+  if (!args.rpId.trim()) {
+    throw new Error("rpId is required for Secp256r1 wallet creation");
+  }
+  const programAddress =
+    args.programAddress ?? LAZORKIT_PROGRAM_PROGRAM_ADDRESS;
   return getCreateWalletInstruction(
     {
       payer: args.payer,
@@ -30,9 +35,9 @@ export function buildCreateWalletInstruction(args: {
       authType: AUTH_TYPE_SECP256R1,
       authPubkey: args.compressedPubkey,
       credentialHash: args.credentialIdHash,
+      rpId: args.rpId.trim(),
+      authBump: args.pdas.authorityBump,
     },
-    {
-      programAddress: args.programAddress ?? LAZORKIT_PROGRAM_PROGRAM_ADDRESS,
-    },
+    { programAddress },
   );
 }

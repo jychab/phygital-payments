@@ -29,14 +29,13 @@ import {
 } from "@solana/kit";
 import {
   assembleSessionExecute,
+  decodeExecutePayload,
   EXECUTE_DISCRIMINATOR,
-  getExecuteInstructionDataDecoder,
   parseCompactInstructions,
 } from "lazor-kit";
 
 import { lazorkitProgramAddress } from "@/lib/lazorkit/constants";
 import { getSolanaRpc } from "@/lib/solana/rpc";
-import { bytesMatchPrefix } from "@/lib/solana/discriminator";
 import {
   COMPUTE_BUDGET_PROGRAM_ADDRESS,
   defaultComputeBudgetIxs,
@@ -86,10 +85,14 @@ function createEmptyMessage(version: TransactionVersion): PreparedMessage {
   }) as unknown as PreparedMessage;
 }
 
+function isExecuteDiscriminator(data: Uint8Array): boolean {
+  return data.length > 0 && data[0] === EXECUTE_DISCRIMINATOR;
+}
+
 function isExecute(ix: Instruction, lazorkit: string): boolean {
   return (
     String(ix.programAddress) === lazorkit &&
-    bytesMatchPrefix(ixDataBytes(ix.data), EXECUTE_DISCRIMINATOR)
+    isExecuteDiscriminator(ixDataBytes(ix.data))
   );
 }
 
@@ -196,13 +199,13 @@ function promoteSignerRole(role: AccountRole): AccountRole {
     : AccountRole.READONLY_SIGNER;
 }
 
+function executePayloadBytes(data: Uint8Array): Uint8Array {
+  return Uint8Array.from(decodeExecutePayload(data));
+}
+
 function innerFromSessionExecute(executeIx: Instruction): Instruction[] {
-  const parsed = getExecuteInstructionDataDecoder().decode(
-    ixDataBytes(executeIx.data),
-  );
-  const { instructions: compact } = parseCompactInstructions(
-    Uint8Array.from(parsed.instructions),
-  );
+  const parsedPayload = executePayloadBytes(ixDataBytes(executeIx.data));
+  const { instructions: compact } = parseCompactInstructions(parsedPayload);
   const packedAccounts = (executeIx.accounts ?? []).map((meta) => ({
     address: meta.address,
     role: meta.role,
@@ -239,7 +242,7 @@ function substituteVaultSignerInInstructions(
     const accounts = [...(ix.accounts ?? [])];
     if (
       String(ix.programAddress) !== lazorkit ||
-      !bytesMatchPrefix(ixDataBytes(ix.data), EXECUTE_DISCRIMINATOR)
+      !isExecuteDiscriminator(ixDataBytes(ix.data))
     ) {
       return {
         ...ix,

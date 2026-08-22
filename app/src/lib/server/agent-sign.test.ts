@@ -57,8 +57,8 @@ function computeBudgetLimit(units: number): Instruction {
 }
 
 function executeData(): Uint8Array {
-  const data = new Uint8Array(EXECUTE_DISCRIMINATOR.length + 4);
-  data.set(EXECUTE_DISCRIMINATOR, 0);
+  const data = new Uint8Array(5);
+  data[0] = EXECUTE_DISCRIMINATOR;
   return data;
 }
 
