@@ -6,10 +6,13 @@
  * Max 16 actions / 2048 bytes per session.
  */
 import {
+  getAddressDecoder,
   getAddressEncoder,
   type Address,
   type ReadonlyUint8Array,
 } from "@solana/kit";
+
+import { readU16Le, readU64Le } from "./bytes";
 
 export const MAX_SESSION_ACTIONS = 16;
 export const MAX_SESSION_ACTIONS_BYTES = 2048;
@@ -35,6 +38,8 @@ export type SolRecurringLimitAction = {
   type: SessionActionType.SolRecurringLimit;
   limit: bigint;
   window: bigint;
+  spent?: bigint;
+  lastReset?: bigint;
   expiresAt?: bigint;
 };
 
@@ -56,6 +61,8 @@ export type TokenRecurringLimitAction = {
   mint: Address;
   limit: bigint;
   window: bigint;
+  spent?: bigint;
+  lastReset?: bigint;
   expiresAt?: bigint;
 };
 
@@ -180,9 +187,9 @@ function serializeActionData(action: SessionAction): Uint8Array {
     case SessionActionType.SolRecurringLimit: {
       const buf = new Uint8Array(32);
       writeU64Le(buf, 0, action.limit);
-      writeU64Le(buf, 8, 0n);
+      writeU64Le(buf, 8, action.spent ?? 0n);
       writeU64Le(buf, 16, action.window);
-      writeU64Le(buf, 24, 0n);
+      writeU64Le(buf, 24, action.lastReset ?? 0n);
       return buf;
     }
     case SessionActionType.SolMaxPerTx: {
@@ -200,9 +207,9 @@ function serializeActionData(action: SessionAction): Uint8Array {
       const buf = new Uint8Array(64);
       buf.set(encodeAddress(action.mint), 0);
       writeU64Le(buf, 32, action.limit);
-      writeU64Le(buf, 40, 0n);
+      writeU64Le(buf, 40, action.spent ?? 0n);
       writeU64Le(buf, 48, action.window);
-      writeU64Le(buf, 56, 0n);
+      writeU64Le(buf, 56, action.lastReset ?? 0n);
       return buf;
     }
     case SessionActionType.TokenMaxPerTx: {
@@ -250,6 +257,89 @@ export function serializeActions(
     offset += part.length;
   }
   return result;
+}
+
+const addressDecoder = getAddressDecoder();
+
+function decodeAddress(data: Uint8Array, offset = 0): Address {
+  return addressDecoder.decode(data.subarray(offset, offset + 32));
+}
+
+function deserializeActionData(
+  type: SessionActionType,
+  data: Uint8Array,
+  expiresAt?: bigint,
+): SessionAction {
+  switch (type) {
+    case SessionActionType.SolLimit:
+      return { type, remaining: readU64Le(data, 0), expiresAt };
+    case SessionActionType.SolRecurringLimit:
+      return {
+        type,
+        limit: readU64Le(data, 0),
+        spent: readU64Le(data, 8),
+        window: readU64Le(data, 16),
+        lastReset: readU64Le(data, 24),
+        expiresAt,
+      };
+    case SessionActionType.SolMaxPerTx:
+      return { type, max: readU64Le(data, 0), expiresAt };
+    case SessionActionType.TokenLimit:
+      return {
+        type,
+        mint: decodeAddress(data),
+        remaining: readU64Le(data, 32),
+        expiresAt,
+      };
+    case SessionActionType.TokenRecurringLimit:
+      return {
+        type,
+        mint: decodeAddress(data),
+        limit: readU64Le(data, 32),
+        spent: readU64Le(data, 40),
+        window: readU64Le(data, 48),
+        lastReset: readU64Le(data, 56),
+        expiresAt,
+      };
+    case SessionActionType.TokenMaxPerTx:
+      return {
+        type,
+        mint: decodeAddress(data),
+        max: readU64Le(data, 32),
+        expiresAt,
+      };
+    case SessionActionType.ProgramWhitelist:
+    case SessionActionType.ProgramBlacklist:
+      return { type, programId: decodeAddress(data), expiresAt };
+    default:
+      throw new Error(`Unknown session action type ${type}`);
+  }
+}
+
+/** Parse the on-chain actions buffer from a session account. */
+export function deserializeActions(bytes: Uint8Array): SessionAction[] {
+  const actions: SessionAction[] = [];
+  let offset = 0;
+  while (offset < bytes.length) {
+    if (offset + ACTION_HEADER_SIZE > bytes.length) {
+      throw new Error("Truncated session action header");
+    }
+    const type = bytes[offset]! as SessionActionType;
+    const dataLen = readU16Le(bytes, offset + 1);
+    const expiresRaw = readU64Le(bytes, offset + 3);
+    offset += ACTION_HEADER_SIZE;
+    if (offset + dataLen > bytes.length) {
+      throw new Error("Truncated session action data");
+    }
+    const data = bytes.subarray(offset, offset + dataLen);
+    offset += dataLen;
+    const expiresAt = expiresRaw === 0n ? undefined : expiresRaw;
+    actions.push(deserializeActionData(type, data, expiresAt));
+    if (actions.length > MAX_SESSION_ACTIONS) {
+      throw new Error(`At most ${MAX_SESSION_ACTIONS} session actions`);
+    }
+  }
+  return actions;
 }
 
 export function actionsByteLength(actions: ReadonlyUint8Array): number {

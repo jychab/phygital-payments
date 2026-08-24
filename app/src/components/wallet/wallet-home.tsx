@@ -73,6 +73,12 @@ const AuthenticCardPanel = dynamic(
   { loading: () => <Skeleton className="h-48 w-full rounded-xl" /> },
 );
 
+const WhatsNextPanel = dynamic(
+  () =>
+    import("@/components/wallet/whats-next-panel").then((m) => m.WhatsNextPanel),
+  { loading: () => <Skeleton className="h-48 w-full rounded-xl" /> },
+);
+
 type PanelTab = "tokens" | "collectibles" | "activity";
 
 type StackView =
@@ -81,6 +87,11 @@ type StackView =
   | { kind: "send"; draft: SendDraft }
   | { kind: "receive" }
   | { kind: "spending"; accessory: PhygitalTokenWire; intent?: "onboarding" }
+  | {
+      kind: "whats-next";
+      accessory: PhygitalTokenWire;
+      spendEnabled: boolean;
+    }
   | { kind: "spend-detail"; agent: AgentSessionDetail }
   | { kind: "hold-add" }
   | { kind: "claim"; token: PhygitalToken }
@@ -117,6 +128,8 @@ function stackTitle(view: StackView): string {
       return "Send";
     case "spending":
       return "Tap to pay";
+    case "whats-next":
+      return "What's next";
     case "spend-detail":
       return "Spending";
     case "hold-add":
@@ -397,11 +410,46 @@ export function WalletHome({
             <SpendingSheet
               accessory={view.accessory}
               intent={view.intent}
-              onCancel={() => goHome()}
-              onSuccess={() => {
-                toast.success("Tap to pay is on");
+              onCancel={() => {
+                if (view.intent === "onboarding") {
+                  setView({
+                    kind: "whats-next",
+                    accessory: view.accessory,
+                    spendEnabled: false,
+                  });
+                  return;
+                }
                 goHome();
               }}
+              onSuccess={() => {
+                toast.success("Tap to pay is on");
+                if (view.intent === "onboarding") {
+                  setView({
+                    kind: "whats-next",
+                    accessory: view.accessory,
+                    spendEnabled: true,
+                  });
+                  return;
+                }
+                goHome();
+              }}
+            />
+          </div>
+        ) : null}
+
+        {view.kind === "whats-next" ? (
+          <div className="flex min-h-0 flex-1 flex-col">
+            <WhatsNextPanel
+              spendEnabled={view.spendEnabled}
+              onAddMoney={() => setView({ kind: "receive" })}
+              onTurnOnTapToPay={() =>
+                setView({
+                  kind: "spending",
+                  accessory: view.accessory,
+                  intent: "onboarding",
+                })
+              }
+              onDone={() => goHome()}
             />
           </div>
         ) : null}

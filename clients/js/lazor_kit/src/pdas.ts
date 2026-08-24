@@ -37,6 +37,35 @@ export type LazorKitPdas = {
   authorityBump: number;
 };
 
+export async function findVaultPda(
+  walletPda: Address,
+  programAddress?: Address,
+): Promise<Address> {
+  const program = programAddress ?? LAZORKIT_PROGRAM_PROGRAM_ADDRESS;
+  const [vaultPda] = await getProgramDerivedAddress({
+    programAddress: program,
+    seeds: [new TextEncoder().encode("vault"), addressBytes(walletPda)],
+  });
+  return vaultPda;
+}
+
+export async function findSessionPda(args: {
+  walletPda: Address;
+  sessionKey: Uint8Array;
+  programAddress?: Address;
+}): Promise<Address> {
+  const programAddress = args.programAddress ?? LAZORKIT_PROGRAM_PROGRAM_ADDRESS;
+  const [sessionPda] = await getProgramDerivedAddress({
+    programAddress,
+    seeds: [
+      new TextEncoder().encode("session"),
+      addressBytes(args.walletPda),
+      args.sessionKey,
+    ],
+  });
+  return sessionPda;
+}
+
 export async function findVaultAndAuthorityPdas(args: {
   walletPda: Address;
   credentialIdHash: Uint8Array;

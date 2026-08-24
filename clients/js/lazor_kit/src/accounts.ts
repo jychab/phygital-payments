@@ -1,12 +1,15 @@
 import { getAddressDecoder, type Address } from "@solana/kit";
 
-import { readU32Le } from "./bytes";
+import { readU32Le, readU64Le } from "./bytes";
 import {
   AUTHORITY_DISCRIMINATOR,
   AUTHORITY_HEADER_SIZE,
   AUTHORITY_SECP_SIZE,
+  SESSION_DISCRIMINATOR,
+  SESSION_HEADER_SIZE,
   WALLET_DISCRIMINATOR,
 } from "./constants";
+import { deserializeActions, type SessionAction } from "./session-actions";
 
 export type AuthorityAccount = {
   discriminator: number;
@@ -58,5 +61,34 @@ export function decodeAuthorityAccount(data: Uint8Array): AuthorityAccount {
       AUTHORITY_HEADER_SIZE + 65,
     ),
     rpIdHash: data.slice(AUTHORITY_HEADER_SIZE + 65, AUTHORITY_HEADER_SIZE + 97),
+  };
+}
+
+export type SessionAccount = {
+  discriminator: number;
+  bump: number;
+  version: number;
+  wallet: Address;
+  sessionKey: Uint8Array;
+  expiresAt: bigint;
+  actions: SessionAction[];
+};
+
+export function decodeSessionAccount(data: Uint8Array): SessionAccount {
+  if (data.length < SESSION_HEADER_SIZE) {
+    throw new Error("Not a LazorKit session account");
+  }
+  if (data[0] !== SESSION_DISCRIMINATOR) {
+    throw new Error("Not a LazorKit session account");
+  }
+  const wallet = getAddressDecoder().decode(data.subarray(8, 40));
+  return {
+    discriminator: data[0]!,
+    bump: data[1]!,
+    version: data[2]!,
+    wallet,
+    sessionKey: data.slice(40, 72),
+    expiresAt: readU64Le(data, 72),
+    actions: deserializeActions(data.subarray(SESSION_HEADER_SIZE)),
   };
 }

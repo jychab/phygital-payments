@@ -1,5 +1,5 @@
 import { address } from "@solana/kit";
-import { Actions, serializeActions, SessionActionType } from "lazor-kit";
+import { Actions, serializeActions, deserializeActions, SessionActionType } from "lazor-kit";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -36,6 +36,33 @@ describe("serializeActions", () => {
   it("rejects more than 16 actions", () => {
     const many = Array.from({ length: 17 }, () => Actions.solMaxPerTx(1n));
     expect(() => serializeActions(many)).toThrow(/16/);
+  });
+
+  it("round-trips through deserializeActions", () => {
+    const program = address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+    const decoded = deserializeActions(
+      serializeActions([
+        Actions.solMaxPerTx(500_000_000n),
+        Actions.solRecurringLimit({
+          limit: 2_000_000_000n,
+          window: 216_000n,
+        }),
+        Actions.programWhitelist(program),
+      ]),
+    );
+    expect(decoded[0]).toMatchObject({
+      type: SessionActionType.SolMaxPerTx,
+      max: 500_000_000n,
+    });
+    expect(decoded[1]).toMatchObject({
+      type: SessionActionType.SolRecurringLimit,
+      limit: 2_000_000_000n,
+      window: 216_000n,
+    });
+    expect(decoded[2]).toMatchObject({
+      type: SessionActionType.ProgramWhitelist,
+      programId: program,
+    });
   });
 });
 

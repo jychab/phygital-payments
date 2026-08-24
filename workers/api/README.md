@@ -2,6 +2,8 @@
 
 Cloudflare Worker that backs the Revibase wallet UI and public NFC payment flows: browser wallet sessions, NFC spending grants, gas sponsorship, and tap verification.
 
+External apps that call `/api/challenge` and `/api/modifyAndSign` (or sign in with `phygital-token-sdk`): see the [root README](../../README.md).
+
 For local setup (ports, `.dev.vars`, running with the Next app), see [`app/README.md`](../../app/README.md).
 
 ```bash
@@ -77,7 +79,7 @@ Hourly cron → same request context → `platform/scheduled-tasks.ts`.
 | Path | Purpose |
 |------|---------|
 | `/` | Health `{ service, version }` |
-| `/api/challenge` | Public NFC challenge create/status via signer |
+| `/api/challenge` | Public NFC challenge mint via signer |
 | `/api/modifyAndSign` | Verify NFC tap, load grant, assert/wrap tx, signer `signSession` |
 | `/api/verify-tap` | Hold-to-check: dynamic URL verify + anti-replay |
 | `/api/tokens/phygital` | Lookup phygital token by identifier or passkey |

@@ -16,6 +16,7 @@ export {
   MAX_SESSION_ACTIONS_BYTES,
   SessionActionType,
   serializeActions,
+  deserializeActions,
   type SessionAction,
 } from "./session-actions";
 export {

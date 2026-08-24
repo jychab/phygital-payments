@@ -13,7 +13,8 @@ import {
   type TransactionWithLifetime,
 } from "@solana/kit";
 
-const DEFAULT_MODIFY_AND_SIGN_URL = "/api/modifyAndSign";
+const DEFAULT_MODIFY_AND_SIGN_URL =
+  "https://api.revibase.com/api/modifyAndSign";
 
 export type CreateTransactionModifyingSignerOptions = {
   modifyAndSignUrl?: string;
@@ -64,7 +65,7 @@ async function modifyAndSignOne(
 
 /**
  * Kit `TransactionModifyingSigner` whose `modifyAndSignTransactions` POSTs
- * each compiled transaction to a wallet `/api/modifyAndSign` endpoint.
+ * each compiled transaction to `https://api.revibase.com/api/modifyAndSign`.
  */
 export function createTransactionModifyingSigner<TAddress extends string>(
   response: unknown,

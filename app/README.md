@@ -2,6 +2,8 @@
 
 Next.js app for LazorKit passkey wallets, NFC phygital accessories, and on-chain claims.
 
+External apps (tap-to-pay + NFC sign-in): see the [root README](../README.md).
+
 ## Setup
 
 From the repo root:

@@ -49,6 +49,17 @@ export function readU32Le(data: Uint8Array, offset: number): number {
   );
 }
 
+export function readU16Le(data: Uint8Array, offset: number): number {
+  return data[offset]! | (data[offset + 1]! << 8);
+}
+
+export function readU64Le(data: Uint8Array, offset: number): bigint {
+  return new DataView(data.buffer, data.byteOffset, data.byteLength).getBigUint64(
+    offset,
+    true,
+  );
+}
+
 export function bytesToBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);

@@ -35,9 +35,12 @@ export const AUTH_TYPE_SECP256R1 = 1;
 
 export const WALLET_DISCRIMINATOR = 1;
 export const AUTHORITY_DISCRIMINATOR = 2;
+export const SESSION_DISCRIMINATOR = 3;
 
 export const AUTHORITY_HEADER_SIZE = 48;
 export const AUTHORITY_SECP_SIZE = 145;
+/** disc + bump + version + pad(5) + wallet + session_key + expires_at */
+export const SESSION_HEADER_SIZE = 80;
 
 /** Execute accounts: payer, wallet, authority, vault, instructions sysvar. */
 export const EXECUTE_FIXED_ACCOUNT_COUNT = 5;

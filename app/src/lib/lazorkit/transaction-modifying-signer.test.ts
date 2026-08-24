@@ -89,7 +89,7 @@ describe("createTransactionModifyingSigner", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/modifyAndSign");
+    expect(url).toBe("https://api.revibase.com/api/modifyAndSign");
     expect(init.method).toBe("POST");
     const body = JSON.parse(String(init.body)) as {
       requestId: string;
