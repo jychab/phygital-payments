@@ -3,7 +3,7 @@ export type Cluster = "devnet" | "mainnet";
 const CLUSTER = (process.env.NEXT_PUBLIC_SOLANA_CLUSTER as Cluster) || "devnet";
 
 export const RPC_URL =
-  process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
 
 export function rpcSubscriptionsUrl(): string {
   return RPC_URL.replace(/^http/, "ws");

@@ -39,6 +39,7 @@ export function AccessoryTapFlow({ token }: { token: PhygitalToken }) {
           token={token}
           unclaimed={isUnclaimedToken(token)}
           fromVerifiedTap
+          continueToSpend
           onBack={() => setShowClaim(false)}
           onClaimed={() => {
             setClaimed(true);
@@ -70,5 +71,5 @@ export function AccessoryTapFlow({ token }: { token: PhygitalToken }) {
     return <AuthenticCardPanel token={token} liveConfirmed />;
   }
 
-  return <WalletHome focusedAccessory={token} />;
+  return <WalletHome focusedAccessory={token} startOnSpendSetup={claimed} />;
 }

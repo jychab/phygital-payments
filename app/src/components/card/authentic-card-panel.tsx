@@ -34,13 +34,19 @@ export function AuthenticCardPanel({
     ? "Confirmed just now."
     : "This accessory is genuine.";
   const ownership = unclaimed
-    ? "Genuine. Not in a wallet yet."
+    ? "This accessory can pay from a wallet on your phone. Add it so only you can tap to spend."
     : `Linked to ${shortAddress(String(token.currentOwner))}.`;
 
   const status = (
-    <div className="flex w-full max-w-64 flex-col items-center gap-2">
-      <div className="flex items-center gap-0.5">
-        <p className="text-xs text-muted-foreground">{ownership}</p>
+    <div className="flex w-full max-w-72 flex-col items-center gap-2">
+      <div
+        className={
+          unclaimed
+            ? "flex w-full flex-col items-center gap-1"
+            : "flex items-center gap-0.5"
+        }
+      >
+        <p className="text-center text-xs text-muted-foreground">{ownership}</p>
         <PhygitalTokenRefreshButton token={token} />
       </div>
       {!liveConfirmed && onHoldToCheck ? (

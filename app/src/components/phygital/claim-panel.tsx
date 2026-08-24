@@ -34,12 +34,14 @@ export function ClaimPanel({
   token,
   unclaimed = false,
   fromVerifiedTap = false,
+  continueToSpend = false,
   onBack,
   onClaimed,
 }: {
   token: PhygitalToken;
   unclaimed?: boolean;
   fromVerifiedTap?: boolean;
+  continueToSpend?: boolean;
   onBack?: () => void;
   onClaimed?: () => void;
 }) {
@@ -56,12 +58,14 @@ export function ClaimPanel({
   const [error, setError] = useState<string | null>(null);
 
   const holdTitle = fromVerifiedTap
-    ? "Hold once more"
+    ? "Link this accessory"
     : unclaimed
       ? "Add to Wallet"
       : "Move to a New Wallet";
   const holdBody = fromVerifiedTap
-    ? "Hold this accessory to the back of your phone to add it."
+    ? continueToSpend
+      ? "Hold it once more so this wallet knows the physical accessory is yours. Next you choose how much a tap can spend."
+      : "Hold it once more so this wallet knows the physical accessory is yours."
     : "Hold your accessory to this phone, then confirm with Face ID.";
   const holdCta = fromVerifiedTap
     ? "Hold once more"
@@ -134,8 +138,12 @@ export function ClaimPanel({
     return (
       <SuccessStatus
         icon={<CheckCircle2 className="size-6" />}
-        title="Added"
-        body="This accessory is in your wallet."
+        title="Linked"
+        body={
+          continueToSpend
+            ? "Next, choose how much this accessory can spend."
+            : "This accessory is in your wallet."
+        }
       />
     );
   }
@@ -170,8 +178,8 @@ export function ClaimPanel({
         {onBack ? <BackLink onClick={onBack} /> : null}
         <GateMessage
           icon={<Fingerprint className="size-5 text-muted-foreground" />}
-          title="Create a passkey"
-          body="This wallet will own this accessory. There is no recovery phrase. Network fees are covered."
+          title="No wallet detected."
+          body="Sign in or create a passkey wallet first."
           action={
             <div className="flex w-full max-w-64 flex-col gap-3">
               <Button

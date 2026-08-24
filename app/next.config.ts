@@ -35,6 +35,7 @@ const workspaceRoot = path.join(__dirname, "..");
 
 const connectOrigins = [
   process.env.NEXT_PUBLIC_SOLANA_RPC_URL,
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL.replace(/^http/, "ws"),
   process.env.NEXT_PUBLIC_API_ORIGIN,
 ]
   .map((value) => {

@@ -169,10 +169,12 @@ function optionalTokenAmount(
 
 export function SpendingSheet({
   accessory,
+  intent,
   onCancel,
   onSuccess,
 }: {
   accessory: PhygitalTokenWire;
+  intent?: "onboarding";
   onCancel: () => void;
   onSuccess: () => void;
 }) {
@@ -405,9 +407,9 @@ export function SpendingSheet({
         <div>
           <p className="text-sm font-medium text-foreground">Tap to pay</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Other apps can charge this wallet only while you hold this
-            accessory. You can change this later by turning it off and setting
-            a new limit.
+            {intent === "onboarding"
+              ? "Hold this accessory to any smartphone or NFC reader to pay from this wallet."
+              : "Other apps can charge this wallet only while you hold this accessory. You can change this later by turning it off and setting a new limit."}
           </p>
         </div>
 

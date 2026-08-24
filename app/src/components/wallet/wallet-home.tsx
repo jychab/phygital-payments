@@ -80,7 +80,7 @@ type StackView =
   | { kind: "send-pick" }
   | { kind: "send"; draft: SendDraft }
   | { kind: "receive" }
-  | { kind: "spending"; accessory: PhygitalTokenWire }
+  | { kind: "spending"; accessory: PhygitalTokenWire; intent?: "onboarding" }
   | { kind: "spend-detail"; agent: AgentSessionDetail }
   | { kind: "hold-add" }
   | { kind: "claim"; token: PhygitalToken }
@@ -140,13 +140,24 @@ function nfcSpendingFor(
 
 export function WalletHome({
   focusedAccessory = null,
+  startOnSpendSetup = false,
 }: {
   focusedAccessory?: PhygitalToken | null;
+  startOnSpendSetup?: boolean;
 }) {
   const { session } = useSmartWallet();
   const queryClient = useQueryClient();
   const { authenticate } = useAuthenticatePhygital();
-  const [view, setView] = useState<StackView>({ kind: "home", tab: "tokens" });
+  const [view, setView] = useState<StackView>(() => {
+    if (startOnSpendSetup && focusedAccessory) {
+      return {
+        kind: "spending",
+        accessory: toPhygitalTokenWire(focusedAccessory),
+        intent: "onboarding",
+      };
+    }
+    return { kind: "home", tab: "tokens" };
+  });
   const [copied, setCopied] = useState(false);
   const [holdAttempt, setHoldAttempt] = useState<Promise<{
     secp256r1PublicKey: string;
@@ -385,6 +396,7 @@ export function WalletHome({
           <div className="min-h-0 flex-1 overflow-y-auto py-3 md:py-4">
             <SpendingSheet
               accessory={view.accessory}
+              intent={view.intent}
               onCancel={() => goHome()}
               onSuccess={() => {
                 toast.success("Tap to pay is on");
@@ -416,9 +428,14 @@ export function WalletHome({
           <ClaimPanel
             token={view.token}
             unclaimed={isUnclaimedToken(view.token)}
+            continueToSpend
             onBack={() => goHome()}
             onClaimed={() => {
-              goHome();
+              setView({
+                kind: "spending",
+                accessory: toPhygitalTokenWire(view.token),
+                intent: "onboarding",
+              });
             }}
           />
         ) : null}
