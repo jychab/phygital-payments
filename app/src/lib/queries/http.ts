@@ -1,17 +1,28 @@
-/** Default Cache-Control for API routes consumed by React Query. */
-export const QUERY_NO_STORE = {
-  "Cache-Control": "private, no-store",
-} as const;
+function getApiOrigin(): string {
+  const origin = process.env.NEXT_PUBLIC_API_ORIGIN?.trim().replace(/\/+$/, "");
+  if (!origin) {
+    throw new Error("NEXT_PUBLIC_API_ORIGIN is not configured");
+  }
+  return origin;
+}
 
-/**
- * Browser fetch for React Query (and other app API calls).
- * HTTP cache is off — React Query owns freshness.
- */
+export function resolveApiUrl(input: RequestInfo | URL): RequestInfo | URL {
+  if (typeof input !== "string" || !input.startsWith("/api/")) {
+    return input;
+  }
+  return new URL(input, `${getApiOrigin()}/`).toString();
+}
+
+/** Browser fetch for React Query — HTTP cache off; RQ owns freshness. */
 export function queryFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
-  return fetch(input, { ...init, cache: "no-store", credentials: "include" });
+  return fetch(resolveApiUrl(input), {
+    ...init,
+    cache: "no-store",
+    credentials: "include",
+  });
 }
 
 /** Parse JSON and throw `body.error` when the response is not OK. */

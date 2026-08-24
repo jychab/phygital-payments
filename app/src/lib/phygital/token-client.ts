@@ -1,31 +1,9 @@
-import { address } from "@solana/kit";
-
 import { queryFetch, readJson } from "@/lib/queries/http";
 import type { PhygitalToken } from "@/lib/phygital/token";
-
-type PhygitalTokenWire = {
-  tokenType: PhygitalToken["tokenType"];
-  identifier: string;
-  secp256r1PublicKey: string;
-  address: string;
-  isLocked: boolean;
-  currentOwner: string;
-  lastSignCount: number;
-  mint: string;
-};
-
-function fromWire(wire: PhygitalTokenWire): PhygitalToken {
-  return {
-    tokenType: wire.tokenType,
-    identifier: wire.identifier,
-    secp256r1PublicKey: wire.secp256r1PublicKey,
-    address: address(wire.address),
-    isLocked: wire.isLocked,
-    currentOwner: address(wire.currentOwner),
-    lastSignCount: wire.lastSignCount,
-    mint: address(wire.mint),
-  };
-}
+import {
+  fromPhygitalTokenWire,
+  type PhygitalTokenWire,
+} from "@/lib/phygital/token-wire";
 
 export async function fetchPhygitalTokenByIdentifierClient(
   identifier: string,
@@ -35,9 +13,9 @@ export async function fetchPhygitalTokenByIdentifierClient(
   );
   const body = await readJson<{ token: PhygitalTokenWire }>(
     res,
-    "Couldn’t load phygital",
+    "Couldn’t load this accessory",
   );
-  return fromWire(body.token);
+  return fromPhygitalTokenWire(body.token);
 }
 
 export async function fetchMaybePhygitalTokenByPasskeyClient(
@@ -48,7 +26,7 @@ export async function fetchMaybePhygitalTokenByPasskeyClient(
   );
   const body = await readJson<{ token: PhygitalTokenWire | null }>(
     res,
-    "Couldn’t load phygital",
+    "Couldn’t load this accessory",
   );
-  return body.token ? fromWire(body.token) : null;
+  return body.token ? fromPhygitalTokenWire(body.token) : null;
 }

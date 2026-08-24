@@ -17,7 +17,8 @@ import {
   type PasskeyIdentity,
 } from "./passkey";
 import { resolveSmartWalletPdas } from "./resolve-pdas";
-import { sponsoredFeePayerSigner, sponsorInstructions } from "./sponsor";
+import { sponsoredFeePayerSigner } from "@/lib/wallet/fee-payer-client";
+import { sponsorInstructions } from "./sponsor";
 import {
   establishWalletSessionCookie,
   establishWalletSessionFromDiscoverablePasskey,
@@ -39,7 +40,7 @@ export async function ensureSmartWallet(
   if (!value) {
     await sponsorInstructions([
       buildCreateWalletInstruction({
-        payer: sponsoredFeePayerSigner(),
+        payer: await sponsoredFeePayerSigner(),
         pdas,
         userSeed: pdas.userSeed,
         credentialIdHash: pdas.credentialIdHash,

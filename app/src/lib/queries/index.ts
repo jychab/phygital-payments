@@ -1,22 +1,11 @@
 /**
  * React Query keys, fetchers, and staleTime presets.
- *
- * Browser HTTP always goes through `queryFetch` (`cache: "no-store"`).
- * React Query is the only client cache; API GET routes send
- * `Cache-Control: private, no-store`.
- *
- * Domain code lives next to the matching UI folder:
- *   lib/phygital + hooks/phygital  NFC tap, claim
- *   hooks/card                       Hold to Check, DAS collectible
- *   lib/server                       API routes only (`import "server-only"`)
- *   hooks/wallet                     passkey smart wallet
- *   hooks/layout                     page-show / persist refresh
+ * Browser HTTP goes through `queryFetch`; React Query owns freshness.
  */
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { Address } from "@solana/kit";
 
-import { fetchDasCollectibleClient } from "@/lib/tokens/das-collectible-client";
 import type { Collectible } from "@/lib/tokens/collectible";
 import type { PhygitalToken } from "@/lib/phygital/token";
 
@@ -49,10 +38,28 @@ export const queryKeys = {
       [...queryKeys.walletPortfolio.all(), vault] as const,
   },
 
+  walletDashboard: {
+    all: () => ["walletDashboard"] as const,
+    byVault: (vault: string | null) =>
+      [...queryKeys.walletDashboard.all(), vault] as const,
+  },
+
   agentSession: {
     all: () => ["agentSession"] as const,
     byVault: (vault: string | null) =>
       [...queryKeys.agentSession.all(), vault] as const,
+  },
+
+  nfcAccessories: {
+    all: () => ["nfcAccessories"] as const,
+    byVault: (vault: string | null) =>
+      [...queryKeys.nfcAccessories.all(), vault] as const,
+  },
+
+  walletActivity: {
+    all: () => ["walletActivity"] as const,
+    byVault: (vault: string | null) =>
+      [...queryKeys.walletActivity.all(), vault] as const,
   },
 };
 
@@ -79,50 +86,71 @@ export function setPhygitalTokenOwner(
   token: Pick<PhygitalToken, "identifier" | "secp256r1PublicKey">,
   currentOwner: Address,
 ): void {
-  const patch = (prev: PhygitalToken | null | undefined) =>
-    prev ? { ...prev, currentOwner } : prev;
+  patchPhygitalToken(queryClient, token, (prev) => ({
+    ...prev,
+    currentOwner,
+  }));
+}
+
+export function setPhygitalTokenLocked(
+  queryClient: QueryClient,
+  token: Pick<PhygitalToken, "identifier" | "secp256r1PublicKey">,
+  isLocked: boolean,
+): void {
+  patchPhygitalToken(queryClient, token, (prev) => ({ ...prev, isLocked }));
+}
+
+function patchPhygitalToken(
+  queryClient: QueryClient,
+  token: Pick<PhygitalToken, "identifier" | "secp256r1PublicKey">,
+  patch: (prev: PhygitalToken) => PhygitalToken,
+): void {
+  const apply = (prev: PhygitalToken | null | undefined) =>
+    prev ? patch(prev) : prev;
   queryClient.setQueryData(
     queryKeys.phygitalToken.byIdentifier(token.identifier),
-    patch,
+    apply,
   );
   queryClient.setQueryData(
     queryKeys.phygitalToken.byPasskey(token.secp256r1PublicKey),
-    patch,
+    apply,
   );
 }
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 
+/** Per-domain React Query defaults. Prefer these over ad-hoc staleTimes. */
 export const queryOptions = {
-  /** Changes after user actions; mutations already invalidate. */
   default: { refetchOnWindowFocus: false, staleTime: 5 * MINUTE },
-  /**
-   * Ownership / token accounts that change via an NFC tap that cannot
-   * invalidate this tab's cache. Persist may paint instantly; always
-   * refetch on mount/focus/reconnect.
-   */
+  /** Phygital ownership can change via NFC off-tab; always refetch. */
   volatile: {
-    staleTime: 0,
-    refetchOnMount: "always" as const,
+    staleTime: 30 * SECOND,
+    retry: 1,
+    refetchOnMount: true,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   },
-  /** Wallet balance / agent status — refetch after actions, not every focus. */
-  recent: {
-    staleTime: 30 * SECOND,
+  /** Balances/history — mutations invalidate; focus catches inbound. */
+  wallet: {
+    staleTime: 60 * SECOND,
+    retry: 1,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
+  },
+  /** Agent grants — mutation-invalidated only. */
+  agent: {
+    staleTime: 60 * SECOND,
+    retry: 1,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     refetchOnReconnect: true,
   },
-  /** Catalog / rarely changing metadata. */
+  /** NFT metadata — rarely changes after mint. */
   stable: { refetchOnWindowFocus: false, staleTime: 15 * MINUTE },
-  /** One-shot proofs / immutable chain metadata — never refetch. */
+  /** One-shot NFC tap proofs. */
   immutable: { refetchOnWindowFocus: false, staleTime: Infinity },
 } as const;
-
-export function fetchDasCollectible(mint: string): Promise<Collectible | null> {
-  return fetchDasCollectibleClient(mint);
-}
 
 export type { Collectible };

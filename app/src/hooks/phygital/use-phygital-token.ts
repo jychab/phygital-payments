@@ -18,7 +18,7 @@ export function usePhygitalToken(identifier: string | null) {
       return fetchPhygitalTokenByIdentifierClient(identifier);
     },
     enabled: Boolean(identifier),
-    ...queryOptions.recent,
+    ...queryOptions.volatile,
   });
 }
 
@@ -31,6 +31,6 @@ export function usePhygitalTokenByPasskey(secp256r1PublicKey: string | null) {
       return fetchMaybePhygitalTokenByPasskeyClient(secp256r1PublicKey);
     },
     enabled: Boolean(secp256r1PublicKey),
-    ...queryOptions.recent,
+    ...queryOptions.volatile,
   });
 }

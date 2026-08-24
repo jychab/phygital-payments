@@ -1,23 +1,10 @@
-import {
-  type Instruction,
-  type TransactionPartialSigner,
-} from "@solana/kit";
+import { type Instruction } from "@solana/kit";
 
 import { queryFetch, readJson } from "@/lib/queries/http";
-import { createAddressSigner } from "@/lib/solana/address-signer";
-import { getSponsoredFeePayerAddress } from "@/lib/solana/simulate-sponsored";
 import {
   instructionsToWire,
   type SponsorResponse,
 } from "../../../shared/sponsor-wire";
-
-/** Client-side fee payer. Signatures are applied by `/api/wallet/sponsor`. */
-export function sponsoredFeePayerSigner(): TransactionPartialSigner {
-  return createAddressSigner(
-    getSponsoredFeePayerAddress(),
-    "Sponsored fee payer signs on the server",
-  );
-}
 
 export async function sponsorInstructions(
   instructions: readonly Instruction[],

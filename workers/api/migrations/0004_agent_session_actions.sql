@@ -1,0 +1,1 @@
+-- Greenfield schema already includes actions_json on agent_sessions.

@@ -6,27 +6,30 @@ import {
   type PhygitalToken,
 } from "@/lib/phygital/token";
 
-/** Post-tap screens after LazorKit sign-in. */
-export type PhygitalTapView =
+/** Post-tap screens on `/` — object first, wallet only when this vault owns it. */
+export type AccessoryTapView =
   | "unsupported"
   | "claim"
+  | "signed-out"
   | "foreign-owner"
   | "wallet";
 
 /**
  * Controlled + unclaimed → claim.
+ * Controlled + claimed, no passkey session → signed-out (object + sign in).
  * Controlled + claimed by this vault → wallet.
  * Controlled + claimed by someone else → foreign-owner.
- * Bearer (or any other type) is not this route.
+ * Bearer (or any other type) is authenticity only.
  */
-export function phygitalTapView(
+export function accessoryTapView(
   token: Pick<PhygitalToken, "tokenType" | "currentOwner">,
-  vaultPda: Address,
-): PhygitalTapView {
+  vaultPda: Address | null,
+): AccessoryTapView {
   if (token.tokenType !== PhygitalTokenType.Controlled) {
     return "unsupported";
   }
   if (isUnclaimedToken(token)) return "claim";
+  if (!vaultPda) return "signed-out";
   if (token.currentOwner === vaultPda) return "wallet";
   return "foreign-owner";
 }

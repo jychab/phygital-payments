@@ -20,18 +20,18 @@ describe("toUserFacingError", () => {
     expect(facing.title).toBe("Couldn’t Verify");
   });
 
-  it("maps a locked phygital token", () => {
+  it("maps a locked accessory", () => {
     const facing = toUserFacingError(
       new Error(
-        "This phygital token is locked. Unlock it before claiming it to a wallet.",
+        "This accessory is locked. Unlock it before adding it to a wallet.",
       ),
     );
-    expect(facing.title).toBe("Phygital Locked");
+    expect(facing.title).toBe("Accessory Locked");
   });
 
   it("maps an already-claimed wallet", () => {
     const facing = toUserFacingError(
-      new Error("This phygital token is already on that wallet."),
+      new Error("This accessory is already on that wallet."),
     );
     expect(facing.title).toBe("Already Added");
   });
@@ -48,7 +48,7 @@ describe("toUserErrorMessage", () => {
 describe("toUserFacingBody", () => {
   it("folds a replayed tap into one line", () => {
     expect(toUserFacingBody("This tap was already used.")).toBe(
-      "Already Used. Hold your phygital to this phone again.",
+      "Already Used. Hold your accessory to this phone again.",
     );
   });
 });

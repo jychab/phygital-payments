@@ -36,7 +36,7 @@ export function assertCaptureReady(
 ): void {
   if (token.isLocked) {
     throw new Error(
-      "This phygital token is locked. Unlock it before claiming it to a wallet.",
+      "This accessory is locked. Unlock it before adding it to a wallet.",
     );
   }
 }
@@ -48,7 +48,7 @@ export function assertClaimReady(
 ): void {
   assertCaptureReady(token);
   if (token.currentOwner === recipient) {
-    throw new Error("This phygital token is already on that wallet.");
+    throw new Error("This accessory is already on that wallet.");
   }
 }
 

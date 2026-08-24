@@ -1,0 +1,25 @@
+{
+  "name": "@phygital/api-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev -c wrangler.jsonc --env dev --port 8787",
+    "deploy": "wrangler deploy -c wrangler.jsonc",
+    "test": "vitest run",
+    "db:migrate:local": "wrangler d1 migrations apply phygital_app --local -c wrangler.jsonc --env dev",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv worker-env.d.ts"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.2.0",
+    "@solana/kit": "^7.0.0",
+    "lazor-kit": "workspace:*",
+    "phygital-token-sdk": "^0.22.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250726.0",
+    "typescript": "^5",
+    "vitest": "^3.2.7",
+    "wrangler": "^4.80.0"
+  }
+}

@@ -27,7 +27,7 @@ export function WalletBusyStatus({ connecting }: { connecting: boolean }) {
     <CenteredStatus>
       <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
       <p className="text-sm text-muted-foreground">
-        {connecting ? "Confirm with Face ID…" : "Loading…"}
+        {connecting ? "Confirm" : "Loading…"}
       </p>
     </CenteredStatus>
   );
@@ -81,8 +81,8 @@ export function GateMessage({
       >
         {icon}
       </div>
-      <div className="max-w-64 space-y-1.5">
-        <p className="text-sm font-medium text-foreground">{title}</p>
+      <div className="max-w-64 space-y-1.5 md:max-w-80">
+        <p className="text-sm font-medium text-foreground md:text-base">{title}</p>
         {body ? (
           <p className="text-sm text-muted-foreground">{body}</p>
         ) : null}

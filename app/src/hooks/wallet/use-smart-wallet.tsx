@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { toast } from "sonner";
 
@@ -17,6 +17,7 @@ import { clearAppClientStorage } from "@/lib/wallet/clear-client-session";
 import { clearWalletSessionCookie } from "@/lib/wallet/wallet-session-client";
 import { queryFetch, readJson } from "@/lib/queries/http";
 import { queryKeys } from "@/lib/queries";
+import { clearPersistedQueryCache } from "@/lib/queries/persist";
 import {
   clearSmartWalletSession,
   loadSmartWalletSession,
@@ -40,7 +41,6 @@ export function SmartWalletProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [session, setSession] = useState<SmartWalletSession | null>(null);
   const [ready, setReady] = useState(false);
-  const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,36 +75,37 @@ export function SmartWalletProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const runAuth = useCallback(
-    (mode: "signIn" | "signUp") => {
-      if (session || connecting) return;
-      setConnecting(true);
-      void import("@/lib/lazorkit/connect")
-        .then((mod) =>
-          mode === "signIn" ? mod.signInSmartWallet() : mod.signUpSmartWallet(),
-        )
-        .then((next) => {
-          setSession(next);
-        })
-        .catch((error) => {
-          toast.error(
-            toUserErrorMessage(
-              error,
-              mode === "signIn"
-                ? "Couldn't sign in with Face ID"
-                : "Couldn't create a passkey",
-            ),
-          );
-        })
-        .finally(() => {
-          setConnecting(false);
-        });
+  const signInMutation = useMutation({
+    mutationFn: async () => {
+      const mod = await import("@/lib/lazorkit/connect");
+      return mod.signInSmartWallet();
     },
-    [session, connecting],
-  );
+    onSuccess: (next) => setSession(next),
+    onError: (error) => {
+      toast.error(toUserErrorMessage(error, "Couldn't sign in with Face ID"));
+    },
+  });
 
-  const signIn = useCallback(() => runAuth("signIn"), [runAuth]);
-  const signUp = useCallback(() => runAuth("signUp"), [runAuth]);
+  const signUpMutation = useMutation({
+    mutationFn: async () => {
+      const mod = await import("@/lib/lazorkit/connect");
+      return mod.signUpSmartWallet();
+    },
+    onSuccess: (next) => setSession(next),
+    onError: (error) => {
+      toast.error(toUserErrorMessage(error, "Couldn't create a passkey"));
+    },
+  });
+
+  const signIn = useCallback(() => {
+    if (session || signInMutation.isPending || signUpMutation.isPending) return;
+    signInMutation.mutate();
+  }, [session, signInMutation, signUpMutation.isPending]);
+
+  const signUp = useCallback(() => {
+    if (session || signInMutation.isPending || signUpMutation.isPending) return;
+    signUpMutation.mutate();
+  }, [session, signInMutation.isPending, signUpMutation]);
 
   const disconnect = useCallback(async () => {
     await clearWalletSessionCookie();
@@ -113,6 +114,10 @@ export function SmartWalletProvider({ children }: { children: ReactNode }) {
     clearAppClientStorage();
     queryClient.removeQueries({ queryKey: queryKeys.walletPortfolio.all() });
     queryClient.removeQueries({ queryKey: queryKeys.agentSession.all() });
+    queryClient.removeQueries({ queryKey: queryKeys.walletActivity.all() });
+    queryClient.removeQueries({ queryKey: queryKeys.nfcAccessories.all() });
+    queryClient.removeQueries({ queryKey: queryKeys.phygitalToken.all() });
+    clearPersistedQueryCache();
   }, [queryClient]);
 
   const value = useMemo<SmartWallet>(
@@ -120,12 +125,20 @@ export function SmartWalletProvider({ children }: { children: ReactNode }) {
       session,
       isConnected: Boolean(session),
       ready,
-      connecting,
+      connecting: signInMutation.isPending || signUpMutation.isPending,
       signIn,
       signUp,
       disconnect,
     }),
-    [session, ready, connecting, signIn, signUp, disconnect],
+    [
+      session,
+      ready,
+      signInMutation.isPending,
+      signUpMutation.isPending,
+      signIn,
+      signUp,
+      disconnect,
+    ],
   );
 
   return (

@@ -1,0 +1,135 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "phygital-payments-api",
+  "main": "./src/index.ts",
+  "compatibility_date": "2025-07-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "services": [
+    {
+      "binding": "SIGNER",
+      "service": "phygital-payments-signer"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "revibase_counter",
+      "id": "a9aa768ab4854f11ac0314170849c172"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "phygital_app",
+      "database_name": "phygital_app",
+      "database_id": "fb29b7a6-217d-407c-a96a-f4228f36fb43",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "phygital_payments_api"
+    }
+  ],
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "unsafe": {
+    "bindings": [
+      {
+        "name": "PUBLIC_READ_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "1001",
+        "simple": { "limit": 60, "period": 60 }
+      },
+      {
+        "name": "PUBLIC_WRITE_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "1002",
+        "simple": { "limit": 20, "period": 60 }
+      },
+      {
+        "name": "SPONSOR_LIMITER",
+        "type": "ratelimit",
+        "namespace_id": "1003",
+        "simple": { "limit": 10, "period": 60 }
+      }
+    ]
+  },
+  "vars": {
+    "NEXT_PUBLIC_SOLANA_RPC_URL": "https://rpc.devnet.revibase.com",
+    "NEXT_PUBLIC_SOLANA_CLUSTER": "devnet",
+    "APP_ORIGIN": "https://revibase.com"
+  },
+  "env": {
+    "dev": {
+      "services": [
+        {
+          "binding": "SIGNER",
+          "service": "phygital-payments-signer"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "revibase_counter",
+          "id": "a9aa768ab4854f11ac0314170849c172"
+        }
+      ],
+      "d1_databases": [
+        {
+          "binding": "phygital_app",
+          "database_name": "phygital_app",
+          "database_id": "fb29b7a6-217d-407c-a96a-f4228f36fb43",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "analytics_engine_datasets": [
+        {
+          "binding": "ANALYTICS",
+          "dataset": "phygital_payments_api"
+        }
+      ],
+      "unsafe": {
+        "bindings": [
+          {
+            "name": "PUBLIC_READ_LIMITER",
+            "type": "ratelimit",
+            "namespace_id": "1001",
+            "simple": { "limit": 60, "period": 60 }
+          },
+          {
+            "name": "PUBLIC_WRITE_LIMITER",
+            "type": "ratelimit",
+            "namespace_id": "1002",
+            "simple": { "limit": 20, "period": 60 }
+          },
+          {
+            "name": "SPONSOR_LIMITER",
+            "type": "ratelimit",
+            "namespace_id": "1003",
+            "simple": { "limit": 10, "period": 60 }
+          }
+        ]
+      },
+      "vars": {
+        "NEXT_PUBLIC_SOLANA_RPC_URL": "https://rpc.devnet.revibase.com",
+        "NEXT_PUBLIC_SOLANA_CLUSTER": "devnet",
+        "APP_ORIGIN": "http://localhost:3000,http://127.0.0.1:3000"
+      }
+    }
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": true,
+      "persist": true,
+      "head_sampling_rate": 0.1
+    }
+  }
+}

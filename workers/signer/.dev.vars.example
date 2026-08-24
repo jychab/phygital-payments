@@ -1,0 +1,7 @@
+# Signer worker — key custody only.
+# cp workers/signer/.dev.vars.example workers/signer/.dev.vars
+
+APP_ENCRYPTION_SECRET=
+SIGNER_INTERNAL_TOKEN=
+# One-time fee-payer import only (provision-fee-payer script):
+# FEE_PAYER_SECRET_KEY=

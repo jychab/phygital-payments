@@ -10,7 +10,9 @@
     "dev": "pnpm --filter app dev",
     "build:app": "pnpm --filter app build",
     "preview:app": "pnpm --filter app preview",
-    "deploy:app": "pnpm --filter app deploy"
+    "deploy:app": "pnpm --filter app deploy",
+    "deploy:api": "pnpm --filter @phygital/api-worker deploy",
+    "deploy:signer": "pnpm --filter @phygital/signer-worker deploy"
   },
   "dependencies": {
     "@anchor-lang/core": "^1.0.2"

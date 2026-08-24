@@ -1,14 +1,5 @@
-import { address, type Address, type Rpc, type SolanaRpcApi } from "@solana/kit";
-import {
-  fetchMaybePhygitalToken,
-  fetchTokenByIdentifier,
-  findTokenPda,
-  parseSecp256r1Pubkey,
-  PhygitalTokenType,
-  type PhygitalToken as PhygitalTokenAccount,
-} from "phygital-token-sdk";
-
-import { bytesToBase64Url } from "@/lib/crypto/base64";
+import { address, type Address } from "@solana/kit";
+import { PhygitalTokenType } from "phygital-token-sdk";
 
 /** System program / default pubkey — token.owner before first claim. */
 export const DEFAULT_TOKEN_OWNER = address(
@@ -27,55 +18,6 @@ export type PhygitalToken = {
   lastSignCount: number;
   mint: Address;
 };
-
-export function phygitalTokenFromAccount(
-  tokenAddress: Address,
-  account: PhygitalTokenAccount,
-): PhygitalToken {
-  return {
-    tokenType: account.tokenType,
-    identifier: bytesToBase64Url(new Uint8Array(account.identifier[0])),
-    address: tokenAddress,
-    secp256r1PublicKey: bytesToBase64Url(new Uint8Array(account.publicKey[0])),
-    isLocked: account.isLocked,
-    currentOwner: account.owner,
-    lastSignCount: account.lastSignCount,
-    mint: account.mint,
-  };
-}
-
-/**
- * Load token by passkey public key (WebAuthn `verifyResponse` result).
- * PDA is seeded by the passkey, not the chip identifier. `null` when the
- * account does not exist yet.
- */
-export async function fetchMaybePhygitalTokenByPasskey(
-  rpc: Rpc<SolanaRpcApi>,
-  secp256r1PublicKey: string,
-): Promise<PhygitalToken | null> {
-  const tokenAddress = await findTokenPda(
-    parseSecp256r1Pubkey(secp256r1PublicKey),
-  );
-  const account = await fetchMaybePhygitalToken(rpc, tokenAddress);
-  if (!account.exists) return null;
-  return phygitalTokenFromAccount(tokenAddress, account.data);
-}
-
-/**
- * Load token by chip `identifier` (NFC URL `pk`), not by passkey.
- * PDA is still derived from on-chain `publicKey` after the GPA lookup.
- */
-export async function fetchPhygitalTokenByIdentifier(
-  rpc: Rpc<SolanaRpcApi>,
-  identifier: string,
-): Promise<PhygitalToken> {
-  const account = await fetchTokenByIdentifier(rpc, identifier);
-  if (!account) {
-    throw new Error("Token not found for identifier");
-  }
-  const tokenAddress = await findTokenPda(account.publicKey);
-  return phygitalTokenFromAccount(tokenAddress, account);
-}
 
 /** True when no wallet has claimed the token yet. */
 export function isUnclaimedToken(

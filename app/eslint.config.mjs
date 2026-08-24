@@ -16,9 +16,6 @@ const eslintConfig = defineConfig([
     ".open-next/**",
     ".wrangler/**",
     "cloudflare-env.d.ts",
-    // Worker/DO code is linted via its own tsconfig, not Next's eslint.
-    "worker/**",
-    "custom-worker.ts",
   ]),
 ]);
 

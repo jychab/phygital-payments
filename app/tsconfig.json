@@ -33,8 +33,6 @@
   ],
   "exclude": [
     "node_modules",
-    "worker",
-    "custom-worker.ts",
     ".open-next"
   ]
 }

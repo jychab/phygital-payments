@@ -1,11 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import { AppProviders } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Wallet",
-  description: "Your Face ID is this wallet. There is no recovery phrase.",
+  description: "Your passkey is this wallet. There is no recovery phrase.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -15,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark h-full antialiased">
-      <body className="min-h-full flex flex-col font-sans">
+      <body className="flex min-h-dvh flex-col font-sans">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

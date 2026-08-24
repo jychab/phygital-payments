@@ -49,6 +49,7 @@ export function CardHome({
       <ClaimPanel
         token={token}
         unclaimed={isUnclaimedToken(token)}
+        fromVerifiedTap={liveConfirmed}
         onBack={() => setShowClaim(false)}
         onClaimed={() => {
           setShowClaim(false);
@@ -75,7 +76,7 @@ export function CardHome({
       liveConfirmed={liveConfirmed}
       holdError={holdError}
       onHoldToCheck={() => void onHoldToCheck()}
-      onClaim={() => setShowClaim(true)}
+      onClaim={!token.isLocked ? () => setShowClaim(true) : undefined}
     />
   );
 }

@@ -77,6 +77,12 @@ export function shouldDehydrateQuery(query: Query): boolean {
   return defaultShouldDehydrateQuery(query) && isPersistedQueryKey(query.queryKey);
 }
 
+/** Drop persisted React Query cache (e.g. on wallet disconnect). */
+export function clearPersistedQueryCache(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(STORAGE_KEY);
+}
+
 /**
  * Sync localStorage persister. No-op during SSR (Next may evaluate providers
  * on the server; PersistQueryClientProvider still needs a Persister object).

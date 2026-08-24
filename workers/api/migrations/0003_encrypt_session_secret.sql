@@ -1,0 +1,1 @@
+-- Greenfield schema already stores no session secrets in the app DB.

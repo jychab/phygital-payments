@@ -1,0 +1,25 @@
+{
+  "name": "@phygital/signer-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev -c wrangler.jsonc --env dev --port 8788",
+    "deploy": "wrangler deploy -c wrangler.jsonc",
+    "test": "vitest run",
+    "db:migrate:local": "wrangler d1 migrations apply phygital_signer --local -c wrangler.jsonc --env dev",
+    "provision-fee-payer": "node scripts/provision-fee-payer.mjs",
+    "cf-typegen": "wrangler types --env-interface SignerWorkerEnv worker-env.d.ts"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.2.0",
+    "@solana/kit": "^7.0.0",
+    "phygital-token-sdk": "^0.22.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250726.0",
+    "typescript": "^5",
+    "vitest": "^3.2.7",
+    "wrangler": "^4.80.0"
+  }
+}

@@ -1,17 +1,22 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Suspense } from "react";
 
-import { CardApp } from "@/components/card/card-app";
 import { AppBoot } from "@/components/layout/app-shell";
 
+const CardApp = dynamic(
+  () => import("@/components/card/card-app").then((m) => m.CardApp),
+  { loading: () => <AppBoot /> },
+);
+
 export const metadata: Metadata = {
-  title: "Card",
-  description: "Check if this card is genuine, then claim it to a wallet",
+  title: "Accessories",
+  description: "Check if this accessory is genuine, then claim it to a wallet",
 };
 
 export default function CardPage() {
   return (
-    <Suspense fallback={<AppBoot modeLabel="Card" />}>
+    <Suspense fallback={<AppBoot />}>
       <CardApp />
     </Suspense>
   );

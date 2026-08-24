@@ -1,47 +1,21 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "phygital-payments-app",
-  "main": "./custom-worker.ts",
+  "main": ".open-next/worker.js",
   "compatibility_date": "2025-07-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  "services": [
-    {
-      "binding": "WORKER_SELF_REFERENCE",
-      "service": "phygital-payments-app"
-    }
-  ],
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": ["TransferSubmitterDO"]
-    },
-    {
-      "tag": "v2",
-      "new_sqlite_classes": ["PreauthGrantsDO"]
-    },
-    {
-      "tag": "v3",
-      "deleted_classes": ["TransferSubmitterDO", "PreauthGrantsDO"]
-    }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "revibase_counter",
-      "id": "a9aa768ab4854f11ac0314170849c172"
-    }
-  ],
   "vars": {
-    "NEXT_PUBLIC_SOLANA_RPC_URL": "https://rpc.revibase.com",
-    "NEXT_PUBLIC_SOLANA_CLUSTER": "mainnet",
-    "NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY": "2qLZosEYxN4Bp7dGySYgjWEmXR9jQ4za6hr2AFocUHxU"
+    "NEXT_PUBLIC_SOLANA_RPC_URL": "https://rpc.devnet.revibase.com",
+    "NEXT_PUBLIC_SOLANA_CLUSTER": "devnet",
+    "NEXT_PUBLIC_API_ORIGIN": "https://api.revibase.com"
   },
   "observability": {
-    "enabled": false,
-    "head_sampling_rate": 1,
+    "enabled": true,
+    "head_sampling_rate": 0.1,
     "logs": {
       "enabled": true,
       "head_sampling_rate": 1,
@@ -49,9 +23,9 @@
       "invocation_logs": true
     },
     "traces": {
-      "enabled": false,
+      "enabled": true,
       "persist": true,
-      "head_sampling_rate": 1
+      "head_sampling_rate": 0.1
     }
   }
 }

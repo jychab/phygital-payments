@@ -1,13 +1,6 @@
-# Local secrets + public config for `next dev` and Wrangler.
-# Copied to `.dev.vars` (gitignored). Do not use `.env` / `.env.local`.
+# App (Pages / Next) — browser-facing public config only.
+# cp app/.dev.vars.example app/.dev.vars
 
-NEXTJS_ENV=development
-
-# Solana
+NEXT_PUBLIC_API_ORIGIN=http://localhost:8787
 # NEXT_PUBLIC_SOLANA_CLUSTER=devnet
 # NEXT_PUBLIC_SOLANA_RPC_URL=https://api.devnet.solana.com
-# NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY=
-
-# Worker secrets (Wrangler / OpenNext)
-# FEE_PAYER_SECRET_KEY=
-# WALLET_SESSION_SECRET=

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 
@@ -15,6 +15,17 @@ import {
 } from "@/lib/queries/persist";
 import { queryOptions } from "@/lib/queries";
 
+/** Real persister on the client; SSR/hydration must not freeze the no-op from `useState`. */
+function useQueryPersister() {
+  const persisterRef = useRef<ReturnType<typeof createQueryPersister> | null>(
+    null,
+  );
+  if (typeof window !== "undefined" && persisterRef.current === null) {
+    persisterRef.current = createQueryPersister();
+  }
+  return persisterRef.current ?? createQueryPersister();
+}
+
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -28,7 +39,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
         },
       }),
   );
-  const [persister] = useState(() => createQueryPersister());
+  const persister = useQueryPersister();
 
   return (
     <PersistQueryClientProvider

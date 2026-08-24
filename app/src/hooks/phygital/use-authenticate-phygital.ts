@@ -1,23 +1,18 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 
 import { authenticatePhygital } from "@/lib/phygital/authenticate";
 
 export function useAuthenticatePhygital() {
-  const [pending, setPending] = useState(false);
+  const mutation = useMutation({
+    mutationFn: (args?: { expectedPublicKey?: string }) => authenticatePhygital(args),
+  });
 
-  const authenticate = useCallback(
-    async (args?: { expectedPublicKey?: string }) => {
-      setPending(true);
-      try {
-        return await authenticatePhygital(args);
-      } finally {
-        setPending(false);
-      }
-    },
-    [],
-  );
-
-  return { authenticate, pending };
+  return {
+    authenticate: (args?: { expectedPublicKey?: string }) => mutation.mutateAsync(args),
+    pending: mutation.isPending,
+    error: mutation.error,
+    reset: mutation.reset,
+  };
 }

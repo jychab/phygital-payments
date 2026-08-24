@@ -32,7 +32,7 @@ export function PhygitalTokenGate({
         size="lg"
         pulsing={false}
         title="Not Set Up"
-        body="This phygital token isn’t set up yet."
+        body="This accessory isn’t set up yet."
       />
     );
   }

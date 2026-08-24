@@ -1,0 +1,7 @@
+# API worker — secrets + CORS. Not used by the Pages app.
+# cp workers/api/.dev.vars.example workers/api/.dev.vars
+
+WALLET_SESSION_SECRET=
+SIGNER_INTERNAL_TOKEN=
+SIGNER_ORIGIN=http://127.0.0.1:8788
+APP_ORIGIN=http://localhost:3000,http://127.0.0.1:3000

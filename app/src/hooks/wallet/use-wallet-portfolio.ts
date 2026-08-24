@@ -27,6 +27,6 @@ export function useWalletPortfolio(vaultPda: Address | null) {
       return fetchWalletPortfolio(vaultPda);
     },
     enabled: Boolean(vaultPda),
-    ...queryOptions.recent,
+    ...queryOptions.wallet,
   });
 }

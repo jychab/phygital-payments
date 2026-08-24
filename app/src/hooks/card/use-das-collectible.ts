@@ -2,19 +2,15 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import {
-  fetchDasCollectible,
-  queryKeys,
-  queryOptions,
-  type Collectible,
-} from "@/lib/queries";
+import { queryKeys, queryOptions, type Collectible } from "@/lib/queries";
+import { fetchDasCollectibleClient } from "@/lib/tokens/das-collectible-client";
 
 export function useDasCollectible(mint: string | null) {
   return useQuery<Collectible | null, Error>({
     queryKey: queryKeys.dasCollectible.byMint(mint),
     queryFn: () => {
       if (!mint) throw new Error("Missing mint");
-      return fetchDasCollectible(mint);
+      return fetchDasCollectibleClient(mint);
     },
     enabled: Boolean(mint),
     retry: false,

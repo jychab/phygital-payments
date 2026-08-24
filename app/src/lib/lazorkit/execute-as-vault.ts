@@ -11,7 +11,8 @@ import { rpcAccountDataBytes } from "@/lib/solana/rpc-account-data";
 import { lazorkitProgramAddress } from "./constants";
 import type { SmartWalletSession } from "./credential-store";
 import { getPasskeyAssertion } from "./passkey";
-import { sponsoredFeePayerSigner, sponsorInstructions } from "./sponsor";
+import { sponsoredFeePayerSigner } from "@/lib/wallet/fee-payer-client";
+import { sponsorInstructions } from "./sponsor";
 
 export type ExecuteAsVaultArgs = {
   session: SmartWalletSession;
@@ -47,8 +48,8 @@ async function fetchSlot(): Promise<bigint> {
 export async function executeAsVault(
   args: ExecuteAsVaultArgs,
 ): Promise<{ signature: string }> {
-  const payer = sponsoredFeePayerSigner();
-  const [counter, slot] = await Promise.all([
+  const [payer, counter, slot] = await Promise.all([
+    sponsoredFeePayerSigner(),
     fetchAuthorityCounter(args.session.authorityPda),
     fetchSlot(),
   ]);

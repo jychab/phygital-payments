@@ -35,6 +35,7 @@ export function buildCreateSessionInner(args: {
   sessionPda: Address;
   sessionKey: Uint8Array;
   expiresAtSlot: bigint;
+  actions?: Uint8Array;
 }) {
   return buildCreateSessionInstruction({
     payer: createAddressSigner(args.vaultPda),
@@ -43,6 +44,7 @@ export function buildCreateSessionInner(args: {
     session: args.sessionPda,
     sessionKey: args.sessionKey,
     expiresAtSlot: args.expiresAtSlot,
+    actions: args.actions,
     programAddress: lazorkitProgramAddress(),
   });
 }

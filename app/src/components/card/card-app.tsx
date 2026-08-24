@@ -14,7 +14,7 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 
 export function CardApp() {
   return (
-    <PhygitalAppShell modeLabel="Card">
+    <PhygitalAppShell>
       <CardNfcApp />
     </PhygitalAppShell>
   );
@@ -31,7 +31,7 @@ function CardNfcApp() {
     <NfcTapVerifiedGate>
       {(pk) => (
         <PhygitalTokenGate pk={pk}>
-          {(token) => <CardHome token={token} />}
+          {(token) => <CardHome token={token} liveConfirmed />}
         </PhygitalTokenGate>
       )}
     </NfcTapVerifiedGate>
@@ -87,7 +87,7 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
         size="lg"
         pulsing={false}
         title="Not Set Up"
-        body="This phygital token isn’t set up yet."
+        body="This accessory isn’t set up yet."
       />
     );
   }
@@ -108,7 +108,7 @@ function HoldToCheckLanding({ failed = false }: { failed?: boolean }) {
     <NfcHoldStatus
       size="lg"
       title="Hold to Check"
-      body="Hold your phygital to the back of this phone."
+      body="Hold your accessory to the back of this phone."
       onRingClick={() => void onCheck()}
       ringAriaLabel="Hold to Check"
     />

@@ -11,6 +11,14 @@ export {
   buildRevokeSessionInstruction,
 } from "./create-session";
 export {
+  Actions,
+  MAX_SESSION_ACTIONS,
+  MAX_SESSION_ACTIONS_BYTES,
+  SessionActionType,
+  serializeActions,
+  type SessionAction,
+} from "./session-actions";
+export {
   assembleExecuteInstructions,
   assembleSessionExecute,
   buildExecuteChallenge,

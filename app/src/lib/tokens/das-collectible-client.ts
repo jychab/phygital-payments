@@ -7,10 +7,9 @@ export async function fetchDasCollectibleClient(
   const res = await queryFetch(
     `/api/tokens/collectible?id=${encodeURIComponent(mint)}`,
   );
-  if (!res.ok) return null;
-  const body = await readJson<{ collectible?: Collectible | null }>(
+  const body = await readJson<{ collectible: Collectible | null }>(
     res,
     "Couldn’t load collectible",
   );
-  return body.collectible ?? null;
+  return body.collectible;
 }
