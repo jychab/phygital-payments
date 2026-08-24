@@ -1,9 +1,9 @@
-import { withApiMetrics } from "@/lib/server/analytics";
-import { apiJson, cachedApiJson } from "@/lib/server/api-response";
-import { fetchDasCollectible } from "@/lib/server/das-collectible";
-import { rateLimitOrResponse, rateLimitPresets } from "@/lib/server/rate-limit";
-import { tryParseAddress } from "@/lib/solana/address";
-import { toUserErrorMessage } from "@/lib/user-errors";
+import { withApiMetrics } from "@/platform/analytics";
+import { apiJson, cachedApiJson } from "@/platform/api-response";
+import { fetchDasCollectible } from "@/solana/das-collectible";
+import { rateLimitOrResponse, rateLimitPresets } from "@/platform/rate-limit";
+import { tryParseAddress } from "@/solana/address";
+import { toUserErrorMessage } from "@/platform/user-errors";
 
 const CACHE_TTL_SEC = 900;
 

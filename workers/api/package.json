@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@noble/curves": "^2.2.0",
+    "@solana-program/compute-budget": "0.17.0",
     "@solana/kit": "^7.0.0",
     "lazor-kit": "workspace:*",
     "phygital-token-sdk": "^0.22.0"

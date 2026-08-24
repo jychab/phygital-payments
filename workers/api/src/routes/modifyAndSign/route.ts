@@ -1,28 +1,28 @@
 import { verifyResponse } from "phygital-token-sdk";
 import { getBase64EncodedWireTransaction } from "@solana/kit";
 
-import { isEligibleNfcAccessory } from "@/lib/phygital/nfc-accessory";
+import { isEligibleNfcAccessory } from "@/phygital/nfc-accessory";
 import {
   fetchMaybePhygitalTokenByPasskey,
   isUnclaimedToken,
-} from "@/lib/phygital/token";
-import { getSolanaRpc } from "@/lib/solana/rpc";
-import { getFeePayerAddress } from "@/lib/server/fee-payer";
-import { withApiMetrics } from "@/lib/server/analytics";
-import { corsJson, corsOptions } from "@/lib/server/api-response";
+} from "@/phygital/token";
+import { getSolanaRpc } from "@/solana/rpc";
+import { getFeePayerAddress } from "@/sponsor/fee-payer";
+import { withApiMetrics } from "@/platform/analytics";
+import { corsJson, corsOptions } from "@/platform/api-response";
 import {
   decodeAndAssertSignTransaction,
   SignTransactionError,
-} from "@/lib/server/agent-sign";
-import { getRecordByPhygitalPasskey } from "@/lib/server/agent-store";
+} from "@/agent/sign";
+import { getRecordByPhygitalPasskey } from "@/agent/store";
 import {
   clientIp,
   rateLimitOrResponse,
   rateLimitPresets,
-} from "@/lib/server/rate-limit";
-import { SIGNER_REQUEST_EXPIRED, SignerError, signerErrorToHttp } from "@/lib/signer/errors";
-import { getSignerClient } from "@/lib/signer/get-signer-client";
-import { toUserErrorMessage } from "@/lib/user-errors";
+} from "@/platform/rate-limit";
+import { SIGNER_REQUEST_EXPIRED, SignerError, signerErrorToHttp } from "@/signer/errors";
+import { getSignerClient } from "@/signer/get-signer-client";
+import { toUserErrorMessage } from "@/platform/user-errors";
 
 const SIGN_KEYS = new Set(["requestId", "response", "transaction"]);
 

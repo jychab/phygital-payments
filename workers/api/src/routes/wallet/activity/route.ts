@@ -1,7 +1,7 @@
-import { withApiMetrics } from "@/lib/server/analytics";
-import { cachedApiJson } from "@/lib/server/api-response";
-import { withVaultQuery } from "@/lib/server/vault-route";
-import { fetchWalletActivity } from "@/lib/server/wallet-activity";
+import { withApiMetrics } from "@/platform/analytics";
+import { cachedApiJson } from "@/platform/api-response";
+import { withVaultQuery } from "@/wallet/vault-query";
+import { fetchWalletActivity } from "@/wallet/activity";
 
 const CACHE_TTL_SEC = 15;
 

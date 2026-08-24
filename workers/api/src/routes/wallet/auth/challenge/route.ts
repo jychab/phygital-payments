@@ -1,13 +1,13 @@
 import { bytesToBase64Url } from "@/shared/base64";
-import { CHALLENGE_TTL_MS } from "@/lib/server/agent-policy";
-import { withApiMetrics } from "@/lib/server/analytics";
-import { apiJson } from "@/lib/server/api-response";
-import { rateLimitOrResponse, rateLimitPresets } from "@/lib/server/rate-limit";
+import { CHALLENGE_TTL_MS } from "@/wallet/challenge-ttl";
+import { withApiMetrics } from "@/platform/analytics";
+import { apiJson } from "@/platform/api-response";
+import { rateLimitOrResponse, rateLimitPresets } from "@/platform/rate-limit";
 import {
   putWalletAuthChallenge,
   type WalletAuthChallenge,
-} from "@/lib/server/wallet-auth-store";
-import { toUserErrorMessage } from "@/lib/user-errors";
+} from "@/wallet/auth-store";
+import { toUserErrorMessage } from "@/platform/user-errors";
 
 /** Mint a WebAuthn challenge for wallet-owner API calls (agent bind / revoke). */
 export async function POST(req: Request) {

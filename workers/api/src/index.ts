@@ -1,3 +1,9 @@
+/**
+ * Phygital Payments API Worker entry.
+ * See README.md for folder map, auth layers, and the two traps below:
+ * - Two sessions: wallet JWT cookie (`wallet/`) vs LazorKit agent grant (`agent/`).
+ * - Two challenges: `/api/challenge` (signer NFC) vs `/api/wallet/auth/challenge` (WebAuthn).
+ */
 import * as challengeRoute from "@/routes/challenge/route";
 import * as modifyAndSignRoute from "@/routes/modifyAndSign/route";
 import * as collectibleRoute from "@/routes/tokens/collectible/route";
@@ -13,9 +19,9 @@ import * as walletGrantRoute from "@/routes/wallet/grant/route";
 import * as walletPasskeyRoute from "@/routes/wallet/passkey/route";
 import * as walletSessionRoute from "@/routes/wallet/session/route";
 import * as walletSponsorRoute from "@/routes/wallet/sponsor/route";
-import { apiJson } from "@/lib/server/api-response";
-import { runScheduledTasks } from "@/lib/server/scheduled-tasks";
-import { runWithRequestContext } from "@/lib/server/request-context";
+import { apiJson } from "@/platform/api-response";
+import { runScheduledTasks } from "@/platform/scheduled-tasks";
+import { runWithRequestContext } from "@/platform/request-context";
 
 type RouteModule = {
   GET?: (request: Request) => Promise<Response> | Response;

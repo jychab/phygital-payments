@@ -1,8 +1,8 @@
-import { withApiMetrics } from "@/lib/server/analytics";
-import { listVaultAgents } from "@/lib/server/list-vault-agents";
-import { listOwnedNfcAccessories } from "@/lib/server/nfc-accessories";
-import { withVaultQuery } from "@/lib/server/vault-route";
-import { fetchWalletPortfolio } from "@/lib/server/wallet-assets";
+import { withApiMetrics } from "@/platform/analytics";
+import { listVaultAgents } from "@/agent/list";
+import { listOwnedNfcAccessories } from "@/phygital/accessories";
+import { withVaultQuery } from "@/wallet/vault-query";
+import { fetchWalletPortfolio } from "@/wallet/assets";
 
 /**
  * Batch wallet home data: portfolio + NFC accessories + agents in one round trip.
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   return withApiMetrics("/api/wallet/dashboard", async () => {
     return withVaultQuery(req, async (vault) => {
       const accessoriesPromise = listOwnedNfcAccessories(vault);
-      const [portfolioResult, accessories, agents] = await Promise.all([
+      const [portfolio, accessories, agents] = await Promise.all([
         fetchWalletPortfolio(vault),
         accessoriesPromise,
         listVaultAgents(vault, {
@@ -22,7 +22,6 @@ export async function GET(req: Request) {
           ),
         }),
       ]);
-      const { dasPageCount: _pages, ...portfolio } = portfolioResult;
       return { portfolio, accessories, agents };
     });
   });

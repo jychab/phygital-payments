@@ -1,12 +1,12 @@
-import { withApiMetrics } from "@/lib/server/analytics";
+import { withApiMetrics } from "@/platform/analytics";
 import {
   getMaybePhygitalTokenByPasskey,
   getPhygitalTokenByIdentifier,
-} from "@/lib/server/phygital-token-lookup";
-import { toPhygitalTokenWire } from "@/lib/phygital/token-wire";
-import { apiJson } from "@/lib/server/api-response";
-import { rateLimitOrResponse, rateLimitPresets } from "@/lib/server/rate-limit";
-import { toUserErrorMessage } from "@/lib/user-errors";
+} from "@/phygital/lookup";
+import { toPhygitalTokenWire } from "@/phygital/token-wire";
+import { apiJson } from "@/platform/api-response";
+import { rateLimitOrResponse, rateLimitPresets } from "@/platform/rate-limit";
+import { toUserErrorMessage } from "@/platform/user-errors";
 
 export async function GET(req: Request) {
   return withApiMetrics("/api/tokens/phygital", async () => {

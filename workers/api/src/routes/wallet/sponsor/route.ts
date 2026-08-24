@@ -1,57 +1,60 @@
 import type { Address, Instruction } from "@solana/kit";
 
-import { withApiMetrics } from "@/lib/server/analytics";
-import { apiJson } from "@/lib/server/api-response";
+import { withApiMetrics } from "@/platform/analytics";
+import { apiJson } from "@/platform/api-response";
 import {
   assertRateLimit,
   clientIp,
   rateLimitPresets,
   RateLimitError,
-} from "@/lib/server/rate-limit";
+} from "@/platform/rate-limit";
 import {
   assertSponsorBudget,
   SponsorBudgetError,
-} from "@/lib/server/sponsor-budget";
+} from "@/sponsor/budget";
 import {
   requireWalletSession,
   walletSessionErrorMessage,
   WalletSessionError,
-} from "@/lib/server/wallet-session";
+} from "@/wallet/session";
 import {
   assertSponsoredInstructionsForSession,
   isCreateWalletOnlyBatch,
   SponsorValidationError,
   validateSponsoredInstructions,
-} from "@/lib/server/wallet-sponsor";
+} from "@/sponsor/validate";
 import {
   IdempotencyConflictError,
   idempotencyKey,
   readIdempotentResponse,
   requestFingerprint,
   storeIdempotentResponse,
-} from "@/lib/server/idempotency";
-import { getFeePayerAddress } from "@/lib/server/fee-payer";
-import { SignerError, signerErrorToHttp } from "@/lib/signer/errors";
-import { getSignerClient } from "@/lib/signer/get-signer-client";
+} from "@/platform/idempotency";
+import { getFeePayerAddress } from "@/sponsor/fee-payer";
+import { SignerError, signerErrorToHttp } from "@/signer/errors";
+import { getSignerClient } from "@/signer/get-signer-client";
 import type { SponsorRequest } from "@/shared/sponsor-wire";
-import { toUserErrorMessage } from "@/lib/user-errors";
+import { toUserErrorMessage } from "@/platform/user-errors";
 import {
   buildSponsoredWireForExternalSign,
+  estimateSponsoredComputeUnits,
   fetchLatestBlockhash,
   submitSignedWire,
   type BlockhashLifetime,
   SubmitError,
-} from "@/worker/solana";
+} from "@/sponsor/submit";
 
 async function signAndSubmit(
   instructions: Instruction[],
   latestBlockhash: BlockhashLifetime,
   feePayer: Address,
+  computeUnitLimit: number,
 ): Promise<string> {
   const unsignedWire = await buildSponsoredWireForExternalSign(
     instructions,
     latestBlockhash,
     feePayer,
+    computeUnitLimit,
   );
   const { transaction: signedWire } = await getSignerClient().signFeePayer({
     transaction: unsignedWire,
@@ -65,6 +68,7 @@ export async function POST(req: Request) {
     try {
       const body = (await req.json()) as SponsorRequest;
       const idemKey = idempotencyKey(req);
+      const feePayerPromise = getFeePayerAddress();
       if (idemKey) {
         const cached = await readIdempotentResponse<{ signature: string }>(
           "/api/wallet/sponsor",
@@ -74,33 +78,40 @@ export async function POST(req: Request) {
       }
 
       const wires = body?.instructions ?? [];
-      const feePayer = await getFeePayerAddress();
+      const feePayer = await feePayerPromise;
       const instructions = validateSponsoredInstructions(wires, feePayer);
 
       let latestBlockhash: BlockhashLifetime;
+      let computeUnitLimit: number;
       if (isCreateWalletOnlyBatch(instructions)) {
-        [, latestBlockhash] = await Promise.all([
+        [, latestBlockhash, computeUnitLimit] = await Promise.all([
           assertRateLimit(
             `sponsor:create-wallet:${clientIp(req)}`,
             rateLimitPresets.createWallet,
           ),
           fetchLatestBlockhash(),
+          estimateSponsoredComputeUnits(instructions, feePayer),
         ]);
       } else {
-        const session = await requireWalletSession();
-        assertSponsoredInstructionsForSession(wires, session);
-        const vaultPda = String(session.vaultPda);
-        [, , latestBlockhash] = await Promise.all([
-          assertRateLimit(`sponsor:${vaultPda}`, rateLimitPresets.sponsor),
-          assertSponsorBudget(vaultPda),
+        const [session, blockhash] = await Promise.all([
+          requireWalletSession(),
           fetchLatestBlockhash(),
         ]);
+        assertSponsoredInstructionsForSession(wires, session);
+        const vaultPda = String(session.vaultPda);
+        [, , computeUnitLimit] = await Promise.all([
+          assertRateLimit(`sponsor:${vaultPda}`, rateLimitPresets.sponsor),
+          assertSponsorBudget(vaultPda),
+          estimateSponsoredComputeUnits(instructions, feePayer),
+        ]);
+        latestBlockhash = blockhash;
       }
 
       const signature = await signAndSubmit(
         instructions,
         latestBlockhash,
         feePayer,
+        computeUnitLimit,
       );
       const response = { signature };
       if (idemKey) {

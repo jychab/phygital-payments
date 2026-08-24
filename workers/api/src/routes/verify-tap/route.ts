@@ -1,17 +1,17 @@
-import { withApiMetrics } from "@/lib/server/analytics";
-import { apiJson } from "@/lib/server/api-response";
+import { withApiMetrics } from "@/platform/analytics";
+import { apiJson } from "@/platform/api-response";
 import {
   evaluateCounter,
   TAP_SESSION_TTL_MS,
-} from "@/lib/phygital/tap/counter-session";
+} from "@/phygital/tap/counter-session";
 import {
   readCounterSession,
   writeCounterSession,
-} from "@/lib/phygital/tap/counter-store";
-import { verifyDynamicUrlWithoutCounterCheck } from "@/lib/phygital/tap/verify-dynamic-url";
-import { tryAdvanceD1Counter } from "@/lib/server/d1-counter-store";
-import { rateLimitOrResponse, rateLimitPresets } from "@/lib/server/rate-limit";
-import { toUserErrorMessage } from "@/lib/user-errors";
+} from "@/phygital/tap/counter-store";
+import { verifyDynamicUrlWithoutCounterCheck } from "@/phygital/tap/verify-dynamic-url";
+import { tryAdvanceD1Counter } from "@/phygital/tap/counter-d1";
+import { rateLimitOrResponse, rateLimitPresets } from "@/platform/rate-limit";
+import { toUserErrorMessage } from "@/platform/user-errors";
 
 /**
  * Verify an NFC dynamic-URL tap (`pk`/`s`/`c`/`n`) for Hold to Check.

@@ -1,9 +1,9 @@
-import { withApiMetrics } from "@/lib/server/analytics";
-import { corsJson, corsOptions } from "@/lib/server/api-response";
-import { rateLimitOrResponse, rateLimitPresets } from "@/lib/server/rate-limit";
-import { SignerError, signerErrorToHttp } from "@/lib/signer/errors";
-import { getSignerClient } from "@/lib/signer/get-signer-client";
-import { toUserErrorMessage } from "@/lib/user-errors";
+import { withApiMetrics } from "@/platform/analytics";
+import { corsJson, corsOptions } from "@/platform/api-response";
+import { rateLimitOrResponse, rateLimitPresets } from "@/platform/rate-limit";
+import { SignerError, signerErrorToHttp } from "@/signer/errors";
+import { getSignerClient } from "@/signer/get-signer-client";
+import { toUserErrorMessage } from "@/platform/user-errors";
 
 export function OPTIONS() {
   return corsOptions("GET, POST, OPTIONS");

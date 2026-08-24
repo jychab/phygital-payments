@@ -1,8 +1,8 @@
-import { withApiMetrics } from "@/lib/server/analytics";
-import { apiJson } from "@/lib/server/api-response";
-import { getFeePayerAddress } from "@/lib/server/fee-payer";
-import { SignerError, signerErrorToHttp } from "@/lib/signer/errors";
-import { toUserErrorMessage } from "@/lib/user-errors";
+import { withApiMetrics } from "@/platform/analytics";
+import { apiJson } from "@/platform/api-response";
+import { getFeePayerAddress } from "@/sponsor/fee-payer";
+import { SignerError, signerErrorToHttp } from "@/signer/errors";
+import { toUserErrorMessage } from "@/platform/user-errors";
 
 /** GET /api/wallet/fee-payer — active sponsored fee-payer pubkey from the signer. */
 export async function GET() {

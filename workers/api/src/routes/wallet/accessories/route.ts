@@ -1,6 +1,6 @@
-import { withApiMetrics } from "@/lib/server/analytics";
-import { withVaultQuery } from "@/lib/server/vault-route";
-import { listOwnedNfcAccessories } from "@/lib/server/nfc-accessories";
+import { withApiMetrics } from "@/platform/analytics";
+import { withVaultQuery } from "@/wallet/vault-query";
+import { listOwnedNfcAccessories } from "@/phygital/accessories";
 
 /** Controlled phygital tokens owned by the vault. */
 export async function GET(req: Request) {

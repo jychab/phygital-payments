@@ -1,8 +1,8 @@
 import { bytesToBase64Url } from "@/shared/base64";
 
-import { withApiMetrics } from "@/lib/server/analytics";
-import { apiJson } from "@/lib/server/api-response";
-import { rateLimitOrResponse, rateLimitPresets } from "@/lib/server/rate-limit";
+import { withApiMetrics } from "@/platform/analytics";
+import { apiJson } from "@/platform/api-response";
+import { rateLimitOrResponse, rateLimitPresets } from "@/platform/rate-limit";
 import {
   assertWalletAuthAssertion,
   assertWalletRegistration,
@@ -11,18 +11,18 @@ import {
   type ResolvedWalletSession,
   type WalletAuthAssertionWire,
   type WalletRegistrationWire,
-} from "@/lib/server/wallet-auth";
-import { takeWalletAuthChallenge } from "@/lib/server/wallet-auth-store";
+} from "@/wallet/auth";
+import { takeWalletAuthChallenge } from "@/wallet/auth-store";
 import {
   clearWalletSessionCookieOptions,
   readWalletSessionFromCookies,
   serializeCookie,
   walletSessionCookieOptions,
   walletSessionErrorMessage,
-} from "@/lib/server/wallet-session";
-import { getCookie, withSetCookie } from "@/lib/server/request-context";
-import { signWalletSessionJwt, revokeWalletSessionToken, WALLET_SESSION_COOKIE } from "@/lib/server/wallet-session-jwt";
-import { toUserErrorMessage } from "@/lib/user-errors";
+} from "@/wallet/session";
+import { getCookie, withSetCookie } from "@/platform/request-context";
+import { signWalletSessionJwt, revokeWalletSessionToken, WALLET_SESSION_COOKIE } from "@/wallet/session-jwt";
+import { toUserErrorMessage } from "@/platform/user-errors";
 
 async function issueSessionResponse(wallet: ResolvedWalletSession) {
   const token = await signWalletSessionJwt({
