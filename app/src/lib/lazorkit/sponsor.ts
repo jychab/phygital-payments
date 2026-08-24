@@ -1,6 +1,7 @@
 import { type Instruction } from "@solana/kit";
 
 import { queryFetch, readJson } from "@/lib/queries/http";
+import { waitForSignatureConfirmed } from "@/lib/solana/wait-for-confirmation";
 import {
   instructionsToWire,
   type SponsorResponse,
@@ -17,5 +18,13 @@ export async function sponsorInstructions(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ instructions: instructionsToWire(instructions) }),
   });
-  return readJson<SponsorResponse>(res, "Couldn’t submit the transaction");
+  const submitted = await readJson<SponsorResponse>(
+    res,
+    "Couldn’t submit the transaction",
+  );
+  await waitForSignatureConfirmed(
+    submitted.signature,
+    submitted.lastValidBlockHeight,
+  );
+  return { signature: submitted.signature };
 }

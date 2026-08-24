@@ -35,6 +35,22 @@ describe("toUserFacingError", () => {
     );
     expect(facing.title).toBe("Already Added");
   });
+
+  it("maps a sponsored confirmation timeout", () => {
+    expect(
+      toUserErrorMessage(
+        new Error("timed out waiting for sponsored transaction"),
+      ),
+    ).toBe("Taking Too Long");
+  });
+
+  it("maps an on-chain sponsored failure", () => {
+    const facing = toUserFacingError(
+      new Error('Transaction failed on-chain: {"InstructionError":[0,"Custom"]}'),
+    );
+    expect(facing.title).toBe("Couldn’t Finish");
+    expect(facing.body).toMatch(/didn’t go through/i);
+  });
 });
 
 describe("toUserErrorMessage", () => {

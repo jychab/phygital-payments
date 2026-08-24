@@ -9,7 +9,6 @@ import {
   writeCounterSession,
 } from "@/phygital/tap/counter-store";
 import { verifyDynamicUrlWithoutCounterCheck } from "@/phygital/tap/verify-dynamic-url";
-import { tryAdvanceD1Counter } from "@/phygital/tap/counter-d1";
 import { rateLimitOrResponse, rateLimitPresets } from "@/platform/rate-limit";
 import { toUserErrorMessage } from "@/platform/user-errors";
 
@@ -53,21 +52,6 @@ export async function GET(req: Request) {
       }
 
       if (verdict === "new") {
-        const advanced = await tryAdvanceD1Counter(
-          secp256r1PublicKey,
-          counter,
-          now,
-        );
-        if (!advanced) {
-          return apiJson(
-            {
-              isVerified: false,
-              error:
-                "This tap was already used. Hold your accessory to this phone again.",
-            },
-            409,
-          );
-        }
         await writeCounterSession(secp256r1PublicKey, { c: counter, t: now });
       }
 

@@ -5,9 +5,8 @@ import {
 import { getEnv } from "@/platform/request-context";
 
 /**
- * KV-backed counter session for tap anti-replay reentry grace.
+ * KV-backed counter session for tap anti-replay.
  * `revibase_counter` is the shared chip counter store across products.
- * Strict monotonic advance lives in D1 (`tryAdvanceD1Counter`).
  * Keyed by chip public key (`pk`); value is `{ c, t }`.
  */
 

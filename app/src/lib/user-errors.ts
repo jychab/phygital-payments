@@ -49,6 +49,11 @@ const RULES: Rule[] = [
     body: "Try again.",
   },
   {
+    test: /transaction failed on-chain/i,
+    title: "Couldn’t Finish",
+    body: "The transaction didn’t go through. Try again.",
+  },
+  {
     test: /tap proof expired|slot hash no longer valid/i,
     title: "This Expired",
     body: "Hold your accessory to this phone again.",

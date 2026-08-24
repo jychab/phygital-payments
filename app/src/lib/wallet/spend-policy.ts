@@ -5,6 +5,7 @@ import {
   type SessionActionDraft,
 } from "@/lib/lazorkit/session-action-drafts";
 import { isMainnet } from "@/lib/solana/cluster";
+import { formatSol } from "@/lib/wallet/sol";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
   TOKEN_PROGRAM_ADDRESS,
@@ -18,10 +19,20 @@ export const USDC_MINT_MAINNET =
 export const USDC_MINT_DEVNET =
   "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
 
+/** Jupiter aggregator v6. */
+export const JUPITER_V6_PROGRAM_ADDRESS =
+  "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4";
+
+/** Compute Budget program. */
+export const COMPUTE_BUDGET_PROGRAM_ADDRESS =
+  "ComputeBudget111111111111111111111111111111";
+
 export const DEFAULT_SPEND_DAYS = 30;
-export const DEFAULT_USDC_PER_DAY = 200;
+export const DEFAULT_SOL_PER_TAP_LAMPORTS = 500_000_000n;
+export const DEFAULT_SOL_PER_DAY_LAMPORTS = 2_000_000_000n;
+export const DEFAULT_USDC_PER_DAY = 1_000;
 /** Contactless-style cap so one tap cannot spend the whole daily budget. */
-export const DEFAULT_USDC_PER_TAP = 50;
+export const DEFAULT_USDC_PER_TAP = 100;
 export const USDC_DECIMALS = 6;
 
 export function usdcMint(): string {
@@ -40,21 +51,35 @@ export function defaultUsdcAtomsPerTap(): bigint {
   return BigInt(DEFAULT_USDC_PER_TAP) * 10n ** BigInt(USDC_DECIMALS);
 }
 
-/** Recommended tap-to-pay policy: 200 USDC/day, 50 USDC/tap, SPL Token + ATA. */
+function defaultWindowSlots(): string {
+  return daysToSlots(1).toString();
+}
+
+/** Recommended tap-to-pay policy: 2 SOL/day, 1,000 USDC/day, Token + ATA + Jupiter. */
 export function defaultSpendActions(): SessionActionDraft[] {
   const mint = usdcMint();
+  const windowSlots = defaultWindowSlots();
   return [
     {
-      type: "tokenRecurringLimit",
-      mint,
-      limit: defaultUsdcAtomsPerDay().toString(),
-      windowSlots: daysToSlots(1).toString(),
-      decimals: USDC_DECIMALS,
+      type: "solMaxPerTx",
+      max: DEFAULT_SOL_PER_TAP_LAMPORTS.toString(),
+    },
+    {
+      type: "solRecurringLimit",
+      limit: DEFAULT_SOL_PER_DAY_LAMPORTS.toString(),
+      windowSlots,
     },
     {
       type: "tokenMaxPerTx",
       mint,
       max: defaultUsdcAtomsPerTap().toString(),
+      decimals: USDC_DECIMALS,
+    },
+    {
+      type: "tokenRecurringLimit",
+      mint,
+      limit: defaultUsdcAtomsPerDay().toString(),
+      windowSlots,
       decimals: USDC_DECIMALS,
     },
     {
@@ -64,6 +89,14 @@ export function defaultSpendActions(): SessionActionDraft[] {
     {
       type: "programWhitelist",
       programId: String(ASSOCIATED_TOKEN_PROGRAM_ADDRESS),
+    },
+    {
+      type: "programWhitelist",
+      programId: JUPITER_V6_PROGRAM_ADDRESS,
+    },
+    {
+      type: "programWhitelist",
+      programId: COMPUTE_BUDGET_PROGRAM_ADDRESS,
     },
   ];
 }
@@ -78,6 +111,12 @@ export function isDefaultSpendPolicy(
 function normalize(drafts: readonly SessionActionDraft[]): string {
   return [...drafts]
     .map((draft) => {
+      if (draft.type === "solRecurringLimit") {
+        return [draft.type, draft.limit, draft.windowSlots].join(":");
+      }
+      if (draft.type === "solMaxPerTx") {
+        return [draft.type, draft.max].join(":");
+      }
       if (draft.type === "tokenRecurringLimit") {
         return [draft.type, draft.mint, draft.limit, draft.windowSlots].join(
           ":",
@@ -103,7 +142,7 @@ export function spendRowCaption(
   drafts: readonly SessionActionDraft[] | null | undefined,
 ): string {
   if (isDefaultSpendPolicy(drafts)) {
-    return `${DEFAULT_USDC_PER_DAY} USDC a day`;
+    return `${formatSol(DEFAULT_SOL_PER_DAY_LAMPORTS)} SOL and ${DEFAULT_USDC_PER_DAY} USDC a day`;
   }
   return accessorySpendCaption(drafts);
 }
@@ -114,9 +153,11 @@ export function summarizeSpendPolicy(
 ): string[] {
   if (isDefaultSpendPolicy(drafts)) {
     return [
+      `${formatSol(DEFAULT_SOL_PER_DAY_LAMPORTS)} SOL a day`,
+      `${formatSol(DEFAULT_SOL_PER_TAP_LAMPORTS)} SOL per tap`,
       `${DEFAULT_USDC_PER_DAY} USDC a day`,
       `${DEFAULT_USDC_PER_TAP} USDC per tap`,
-      "USDC transfers only",
+      "SOL, USDC, and Jupiter",
     ];
   }
   return summarizeSessionActions(drafts);

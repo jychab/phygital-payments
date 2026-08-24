@@ -20,6 +20,8 @@ export type SponsorRequest = {
 
 export type SponsorResponse = {
   signature: string;
+  /** Block height after which the submitted tx’s blockhash is expired. */
+  lastValidBlockHeight: number;
 };
 
 function roleFromFlags(writable: boolean, signer: boolean): AccountRole {

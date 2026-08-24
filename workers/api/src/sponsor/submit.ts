@@ -138,7 +138,11 @@ export async function buildSponsoredWireForExternalSign(
   return getBase64EncodedWireTransaction(compileTransaction(message));
 }
 
-/** Submit a fully signed wire transaction without waiting for confirmation. */
+/**
+ * Submit a fully signed wire transaction without waiting for confirmation.
+ * Omits `maxRetries` so the RPC re-forwards until blockhash expiry; the client
+ * waits for `confirmed` so the Worker stays short-lived at high concurrency.
+ */
 export async function submitSignedWire(wire: string): Promise<Signature> {
   const decoder = getTransactionDecoder();
   const transaction = decoder.decode(base64ToBytes(wire));
@@ -148,7 +152,6 @@ export async function submitSignedWire(wire: string): Promise<Signature> {
       .sendTransaction(wire as Base64EncodedWireTransaction, {
         encoding: "base64",
         skipPreflight: true,
-        maxRetries: 0n,
       })
       .send();
   } catch (error) {

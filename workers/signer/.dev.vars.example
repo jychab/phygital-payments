@@ -3,5 +3,3 @@
 
 APP_ENCRYPTION_SECRET=
 SIGNER_INTERNAL_TOKEN=
-# One-time fee-payer import only (provision-fee-payer script):
-# FEE_PAYER_SECRET_KEY=

@@ -24,11 +24,15 @@ import { tryParseAddress } from "@/lib/solana/address";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { shortAddress } from "@/lib/utils";
 import { parseUiAmount } from "@/lib/wallet/parse-amount";
-import { parseSolAmount } from "@/lib/wallet/sol";
+import { formatSol, parseSolAmount } from "@/lib/wallet/sol";
 import {
+  COMPUTE_BUDGET_PROGRAM_ADDRESS,
+  DEFAULT_SOL_PER_DAY_LAMPORTS,
+  DEFAULT_SOL_PER_TAP_LAMPORTS,
   DEFAULT_SPEND_DAYS,
   DEFAULT_USDC_PER_DAY,
   DEFAULT_USDC_PER_TAP,
+  JUPITER_V6_PROGRAM_ADDRESS,
   USDC_DECIMALS,
   defaultSpendActions,
   usdcMint,
@@ -84,6 +88,16 @@ function defaultProgramRows(): ProgramDraft[] {
     {
       id: newId(),
       programId: String(ASSOCIATED_TOKEN_PROGRAM_ADDRESS),
+      kind: "allow",
+    },
+    {
+      id: newId(),
+      programId: JUPITER_V6_PROGRAM_ADDRESS,
+      kind: "allow",
+    },
+    {
+      id: newId(),
+      programId: COMPUTE_BUDGET_PROGRAM_ADDRESS,
       kind: "allow",
     },
   ];
@@ -170,8 +184,12 @@ export function SpendingSheet({
   const [mode, setMode] = useState<"recommended" | "custom">("recommended");
   const [days, setDays] = useState(DEFAULT_SPEND_DAYS);
   const [solLifetime, setSolLifetime] = useState("");
-  const [solMaxPerTx, setSolMaxPerTx] = useState("");
-  const [solRecurring, setSolRecurring] = useState("");
+  const [solMaxPerTx, setSolMaxPerTx] = useState(
+    formatSol(DEFAULT_SOL_PER_TAP_LAMPORTS),
+  );
+  const [solRecurring, setSolRecurring] = useState(
+    formatSol(DEFAULT_SOL_PER_DAY_LAMPORTS),
+  );
   const [solRecurringDays, setSolRecurringDays] = useState("1");
   const [tokens, setTokens] = useState<TokenDraft[]>(defaultTokenRows);
   const [programs, setPrograms] = useState<ProgramDraft[]>(defaultProgramRows);
@@ -208,8 +226,8 @@ export function SpendingSheet({
   function resetToRecommended() {
     setDays(DEFAULT_SPEND_DAYS);
     setSolLifetime("");
-    setSolMaxPerTx("");
-    setSolRecurring("");
+    setSolMaxPerTx(formatSol(DEFAULT_SOL_PER_TAP_LAMPORTS));
+    setSolRecurring(formatSol(DEFAULT_SOL_PER_DAY_LAMPORTS));
     setSolRecurringDays("1");
     setTokens(defaultTokenRows());
     setPrograms(defaultProgramRows());
@@ -395,13 +413,14 @@ export function SpendingSheet({
 
         <div className="rounded-2xl border border-border/60 px-4 py-4">
           <p className="text-2xl font-semibold tracking-tight tabular-nums text-foreground">
-            {DEFAULT_USDC_PER_DAY} USDC
+            {formatSol(DEFAULT_SOL_PER_DAY_LAMPORTS)} SOL · {DEFAULT_USDC_PER_DAY}{" "}
+            USDC
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">a day</p>
           <ul className="mt-3 space-y-1.5">
             {[
-              `Up to ${DEFAULT_USDC_PER_TAP} USDC per tap`,
-              "USDC transfers only",
+              `Up to ${formatSol(DEFAULT_SOL_PER_TAP_LAMPORTS)} SOL / ${DEFAULT_USDC_PER_TAP} USDC per tap`,
+              "SOL, USDC, and Jupiter",
               `Good for ${DEFAULT_SPEND_DAYS} days`,
             ].map((line) => (
               <li

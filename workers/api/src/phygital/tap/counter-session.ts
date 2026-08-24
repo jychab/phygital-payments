@@ -1,9 +1,9 @@
 /**
  * Counter session logic for tap verification.
- * KV (`revibase_counter`) holds the last verified counter for reentry grace;
- * D1 (`nfc_tap_counters`) is the strict monotonic advance. See `/api/verify-tap`.
+ * KV (`revibase_counter`) holds the last verified counter for reentry grace
+ * and monotonic advance. See `/api/verify-tap`.
  *
- * Pure logic (no IO) — `counter-store` / `d1-counter-store` own persistence.
+ * Pure logic (no IO) — `counter-store` owns persistence.
  */
 
 export const TAP_SESSION_TTL_MS = 15 * 60 * 1000;

@@ -8,7 +8,6 @@
     "deploy": "wrangler deploy -c wrangler.jsonc",
     "test": "vitest run",
     "db:migrate:local": "wrangler d1 migrations apply phygital_signer --local -c wrangler.jsonc --env dev",
-    "provision-fee-payer": "node scripts/provision-fee-payer.mjs",
     "cf-typegen": "wrangler types --env-interface SignerWorkerEnv worker-env.d.ts"
   },
   "dependencies": {

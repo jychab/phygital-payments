@@ -1,8 +1,8 @@
 import { getEnv } from "@/platform/request-context";
 
 /**
- * App D1 (`phygital_app`): agents, passkeys, challenges, NFC counters.
- * Tap reentry grace stays on `revibase_counter` KV — see counter-store.
+ * App D1 (`phygital_app`): agents, passkeys, challenges.
+ * Tap anti-replay stays on `revibase_counter` KV — see counter-store.
  */
 export function getAppDb(): D1Database {
   const db = getEnv().phygital_app;

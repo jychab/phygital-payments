@@ -36,6 +36,10 @@ const RULES: Rule[] = [
     title: "Taking Too Long",
   },
   {
+    test: /transaction failed on-chain/i,
+    title: "Couldn’t Finish",
+  },
+  {
     test: /tap proof expired|slot hash no longer valid/i,
     title: "This Expired",
   },

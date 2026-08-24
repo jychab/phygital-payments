@@ -29,8 +29,8 @@ Do not confuse “session” in route names with LazorKit `sessionPda` / `sessio
 
 ### Storage split
 
-- **D1 `phygital_app`**: agents, passkeys, WebAuthn challenges, rate limits, sponsor budget, idempotency, NFC tap counters, session revocations — see `platform/app-db.ts`.
-- **KV `revibase_counter`**: tap reentry grace only — see `phygital/tap/counter-store.ts`. Strict monotonic advance is D1 (`phygital/tap/counter-d1.ts`).
+- **D1 `phygital_app`**: agents, passkeys, WebAuthn challenges, rate limits, sponsor budget, idempotency, session revocations — see `platform/app-db.ts`.
+- **KV `revibase_counter`**: tap anti-replay (monotonic counter + reentry grace) — see `phygital/tap/counter-store.ts`.
 
 Signing secrets live in the **signer** worker (`SIGNER` service binding), not here.
 

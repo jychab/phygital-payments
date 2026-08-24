@@ -20,6 +20,8 @@ export type SponsoredInstructionWire = {
 
 export type SponsorResponse = {
   signature: string;
+  /** Block height after which the submitted tx’s blockhash is expired. */
+  lastValidBlockHeight: number;
 };
 
 export function instructionToWire(ix: Instruction): SponsoredInstructionWire {

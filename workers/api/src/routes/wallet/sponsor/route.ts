@@ -33,7 +33,7 @@ import {
 import { getFeePayerAddress } from "@/sponsor/fee-payer";
 import { SignerError, signerErrorToHttp } from "@/signer/errors";
 import { getSignerClient } from "@/signer/get-signer-client";
-import type { SponsorRequest } from "@/shared/sponsor-wire";
+import type { SponsorRequest, SponsorResponse } from "@/shared/sponsor-wire";
 import { toUserErrorMessage } from "@/platform/user-errors";
 import {
   buildSponsoredWireForExternalSign,
@@ -49,7 +49,7 @@ async function signAndSubmit(
   latestBlockhash: BlockhashLifetime,
   feePayer: Address,
   computeUnitLimit: number,
-): Promise<string> {
+): Promise<SponsorResponse> {
   const unsignedWire = await buildSponsoredWireForExternalSign(
     instructions,
     latestBlockhash,
@@ -59,7 +59,11 @@ async function signAndSubmit(
   const { transaction: signedWire } = await getSignerClient().signFeePayer({
     transaction: unsignedWire,
   });
-  return String(await submitSignedWire(signedWire));
+  const signature = String(await submitSignedWire(signedWire));
+  return {
+    signature,
+    lastValidBlockHeight: Number(latestBlockhash.lastValidBlockHeight),
+  };
 }
 
 /** POST /api/wallet/sponsor — fee-payer signs an allowlisted instruction list. */
@@ -70,7 +74,7 @@ export async function POST(req: Request) {
       const idemKey = idempotencyKey(req);
       const feePayerPromise = getFeePayerAddress();
       if (idemKey) {
-        const cached = await readIdempotentResponse<{ signature: string }>(
+        const cached = await readIdempotentResponse<SponsorResponse>(
           "/api/wallet/sponsor",
           idemKey,
         );
@@ -107,13 +111,12 @@ export async function POST(req: Request) {
         latestBlockhash = blockhash;
       }
 
-      const signature = await signAndSubmit(
+      const response = await signAndSubmit(
         instructions,
         latestBlockhash,
         feePayer,
         computeUnitLimit,
       );
-      const response = { signature };
       if (idemKey) {
         await storeIdempotentResponse(
           "/api/wallet/sponsor",
