@@ -77,6 +77,8 @@ export const copy = {
   claimStepConfirm: "Confirm in wallet",
   verifyingChip: "Verifying chip signature…",
   amountLocked: "Amount set by payment link",
+  collect: products.collect.name,
+  getPaid: "Get paid",
 } as const;
 
 /**

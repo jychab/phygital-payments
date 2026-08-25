@@ -25,6 +25,7 @@ export function AuthenticAccessoryPanel({
   onHoldToCheck,
   onClaim,
   payAction,
+  collectAction,
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
@@ -35,6 +36,8 @@ export function AuthenticAccessoryPanel({
   onClaim?: () => void;
   /** Integrated Hold-to-Pay actions (arm Pay / Set up / Manage). */
   payAction?: ReactNode;
+  /** Merchant launcher (owned detail from Collection only). */
+  collectAction?: ReactNode;
 }) {
   const unclaimed = isUnclaimedToken(token);
   const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
@@ -69,6 +72,8 @@ export function AuthenticAccessoryPanel({
     </Button>
   ) : null;
 
+  const hasFooter = footer != null || collectAction != null;
+
   return (
     <div className="flex flex-1 flex-col">
       <NfcHoldStatus
@@ -89,14 +94,17 @@ export function AuthenticAccessoryPanel({
         }
       />
 
-      {footer ? (
+      {hasFooter ? (
         <div
           className={cn(
             "mt-auto flex w-full flex-col items-center gap-2.5 pt-2",
             galleryAnimate.rise,
           )}
         >
-          <div className="flex w-full max-w-xs flex-col gap-2.5">{footer}</div>
+          <div className="flex w-full max-w-xs flex-col gap-2.5">
+            {footer}
+            {collectAction}
+          </div>
         </div>
       ) : null}
     </div>

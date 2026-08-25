@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { AuthenticAccessoryPanel } from "@/components/accessory/authentic-accessory-panel";
 import { ClaimPanel } from "@/components/claim/claim-panel";
@@ -24,6 +25,7 @@ import { useHoldToCheck } from "@/hooks/phygital/use-hold-to-check";
 import { useHoldToPay } from "@/hooks/pay/use-hold-to-pay";
 import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
 import { usePreauthRequired } from "@/hooks/pay/use-preauth-required";
+import { collectHref } from "@/lib/collect/payment-request";
 import {
   tokenAllowsPay,
   isUnclaimedToken,
@@ -86,6 +88,11 @@ export function AccessoryHome({
 
   const owner = String(token.currentOwner);
   const canPay = token.isLocked && tokenAllowsPay(token);
+  /** Merchant Collect launcher — Collection detail only, never cold NFC. */
+  const collectLaunch =
+    fromCollection && !isUnclaimedToken(token) ? (
+      <CollectLaunchLink recipient={owner} />
+    ) : undefined;
 
   function openPay(mode: AccessoryPayMode) {
     setShowPay({
@@ -159,6 +166,7 @@ export function AccessoryHome({
         liveConfirmed={liveConfirmed}
         fromCollection={fromCollection}
         holdError={holdError}
+        collectAction={collectLaunch}
         onHoldToCheck={() => void holdToCheck()}
         onClaim={() => setShowClaim(true)}
         onOpenSetup={() => openPay("setup")}
@@ -177,8 +185,23 @@ export function AccessoryHome({
         holdError={holdError}
         onHoldToCheck={() => void holdToCheck()}
         onClaim={() => setShowClaim(true)}
+        collectAction={collectLaunch}
       />
     </div>
+  );
+}
+
+/** Opens Collect as this wallet — friends pay with their accessories. */
+function CollectLaunchLink({ recipient }: { recipient: string }) {
+  return (
+    <Button
+      asChild
+      variant="ghost"
+      size="lg"
+      className="w-full text-muted-foreground"
+    >
+      <Link href={collectHref({ recipient })}>{copy.collect}</Link>
+    </Button>
   );
 }
 
@@ -192,6 +215,7 @@ function AccessoryPayHome({
   liveConfirmed,
   fromCollection,
   holdError,
+  collectAction,
   onHoldToCheck,
   onClaim,
   onOpenSetup,
@@ -202,6 +226,7 @@ function AccessoryPayHome({
   liveConfirmed: boolean;
   fromCollection: boolean;
   holdError?: string | null;
+  collectAction?: ReactNode;
   onHoldToCheck: () => void;
   onClaim: () => void;
   onOpenSetup: () => void;
@@ -233,6 +258,7 @@ function AccessoryPayHome({
         holdError={holdError}
         onHoldToCheck={onHoldToCheck}
         onClaim={onClaim}
+        collectAction={collectAction}
         payAction={
           <AccessoryIntegratedPayCta
             owner={owner}

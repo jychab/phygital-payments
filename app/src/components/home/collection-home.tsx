@@ -14,6 +14,8 @@ import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import { usePrefetchDasCollectibles } from "@/hooks/accessory/use-das-collectible";
 import { usePhygitalTokensByOwner } from "@/hooks/home/use-phygital-tokens-by-owner";
+import { collectHref } from "@/lib/collect/payment-request";
+import { copy } from "@/lib/copy/phygital";
 import { collectionDetailHref } from "@/lib/journey";
 import { tokenHasLinkedMint, type PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
@@ -88,7 +90,12 @@ function CollectionBody({
               : ""}
           </p>
         </div>
-        <QueryRefreshButton owner={owner} />
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Button asChild variant="outline" size="sm">
+            <Link href={collectHref({ recipient: owner })}>{copy.collect}</Link>
+          </Button>
+          <QueryRefreshButton owner={owner} />
+        </div>
       </MotionSection>
 
       {cards.length > 0 ? (
