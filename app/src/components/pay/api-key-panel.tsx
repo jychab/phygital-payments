@@ -14,6 +14,7 @@ import { markApiKeyVerified } from "@/hooks/pay/use-verified-api-key";
 import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 import { verifyAndStoreApiKey } from "@/lib/pay/api-key-client";
 import { maskApiKey, readApiKey } from "@/lib/pay/api-key-store";
+import { payCopy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 type PanelStep = "home" | "paste" | "confirm-reset";
@@ -69,7 +70,7 @@ export function ApiKeyPanel({
       refreshStoredKey();
       setPasteValue("");
       goHome();
-      toast.success("Revibase Pay is on");
+      toast.success(payCopy.onToast);
       onStored?.();
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn’t continue"));
@@ -100,7 +101,7 @@ export function ApiKeyPanel({
       refreshStoredKey();
       goHome();
       toast.success(
-        rotate ? "Other browsers will stop working." : "Revibase Pay is on",
+        rotate ? "Other browsers will stop working." : payCopy.onToast,
       );
     } catch (error) {
       toast.error(
@@ -172,7 +173,7 @@ export function ApiKeyPanel({
               matched={matched}
               busy={busy}
               provisionBusy={provisionBusy}
-              idleLabel="Generate API key"
+              idleLabel={payCopy.generateKey}
               busyLabel="Generating…"
               connectHint={`Connect ${ownerShort} to generate an API key.`}
               onProvision={() => void onProvision(false)}
@@ -185,7 +186,7 @@ export function ApiKeyPanel({
               onClick={() => setStep("paste")}
               disabled={busy}
             >
-              Import API key
+              {payCopy.importKey}
             </Button>
           </>
         ) : null}
@@ -200,7 +201,7 @@ export function ApiKeyPanel({
               onClick={() => setStep("paste")}
               disabled={busy}
             >
-              Import API key
+              {payCopy.importKey}
             </Button>
             <Button
               type="button"
@@ -210,7 +211,7 @@ export function ApiKeyPanel({
               onClick={() => setStep("confirm-reset")}
               disabled={busy}
             >
-              Rotate API key
+              {payCopy.rotateKey}
             </Button>
           </>
         ) : null}
@@ -240,7 +241,7 @@ export function ApiKeyPanel({
             matched={matched}
             busy={busy}
             provisionBusy={provisionBusy}
-            idleLabel="Rotate API key"
+            idleLabel={payCopy.rotateKey}
             busyLabel="Rotating…"
             connectHint={`Connect ${ownerShort} to rotate the API key.`}
             onProvision={() => void onProvision(true)}
@@ -270,13 +271,13 @@ function copyForStep(step: PanelStep, hasStoredKey: boolean): {
 } {
   if (step === "paste") {
     return {
-      title: "Import API key",
+      title: payCopy.importKey,
       subtitle: "Paste a key from another browser.",
     };
   }
   if (step === "confirm-reset") {
     return {
-      title: "Rotate API key?",
+      title: `${payCopy.rotateKey}?`,
       subtitle:
         "Other browsers will stop working. This browser stays on.",
     };
@@ -284,13 +285,12 @@ function copyForStep(step: PanelStep, hasStoredKey: boolean): {
   if (hasStoredKey) {
     return {
       title: "API key",
-      subtitle: "Copy this to use Revibase Pay in another browser.",
+      subtitle: `Copy this to use ${payCopy.product} in another browser.`,
     };
   }
   return {
-    title: "Enable Revibase Pay",
-    subtitle:
-      "Generate a key for this browser, or import one you already have.",
+    title: payCopy.enableTitle,
+    subtitle: payCopy.enableSubtitle,
   };
 }
 

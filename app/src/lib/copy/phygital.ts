@@ -67,7 +67,7 @@ export const copy = {
   confirmed: "Confirmed",
   registeredOnChain: "Registered on-chain.",
   confirmedJustNow: "Confirmed just now.",
-/** Collection → detail; Confirmed copy when owner session verified (not URL alone). */
+  /** Collection → detail; Confirmed when owner session verified (not URL alone). */
   verifiedFromCollection: "Verified from your Collection.",
   connectCollectionBody: "Connect to see your cards and accessories.",
   claimNetworkFee:
@@ -77,4 +77,38 @@ export const copy = {
   claimStepConfirm: "Confirm in wallet",
   verifyingChip: "Verifying chip signature…",
   amountLocked: "Amount set by payment link",
+} as const;
+
+/**
+ * Revibase Pay surface copy — Collection and NFC accessory share these strings.
+ * Product name on setup/settings; short **Pay** only for the arm-payment action.
+ */
+export const payCopy = {
+  product: "Revibase Pay",
+  /** Primary action — arm a payment window. */
+  pay: "Pay",
+  setUp: "Set up Revibase Pay",
+  manage: "Manage Revibase Pay",
+  settings: "Manage Revibase Pay",
+  connectLinked: "Connect linked wallet",
+  manageConnectBody: (ownerShort: string) =>
+    `Connect ${ownerShort} to manage Revibase Pay on this accessory.`,
+  enableTitle: "Enable Revibase Pay",
+  enableSubtitle:
+    "Generate a key for this browser, or import one you already have.",
+  setUpSubtitle: "Import a key from another browser, or generate a new one.",
+  finishSetupTitle: "Finish Revibase Pay setup",
+  finishSetupKeyBody:
+    "Confirmation is on. Set up Revibase Pay in this browser to continue.",
+  finishSetupLimitBody: "Connect the linked wallet to set a spending limit.",
+  holdNeedsKey:
+    "Confirmation is on. Generate or import an API key to enable Revibase Pay.",
+  holdReady: "Press Pay, then hold your accessory to their phone.",
+  holdConfirmOff: "Hold your accessory to their phone to pay.",
+  onToast: "Revibase Pay is on",
+  importKey: "Import API key",
+  generateKey: "Generate API key",
+  rotateKey: "Rotate API key",
+  manageKey: "Manage API key",
+  loading: "Loading Pay…",
 } as const;

@@ -28,6 +28,7 @@ import {
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
 import { toUserErrorMessage } from "@/lib/user-errors";
+import { payCopy } from "@/lib/copy/phygital";
 import { cn, shortAddress } from "@/lib/utils";
 
 /** Tokens, spending limits, and Confirm Payments. */
@@ -69,7 +70,7 @@ export function ManagePayPanel({
 
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
-          Pay Settings
+          {payCopy.product}
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
           {confirmationOn
@@ -114,7 +115,7 @@ export function ManagePayPanel({
             className="w-full"
             onClick={() => setManageKeys(true)}
           >
-            Manage API key
+            {payCopy.manageKey}
           </Button>
         ) : null}
       </div>

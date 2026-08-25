@@ -28,6 +28,7 @@ import {
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
 import { toUserErrorMessage } from "@/lib/user-errors";
+import { payCopy } from "@/lib/copy/phygital";
 
 type PayNav =
   | { screen: "manage" }
@@ -45,10 +46,10 @@ export type PayScreenProps = {
   /** When false, owner queries fetch once without background polling. */
   active?: boolean;
   /**
-   * Accessory Hold path: API-key only, no wallet panels.
-   * Escalate via `onNeedSetup` (paste key) or `onNeedManage` (limits / settings).
+   * Accessory entry: `hold` = API-key Pay only; `manage` = settings home
+   * (even when Confirm is on). Escalate via `onNeedSetup` / `onNeedManage`.
    */
-  intent?: "hold";
+  intent?: "hold" | "manage";
   onNeedSetup?: () => void;
   onNeedManage?: () => void;
 };
@@ -56,7 +57,7 @@ export type PayScreenProps = {
 /**
  * Shared Pay surface for Home (`/`) and an owned accessory.
  * Setup order: spending limit → Pay home. Confirm Payments off lands on
- * Pay Settings; on lands on Hold to Pay.
+ * settings; on lands on Hold to Pay (unless `intent="manage"`).
  */
 export function PayScreen({
   owner,
@@ -82,9 +83,18 @@ export function PayScreen({
     queryOpts,
   );
 
-  const [nav, setNav] = useState<PayNav | null>(null);
+  // Manage entry must open settings even when Confirm-on would otherwise
+  // make Hold the home (e.g. Hold → Settings via pay=manage).
+  const [nav, setNav] = useState<PayNav | null>(() =>
+    intent === "manage" ? { screen: "manage" } : null,
+  );
 
   const manageIsHome = !confirmationRequired;
+  /** Settings is the landing screen for Confirm-off or explicit manage entry. */
+  const showManageHome =
+    nav?.screen === "manage" ||
+    (intent === "manage" && nav == null) ||
+    (manageIsHome && nav == null && limitReady);
   const tokens = delegates.data?.tokens ?? [];
   const defaultMintKey = String(defaultMint);
   const defaultHolding = delegates.holdings?.find(
@@ -195,15 +205,15 @@ export function PayScreen({
 
     const needsKey = confirmationRequired && !keyReady;
     const escalate = needsKey ? onNeedSetup : onNeedManage;
-    const escalateLabel = needsKey ? "Set up Revibase Pay" : "Continue";
+    const escalateLabel = needsKey ? payCopy.setUp : "Continue";
     const body = needsKey
-      ? "Confirmation is on. Set up Revibase Pay in this browser to continue."
-      : "Connect the linked wallet to set a spending limit.";
+      ? payCopy.finishSetupKeyBody
+      : payCopy.finishSetupLimitBody;
 
     return (
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
-        title="Finish Pay setup"
+        title={payCopy.finishSetupTitle}
         body={body}
         action={
           <div className="flex w-full flex-col gap-2">
@@ -269,13 +279,15 @@ export function PayScreen({
     );
   }
 
-  if (nav?.screen === "manage" || (manageIsHome && nav == null && limitReady)) {
+  if (showManageHome) {
     return (
       <ManagePayPanel
         owner={owner}
         live={active}
         onBack={
-          manageIsHome && nav == null ? onExit : () => setNav(null)
+          intent === "manage" || (manageIsHome && nav == null)
+            ? onExit
+            : () => setNav(null)
         }
         onEditTokenLimit={openLimit}
       />

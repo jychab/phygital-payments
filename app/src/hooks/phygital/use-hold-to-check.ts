@@ -31,7 +31,7 @@ export function useHoldToCheck(
   const { hasTapProof, verify } = useTapVerify();
   const tapConfirmed = hasTapProof && verify === "verified";
 
-  const [holdConfirmed, setHoldConfirmed] = useState(webauthnProvenInTree);
+  const [holdConfirmed, setHoldConfirmed] = useState(false);
   const [showInAppGate, setShowInAppGate] = useState(false);
   const [holdError, setHoldError] = useState<string | null>(null);
 
@@ -55,7 +55,9 @@ export function useHoldToCheck(
   }
 
   return {
-    liveConfirmed: holdConfirmed || tapConfirmed,
+    // Include parent seed so Collection wallet-match / cold WebAuthn stick
+    // when they arrive after the first render (Privy ready, etc.).
+    liveConfirmed: holdConfirmed || tapConfirmed || webauthnProvenInTree,
     pending,
     holdError,
     showInAppGate,

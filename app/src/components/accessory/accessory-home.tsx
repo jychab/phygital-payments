@@ -27,7 +27,7 @@ import {
   isUnclaimedToken,
   type PhygitalToken,
 } from "@/lib/phygital/token";
-import { copy } from "@/lib/copy/phygital";
+import { copy, payCopy } from "@/lib/copy/phygital";
 import { shortAddress } from "@/lib/utils";
 
 /**
@@ -116,7 +116,7 @@ export function AccessoryHome({
 
   if (showPay && payMode === "manage") {
     return (
-      <PrivyGate fallback={<LoadingStatus label="Loading Pay…" />}>
+      <PrivyGate fallback={<LoadingStatus label={payCopy.loading} />}>
         <AccessoryManagePayEntry
           owner={owner}
           tokenAddress={String(token.address)}
@@ -165,6 +165,7 @@ export function AccessoryHome({
 /**
  * Authenticity primary CTA matrix (Confirm / key / session).
  * Hold + paste-setup never wrap Privy; Manage does when Connect is needed.
+ * Same CTAs for Collection and NFC entry.
  */
 function AccessoryPayCta({
   owner,
@@ -192,7 +193,7 @@ function AccessoryPayCta({
   if (required && keyOk) {
     return (
       <Button type="button" size="lg" className="w-full" onClick={onOpenHold}>
-        Pay
+        {payCopy.pay}
       </Button>
     );
   }
@@ -200,7 +201,7 @@ function AccessoryPayCta({
   if (required && !keyOk) {
     return (
       <Button type="button" size="lg" className="w-full" onClick={onOpenSetup}>
-        Set up Revibase Pay
+        {payCopy.setUp}
       </Button>
     );
   }
@@ -209,14 +210,14 @@ function AccessoryPayCta({
     <PrivyGate
       fallback={
         <Button type="button" size="lg" className="w-full" disabled>
-          Connect linked wallet
+          {payCopy.connectLinked}
         </Button>
       }
     >
       <ManagePayButton
         label={{
-          connected: "Manage Pay Settings",
-          disconnected: "Connect linked wallet",
+          connected: payCopy.manage,
+          disconnected: payCopy.connectLinked,
         }}
         onOpen={onOpenManage}
       />
@@ -277,8 +278,8 @@ function AccessoryManagePayEntry({
         <BackLink onClick={onExit} />
         <div className="flex flex-1 flex-col items-center justify-center py-8">
           <ConnectGate
-            title="Connect linked wallet"
-            body={`Connect ${shortAddress(owner)} to manage Pay on this accessory.`}
+            title={payCopy.connectLinked}
+            body={payCopy.manageConnectBody(shortAddress(owner))}
             onConnect={connect}
           />
         </div>
@@ -288,7 +289,12 @@ function AccessoryManagePayEntry({
 
   return (
     <WalletSyncGate linkedOwner={owner}>
-      <PayScreen owner={owner} tokenAddress={tokenAddress} onExit={onExit} />
+      <PayScreen
+        intent="manage"
+        owner={owner}
+        tokenAddress={tokenAddress}
+        onExit={onExit}
+      />
     </WalletSyncGate>
   );
 }

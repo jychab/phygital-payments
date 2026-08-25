@@ -98,8 +98,8 @@ const RULES: Rule[] = [
   },
   {
     test: /missing x-api-key header|missing preauth api key|Pay isn't set up on this phone|Pay isn't set up in this browser|Pay isn't turned on here/i,
-    title: "Pay Isn’t Set Up",
-    body: "Turn on Pay here first.",
+    title: "Revibase Pay Isn’t Set Up",
+    body: "Generate or import an API key in this browser first.",
   },
   {
     test: /query param grantid is required|preauth grant not found/i,

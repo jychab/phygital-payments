@@ -11,6 +11,7 @@ import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenSymbol } from "@/components/shared/token-chip";
 import { formatCountdown } from "@/components/shared/expiry-countdown";
 import { Button } from "@/components/ui/button";
+import { payCopy } from "@/lib/copy/phygital";
 import { galleryAnimate } from "@/lib/motion";
 import {
   cancelPreauthForWallet,
@@ -270,10 +271,10 @@ export function HoldToPayPanel({
       <div className="flex flex-1 flex-col items-center justify-center text-center">
         <p className="max-w-64 text-sm text-muted-foreground">
           {!confirmationRequired
-            ? "Hold your accessory to their phone to pay."
+            ? payCopy.holdConfirmOff
             : !keyReady
-              ? "Confirmation is on. Generate or import an API key to enable Revibase Pay."
-              : "Press Pay, then hold your accessory to their phone."}
+              ? payCopy.holdNeedsKey
+              : payCopy.holdReady}
         </p>
       </div>
 
@@ -286,7 +287,7 @@ export function HoldToPayPanel({
             onClick={() => void onPay()}
             disabled={busy}
           >
-            {busy ? <LoaderCircle className="size-4 animate-spin" /> : "Pay"}
+            {busy ? <LoaderCircle className="size-4 animate-spin" /> : payCopy.pay}
           </Button>
         ) : null}
         {confirmationRequired && !keyReady && onSetupPhone ? (
@@ -296,7 +297,7 @@ export function HoldToPayPanel({
             className="w-full"
             onClick={onSetupPhone}
           >
-            Set up Revibase Pay
+            {payCopy.setUp}
           </Button>
         ) : null}
         {onManage ? (
@@ -307,7 +308,7 @@ export function HoldToPayPanel({
             className="w-full text-muted-foreground"
             onClick={onManage}
           >
-            Pay Settings
+            {payCopy.settings}
           </Button>
         ) : null}
       </div>

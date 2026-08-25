@@ -123,7 +123,7 @@ Phygital tokens **with** a linked mint. Shows DAS mint metadata (name, image, co
 
 A signed NFC URL or Hold to Check that resolves a minted token redirects from `/accessory` to `/card` (query string preserved). The reverse happens for tokens with no mint.
 
-API keys live in localStorage on this phone, keyed by wallet, and are only needed when Confirm Payments is on. **Use on Another Phone** copies, pastes, or issues/rotates a key. Setting a spending limit requires a balance for that token in the linked wallet.
+API keys live in browser localStorage, keyed by wallet, and are only needed when Confirm Payments is on. **Manage API key** imports, generates, or rotates a key. Setting a spending limit requires a balance for that token in the linked wallet.
 
 ### Open a spending window (API key)
 
@@ -163,7 +163,7 @@ Keep the HTTP connection open for the full window. Example: `curl --max-time 150
 
 Cancel an open window: `DELETE /api/preauth` with `Authorization: Bearer <apiKey>` (rejects rotated keys).
 
-The API key is stored in plaintext in localStorage on this phone. Use **Start over** in **Use on Another Phone** if leaked. `/api/preauth/open` only gates Revi-sponsored settlement when Confirm Payments is on for that wallet.
+The API key is stored in plaintext in localStorage in this browser. Use **Rotate API key** under **Manage API key** if leaked. `/api/preauth/open` only gates Revi-sponsored settlement when Confirm Payments is on for that wallet.
 
 ```bash
 curl -H "x-api-key: ppk_…" "https://<host>/api/preauth/open"

@@ -108,7 +108,7 @@ describe("toUserFacingBody", () => {
 
   it("folds a missing apiKey header into one Shortcuts line", () => {
     expect(toUserFacingBody("Missing x-api-key header")).toBe(
-      "Pay Isn’t Set Up. Turn on Pay here first.",
+      "Revibase Pay Isn’t Set Up. Generate or import an API key in this browser first.",
     );
   });
 });

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { markApiKeyVerified } from "@/hooks/pay/use-verified-api-key";
 import { verifyAndStoreApiKey } from "@/lib/pay/api-key-client";
 import { toUserErrorMessage } from "@/lib/user-errors";
+import { payCopy } from "@/lib/copy/phygital";
 
 /**
  * Import an existing Pay API key — HTTP verify only, no wallet Connect.
@@ -42,7 +43,7 @@ export function PastePayKeyPanel({
       setBusy(true);
       await verifyAndStoreApiKey(owner, trimmed);
       markApiKeyVerified(queryClient, owner);
-      toast.success("Revibase Pay is on");
+      toast.success(payCopy.onToast);
       onStored?.();
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn’t continue"));
@@ -57,10 +58,10 @@ export function PastePayKeyPanel({
 
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
-          Set up Revibase Pay
+          {payCopy.setUp}
         </h1>
         <p className="mx-auto max-w-72 text-sm text-muted-foreground">
-          Import a key from another browser, or generate a new one.
+          {payCopy.setUpSubtitle}
         </p>
       </div>
 
@@ -106,7 +107,7 @@ export function PastePayKeyPanel({
               onClick={onNeedWallet}
               disabled={busy}
             >
-              Generate API key
+              {payCopy.generateKey}
             </Button>
           ) : null}
         </div>
