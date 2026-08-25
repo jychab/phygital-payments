@@ -14,7 +14,10 @@ import { Button } from "@/components/ui/button";
 import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
 import { explorerTxUrl } from "@/lib/solana/cluster";
 import { formatTokenAmount } from "@/lib/tokens/mint-delegate";
-import { resolvePaymentToken, type PaymentToken } from "@/lib/tokens/payment-token";
+import {
+  resolvePaymentToken,
+  type PaymentToken,
+} from "@/lib/tokens/payment-token";
 import type { PaymentRecord } from "@/lib/home/history-client";
 import { usePaymentHistory } from "@/hooks/home/use-payment-history";
 import { cn, shortAddress } from "@/lib/utils";
@@ -63,7 +66,7 @@ function formatPaymentAmountUi(
   };
 }
 
-/** Home → Activity: payments this wallet sent or received. */
+/** Collect / wallet Activity — indexed payments for an address. */
 export function HistoryPanel({ owner }: { owner: string }) {
   const isRestoring = useIsRestoring();
   const query = usePaymentHistory(owner);
@@ -72,6 +75,7 @@ export function HistoryPanel({ owner }: { owner: string }) {
   const loading = isRestoring || query.isLoading;
   const error = query.error as Error | null;
   const rows = query.data ? toRows(query.data, owner) : [];
+  const emptyCopy = "Payments you send and receive will appear here.";
 
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -103,9 +107,7 @@ export function HistoryPanel({ owner }: { owner: string }) {
           <div className="flex size-12 items-center justify-center rounded-2xl border border-border/60 bg-muted/40">
             <History className="size-5 text-muted-foreground" />
           </div>
-          <p className="text-sm text-muted-foreground">
-            Payments you send and receive will appear here.
-          </p>
+          <p className="text-sm text-muted-foreground">{emptyCopy}</p>
         </div>
       ) : (
         <ul className="flex flex-col gap-2">

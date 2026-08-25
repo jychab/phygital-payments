@@ -1,14 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Nfc } from "lucide-react";
 
-import {
-  AccessoryOverflowMenu,
-  type AccessorySubview,
-} from "@/components/accessory/accessory-overflow-menu";
 import { AccessoryHome } from "@/components/accessory/accessory-home";
 import { GateMessage } from "@/components/layout/gate-message";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
@@ -17,9 +12,7 @@ import { PhygitalNfcApp } from "@/components/phygital/phygital-nfc-app";
 import { usePhygitalTokenByAddress } from "@/hooks/accessory/use-phygital-token";
 import { useEnsurePhygitalSurface } from "@/hooks/phygital/use-ensure-phygital-surface";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
-import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import { isDashboardBrowse } from "@/lib/journey";
-import { isUnclaimedToken, type PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 const PhygitalRouteShell = dynamic(
@@ -39,6 +32,7 @@ const ACCESSORY_NFC_COPY = {
 /**
  * Route `/accessory` — Hold to Check, signed NFC URL, or wallet finish.
  * Tokens with a linked mint redirect to `/card`.
+ * Authenticity does not mount Privy; Pay loads Privy only when opened.
  */
 export function AccessoryApp() {
   const embedded = useIsEmbedded();
@@ -76,14 +70,14 @@ export function AccessoryApp() {
         surface="accessory"
         copy={ACCESSORY_NFC_COPY}
         renderHome={({ token: loaded, liveConfirmed }) => (
-          <AccessoryOwnedHome token={loaded} liveConfirmed={liveConfirmed} />
+          <AccessoryHome token={loaded} liveConfirmed={liveConfirmed} />
         )}
       />
     </PhygitalRouteShell>
   );
 }
 
-/** `?address=` — single token query for overflow header + home. */
+/** `?address=` — browse from Collection, or deep link into task home. */
 function AccessoryAddressRoute({
   address,
   browseMode,
@@ -91,8 +85,6 @@ function AccessoryAddressRoute({
   address: string;
   browseMode: boolean;
 }) {
-  const [toolsSubview, setToolsSubview] = useState<AccessorySubview>("main");
-  const { address: wallet, isConnected } = useSolanaAddress();
   const tokenQuery = usePhygitalTokenByAddress(address);
   const mismatch = useEnsurePhygitalSurface(tokenQuery.data, "accessory");
 
@@ -125,64 +117,12 @@ function AccessoryAddressRoute({
     );
   }
 
-  const token = tokenQuery.data;
-  const owner = String(token.currentOwner);
-  const showOverflow =
-    !browseMode &&
-    isConnected &&
-    Boolean(wallet) &&
-    wallet === owner &&
-    !isUnclaimedToken(token);
-
   return (
     <PhygitalRouteShell
       modeLabel="Accessory"
       layout={browseMode ? "gallery" : "compact"}
-      headerExtra={
-        showOverflow && wallet ? (
-          <AccessoryOverflowMenu
-            owner={wallet}
-            token={token}
-            subview={toolsSubview}
-            onSubviewChange={setToolsSubview}
-          />
-        ) : null
-      }
     >
-      <AccessoryHome
-        token={token}
-        browseMode={browseMode}
-        toolsSubview={toolsSubview}
-        onToolsSubviewChange={setToolsSubview}
-      />
+      <AccessoryHome token={tokenQuery.data} browseMode={browseMode} />
     </PhygitalRouteShell>
-  );
-}
-
-/** Cold NFC / signed URL — overflow in content when owner. */
-function AccessoryOwnedHome({
-  token,
-  liveConfirmed,
-}: {
-  token: PhygitalToken;
-  liveConfirmed?: boolean;
-}) {
-  const [toolsSubview, setToolsSubview] = useState<AccessorySubview>("main");
-  const { address, isConnected } = useSolanaAddress();
-  const owner = String(token.currentOwner);
-  const showOverflow =
-    isConnected &&
-    Boolean(address) &&
-    address === owner &&
-    !isUnclaimedToken(token);
-
-  return (
-    <AccessoryHome
-      token={token}
-      liveConfirmed={liveConfirmed}
-      toolsSubview={toolsSubview}
-      onToolsSubviewChange={setToolsSubview}
-      showOverflowMenu={showOverflow}
-    />
   );
 }

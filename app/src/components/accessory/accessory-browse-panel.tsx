@@ -9,7 +9,10 @@ import { shortAddress } from "@/lib/utils";
 import { galleryAnimate } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
-/** Dashboard browse detail for an owned accessory — no Pay or manage. */
+/**
+ * Collection browse detail for an owned accessory.
+ * Authenticity only — Lock / Remove live on the `/` hub ⋮ menus.
+ */
 export function AccessoryBrowsePanel({
   token,
   liveConfirmed = false,

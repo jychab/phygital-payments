@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useIsRestoring } from "@tanstack/react-query";
-import { ChevronRight, Nfc } from "lucide-react";
+import { Nfc } from "lucide-react";
 
 import { BinderCardTile } from "@/components/home/binder-card-tile";
+import { CollectionTokenMenu } from "@/components/home/collection-token-menu";
 import { GateMessage } from "@/components/layout/gate-message";
 import { AccessoryIdentity } from "@/components/shared/accessory-identity";
 import { LoadingStatus } from "@/components/shared/loading-status";
@@ -98,7 +99,12 @@ function DashboardCollection({
         <section aria-label="Cards">
           <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
             {cards.map((token, index) => (
-              <BinderCardTile key={token.address} token={token} index={index} />
+              <BinderCardTile
+                key={token.address}
+                owner={owner}
+                token={token}
+                index={index}
+              />
             ))}
           </div>
         </section>
@@ -113,13 +119,19 @@ function DashboardCollection({
       )}
 
       {accessories.length > 0 ? (
-        <AccessoriesSection accessories={accessories} />
+        <AccessoriesSection owner={owner} accessories={accessories} />
       ) : null}
     </div>
   );
 }
 
-function AccessoriesSection({ accessories }: { accessories: PhygitalToken[] }) {
+function AccessoriesSection({
+  owner,
+  accessories,
+}: {
+  owner: string;
+  accessories: PhygitalToken[];
+}) {
   return (
     <MotionSection staggerIndex={2} className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
@@ -129,7 +141,7 @@ function AccessoriesSection({ accessories }: { accessories: PhygitalToken[] }) {
       <ul className="flex flex-col gap-2">
         {accessories.map((token) => (
           <li key={token.address}>
-            <AccessoryRow token={token} />
+            <AccessoryRow owner={owner} token={token} />
           </li>
         ))}
       </ul>
@@ -137,18 +149,35 @@ function AccessoriesSection({ accessories }: { accessories: PhygitalToken[] }) {
   );
 }
 
-function AccessoryRow({ token }: { token: PhygitalToken }) {
+function AccessoryRow({
+  owner,
+  token,
+}: {
+  owner: string;
+  token: PhygitalToken;
+}) {
   return (
-    <Link
-      href={dashboardDetailHref("accessory", token.address)}
+    <div
       className={cn(
-        "group flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/40 px-3.5 py-3",
-        "outline-none transition-colors duration-150 hover:bg-card/60",
-        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "flex items-center gap-0.5 rounded-xl border border-border/60 bg-card/40",
+        "transition-colors duration-150 hover:bg-card/60",
       )}
     >
-      <AccessoryIdentity token={token} />
-      <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-    </Link>
+      <Link
+        href={dashboardDetailHref("accessory", token.address)}
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-3 px-3.5 py-3",
+          "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        )}
+      >
+        <AccessoryIdentity token={token} />
+      </Link>
+      <CollectionTokenMenu
+        owner={owner}
+        token={token}
+        noun="accessory"
+        className="mr-1.5"
+      />
+    </div>
   );
 }

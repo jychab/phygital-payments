@@ -1,15 +1,21 @@
 "use client";
 
+import { useState } from "react";
+import { History } from "lucide-react";
+
 import { AppCard, AppShell } from "@/components/layout/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CollectPanel } from "@/components/collect/collect-panel";
+import { HistoryPanel } from "@/components/home/history-panel";
+import { BackLink } from "@/components/shared/back-link";
+import { Button } from "@/components/ui/button";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import type { PaymentRequest } from "@/lib/collect/payment-request";
 
 /**
  * Route `/collect` — merchant receive. Recipient always comes from
- * `?recipient=` (URL). Privy loads only inside ATA setup when the receive
- * account is missing (standalone only — embeds stay sealed).
+ * `?recipient=` (URL). Activity is public-by-address (no Privy).
+ * Privy loads only inside ATA setup when the receive account is missing.
  */
 export function CollectApp({
   paymentRequest,
@@ -17,6 +23,7 @@ export function CollectApp({
   paymentRequest: PaymentRequest;
 }) {
   const embedded = useIsEmbedded();
+  const [view, setView] = useState<"collect" | "activity">("collect");
 
   if (embedded === null) {
     return <EmbedBoot />;
@@ -45,12 +52,32 @@ export function CollectApp({
       walletActions="display-only"
       modeLabel="Collect"
       layout="compact"
+      headerExtra={
+        view === "collect" ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Activity"
+            onClick={() => setView("activity")}
+          >
+            <History className="size-4 text-muted-foreground" />
+          </Button>
+        ) : null
+      }
     >
       <AppCard>
-        <CollectPanel
-          paymentRequest={{ ...paymentRequest, recipient }}
-          allowWalletSetup={!embedded}
-        />
+        {view === "activity" ? (
+          <div className="flex flex-1 flex-col">
+            <BackLink onClick={() => setView("collect")} />
+            <HistoryPanel owner={recipientStr} />
+          </div>
+        ) : (
+          <CollectPanel
+            paymentRequest={{ ...paymentRequest, recipient }}
+            allowWalletSetup={!embedded}
+          />
+        )}
       </AppCard>
     </AppShell>
   );
