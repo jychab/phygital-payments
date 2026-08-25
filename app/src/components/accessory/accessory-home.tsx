@@ -88,9 +88,13 @@ export function AccessoryHome({
 
   const owner = String(token.currentOwner);
   const canPay = token.isLocked && tokenAllowsPay(token);
-  /** Merchant Collect launcher — Collection detail only, never cold NFC. */
+  /**
+   * Merchant Collect launcher — only on wallet-free accessory surfaces
+   * (NFC / deep link). Collection (`from=collection`) is Connect-gated and
+   * often embedded-adjacent; Collect needs standalone WebAuthn.
+   */
   const collectLaunch =
-    fromCollection && !isUnclaimedToken(token) ? (
+    !fromCollection && !isUnclaimedToken(token) ? (
       <CollectLaunchLink recipient={owner} />
     ) : undefined;
 
