@@ -5,6 +5,7 @@ import { AlertCircle } from "lucide-react";
 
 import { AppCard, AppShell } from "@/components/layout/app-shell";
 import { GateMessage } from "@/components/layout/gate-message";
+import { brand } from "@/lib/copy/phygital";
 import { galleryAnimate } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +44,7 @@ export function EmbedBoot({ children }: { children?: ReactNode }) {
             aria-hidden
           />
           <p className="font-(family-name:--font-display) text-sm tracking-tight text-muted-foreground">
-            Phygital
+            {brand.company}
           </p>
         </div>
         {children}

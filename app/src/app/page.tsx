@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 
 import { HomeApp } from "@/components/home/home-app";
+import { products } from "@/lib/copy/phygital";
 
 export const metadata: Metadata = {
-  title: "Phygital Pay",
-  description: "Tap to pay with your accessory",
+  title: products.collection.name,
+  description: products.collection.tagline,
 };
 
 export default function Home() {

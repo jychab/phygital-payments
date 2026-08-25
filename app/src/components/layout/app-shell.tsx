@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
 import { CopyableAddress } from "@/components/shared/copyable-address";
+import { brand } from "@/lib/copy/phygital";
 import {
   appCardPaddingClass,
   shellLayoutClass,
@@ -21,9 +22,10 @@ const WalletChip = dynamic(
 
 export type WalletActionsMode = "full" | "display-only" | "hidden";
 
-export type AppMode = "Home" | "Collect" | "Accessory" | "Card";
+/** Product / object chrome labels — not company name. */
+export type AppMode = "Collection" | "Collect" | "Accessory" | "Card" | "Pay";
 
-/** Chrome for every route: wordmark or mode label, optional wallet chip. */
+/** Chrome for every route: company wordmark OR product/object label. */
 export function AppShell({
   recipient,
   children,
@@ -38,6 +40,7 @@ export function AppShell({
   children: ReactNode;
   walletActions?: WalletActionsMode;
   modeLabel?: AppMode;
+  /** Company wordmark (use on `/` hub only). */
   wordmark?: boolean;
   layout?: ShellLayout;
   headerExtra?: ReactNode;
@@ -60,7 +63,7 @@ export function AppShell({
           <div className="flex min-w-0 items-center gap-2">
             {wordmark ? (
               <span className="font-(family-name:--font-display) text-sm font-medium tracking-tight text-foreground">
-                Phygital
+                {brand.company}
               </span>
             ) : modeLabel ? (
               <span className="text-eyebrow text-muted-foreground">

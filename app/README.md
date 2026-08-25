@@ -1,6 +1,8 @@
-# Phygital Pay
+# Revibase
 
-Next.js app for enabling tap-to-pay on a phygital NFC accessory and receiving tap-authorized transfers. Runs standalone with Privy for login and Solana wallets.
+Next.js app for Revibase products: **Collection** (cards & accessories), **Pay**
+(NFC tap-to-pay), and **Collect** (merchant receive). Runs standalone with Privy
+for login and Solana wallets.
 
 ## Setup
 
@@ -34,6 +36,18 @@ Read **string vars/secrets** from `process.env`. Use `getCloudflareContext().env
 | `NEXT_PUBLIC_SOLANA_RPC_URL` | No | Solana RPC HTTP URL |
 
 Configure the Privy app for Solana external wallet connectors. Login method: wallet connect only.
+
+## Brand
+
+| Layer | Name | Where |
+|-------|------|--------|
+| Company | **Revibase** | Wordmark on `/` only |
+| Product | **Collection** | Owner hub (`/`) — cards + accessories |
+| Product | **Pay** | Accessory task journey (NFC tap-to-pay) |
+| Product | **Collect** | Merchant receive (`/collect`) |
+| Object | **Card** / **Accessory** | Task chrome on `/card`, `/accessory` |
+
+Document titles use Next’s `%s — Revibase` template. Do not brand every route as “Revibase Pay.”
 
 ## Code map
 

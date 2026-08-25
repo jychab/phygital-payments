@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 
 import { CollectApp } from "@/components/collect/collect-app";
 import { parsePaymentRequest } from "@/lib/collect/payment-request";
+import { products } from "@/lib/copy/phygital";
 
 export const metadata: Metadata = {
-  title: "Collect — Phygital Pay",
-  description: "Collect a payment with a tap",
+  title: products.collect.name,
+  description: products.collect.tagline,
 };
 
 type CollectProps = {

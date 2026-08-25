@@ -5,7 +5,7 @@ import { CardApp } from "@/components/card/card-app";
 import { EmbedBoot } from "@/components/layout/embed-gate";
 
 export const metadata: Metadata = {
-  title: "Card — Phygital Pay",
+  title: "Card",
   description: "Check this card and view its mint",
 };
 

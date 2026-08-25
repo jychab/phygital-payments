@@ -5,7 +5,7 @@ import { EmbedBoot } from "@/components/layout/embed-gate";
 import { AccessoryApp } from "@/components/accessory/accessory-app";
 
 export const metadata: Metadata = {
-  title: "Accessory — Phygital Pay",
+  title: "Accessory",
   description: "Check if this accessory is genuine",
 };
 
