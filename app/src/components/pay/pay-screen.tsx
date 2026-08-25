@@ -90,11 +90,6 @@ export function PayScreen({
   );
 
   const manageIsHome = !confirmationRequired;
-  /** Settings is the landing screen for Confirm-off or explicit manage entry. */
-  const showManageHome =
-    nav?.screen === "manage" ||
-    (intent === "manage" && nav == null) ||
-    (manageIsHome && nav == null && limitReady);
   const tokens = delegates.data?.tokens ?? [];
   const defaultMintKey = String(defaultMint);
   const defaultHolding = delegates.holdings?.find(
@@ -111,6 +106,11 @@ export function PayScreen({
   const limitLoading = tokenAddress
     ? pinnedDelegate.isLoading
     : delegates.isPending;
+  /** Settings is the landing screen for Confirm-off or explicit manage entry. */
+  const showManageHome =
+    nav?.screen === "manage" ||
+    (intent === "manage" && nav == null) ||
+    (manageIsHome && nav == null && limitReady);
 
   function onLimitEnabled() {
     invalidateOwnerQueries(queryClient, owner);
