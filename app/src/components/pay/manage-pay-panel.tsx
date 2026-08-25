@@ -10,7 +10,6 @@ import { BackLink } from "@/components/shared/back-link";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { SettingsListRow } from "@/components/shared/settings-list-row";
 import { TokenListRow } from "@/components/shared/token-chip";
-import { ExpectedWalletConnect } from "@/components/shared/wallet-notices";
 import { Button } from "@/components/ui/button";
 import {
   usePreauthRequired,
@@ -133,11 +132,17 @@ function ConfirmPaymentsRow({
   pending: boolean;
 }) {
   const { setRequired } = useSetPreauthRequired();
-  const { matched, ownerShort } = useExpectedWallet(owner);
+  const { matched, ready, connect, wrongWallet, ownerShort } =
+    useExpectedWallet(owner);
   const [busy, setBusy] = useState(false);
 
   async function onToggle() {
-    if (!matched) return;
+    if (!ready) return;
+    if (wrongWallet) return;
+    if (!matched) {
+      connect();
+      return;
+    }
     try {
       setBusy(true);
       await setRequired(owner, !on);
@@ -148,43 +153,43 @@ function ConfirmPaymentsRow({
     }
   }
 
-  if (!matched) {
-    return (
-      <div className="px-3 py-2">
-        <ExpectedWalletConnect
-          owner={owner}
-          hint={`Connect ${ownerShort} to change confirmation.`}
-        />
-      </div>
-    );
-  }
-
   return (
-    <SettingsListRow
-      title="Confirm Payments"
-      subtitle={
-        on
-          ? "Press Pay here before a tap goes through."
-          : "Hold your accessory to their phone to pay."
-      }
-      truncate={false}
-      onSelect={() => void onToggle()}
-      disabled={busy || pending}
-      trailing={
-        busy || pending ? (
-          <LoaderCircle className="size-3.5 animate-spin text-muted-foreground" />
-        ) : (
-          <span
-            className={cn(
-              "text-[11px] font-medium",
-              on ? "text-primary" : "text-muted-foreground",
-            )}
-          >
-            {on ? "On" : "Off"}
-          </span>
-        )
-      }
-    />
+    <div className="space-y-2">
+      <SettingsListRow
+        title="Confirm Payments"
+        subtitle={
+          on
+            ? "Press Pay here before a tap goes through."
+            : "Hold your accessory to their phone to pay."
+        }
+        truncate={false}
+        onSelect={() => void onToggle()}
+        disabled={busy || pending || !ready || wrongWallet}
+        trailing={
+          busy || pending || !ready ? (
+            <LoaderCircle className="size-3.5 animate-spin text-muted-foreground" />
+          ) : (
+            <span
+              className={cn(
+                "text-[11px] font-medium",
+                on ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              {on ? "On" : "Off"}
+            </span>
+          )
+        }
+      />
+      {wrongWallet ? (
+        <p className="px-2 text-center text-xs text-destructive">
+          Disconnect above, then connect {ownerShort} to change this.
+        </p>
+      ) : !matched && ready ? (
+        <p className="px-2 text-center text-xs text-muted-foreground">
+          Connect {ownerShort} to change confirmation.
+        </p>
+      ) : null}
+    </div>
   );
 }
 

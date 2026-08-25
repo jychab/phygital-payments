@@ -9,9 +9,7 @@ import {
   HoldToPayHint,
   HoldToPayIdleActions,
 } from "@/components/pay/hold-to-pay-actions";
-import { ConnectGate } from "@/components/shared/connect-gate";
 import { WalletSyncGate } from "@/components/shared/wallet-sync-gate";
-import { BackLink } from "@/components/shared/back-link";
 import { BackToCollection } from "@/components/shared/back-to-collection";
 import { PrivyGate } from "@/app/privy-wallet-root";
 import { LoadingStatus } from "@/components/shared/loading-status";
@@ -26,14 +24,12 @@ import { useHoldToCheck } from "@/hooks/phygital/use-hold-to-check";
 import { useHoldToPay } from "@/hooks/pay/use-hold-to-pay";
 import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
 import { usePreauthRequired } from "@/hooks/pay/use-preauth-required";
-import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import {
   tokenAllowsPay,
   isUnclaimedToken,
   type PhygitalToken,
 } from "@/lib/phygital/token";
 import { copy, payCopy } from "@/lib/copy/phygital";
-import { shortAddress } from "@/lib/utils";
 
 const PastePayKeyPanel = dynamic(
   () =>
@@ -344,7 +340,7 @@ function AccessoryIntegratedPayCta({
   );
 }
 
-/** Manage Pay entry — ConnectGate if modal dismissed; WalletSync for signing. */
+/** Manage Pay — view without Connect; WalletSync only if wrong wallet linked. */
 function AccessoryManagePayEntry({
   owner,
   tokenAddress,
@@ -354,27 +350,6 @@ function AccessoryManagePayEntry({
   tokenAddress: string;
   onExit: () => void;
 }) {
-  const { address, isConnected, ready, connect } = useSolanaAddress();
-
-  if (!ready) {
-    return <LoadingStatus label="Loading wallet…" />;
-  }
-
-  if (!isConnected || !address) {
-    return (
-      <div className="flex flex-1 flex-col">
-        <BackLink onClick={onExit} />
-        <div className="flex flex-1 flex-col items-center justify-center py-8">
-          <ConnectGate
-            title={payCopy.connectLinked}
-            body={payCopy.manageConnectBody(shortAddress(owner))}
-            onConnect={connect}
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <WalletSyncGate linkedOwner={owner}>
       <PayScreen
