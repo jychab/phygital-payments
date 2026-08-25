@@ -16,7 +16,7 @@ import {
 } from "@/lib/phygital/token";
 import { cn } from "@/lib/utils";
 
-/** Task-mode accessory panel — NFC ring + one primary CTA (claim / Pay / Hold). */
+/** Task-mode accessory panel — NFC ring + claim / Hold / integrated Pay CTAs. */
 export function AuthenticAccessoryPanel({
   token,
   liveConfirmed,
@@ -33,7 +33,7 @@ export function AuthenticAccessoryPanel({
   holdError?: string | null;
   onHoldToCheck?: () => void;
   onClaim?: () => void;
-  /** Pay / Set up / Connect / Manage — shown when accessory is pay-ready. */
+  /** Integrated Hold-to-Pay actions (arm Pay / Set up / Manage). */
   payAction?: ReactNode;
 }) {
   const unclaimed = isUnclaimedToken(token);

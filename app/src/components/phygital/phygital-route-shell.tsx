@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { PrivyGate } from "@/app/privy-wallet-root";
 import { FinishClaimPanel } from "@/components/claim/finish-claim-panel";
 import {
-  AppCard,
   AppShell,
   type AppMode,
 } from "@/components/layout/app-shell";
@@ -35,50 +34,21 @@ export function PhygitalRouteShell({
   if (token) {
     return (
       <PrivyGate>
-        <RouteChrome
-          walletActions="full"
-          modeLabel={modeLabel}
-          layout={layout}
-        >
+        <AppShell walletActions="full" modeLabel={modeLabel} layout={layout}>
           <FinishClaimPanel />
-        </RouteChrome>
+        </AppShell>
       </PrivyGate>
     );
   }
 
   return (
-    <RouteChrome
+    <AppShell
       walletActions={walletActionsProp ?? "hidden"}
       modeLabel={modeLabel}
       headerExtra={headerExtra}
       layout={layout}
     >
       {children}
-    </RouteChrome>
-  );
-}
-
-function RouteChrome({
-  children,
-  walletActions,
-  modeLabel,
-  headerExtra,
-  layout,
-}: {
-  children: ReactNode;
-  walletActions: "full" | "hidden";
-  modeLabel: AppMode;
-  headerExtra?: ReactNode;
-  layout: ShellLayout;
-}) {
-  return (
-    <AppShell
-      walletActions={walletActions}
-      modeLabel={modeLabel}
-      headerExtra={headerExtra}
-      layout={layout}
-    >
-      <AppCard bare={walletActions === "hidden"}>{children}</AppCard>
     </AppShell>
   );
 }

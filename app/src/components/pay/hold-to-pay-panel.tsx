@@ -1,9 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { Check, LoaderCircle, X } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 
 import { BackLink } from "@/components/shared/back-link";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
@@ -11,34 +8,20 @@ import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenSymbol } from "@/components/shared/token-chip";
 import { formatCountdown } from "@/components/shared/expiry-countdown";
 import { Button } from "@/components/ui/button";
+import {
+  useHoldToPay,
+  type HoldToPayPhase,
+  type HoldToPaySuccess,
+} from "@/hooks/pay/use-hold-to-pay";
 import { payCopy } from "@/lib/copy/phygital";
 import { galleryAnimate } from "@/lib/motion";
-import {
-  cancelPreauthForWallet,
-  requestPreauthForWallet,
-  waitPreauthStatusForWallet,
-  type PreauthStatusResult,
-} from "@/lib/pay/preauth-client";
-import { invalidateOwnerQueries } from "@/lib/queries";
 import { formatTokenAmount } from "@/lib/tokens/mint-delegate";
-import { resolvePaymentToken, type PaymentTokenHolding } from "@/lib/tokens/payment-token";
-import { toUserErrorMessage } from "@/lib/user-errors";
+import {
+  resolvePaymentToken,
+  type PaymentTokenHolding,
+} from "@/lib/tokens/payment-token";
 import { shortAddress } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-
-type Phase =
-  | "idle"
-  | "window"
-  | "expired"
-  | "cancelled"
-  | "replaced"
-  | "success";
-
-function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException
-    ? error.name === "AbortError"
-    : error instanceof Error && error.name === "AbortError";
-}
 
 /**
  * Pay home: ready to tap, or Press Pay when Confirm Payments is on.
@@ -62,89 +45,150 @@ export function HoldToPayPanel({
   onManage?: () => void;
   onBack?: () => void;
 }) {
-  const queryClient = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [grantId, setGrantId] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<number | null>(null);
-  const [paid, setPaid] = useState<Extract<
-    PreauthStatusResult,
-    { status: "success" }
-  > | null>(null);
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  const hold = useHoldToPay(owner);
 
-  const windowOpen = phase === "window";
-  const secondsLeft =
-    expiresAt != null && expiresAt * 1000 > nowMs
-      ? Math.max(0, Math.ceil((expiresAt * 1000 - nowMs) / 1000))
-      : 0;
-
-  useEffect(() => {
-    if (!windowOpen || expiresAt == null) return;
-    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [windowOpen, expiresAt]);
-
-  useEffect(() => {
-    if (!windowOpen || grantId == null) return;
-    const ac = new AbortController();
-    void waitPreauthStatusForWallet({
-      wallet: owner,
-      grantId,
-      signal: ac.signal,
-    })
-      .then((result) => {
-        if (result.status === "success") {
-          setPaid(result);
-          setPhase("success");
-          invalidateOwnerQueries(queryClient, owner);
-          return;
-        }
-        setPaid(null);
-        setPhase(result.status);
-      })
-      .catch((error) => {
-        if (isAbortError(error) || ac.signal.aborted) return;
-        toast.error(toUserErrorMessage(error, "Couldn’t check this payment."));
-        setPhase("expired");
-      })
-      .finally(() => {
-        if (!ac.signal.aborted) setExpiresAt(null);
-      });
-    return () => ac.abort();
-  }, [windowOpen, grantId, owner, queryClient]);
-
-  async function onPay() {
-    try {
-      setBusy(true);
-      const grant = await requestPreauthForWallet({ wallet: owner });
-      setPaid(null);
-      setNowMs(Date.now());
-      setGrantId(grant.grantId);
-      setExpiresAt(grant.expiresAt);
-      setPhase("window");
-    } catch (error) {
-        toast.error(toUserErrorMessage(error, "Couldn’t start this payment."));
-    } finally {
-      setBusy(false);
-    }
+  if (hold.showPhase) {
+    return (
+      <HoldToPayPhaseView
+        phase={hold.phase}
+        paid={hold.paid}
+        secondsLeft={hold.secondsLeft}
+        holdings={holdings}
+        onCancelWindow={() => void hold.onCancelWindow()}
+        onReset={hold.resetToIdle}
+        onBack={onBack}
+      />
+    );
   }
 
-  async function onCancelWindow() {
-    try {
-      await cancelPreauthForWallet({ wallet: owner });
-    } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t cancel."));
-    }
-  }
+  return (
+    <div className="flex flex-1 flex-col gap-6">
+      <div className="flex items-center gap-2">
+        {onBack ? <BackLink onClick={onBack} /> : null}
+        <QueryRefreshButton owner={owner} className="ml-auto" />
+      </div>
+      <div className="flex flex-1 flex-col items-center justify-center text-center">
+        <p className="max-w-64 text-sm text-muted-foreground">
+          <HoldToPayHint
+            confirmationRequired={confirmationRequired}
+            keyReady={keyReady}
+          />
+        </p>
+      </div>
 
-  function resetToIdle() {
-    setPhase("idle");
-    setGrantId(null);
-    setExpiresAt(null);
-    setPaid(null);
-  }
+      <HoldToPayIdleActions
+        confirmationRequired={confirmationRequired}
+        keyReady={keyReady}
+        busy={hold.busy}
+        onPay={() => void hold.onPay()}
+        onSetupPhone={onSetupPhone}
+        onManage={onManage}
+      />
+    </div>
+  );
+}
 
+/** Helper line above Pay / Set up CTAs. */
+export function HoldToPayHint({
+  confirmationRequired,
+  keyReady,
+}: {
+  confirmationRequired: boolean;
+  keyReady: boolean;
+}) {
+  if (!confirmationRequired) return payCopy.holdConfirmOff;
+  if (!keyReady) return payCopy.holdNeedsKey;
+  return payCopy.holdReady;
+}
+
+/**
+ * Idle footer: arm Pay, Set up, or Manage — usable as authenticity `payAction`.
+ */
+export function HoldToPayIdleActions({
+  confirmationRequired,
+  keyReady,
+  busy,
+  onPay,
+  onSetupPhone,
+  onManage,
+  manageVariant = "ghost",
+}: {
+  confirmationRequired: boolean;
+  keyReady: boolean;
+  busy?: boolean;
+  onPay?: () => void;
+  onSetupPhone?: () => void;
+  onManage?: () => void;
+  /** Confirm-off accessory uses primary Manage; Hold panel keeps ghost. */
+  manageVariant?: "ghost" | "primary";
+}) {
+  const showPay = confirmationRequired && keyReady && onPay;
+  const showSetup = confirmationRequired && !keyReady && onSetupPhone;
+  const manageIsPrimary = manageVariant === "primary" && !showPay && !showSetup;
+
+  return (
+    <div className="flex w-full flex-col gap-2.5">
+      {showPay ? (
+        <Button
+          type="button"
+          size="lg"
+          className="w-full"
+          onClick={onPay}
+          disabled={busy}
+        >
+          {busy ? (
+            <LoaderCircle className="size-4 animate-spin" />
+          ) : (
+            payCopy.pay
+          )}
+        </Button>
+      ) : null}
+      {showSetup ? (
+        <Button
+          type="button"
+          size="lg"
+          className="w-full"
+          onClick={onSetupPhone}
+        >
+          {payCopy.setUp}
+        </Button>
+      ) : null}
+      {onManage ? (
+        <Button
+          type="button"
+          variant={manageIsPrimary ? "default" : "ghost"}
+          size="lg"
+          className={cn(
+            "w-full",
+            !manageIsPrimary && "text-muted-foreground",
+          )}
+          onClick={onManage}
+        >
+          {manageIsPrimary ? payCopy.manage : payCopy.settings}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/** Window / success / expired — authenticity yields the screen to this. */
+export function HoldToPayPhaseView({
+  phase,
+  paid,
+  secondsLeft,
+  holdings,
+  onCancelWindow,
+  onReset,
+  onBack,
+}: {
+  phase: HoldToPayPhase;
+  paid: HoldToPaySuccess | null;
+  secondsLeft: number;
+  holdings?: PaymentTokenHolding[];
+  onCancelWindow: () => void;
+  onReset: () => void;
+  onBack?: () => void;
+}) {
   if (phase === "success" && paid) {
     const token = resolvePaymentToken(paid.mint, holdings);
     const amountUi = /^\d+$/.test(paid.amount)
@@ -192,7 +236,7 @@ export function HoldToPayPanel({
           type="button"
           size="lg"
           className="w-full max-w-xs"
-          onClick={resetToIdle}
+          onClick={onReset}
         >
           Done
         </Button>
@@ -228,7 +272,7 @@ export function HoldToPayPanel({
             type="button"
             size="lg"
             className="w-full max-w-xs"
-            onClick={resetToIdle}
+            onClick={onReset}
           >
             Pay Again
           </Button>
@@ -237,7 +281,7 @@ export function HoldToPayPanel({
     );
   }
 
-  if (windowOpen) {
+  if (phase === "window") {
     return (
       <NfcHoldStatus
         size="lg"
@@ -253,7 +297,7 @@ export function HoldToPayPanel({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => void onCancelWindow()}
+            onClick={onCancelWindow}
           >
             Cancel
           </Button>
@@ -262,56 +306,5 @@ export function HoldToPayPanel({
     );
   }
 
-  return (
-    <div className="flex flex-1 flex-col gap-6">
-      <div className="flex items-center gap-2">
-        {onBack ? <BackLink onClick={onBack} /> : null}
-        <QueryRefreshButton owner={owner} className="ml-auto" />
-      </div>
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <p className="max-w-64 text-sm text-muted-foreground">
-          {!confirmationRequired
-            ? payCopy.holdConfirmOff
-            : !keyReady
-              ? payCopy.holdNeedsKey
-              : payCopy.holdReady}
-        </p>
-      </div>
-
-      <div className="mt-auto flex flex-col gap-2.5">
-        {confirmationRequired && keyReady ? (
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            onClick={() => void onPay()}
-            disabled={busy}
-          >
-            {busy ? <LoaderCircle className="size-4 animate-spin" /> : payCopy.pay}
-          </Button>
-        ) : null}
-        {confirmationRequired && !keyReady && onSetupPhone ? (
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            onClick={onSetupPhone}
-          >
-            {payCopy.setUp}
-          </Button>
-        ) : null}
-        {onManage ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            className="w-full text-muted-foreground"
-            onClick={onManage}
-          >
-            {payCopy.settings}
-          </Button>
-        ) : null}
-      </div>
-    </div>
-  );
+  return null;
 }

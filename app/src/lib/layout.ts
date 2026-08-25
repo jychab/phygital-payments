@@ -18,9 +18,6 @@ export type ShellLayout = keyof typeof shellLayoutClass;
 /** Horizontal + vertical chrome — identical on every route. */
 export const shellPaddingClass = "px-5 pb-10 pt-5 sm:px-6 md:px-8";
 
-/** AppCard surface padding. */
-export const appCardPaddingClass = "p-5 sm:p-6";
-
 /** Centered gate / loading blocks. */
 export const centeredBlockClass =
   "flex flex-1 flex-col items-center justify-center gap-3 py-14 text-center";

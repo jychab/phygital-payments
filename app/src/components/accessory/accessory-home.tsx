@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AuthenticAccessoryPanel } from "@/components/accessory/authentic-accessory-panel";
 import { ClaimPanel } from "@/components/claim/claim-panel";
+import {
+  HoldToPayHint,
+  HoldToPayIdleActions,
+  HoldToPayPhaseView,
+} from "@/components/pay/hold-to-pay-panel";
 import { PayScreen } from "@/components/pay/pay-screen";
 import { PastePayKeyPanel } from "@/components/pay/paste-pay-key-panel";
 import { ConnectGate } from "@/components/shared/connect-gate";
@@ -20,6 +25,8 @@ import {
   type AccessoryPayMode,
 } from "@/hooks/accessory/use-accessory-pay-open";
 import { useHoldToCheck } from "@/hooks/phygital/use-hold-to-check";
+import { useHoldToPay } from "@/hooks/pay/use-hold-to-pay";
+import { useOwnerPayDelegates } from "@/hooks/pay/use-owner-pay-delegates";
 import { usePreauthRequired } from "@/hooks/pay/use-preauth-required";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import {
@@ -33,8 +40,8 @@ import { shortAddress } from "@/lib/utils";
 /**
  * Accessory task home after a check, claim, or Collection open.
  *
- * WebAuthn-first: authenticity + Hold to Pay never mount Privy.
- * Manage / setup CTAs warm Privy only when Connect or signing is needed.
+ * WebAuthn-first: authenticity hosts Hold-to-Pay CTAs (arm Pay in place).
+ * Setup / Manage still open full screens. Privy only for Manage Connect.
  * Collection (`fromCollection`) shows Back; Confirmed only when session
  * matches the linked owner (see CollectionVerifiedSeed).
  */
@@ -74,6 +81,11 @@ export function AccessoryHome({
     });
   }
 
+  // Stale `?pay=hold` — Pay arms in place on authenticity now.
+  useEffect(() => {
+    if (showPay && payMode === "hold") setShowPay(false);
+  }, [showPay, payMode, setShowPay]);
+
   if (showInAppGate) {
     return (
       <InAppBrowserGate body="To check an accessory, open this page in Safari or Chrome." />
@@ -90,25 +102,12 @@ export function AccessoryHome({
     );
   }
 
-  if (showPay && payMode === "hold") {
-    return (
-      <PayScreen
-        intent="hold"
-        owner={owner}
-        tokenAddress={String(token.address)}
-        onExit={() => setShowPay(false)}
-        onNeedSetup={() => openPay("setup")}
-        onNeedManage={() => openPay("manage")}
-      />
-    );
-  }
-
   if (showPay && payMode === "setup") {
     return (
       <PastePayKeyPanel
         owner={owner}
         onBack={() => setShowPay(false)}
-        onStored={() => openPay("hold")}
+        onStored={() => setShowPay(false)}
         onNeedWallet={() => openPay("manage")}
       />
     );
@@ -137,6 +136,22 @@ export function AccessoryHome({
     );
   }
 
+  if (canPay) {
+    return (
+      <AccessoryPayHome
+        token={token}
+        owner={owner}
+        liveConfirmed={liveConfirmed}
+        fromCollection={fromCollection}
+        holdError={holdError}
+        onHoldToCheck={() => void holdToCheck()}
+        onClaim={() => setShowClaim(true)}
+        onOpenSetup={() => openPay("setup")}
+        onOpenManage={() => openPay("manage")}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       {fromCollection ? <BackToCollection /> : null}
@@ -147,15 +162,75 @@ export function AccessoryHome({
         holdError={holdError}
         onHoldToCheck={() => void holdToCheck()}
         onClaim={() => setShowClaim(true)}
+      />
+    </div>
+  );
+}
+
+/**
+ * Authenticity + real Hold-to-Pay CTAs (arm Pay in place).
+ * Window / success phases replace authenticity until Done.
+ */
+function AccessoryPayHome({
+  token,
+  owner,
+  liveConfirmed,
+  fromCollection,
+  holdError,
+  onHoldToCheck,
+  onClaim,
+  onOpenSetup,
+  onOpenManage,
+}: {
+  token: PhygitalToken;
+  owner: string;
+  liveConfirmed: boolean;
+  fromCollection: boolean;
+  holdError?: string | null;
+  onHoldToCheck: () => void;
+  onClaim: () => void;
+  onOpenSetup: () => void;
+  onOpenManage: () => void;
+}) {
+  const hold = useHoldToPay(owner);
+  const delegates = useOwnerPayDelegates(owner, { live: true });
+
+  if (hold.showPhase) {
+    return (
+      <div className="flex flex-1 flex-col">
+        {fromCollection && hold.phase !== "window" ? (
+          <BackToCollection />
+        ) : null}
+        <HoldToPayPhaseView
+          phase={hold.phase}
+          paid={hold.paid}
+          secondsLeft={hold.secondsLeft}
+          holdings={delegates.holdings}
+          onCancelWindow={() => void hold.onCancelWindow()}
+          onReset={hold.resetToIdle}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-1 flex-col">
+      {fromCollection ? <BackToCollection /> : null}
+      <AuthenticAccessoryPanel
+        token={token}
+        liveConfirmed={liveConfirmed}
+        fromCollection={fromCollection}
+        holdError={holdError}
+        onHoldToCheck={onHoldToCheck}
+        onClaim={onClaim}
         payAction={
-          canPay ? (
-            <AccessoryPayCta
-              owner={owner}
-              onOpenHold={() => openPay("hold")}
-              onOpenSetup={() => openPay("setup")}
-              onOpenManage={() => openPay("manage")}
-            />
-          ) : undefined
+          <AccessoryIntegratedPayCta
+            owner={owner}
+            busy={hold.busy}
+            onPay={() => void hold.onPay()}
+            onOpenSetup={onOpenSetup}
+            onOpenManage={onOpenManage}
+          />
         }
       />
     </div>
@@ -163,18 +238,19 @@ export function AccessoryHome({
 }
 
 /**
- * Authenticity primary CTA matrix (Confirm / key / session).
- * Hold + paste-setup never wrap Privy; Manage does when Connect is needed.
- * Same CTAs for Collection and NFC entry.
+ * Confirm / key matrix with real actions — Pay arms preauth; Set up / Manage
+ * open full screens. Hold + setup never wrap Privy; Manage does for Connect.
  */
-function AccessoryPayCta({
+function AccessoryIntegratedPayCta({
   owner,
-  onOpenHold,
+  busy,
+  onPay,
   onOpenSetup,
   onOpenManage,
 }: {
   owner: string;
-  onOpenHold: () => void;
+  busy: boolean;
+  onPay: () => void;
   onOpenSetup: () => void;
   onOpenManage: () => void;
 }) {
@@ -190,19 +266,21 @@ function AccessoryPayCta({
     );
   }
 
-  if (required && keyOk) {
+  if (required) {
     return (
-      <Button type="button" size="lg" className="w-full" onClick={onOpenHold}>
-        {payCopy.pay}
-      </Button>
-    );
-  }
-
-  if (required && !keyOk) {
-    return (
-      <Button type="button" size="lg" className="w-full" onClick={onOpenSetup}>
-        {payCopy.setUp}
-      </Button>
+      <div className="flex w-full flex-col gap-2.5">
+        <p className="text-center text-sm text-muted-foreground">
+          <HoldToPayHint confirmationRequired={required} keyReady={keyOk} />
+        </p>
+        <HoldToPayIdleActions
+          confirmationRequired={required}
+          keyReady={keyOk}
+          busy={busy}
+          onPay={onPay}
+          onSetupPhone={onOpenSetup}
+          onManage={onOpenManage}
+        />
+      </div>
     );
   }
 

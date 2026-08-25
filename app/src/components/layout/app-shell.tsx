@@ -7,7 +7,6 @@ import { PrivyGate } from "@/app/privy-wallet-root";
 import { CopyableAddress } from "@/components/shared/copyable-address";
 import { brand } from "@/lib/copy/phygital";
 import {
-  appCardPaddingClass,
   shellLayoutClass,
   shellPaddingClass,
   type ShellLayout,
@@ -108,36 +107,8 @@ export function AppShell({
             )}
           </div>
         </div>
-        {children}
+        <div className="flex flex-1 flex-col">{children}</div>
       </main>
-    </div>
-  );
-}
-
-/**
- * Same root element whether bare or framed so toggling chrome (e.g. Pay)
- * does not remount authenticity / NFC children.
- */
-export function AppCard({
-  children,
-  bare = false,
-}: {
-  children: ReactNode;
-  bare?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex flex-1 flex-col",
-        !bare &&
-          cn(
-            "mt-4 rounded-2xl border border-border/60 bg-card/60",
-            appCardPaddingClass,
-            galleryAnimate.rise,
-          ),
-      )}
-    >
-      {children}
     </div>
   );
 }

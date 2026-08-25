@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { History } from "lucide-react";
 
-import { AppCard, AppShell } from "@/components/layout/app-shell";
+import { AppShell } from "@/components/layout/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CollectPanel } from "@/components/collect/collect-panel";
 import { HistoryPanel } from "@/components/home/history-panel";
@@ -66,19 +66,17 @@ export function CollectApp({
         ) : null
       }
     >
-      <AppCard>
-        {view === "activity" ? (
-          <div className="flex flex-1 flex-col">
-            <BackLink onClick={() => setView("collect")} />
-            <HistoryPanel owner={recipientStr} />
-          </div>
-        ) : (
-          <CollectPanel
-            paymentRequest={{ ...paymentRequest, recipient }}
-            allowWalletSetup={!embedded}
-          />
-        )}
-      </AppCard>
+      {view === "activity" ? (
+        <div className="flex flex-1 flex-col">
+          <BackLink onClick={() => setView("collect")} />
+          <HistoryPanel owner={recipientStr} />
+        </div>
+      ) : (
+        <CollectPanel
+          paymentRequest={{ ...paymentRequest, recipient }}
+          allowWalletSetup={!embedded}
+        />
+      )}
     </AppShell>
   );
 }
