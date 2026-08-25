@@ -272,7 +272,7 @@ export function HoldToPayPanel({
           {!confirmationRequired
             ? "Hold your accessory to their phone to pay."
             : !keyReady
-              ? "Confirmation is on. Set up this phone to press Pay."
+              ? "Confirmation is on. Generate or import an API key to enable Revibase Pay."
               : "Press Pay, then hold your accessory to their phone."}
         </p>
       </div>
@@ -296,7 +296,7 @@ export function HoldToPayPanel({
             className="w-full"
             onClick={onSetupPhone}
           >
-            Continue
+            Set up Revibase Pay
           </Button>
         ) : null}
         {onManage ? (

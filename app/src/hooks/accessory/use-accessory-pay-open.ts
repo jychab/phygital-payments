@@ -9,7 +9,7 @@ const PAY_PARAM = "pay";
 
 const listeners = new Set<() => void>();
 
-export type AccessoryPayMode = "hold" | "manage";
+export type AccessoryPayMode = "hold" | "manage" | "setup";
 
 export type AccessoryPayState = {
   open: boolean;
@@ -20,11 +20,13 @@ export type AccessoryPayState = {
 const PAY_CLOSED: AccessoryPayState = { open: false, mode: null };
 const PAY_HOLD: AccessoryPayState = { open: true, mode: "hold" };
 const PAY_MANAGE: AccessoryPayState = { open: true, mode: "manage" };
+const PAY_SETUP: AccessoryPayState = { open: true, mode: "setup" };
 
 function payStateFromLocation(): AccessoryPayState {
   const pay = new URLSearchParams(window.location.search).get(PAY_PARAM);
   if (pay === "hold") return PAY_HOLD;
   if (pay === "manage") return PAY_MANAGE;
+  if (pay === "setup") return PAY_SETUP;
   return PAY_CLOSED;
 }
 
@@ -46,13 +48,13 @@ export type OpenAccessoryPayArgs = {
   tokenAddress: string;
   passkey: string;
   surface?: PhygitalSurface;
-  /** Hold = API-key Pay; Manage = Connect + settings. */
+  /** Hold = API-key Pay; Setup = paste key (no Connect); Manage = Connect + settings. */
   mode: AccessoryPayMode;
 };
 
 /**
  * Pay on `/accessory` after authenticity. URL keeps tap params when present
- * so Confirmed stays tied to cryptographic proof; adds `address` + `pay=hold|manage`
+ * so Confirmed stays tied to cryptographic proof; adds `address` + `pay=hold|manage|setup`
  * for resume. Never stashes Confirmed in sessionStorage.
  */
 export function useAccessoryPayOpen(): [

@@ -18,7 +18,7 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 
 type PanelStep = "home" | "paste" | "confirm-reset";
 
-/** Save a key in this browser, or wallet-sign a new one. */
+/** Generate, import, or rotate the Revibase Pay API key in this browser. */
 export function ApiKeyPanel({
   owner,
   onStored,
@@ -69,7 +69,7 @@ export function ApiKeyPanel({
       refreshStoredKey();
       setPasteValue("");
       goHome();
-      toast.success("Pay is on");
+      toast.success("Revibase Pay is on");
       onStored?.();
     } catch (error) {
       toast.error(toUserErrorMessage(error, "Couldn’t continue"));
@@ -100,7 +100,7 @@ export function ApiKeyPanel({
       refreshStoredKey();
       goHome();
       toast.success(
-        rotate ? "Pay will stop on other phones." : "Pay is on",
+        rotate ? "Other browsers will stop working." : "Revibase Pay is on",
       );
     } catch (error) {
       toast.error(
@@ -172,9 +172,9 @@ export function ApiKeyPanel({
               matched={matched}
               busy={busy}
               provisionBusy={provisionBusy}
-              idleLabel="Turn On Pay"
-              busyLabel="Turning on…"
-              connectHint={`Connect ${ownerShort} to turn on Pay.`}
+              idleLabel="Generate API key"
+              busyLabel="Generating…"
+              connectHint={`Connect ${ownerShort} to generate an API key.`}
               onProvision={() => void onProvision(false)}
             />
             <Button
@@ -185,7 +185,7 @@ export function ApiKeyPanel({
               onClick={() => setStep("paste")}
               disabled={busy}
             >
-              I set this up already
+              Import API key
             </Button>
           </>
         ) : null}
@@ -200,7 +200,7 @@ export function ApiKeyPanel({
               onClick={() => setStep("paste")}
               disabled={busy}
             >
-              Paste from another phone
+              Import API key
             </Button>
             <Button
               type="button"
@@ -210,7 +210,7 @@ export function ApiKeyPanel({
               onClick={() => setStep("confirm-reset")}
               disabled={busy}
             >
-              Start over
+              Rotate API key
             </Button>
           </>
         ) : null}
@@ -240,9 +240,9 @@ export function ApiKeyPanel({
             matched={matched}
             busy={busy}
             provisionBusy={provisionBusy}
-            idleLabel="Start Over"
-            busyLabel="Starting over…"
-            connectHint={`Connect ${ownerShort} to start over.`}
+            idleLabel="Rotate API key"
+            busyLabel="Rotating…"
+            connectHint={`Connect ${ownerShort} to rotate the API key.`}
             onProvision={() => void onProvision(true)}
           />
         ) : null}
@@ -270,26 +270,27 @@ function copyForStep(step: PanelStep, hasStoredKey: boolean): {
 } {
   if (step === "paste") {
     return {
-      title: "Already Set Up?",
-      subtitle: "Paste what you copied from the other phone.",
+      title: "Import API key",
+      subtitle: "Paste a key from another browser.",
     };
   }
   if (step === "confirm-reset") {
     return {
-      title: "Start over?",
+      title: "Rotate API key?",
       subtitle:
-        "Pay will stop on other phones. It will stay on here.",
+        "Other browsers will stop working. This browser stays on.",
     };
   }
   if (hasStoredKey) {
     return {
-      title: "Use on Another Phone",
-      subtitle: "Copy this, then paste it there.",
+      title: "API key",
+      subtitle: "Copy this to use Revibase Pay in another browser.",
     };
   }
   return {
-    title: "Turn On Pay",
-      subtitle: "You’ll be able to pay from this phone.",
+    title: "Enable Revibase Pay",
+    subtitle:
+      "Generate a key for this browser, or import one you already have.",
   };
 }
 

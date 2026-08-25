@@ -24,7 +24,7 @@ async function fetchPreauthPayState(wallet: string): Promise<PreauthPayState> {
   return readJson<PreauthPayState>(res, "Couldn’t check confirmation.");
 }
 
-/** Confirm Payments flag + whether this phone’s stored key is live (one request). */
+/** Confirm Payments flag + whether this browser’s stored key is live (one request). */
 export function usePreauthRequired(wallet: string | null) {
   return useQuery({
     queryKey: queryKeys.preauthRequired.byWallet(wallet),

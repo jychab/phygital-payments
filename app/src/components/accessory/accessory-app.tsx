@@ -71,7 +71,7 @@ export function AccessoryApp() {
 
 function AccessoryNfcRoute() {
   const [{ open: payOpen, mode: payMode }] = useAccessoryPayOpen();
-  // Hold to Pay is API-key only — no Connect chip. Manage needs the session chip.
+  // Hold to Pay / paste setup are API-key only — no Connect chip.
   const walletActions =
     payOpen && payMode === "manage" ? ("full" as const) : ("hidden" as const);
 

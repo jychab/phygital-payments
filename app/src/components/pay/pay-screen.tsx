@@ -46,9 +46,10 @@ export type PayScreenProps = {
   active?: boolean;
   /**
    * Accessory Hold path: API-key only, no wallet panels.
-   * Escalate via `onNeedManage` if limit/key setup or Settings is needed.
+   * Escalate via `onNeedSetup` (paste key) or `onNeedManage` (limits / settings).
    */
   intent?: "hold";
+  onNeedSetup?: () => void;
   onNeedManage?: () => void;
 };
 
@@ -63,6 +64,7 @@ export function PayScreen({
   onExit,
   active = true,
   intent,
+  onNeedSetup,
   onNeedManage,
 }: PayScreenProps) {
   const queryClient = useQueryClient();
@@ -184,28 +186,35 @@ export function PayScreen({
           confirmationRequired={confirmationRequired}
           keyReady={keyReady}
           holdings={delegates.holdings}
-          onSetupPhone={onNeedManage}
+          onSetupPhone={onNeedSetup}
           onManage={onNeedManage}
           onBack={onExit}
         />
       );
     }
 
+    const needsKey = confirmationRequired && !keyReady;
+    const escalate = needsKey ? onNeedSetup : onNeedManage;
+    const escalateLabel = needsKey ? "Set up Revibase Pay" : "Continue";
+    const body = needsKey
+      ? "Confirmation is on. Set up Revibase Pay in this browser to continue."
+      : "Connect the linked wallet to set a spending limit.";
+
     return (
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
         title="Finish Pay setup"
-        body="Connect the linked wallet to set a spending limit or provision this phone."
+        body={body}
         action={
           <div className="flex w-full flex-col gap-2">
-            {onNeedManage ? (
+            {escalate ? (
               <Button
                 type="button"
                 size="lg"
                 className="w-full"
-                onClick={onNeedManage}
+                onClick={escalate}
               >
-                Continue
+                {escalateLabel}
               </Button>
             ) : null}
             {onExit ? (

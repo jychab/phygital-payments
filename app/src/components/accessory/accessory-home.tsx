@@ -6,6 +6,7 @@ import { AuthenticAccessoryPanel } from "@/components/accessory/authentic-access
 import { AccessoryBrowsePanel } from "@/components/accessory/accessory-browse-panel";
 import { ClaimPanel } from "@/components/claim/claim-panel";
 import { PayScreen } from "@/components/pay/pay-screen";
+import { PastePayKeyPanel } from "@/components/pay/paste-pay-key-panel";
 import { ConnectGate } from "@/components/shared/connect-gate";
 import { WalletSyncGate } from "@/components/shared/wallet-sync-gate";
 import { BackLink } from "@/components/shared/back-link";
@@ -97,7 +98,19 @@ export function AccessoryHome({
         owner={owner}
         tokenAddress={String(token.address)}
         onExit={() => setShowPay(false)}
+        onNeedSetup={() => openPay("setup")}
         onNeedManage={() => openPay("manage")}
+      />
+    );
+  }
+
+  if (showPay && payMode === "setup") {
+    return (
+      <PastePayKeyPanel
+        owner={owner}
+        onBack={() => setShowPay(false)}
+        onStored={() => openPay("hold")}
+        onNeedWallet={() => openPay("manage")}
       />
     );
   }
@@ -137,6 +150,7 @@ export function AccessoryHome({
           <AccessoryPayCta
             owner={owner}
             onOpenHold={() => openPay("hold")}
+            onOpenSetup={() => openPay("setup")}
             onOpenManage={() => openPay("manage")}
           />
         ) : undefined
@@ -147,15 +161,17 @@ export function AccessoryHome({
 
 /**
  * Authenticity primary CTA matrix (Confirm / key / session).
- * Hold to Pay never wraps Privy; Manage / setup does when Connect is needed.
+ * Hold + paste-setup never wrap Privy; Manage does when Connect is needed.
  */
 function AccessoryPayCta({
   owner,
   onOpenHold,
+  onOpenSetup,
   onOpenManage,
 }: {
   owner: string;
   onOpenHold: () => void;
+  onOpenSetup: () => void;
   onOpenManage: () => void;
 }) {
   const preauth = usePreauthRequired(owner);
@@ -180,15 +196,9 @@ function AccessoryPayCta({
 
   if (required && !keyOk) {
     return (
-      <PrivyGate
-        fallback={
-          <Button type="button" size="lg" className="w-full" disabled>
-            Set up Pay on this phone
-          </Button>
-        }
-      >
-        <ManagePayButton label="Set up Pay on this phone" onOpen={onOpenManage} />
-      </PrivyGate>
+      <Button type="button" size="lg" className="w-full" onClick={onOpenSetup}>
+        Set up Revibase Pay
+      </Button>
     );
   }
 

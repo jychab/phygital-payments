@@ -87,11 +87,11 @@ export function AuthenticAccessoryPanel({
       {footer ? (
         <div
           className={cn(
-            "mt-auto flex flex-col gap-2.5 pt-2",
+            "mt-auto flex w-full flex-col items-center gap-2.5 pt-2",
             galleryAnimate.rise,
           )}
         >
-          {footer}
+          <div className="flex w-full max-w-xs flex-col gap-2.5">{footer}</div>
         </div>
       ) : null}
     </div>
@@ -114,8 +114,10 @@ function AccessoryStatus({
   onHoldToCheck?: () => void;
 }) {
   return (
-    <div className="flex w-full max-w-72 flex-col items-center gap-2">
-      <div className="flex items-center justify-center gap-0.5">
+    <div className="flex w-full max-w-xs flex-col items-center gap-2">
+      {/* Balance the refresh control so “Linked to …” stays optically centered. */}
+      <div className="flex w-full items-center justify-center gap-0.5">
+        <span className="size-9 shrink-0" aria-hidden />
         {unclaimed ? (
           <p className="text-xs text-muted-foreground">Not linked to a wallet.</p>
         ) : (
@@ -129,7 +131,7 @@ function AccessoryStatus({
             />
           </p>
         )}
-        <PhygitalTokenRefreshButton token={token} />
+        <PhygitalTokenRefreshButton token={token} className="shrink-0" />
       </div>
       {ghostHold && onHoldToCheck ? (
         <Button

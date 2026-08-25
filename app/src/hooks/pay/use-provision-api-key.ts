@@ -24,10 +24,10 @@ async function provisionApiKey(args: ProvisionArgs): Promise<string> {
     wallet: args.solanaWallet,
     options: {
       uiOptions: {
-        title: args.rotate ? "Start Over" : "Turn On Pay",
+        title: args.rotate ? "Rotate API key" : "Generate API key",
         description: args.rotate
-          ? "Pay will stop in other browsers. This does not move funds."
-          : "Pay will work here. This does not move funds.",
+          ? "Other browsers will stop working. This does not move funds."
+          : "Revibase Pay will work in this browser. This does not move funds.",
       },
     },
   });

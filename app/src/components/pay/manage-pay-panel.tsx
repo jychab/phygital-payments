@@ -73,7 +73,7 @@ export function ManagePayPanel({
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
           {confirmationOn
-            ? "Set spending limits, or use Pay on another phone."
+            ? "Set spending limits, or manage your API key."
             : "Set spending limits."}
         </p>
       </div>
@@ -114,7 +114,7 @@ export function ManagePayPanel({
             className="w-full"
             onClick={() => setManageKeys(true)}
           >
-            Use on Another Phone
+            Manage API key
           </Button>
         ) : null}
       </div>
@@ -163,7 +163,7 @@ function ConfirmPaymentsRow({
       title="Confirm Payments"
       subtitle={
         on
-          ? "Press Pay on this phone before a tap goes through."
+          ? "Press Pay here before a tap goes through."
           : "Hold your accessory to their phone to pay."
       }
       truncate={false}
