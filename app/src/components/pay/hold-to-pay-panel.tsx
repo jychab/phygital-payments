@@ -1,7 +1,11 @@
 "use client";
 
-import { Check, LoaderCircle, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 
+import {
+  HoldToPayHint,
+  HoldToPayIdleActions,
+} from "@/components/pay/hold-to-pay-actions";
 import { BackLink } from "@/components/shared/back-link";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
@@ -13,7 +17,6 @@ import {
   type HoldToPayPhase,
   type HoldToPaySuccess,
 } from "@/hooks/pay/use-hold-to-pay";
-import { payCopy } from "@/lib/copy/phygital";
 import { galleryAnimate } from "@/lib/motion";
 import { formatTokenAmount } from "@/lib/tokens/mint-delegate";
 import {
@@ -22,6 +25,11 @@ import {
 } from "@/lib/tokens/payment-token";
 import { shortAddress } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+
+export {
+  HoldToPayHint,
+  HoldToPayIdleActions,
+} from "@/components/pay/hold-to-pay-actions";
 
 /**
  * Pay home: ready to tap, or Press Pay when Confirm Payments is on.
@@ -84,89 +92,6 @@ export function HoldToPayPanel({
         onSetupPhone={onSetupPhone}
         onManage={onManage}
       />
-    </div>
-  );
-}
-
-/** Helper line above Pay / Set up CTAs. */
-export function HoldToPayHint({
-  confirmationRequired,
-  keyReady,
-}: {
-  confirmationRequired: boolean;
-  keyReady: boolean;
-}) {
-  if (!confirmationRequired) return payCopy.holdConfirmOff;
-  if (!keyReady) return payCopy.holdNeedsKey;
-  return payCopy.holdReady;
-}
-
-/**
- * Idle footer: arm Pay, Set up, or Manage — usable as authenticity `payAction`.
- */
-export function HoldToPayIdleActions({
-  confirmationRequired,
-  keyReady,
-  busy,
-  onPay,
-  onSetupPhone,
-  onManage,
-  manageVariant = "ghost",
-}: {
-  confirmationRequired: boolean;
-  keyReady: boolean;
-  busy?: boolean;
-  onPay?: () => void;
-  onSetupPhone?: () => void;
-  onManage?: () => void;
-  /** Confirm-off accessory uses primary Manage; Hold panel keeps ghost. */
-  manageVariant?: "ghost" | "primary";
-}) {
-  const showPay = confirmationRequired && keyReady && onPay;
-  const showSetup = confirmationRequired && !keyReady && onSetupPhone;
-  const manageIsPrimary = manageVariant === "primary" && !showPay && !showSetup;
-
-  return (
-    <div className="flex w-full flex-col gap-2.5">
-      {showPay ? (
-        <Button
-          type="button"
-          size="lg"
-          className="w-full"
-          onClick={onPay}
-          disabled={busy}
-        >
-          {busy ? (
-            <LoaderCircle className="size-4 animate-spin" />
-          ) : (
-            payCopy.pay
-          )}
-        </Button>
-      ) : null}
-      {showSetup ? (
-        <Button
-          type="button"
-          size="lg"
-          className="w-full"
-          onClick={onSetupPhone}
-        >
-          {payCopy.setUp}
-        </Button>
-      ) : null}
-      {onManage ? (
-        <Button
-          type="button"
-          variant={manageIsPrimary ? "default" : "ghost"}
-          size="lg"
-          className={cn(
-            "w-full",
-            !manageIsPrimary && "text-muted-foreground",
-          )}
-          onClick={onManage}
-        >
-          {manageIsPrimary ? payCopy.manage : payCopy.settings}
-        </Button>
-      ) : null}
     </div>
   );
 }

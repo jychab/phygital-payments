@@ -2,9 +2,10 @@
 
 import { LoaderCircle } from "lucide-react";
 
-import { CenteredStatus } from "@/components/layout/gate-message";
+import { centeredBlockClass } from "@/lib/layout";
+import { cn } from "@/lib/utils";
 
-/** Spinner with visible label and screen-reader text. */
+/** Spinner with visible label — fills parent and centers (e.g. verifying chip). */
 export function LoadingStatus({
   label = "Loading…",
   className,
@@ -13,16 +14,14 @@ export function LoadingStatus({
   className?: string;
 }) {
   return (
-    <div className={className}>
-      <CenteredStatus>
-        <LoaderCircle
-          className="size-5 animate-spin text-muted-foreground"
-          aria-hidden
-        />
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          {label}
-        </p>
-      </CenteredStatus>
+    <div className={cn(centeredBlockClass, className)}>
+      <LoaderCircle
+        className="size-5 animate-spin text-muted-foreground"
+        aria-hidden
+      />
+      <p className="text-sm text-muted-foreground" aria-live="polite">
+        {label}
+      </p>
     </div>
   );
 }

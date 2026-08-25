@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 
 import { AuthenticAccessoryPanel } from "@/components/accessory/authentic-accessory-panel";
@@ -7,10 +8,7 @@ import { ClaimPanel } from "@/components/claim/claim-panel";
 import {
   HoldToPayHint,
   HoldToPayIdleActions,
-  HoldToPayPhaseView,
-} from "@/components/pay/hold-to-pay-panel";
-import { PayScreen } from "@/components/pay/pay-screen";
-import { PastePayKeyPanel } from "@/components/pay/paste-pay-key-panel";
+} from "@/components/pay/hold-to-pay-actions";
 import { ConnectGate } from "@/components/shared/connect-gate";
 import { WalletSyncGate } from "@/components/shared/wallet-sync-gate";
 import { BackLink } from "@/components/shared/back-link";
@@ -37,11 +35,32 @@ import {
 import { copy, payCopy } from "@/lib/copy/phygital";
 import { shortAddress } from "@/lib/utils";
 
+const PastePayKeyPanel = dynamic(
+  () =>
+    import("@/components/pay/paste-pay-key-panel").then(
+      (m) => m.PastePayKeyPanel,
+    ),
+  { ssr: false, loading: () => <LoadingStatus label={payCopy.loading} /> },
+);
+
+const PayScreen = dynamic(
+  () => import("@/components/pay/pay-screen").then((m) => m.PayScreen),
+  { ssr: false, loading: () => <LoadingStatus label={payCopy.loading} /> },
+);
+
+const HoldToPayPhaseView = dynamic(
+  () =>
+    import("@/components/pay/hold-to-pay-panel").then(
+      (m) => m.HoldToPayPhaseView,
+    ),
+  { ssr: false, loading: () => <LoadingStatus label={payCopy.loading} /> },
+);
+
 /**
  * Accessory task home after a check, claim, or Collection open.
  *
  * WebAuthn-first: authenticity hosts Hold-to-Pay CTAs (arm Pay in place).
- * Setup / Manage still open full screens. Privy only for Manage Connect.
+ * Heavy Pay bootstrap / Manage / setup chunks load only when needed.
  * Collection (`fromCollection`) shows Back; Confirmed only when session
  * matches the linked owner (see CollectionVerifiedSeed).
  */
@@ -169,7 +188,7 @@ export function AccessoryHome({
 
 /**
  * Authenticity + real Hold-to-Pay CTAs (arm Pay in place).
- * Window / success phases replace authenticity until Done.
+ * Pay bootstrap RPC only after a payment window starts (success amount).
  */
 function AccessoryPayHome({
   token,
@@ -193,23 +212,18 @@ function AccessoryPayHome({
   onOpenManage: () => void;
 }) {
   const hold = useHoldToPay(owner);
-  const delegates = useOwnerPayDelegates(owner, { live: true });
 
   if (hold.showPhase) {
     return (
-      <div className="flex flex-1 flex-col">
-        {fromCollection && hold.phase !== "window" ? (
-          <BackToCollection />
-        ) : null}
-        <HoldToPayPhaseView
-          phase={hold.phase}
-          paid={hold.paid}
-          secondsLeft={hold.secondsLeft}
-          holdings={delegates.holdings}
-          onCancelWindow={() => void hold.onCancelWindow()}
-          onReset={hold.resetToIdle}
-        />
-      </div>
+      <AccessoryHoldPhase
+        owner={owner}
+        fromCollection={fromCollection}
+        phase={hold.phase}
+        paid={hold.paid}
+        secondsLeft={hold.secondsLeft}
+        onCancelWindow={() => void hold.onCancelWindow()}
+        onReset={hold.resetToIdle}
+      />
     );
   }
 
@@ -237,9 +251,47 @@ function AccessoryPayHome({
   );
 }
 
+/** Mounts holdings fetch only while a payment phase is active. */
+function AccessoryHoldPhase({
+  owner,
+  fromCollection,
+  phase,
+  paid,
+  secondsLeft,
+  onCancelWindow,
+  onReset,
+}: {
+  owner: string;
+  fromCollection: boolean;
+  phase: ReturnType<typeof useHoldToPay>["phase"];
+  paid: ReturnType<typeof useHoldToPay>["paid"];
+  secondsLeft: number;
+  onCancelWindow: () => void;
+  onReset: () => void;
+}) {
+  const delegates = useOwnerPayDelegates(owner, {
+    // Window phase does not need holdings; success does. One-shot is enough.
+    live: false,
+  });
+
+  return (
+    <div className="flex flex-1 flex-col">
+      {fromCollection && phase !== "window" ? <BackToCollection /> : null}
+      <HoldToPayPhaseView
+        phase={phase}
+        paid={paid}
+        secondsLeft={secondsLeft}
+        holdings={delegates.holdings}
+        onCancelWindow={onCancelWindow}
+        onReset={onReset}
+      />
+    </div>
+  );
+}
+
 /**
  * Confirm / key matrix with real actions — Pay arms preauth; Set up / Manage
- * open full screens. Hold + setup never wrap Privy; Manage does for Connect.
+ * open full screens. Authenticity never mounts Privy (Manage screen does).
  */
 function AccessoryIntegratedPayCta({
   owner,
@@ -284,52 +336,10 @@ function AccessoryIntegratedPayCta({
     );
   }
 
+  // Confirm-off — open Manage without warming Privy on authenticity.
   return (
-    <PrivyGate
-      fallback={
-        <Button type="button" size="lg" className="w-full" disabled>
-          {payCopy.connectLinked}
-        </Button>
-      }
-    >
-      <ManagePayButton
-        label={{
-          connected: payCopy.manage,
-          disconnected: payCopy.connectLinked,
-        }}
-        onOpen={onOpenManage}
-      />
-    </PrivyGate>
-  );
-}
-
-function ManagePayButton({
-  label,
-  onOpen,
-}: {
-  label: string | { connected: string; disconnected: string };
-  onOpen: () => void;
-}) {
-  const { isConnected, ready, connect } = useSolanaAddress();
-  const text =
-    typeof label === "string"
-      ? label
-      : isConnected
-        ? label.connected
-        : label.disconnected;
-
-  return (
-    <Button
-      type="button"
-      size="lg"
-      className="w-full"
-      disabled={!ready}
-      onClick={() => {
-        onOpen();
-        if (ready && !isConnected) connect();
-      }}
-    >
-      {text}
+    <Button type="button" size="lg" className="w-full" onClick={onOpenManage}>
+      {payCopy.manage}
     </Button>
   );
 }
