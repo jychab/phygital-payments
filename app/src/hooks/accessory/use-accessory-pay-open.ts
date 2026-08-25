@@ -16,11 +16,16 @@ export type AccessoryPayState = {
   mode: AccessoryPayMode | null;
 };
 
+/** Stable refs — `useSyncExternalStore` compares snapshots with Object.is. */
+const PAY_CLOSED: AccessoryPayState = { open: false, mode: null };
+const PAY_HOLD: AccessoryPayState = { open: true, mode: "hold" };
+const PAY_MANAGE: AccessoryPayState = { open: true, mode: "manage" };
+
 function payStateFromLocation(): AccessoryPayState {
   const pay = new URLSearchParams(window.location.search).get(PAY_PARAM);
-  if (pay === "hold") return { open: true, mode: "hold" };
-  if (pay === "manage") return { open: true, mode: "manage" };
-  return { open: false, mode: null };
+  if (pay === "hold") return PAY_HOLD;
+  if (pay === "manage") return PAY_MANAGE;
+  return PAY_CLOSED;
 }
 
 function subscribePayOpen(onStoreChange: () => void): () => void {
@@ -57,7 +62,7 @@ export function useAccessoryPayOpen(): [
   const state = useSyncExternalStore(
     subscribePayOpen,
     payStateFromLocation,
-    (): AccessoryPayState => ({ open: false, mode: null }),
+    () => PAY_CLOSED,
   );
 
   const setOpen = useCallback((next: false | OpenAccessoryPayArgs) => {
