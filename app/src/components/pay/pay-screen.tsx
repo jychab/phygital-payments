@@ -44,6 +44,12 @@ export type PayScreenProps = {
   onExit?: () => void;
   /** When false, owner queries fetch once without background polling. */
   active?: boolean;
+  /**
+   * Accessory Hold path: API-key only, no wallet panels.
+   * Escalate via `onNeedManage` if limit/key setup or Settings is needed.
+   */
+  intent?: "hold";
+  onNeedManage?: () => void;
 };
 
 /**
@@ -56,6 +62,8 @@ export function PayScreen({
   tokenAddress,
   onExit,
   active = true,
+  intent,
+  onNeedManage,
 }: PayScreenProps) {
   const queryClient = useQueryClient();
   const isRestoring = useIsRestoring();
@@ -162,6 +170,56 @@ export function PayScreen({
               Back
             </Button>
           ) : undefined
+        }
+      />
+    );
+  }
+
+  // Hold intent: arm payment without mounting wallet-gated setup panels.
+  if (intent === "hold") {
+    if (confirmationRequired && keyReady && limitReady) {
+      return (
+        <HoldToPayPanel
+          owner={owner}
+          confirmationRequired={confirmationRequired}
+          keyReady={keyReady}
+          holdings={delegates.holdings}
+          onSetupPhone={onNeedManage}
+          onManage={onNeedManage}
+          onBack={onExit}
+        />
+      );
+    }
+
+    return (
+      <GateMessage
+        icon={<Nfc className="size-5 text-muted-foreground" />}
+        title="Finish Pay setup"
+        body="Connect the linked wallet to set a spending limit or provision this phone."
+        action={
+          <div className="flex w-full flex-col gap-2">
+            {onNeedManage ? (
+              <Button
+                type="button"
+                size="lg"
+                className="w-full"
+                onClick={onNeedManage}
+              >
+                Continue
+              </Button>
+            ) : null}
+            {onExit ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                className="w-full"
+                onClick={onExit}
+              >
+                Back
+              </Button>
+            ) : null}
+          </div>
         }
       />
     );

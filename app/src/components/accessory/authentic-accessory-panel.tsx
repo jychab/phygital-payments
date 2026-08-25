@@ -1,6 +1,9 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
+import { CopyableAddress } from "@/components/shared/copyable-address";
 import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
 import { InlineError } from "@/components/shared/inline-error";
 import { Button } from "@/components/ui/button";
@@ -11,41 +14,55 @@ import {
   isUnclaimedToken,
   type PhygitalToken,
 } from "@/lib/phygital/token";
-import { shortAddress } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
-/** Task-mode accessory panel — NFC ring + one primary CTA (claim / Pay / Hold to Check). */
+/** Task-mode accessory panel — NFC ring + one primary CTA (claim / Pay / Hold). */
 export function AuthenticAccessoryPanel({
   token,
   liveConfirmed,
   holdError,
   onHoldToCheck,
   onClaim,
-  onPay,
-  payLabel = "Pay",
+  payAction,
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
   holdError?: string | null;
   onHoldToCheck?: () => void;
   onClaim?: () => void;
-  onPay?: () => void;
-  payLabel?: string;
+  /** Pay / Set up / Connect / Manage — shown when accessory is pay-ready. */
+  payAction?: ReactNode;
 }) {
   const unclaimed = isUnclaimedToken(token);
   const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
-  const canPay = token.isLocked && tokenAllowsPay(token) && Boolean(onPay);
+  const showPay =
+    token.isLocked && tokenAllowsPay(token) && payAction != null;
   const statusLine = liveConfirmed
     ? copy.confirmedJustNow
     : copy.registeredOnChain;
 
+  // Ghost Hold when another primary exists; otherwise Hold is the primary.
+  const ghostHold =
+    !liveConfirmed && Boolean(onHoldToCheck) && (canClaim || showPay);
+
   const primaryAction = canClaim
-    ? { label: copy.addToWallet, onClick: onClaim }
-    : canPay
-      ? { label: payLabel, onClick: onPay }
-      : !liveConfirmed && onHoldToCheck
-        ? { label: copy.holdToCheck, onClick: onHoldToCheck }
-        : null;
+    ? { label: copy.addToWallet, onClick: onClaim! }
+    : !showPay && !liveConfirmed && onHoldToCheck
+      ? { label: copy.holdToCheck, onClick: onHoldToCheck }
+      : null;
+
+  const footer = showPay ? (
+    payAction
+  ) : primaryAction ? (
+    <Button
+      type="button"
+      size="lg"
+      className="w-full"
+      onClick={primaryAction.onClick}
+    >
+      {primaryAction.label}
+    </Button>
+  ) : null;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -60,28 +77,21 @@ export function AuthenticAccessoryPanel({
             token={token}
             unclaimed={unclaimed}
             owner={String(token.currentOwner)}
-            liveConfirmed={liveConfirmed}
             holdError={holdError}
+            ghostHold={ghostHold}
             onHoldToCheck={onHoldToCheck}
           />
         }
       />
 
-      {primaryAction ? (
+      {footer ? (
         <div
           className={cn(
             "mt-auto flex flex-col gap-2.5 pt-2",
             galleryAnimate.rise,
           )}
         >
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            onClick={primaryAction.onClick}
-          >
-            {primaryAction.label}
-          </Button>
+          {footer}
         </div>
       ) : null}
     </div>
@@ -92,28 +102,36 @@ function AccessoryStatus({
   token,
   unclaimed,
   owner,
-  liveConfirmed,
   holdError,
+  ghostHold,
   onHoldToCheck,
 }: {
   token: PhygitalToken;
   unclaimed: boolean;
   owner: string;
-  liveConfirmed: boolean;
   holdError?: string | null;
+  ghostHold: boolean;
   onHoldToCheck?: () => void;
 }) {
   return (
     <div className="flex w-full max-w-72 flex-col items-center gap-2">
-      <div className="flex items-center gap-0.5">
-        <p className="text-xs text-muted-foreground">
-          {unclaimed
-            ? "Not linked to a wallet."
-            : `Linked to ${shortAddress(owner)}.`}
-        </p>
+      <div className="flex items-center justify-center gap-0.5">
+        {unclaimed ? (
+          <p className="text-xs text-muted-foreground">Not linked to a wallet.</p>
+        ) : (
+          <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <span>Linked to</span>
+            <CopyableAddress
+              address={owner}
+              length={4}
+              label="linked wallet"
+              className="text-xs text-muted-foreground"
+            />
+          </p>
+        )}
         <PhygitalTokenRefreshButton token={token} />
       </div>
-      {!liveConfirmed && onHoldToCheck ? (
+      {ghostHold && onHoldToCheck ? (
         <Button
           type="button"
           variant="ghost"

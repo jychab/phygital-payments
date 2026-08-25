@@ -70,13 +70,13 @@ export function AccessoryApp() {
 }
 
 function AccessoryNfcRoute() {
-  const [payOpen] = useAccessoryPayOpen();
+  const [{ open: payOpen, mode: payMode }] = useAccessoryPayOpen();
+  // Hold to Pay is API-key only — no Connect chip. Manage needs the session chip.
+  const walletActions =
+    payOpen && payMode === "manage" ? ("full" as const) : ("hidden" as const);
 
   return (
-    <PhygitalRouteShell
-      modeLabel="Accessory"
-      walletActions={payOpen ? "full" : "hidden"}
-    >
+    <PhygitalRouteShell modeLabel="Accessory" walletActions={walletActions}>
       <PhygitalNfcApp
         surface="accessory"
         copy={ACCESSORY_NFC_COPY}
@@ -99,7 +99,7 @@ function AccessoryAddressRoute({
   address: string;
   browseMode: boolean;
 }) {
-  const [payOpen] = useAccessoryPayOpen();
+  const [{ open: payOpen, mode: payMode }] = useAccessoryPayOpen();
   const consumedHandoff = useRef(false);
   if (!browseMode && !consumedHandoff.current) {
     // Clear passkey-only stash; never used for Confirmed.
@@ -109,7 +109,9 @@ function AccessoryAddressRoute({
   const tokenQuery = usePhygitalTokenByAddress(address);
   const mismatch = useEnsurePhygitalSurface(tokenQuery.data, "accessory");
   const walletActions =
-    !browseMode && payOpen ? ("full" as const) : ("hidden" as const);
+    !browseMode && payOpen && payMode === "manage"
+      ? ("full" as const)
+      : ("hidden" as const);
 
   if (tokenQuery.isLoading || mismatch) {
     return (

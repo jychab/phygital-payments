@@ -9,8 +9,18 @@ const PAY_PARAM = "pay";
 
 const listeners = new Set<() => void>();
 
-function payOpenFromLocation(): boolean {
-  return new URLSearchParams(window.location.search).get(PAY_PARAM) === "1";
+export type AccessoryPayMode = "hold" | "manage";
+
+export type AccessoryPayState = {
+  open: boolean;
+  mode: AccessoryPayMode | null;
+};
+
+function payStateFromLocation(): AccessoryPayState {
+  const pay = new URLSearchParams(window.location.search).get(PAY_PARAM);
+  if (pay === "hold") return { open: true, mode: "hold" };
+  if (pay === "manage") return { open: true, mode: "manage" };
+  return { open: false, mode: null };
 }
 
 function subscribePayOpen(onStoreChange: () => void): () => void {
@@ -31,30 +41,30 @@ export type OpenAccessoryPayArgs = {
   tokenAddress: string;
   passkey: string;
   surface?: PhygitalSurface;
+  /** Hold = API-key Pay; Manage = Connect + settings. */
+  mode: AccessoryPayMode;
 };
 
 /**
  * Pay on `/accessory` after authenticity. URL keeps tap params when present
- * so Confirmed stays tied to cryptographic proof; adds `address` + `pay=1`
- * for wallet IAB resume. Never stashes Confirmed in sessionStorage.
+ * so Confirmed stays tied to cryptographic proof; adds `address` + `pay=hold|manage`
+ * for resume. Never stashes Confirmed in sessionStorage.
  */
 export function useAccessoryPayOpen(): [
-  boolean,
-  (open: boolean | OpenAccessoryPayArgs) => void,
+  AccessoryPayState,
+  (open: false | OpenAccessoryPayArgs) => void,
 ] {
-  const open = useSyncExternalStore(
+  const state = useSyncExternalStore(
     subscribePayOpen,
-    payOpenFromLocation,
-    () => false,
+    payStateFromLocation,
+    (): AccessoryPayState => ({ open: false, mode: null }),
   );
 
-  const setOpen = useCallback((next: boolean | OpenAccessoryPayArgs) => {
+  const setOpen = useCallback((next: false | OpenAccessoryPayArgs) => {
     const url = new URL(window.location.href);
 
     if (next === false) {
       url.searchParams.delete(PAY_PARAM);
-    } else if (next === true) {
-      url.searchParams.set(PAY_PARAM, "1");
     } else {
       // Passkey only — so address route can load the token; not Confirmed.
       stashDiscovery({
@@ -62,7 +72,7 @@ export function useAccessoryPayOpen(): [
         surface: next.surface ?? "accessory",
       });
       url.searchParams.set("address", next.tokenAddress);
-      url.searchParams.set(PAY_PARAM, "1");
+      url.searchParams.set(PAY_PARAM, next.mode);
       // Keep pk/s/c/n when present — Confirmed requires live tap verify.
     }
 
@@ -77,5 +87,5 @@ export function useAccessoryPayOpen(): [
     emitPayOpen();
   }, []);
 
-  return [open, setOpen];
+  return [state, setOpen];
 }

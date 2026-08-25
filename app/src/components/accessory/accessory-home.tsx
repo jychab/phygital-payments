@@ -13,7 +13,11 @@ import { PrivyGate } from "@/app/privy-wallet-root";
 import { LoadingStatus } from "@/components/shared/loading-status";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
-import { useAccessoryPayOpen } from "@/hooks/accessory/use-accessory-pay-open";
+import { Button } from "@/components/ui/button";
+import {
+  useAccessoryPayOpen,
+  type AccessoryPayMode,
+} from "@/hooks/accessory/use-accessory-pay-open";
 import { useHoldToCheck } from "@/hooks/phygital/use-hold-to-check";
 import { usePreauthRequired } from "@/hooks/pay/use-preauth-required";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
@@ -23,13 +27,13 @@ import {
   type PhygitalToken,
 } from "@/lib/phygital/token";
 import { copy } from "@/lib/copy/phygital";
+import { shortAddress } from "@/lib/utils";
 
 /**
  * Accessory task home after a check or claim.
  *
- * WebAuthn-first: authenticity + claim capture never mount Privy.
- * Pay / connect wallet only after the accessory is already verified — so a
- * wallet in-app browser handoff never blocks NFC/passkey.
+ * WebAuthn-first: authenticity + Hold to Pay never mount Privy.
+ * Manage / setup CTAs warm Privy only when Connect or signing is needed.
  */
 export function AccessoryHome({
   token,
@@ -51,19 +55,18 @@ export function AccessoryHome({
     showInAppGate,
     holdToCheck,
   } = useHoldToCheck(token, liveConfirmedProp);
-  const [showPay, setShowPay] = useAccessoryPayOpen();
+  const [{ open: showPay, mode: payMode }, setShowPay] = useAccessoryPayOpen();
   const [showClaim, setShowClaim] = useState(false);
 
   const owner = String(token.currentOwner);
   const canPay = !browseMode && token.isLocked && tokenAllowsPay(token);
-  const requiredQuery = usePreauthRequired(canPay ? owner : null);
-  const confirmationRequired = requiredQuery.data?.required === true;
 
-  function openPay() {
+  function openPay(mode: AccessoryPayMode) {
     setShowPay({
       tokenAddress: String(token.address),
       passkey: token.secp256r1PublicKey,
       surface: "accessory",
+      mode,
     });
   }
 
@@ -87,10 +90,22 @@ export function AccessoryHome({
     );
   }
 
-  if (showPay) {
+  if (showPay && payMode === "hold") {
+    return (
+      <PayScreen
+        intent="hold"
+        owner={owner}
+        tokenAddress={String(token.address)}
+        onExit={() => setShowPay(false)}
+        onNeedManage={() => openPay("manage")}
+      />
+    );
+  }
+
+  if (showPay && payMode === "manage") {
     return (
       <PrivyGate fallback={<LoadingStatus label="Loading Pay…" />}>
-        <AccessoryPayEntry
+        <AccessoryManagePayEntry
           owner={owner}
           tokenAddress={String(token.address)}
           onExit={() => setShowPay(false)}
@@ -117,14 +132,118 @@ export function AccessoryHome({
       holdError={holdError}
       onHoldToCheck={() => void holdToCheck()}
       onClaim={() => setShowClaim(true)}
-      onPay={canPay ? openPay : undefined}
-      payLabel={confirmationRequired ? "Pay" : "Pay Settings"}
+      payAction={
+        canPay ? (
+          <AccessoryPayCta
+            owner={owner}
+            onOpenHold={() => openPay("hold")}
+            onOpenManage={() => openPay("manage")}
+          />
+        ) : undefined
+      }
     />
   );
 }
 
-/** Privy-mounted Pay entry — connect only after authenticity (WebAuthn) is done. */
-function AccessoryPayEntry({
+/**
+ * Authenticity primary CTA matrix (Confirm / key / session).
+ * Hold to Pay never wraps Privy; Manage / setup does when Connect is needed.
+ */
+function AccessoryPayCta({
+  owner,
+  onOpenHold,
+  onOpenManage,
+}: {
+  owner: string;
+  onOpenHold: () => void;
+  onOpenManage: () => void;
+}) {
+  const preauth = usePreauthRequired(owner);
+  const required = preauth.data?.required === true;
+  const keyOk = preauth.data?.keyOk === true;
+
+  if (preauth.isPending) {
+    return (
+      <Button type="button" size="lg" className="w-full" disabled>
+        …
+      </Button>
+    );
+  }
+
+  if (required && keyOk) {
+    return (
+      <Button type="button" size="lg" className="w-full" onClick={onOpenHold}>
+        Pay
+      </Button>
+    );
+  }
+
+  if (required && !keyOk) {
+    return (
+      <PrivyGate
+        fallback={
+          <Button type="button" size="lg" className="w-full" disabled>
+            Set up Pay on this phone
+          </Button>
+        }
+      >
+        <ManagePayButton label="Set up Pay on this phone" onOpen={onOpenManage} />
+      </PrivyGate>
+    );
+  }
+
+  return (
+    <PrivyGate
+      fallback={
+        <Button type="button" size="lg" className="w-full" disabled>
+          Connect linked wallet
+        </Button>
+      }
+    >
+      <ManagePayButton
+        label={{
+          connected: "Manage Pay Settings",
+          disconnected: "Connect linked wallet",
+        }}
+        onOpen={onOpenManage}
+      />
+    </PrivyGate>
+  );
+}
+
+function ManagePayButton({
+  label,
+  onOpen,
+}: {
+  label: string | { connected: string; disconnected: string };
+  onOpen: () => void;
+}) {
+  const { isConnected, ready, connect } = useSolanaAddress();
+  const text =
+    typeof label === "string"
+      ? label
+      : isConnected
+        ? label.connected
+        : label.disconnected;
+
+  return (
+    <Button
+      type="button"
+      size="lg"
+      className="w-full"
+      disabled={!ready}
+      onClick={() => {
+        onOpen();
+        if (ready && !isConnected) connect();
+      }}
+    >
+      {text}
+    </Button>
+  );
+}
+
+/** Manage Pay entry — ConnectGate if modal dismissed; WalletSync for signing. */
+function AccessoryManagePayEntry({
   owner,
   tokenAddress,
   onExit,
@@ -145,8 +264,8 @@ function AccessoryPayEntry({
         <BackLink onClick={onExit} />
         <div className="flex flex-1 flex-col items-center justify-center py-8">
           <ConnectGate
-            title="Connect your wallet"
-            body="Connect the wallet linked to this accessory to use Pay. You can open your wallet app — no need to hold the accessory again."
+            title="Connect linked wallet"
+            body={`Connect ${shortAddress(owner)} to manage Pay on this accessory.`}
             onConnect={connect}
           />
         </div>
@@ -156,11 +275,7 @@ function AccessoryPayEntry({
 
   return (
     <WalletSyncGate linkedOwner={owner}>
-      <PayScreen
-        owner={owner}
-        tokenAddress={tokenAddress}
-        onExit={onExit}
-      />
+      <PayScreen owner={owner} tokenAddress={tokenAddress} onExit={onExit} />
     </WalletSyncGate>
   );
 }
