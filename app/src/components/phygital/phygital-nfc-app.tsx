@@ -35,6 +35,7 @@ export function PhygitalNfcApp({
   copy: PhygitalNfcCopy;
   renderHome: (args: {
     token: PhygitalToken;
+    /** True only after WebAuthn or tap-verify in this tree. */
     liveConfirmed?: boolean;
   }) => ReactNode;
 }) {
@@ -96,17 +97,15 @@ function HoldToCheckLanding({
 
   const [showInAppGate, setShowInAppGate] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** Passkey from WebAuthn this session, or surface-redirect handoff (load only). */
   const [passkey, setPasskey] = useState<string | null>(
     handoff?.passkey ?? null,
   );
-  const [liveConfirmed, setLiveConfirmed] = useState(
-    handoff?.liveConfirmed ?? false,
-  );
+  /** Confirmed only after WebAuthn here — never from handoff. */
+  const [webauthnProven, setWebauthnProven] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tokenQuery = usePhygitalTokenByPasskey(passkey);
-  const mismatch = useEnsurePhygitalSurface(tokenQuery.data, surface, {
-    liveConfirmed,
-  });
+  const mismatch = useEnsurePhygitalSurface(tokenQuery.data, surface);
 
   async function onCheck() {
     if (inApp) {
@@ -115,12 +114,12 @@ function HoldToCheckLanding({
     }
     setError(null);
     setPasskey(null);
-    setLiveConfirmed(false);
+    setWebauthnProven(false);
     setBusy(true);
     try {
       const { secp256r1PublicKey } = await authenticate();
       setPasskey(secp256r1PublicKey);
-      setLiveConfirmed(true);
+      setWebauthnProven(true);
     } catch (err) {
       setError(
         toUserErrorMessage(
@@ -144,7 +143,7 @@ function HoldToCheckLanding({
   if (tokenQuery.isFetchedAfterMount && tokenQuery.data) {
     return renderHome({
       token: tokenQuery.data,
-      liveConfirmed,
+      liveConfirmed: webauthnProven,
     });
   }
 
@@ -251,5 +250,6 @@ function TapTokenFlow({
     );
   }
 
-  return renderHome({ token: tokenQuery.data });
+  // Tap params already verified by /api/verify-tap — Confirmed is earned.
+  return renderHome({ token: tokenQuery.data, liveConfirmed: true });
 }

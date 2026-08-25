@@ -153,9 +153,9 @@ export function FinishClaimPanel() {
       <div className="flex flex-1 flex-col gap-4">
         <BackToDashboard />
         {surfaceForToken(claimed) === "card" ? (
-          <CardHome token={claimed} liveConfirmed />
+          <CardHome token={claimed} />
         ) : (
-          <AccessoryHome token={claimed} liveConfirmed />
+          <AccessoryHome token={claimed} />
         )}
       </div>
     );
@@ -176,7 +176,7 @@ export function FinishClaimPanel() {
         title="Can’t finish"
         body={toUserErrorMessage(
           pendingQuery.error,
-          `This expired. Hold your ${noun} to your phone again.`,
+          `This link expired. Open Safari or Chrome, hold your ${noun} to your phone again, then come back to connect.`,
         )}
         destructive
       />
@@ -196,8 +196,8 @@ export function FinishClaimPanel() {
           Link your wallet
         </p>
         <p className="mx-auto max-w-72 text-sm text-muted-foreground">
-          Connect the wallet that should own this {noun}, then confirm.{" "}
-          {copy.claimNetworkFee}
+          The hold is done — connect the wallet that should own this {noun},
+          then confirm. Your wallet app is fine here. {copy.claimNetworkFee}
         </p>
       </div>
 

@@ -14,11 +14,11 @@ import type { PhygitalToken } from "@/lib/phygital/token";
 /**
  * Send a resolved token to `/card` or `/accessory`. Hold-to-Check (empty
  * search) stashes the passkey so the destination can reopen the same token.
+ * Does not stash Confirmed — badge requires tap params or WebAuthn again.
  */
 export function useEnsurePhygitalSurface(
   token: PhygitalToken | null | undefined,
   current: PhygitalSurface,
-  opts?: { liveConfirmed?: boolean },
 ): boolean {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,19 +31,11 @@ export function useEnsurePhygitalSurface(
     if (!search) {
       stashDiscovery({
         passkey: token.secp256r1PublicKey,
-        liveConfirmed: opts?.liveConfirmed === true,
         surface: expected,
       });
     }
     router.replace(phygitalHref(expected, search));
-  }, [
-    token,
-    expected,
-    current,
-    router,
-    searchParams,
-    opts?.liveConfirmed,
-  ]);
+  }, [token, expected, current, router, searchParams]);
 
   return mismatch;
 }

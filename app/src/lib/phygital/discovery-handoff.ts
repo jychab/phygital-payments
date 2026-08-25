@@ -2,9 +2,13 @@ import type { PhygitalSurface } from "@/lib/phygital/surface";
 
 const KEY = "phygital:discovery";
 
+/**
+ * Passkey-only handoff after a surface redirect (`/card` ↔ `/accessory`).
+ * Never stores “Confirmed” — that must come from tap params or WebAuthn
+ * in the current page (sessionStorage is forgeable).
+ */
 export type DiscoveryHandoff = {
   passkey: string;
-  liveConfirmed: boolean;
   surface: PhygitalSurface;
 };
 
@@ -23,7 +27,6 @@ function readRaw(): DiscoveryHandoff | null {
     }
     return {
       passkey: parsed.passkey,
-      liveConfirmed: parsed.liveConfirmed === true,
       surface: parsed.surface,
     };
   } catch {
@@ -31,7 +34,7 @@ function readRaw(): DiscoveryHandoff | null {
   }
 }
 
-/** Stash a Hold-to-Check result so a surface redirect can reopen the same token. */
+/** Stash a Hold-to-Check passkey so a surface redirect can reopen the same token. */
 export function stashDiscovery(handoff: DiscoveryHandoff): void {
   if (typeof sessionStorage === "undefined") return;
   try {

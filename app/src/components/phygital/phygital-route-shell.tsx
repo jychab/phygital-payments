@@ -13,7 +13,9 @@ import type { ShellLayout } from "@/lib/layout";
 
 /**
  * Shared chrome for `/card` and `/accessory`.
- * NFC authenticity children skip Privy; `?token=` claim handoff loads the wallet.
+ * Authenticity children stay mounted when wallet chrome toggles — Privy wraps
+ * only the WalletChip (AppShell) and Pay/claim content, never the NFC tree.
+ * `?token=` claim finish mounts Privy for the whole finish panel.
  */
 export function PhygitalRouteShell({
   token,

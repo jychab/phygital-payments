@@ -124,7 +124,7 @@ export function ClaimPanel({
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
         title={title}
-        body={`Hold your ${noun} to this phone, then connect the wallet that should own it. ${copy.claimNetworkFee}`}
+        body={`Stay in Safari or Chrome and hold your ${noun} to this phone. After it reads, you’ll connect a wallet — that step can open your wallet app. ${copy.claimNetworkFee}`}
         action={
           <div className="flex w-full max-w-64 flex-col gap-3">
             {error ? <InlineError>{error}</InlineError> : null}

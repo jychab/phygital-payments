@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
+import { PrivyGate } from "@/app/privy-wallet-root";
 import { CopyableAddress } from "@/components/shared/copyable-address";
 import { brand } from "@/lib/copy/phygital";
 import {
@@ -85,7 +86,15 @@ export function AppShell({
           <div className="flex shrink-0 items-center gap-1">
             {headerExtra}
             {walletActions === "full" ? (
-              <WalletChip />
+              <PrivyGate
+                fallback={
+                  <span className="inline-flex h-8 items-center rounded-full border border-border/60 px-2.5 text-xs text-muted-foreground">
+                    …
+                  </span>
+                }
+              >
+                <WalletChip />
+              </PrivyGate>
             ) : walletActions === "display-only" && recipient ? (
               <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-2.5 py-1.5 text-xs">
                 <span
@@ -105,6 +114,10 @@ export function AppShell({
   );
 }
 
+/**
+ * Same root element whether bare or framed so toggling chrome (e.g. Pay)
+ * does not remount authenticity / NFC children.
+ */
 export function AppCard({
   children,
   bare = false,
@@ -112,16 +125,16 @@ export function AppCard({
   children: ReactNode;
   bare?: boolean;
 }) {
-  if (bare) {
-    return <div className="flex flex-1 flex-col">{children}</div>;
-  }
-
   return (
     <div
       className={cn(
-        "mt-4 flex flex-1 flex-col rounded-2xl border border-border/60 bg-card/60",
-        appCardPaddingClass,
-        galleryAnimate.rise,
+        "flex flex-1 flex-col",
+        !bare &&
+          cn(
+            "mt-4 rounded-2xl border border-border/60 bg-card/60",
+            appCardPaddingClass,
+            galleryAnimate.rise,
+          ),
       )}
     >
       {children}
