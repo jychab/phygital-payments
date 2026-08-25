@@ -14,7 +14,6 @@ export function usePendingClaim(token: string | null) {
       return fetchPendingClaim(token);
     },
     enabled: Boolean(token),
-    retry: false,
     ...queryOptions.immutable,
   });
 }

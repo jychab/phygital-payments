@@ -34,7 +34,6 @@ export function usePreauthRequired(wallet: string | null) {
     },
     enabled: Boolean(wallet),
     ...queryOptions.default,
-    retry: false,
   });
 }
 

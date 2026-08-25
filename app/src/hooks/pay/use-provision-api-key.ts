@@ -8,7 +8,7 @@ import {
 import { bytesToBase64 } from "@/lib/crypto/base64";
 import { verifyStoredApiKey } from "@/lib/pay/api-key-client";
 import { storeApiKey } from "@/lib/pay/api-key-store";
-import { queryFetch } from "@/lib/queries/http";
+import { QueryHttpError, queryFetch } from "@/lib/queries/http";
 
 type ProvisionArgs = {
   wallet: string;
@@ -43,7 +43,10 @@ async function provisionApiKey(args: ProvisionArgs): Promise<string> {
   });
   const body = (await res.json()) as { apiKey?: string; error?: string };
   if (!res.ok || !body.apiKey) {
-    throw new Error(body.error ?? "Couldn't turn on Pay");
+    throw new QueryHttpError(
+      body.error ?? "Couldn't turn on Pay",
+      res.status,
+    );
   }
   return body.apiKey;
 }

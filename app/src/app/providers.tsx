@@ -13,7 +13,8 @@ import {
   createQueryPersister,
   shouldDehydrateQuery,
 } from "@/lib/queries/persist";
-import { queryKeys, queryOptions } from "@/lib/queries";
+import { queryKeys, queryOptions, shouldRetryQuery } from "@/lib/queries";
+
 
 /**
  * Shared by all routes: React Query (localStorage-persisted, only browser cache) + toasts.
@@ -28,6 +29,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
             ...queryOptions.default,
             // Must be ≥ persist maxAge or restored queries are GC'd immediately.
             gcTime: QUERY_CACHE_MAX_AGE_MS,
+            retry: shouldRetryQuery,
+          },
+          mutations: {
+            retry: shouldRetryQuery,
           },
         },
       }),

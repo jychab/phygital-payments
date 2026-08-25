@@ -14,14 +14,73 @@ export function queryFetch(
   return fetch(input, { ...init, cache: "no-store" });
 }
 
-/** Parse JSON and throw `body.error` when the response is not OK. */
+/** HTTP failure from `readJson` / API clients — carries status for retry policy. */
+export class QueryHttpError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "QueryHttpError";
+    this.status = status;
+  }
+}
+
+export function getQueryErrorStatus(error: unknown): number | undefined {
+  if (error instanceof QueryHttpError) return error.status;
+  if (error && typeof error === "object" && "status" in error) {
+    const status = (error as { status: unknown }).status;
+    return typeof status === "number" ? status : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Retry only transient HTTP / network failures.
+ * 4xx (except 408 / 425 / 429) and client validation errors do not retry.
+ */
+export function isRetryableQueryError(error: unknown): boolean {
+  if (
+    error instanceof DOMException &&
+    (error.name === "AbortError" || error.name === "TimeoutError")
+  ) {
+    return false;
+  }
+
+  const status = getQueryErrorStatus(error);
+  if (status != null) {
+    if (status === 408 || status === 425 || status === 429) return true;
+    if (status >= 500 && status <= 599) return true;
+    return false;
+  }
+
+  if (!(error instanceof Error)) return true;
+  const msg = error.message.toLowerCase();
+  return (
+    error.name === "TypeError" ||
+    msg.includes("failed to fetch") ||
+    msg.includes("network") ||
+    msg.includes("fetch failed") ||
+    msg.includes("load failed")
+  );
+}
+
+/** React Query `retry` callback — up to 3 attempts on retryable errors only. */
+export function shouldRetryQuery(
+  failureCount: number,
+  error: unknown,
+): boolean {
+  if (failureCount >= 3) return false;
+  return isRetryableQueryError(error);
+}
+
+/** Parse JSON and throw `QueryHttpError` when the response is not OK. */
 export async function readJson<T>(
   res: Response,
   fallback: string,
 ): Promise<T> {
   const body = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) {
-    throw new Error(body.error ?? fallback);
+    throw new QueryHttpError(body.error ?? fallback, res.status);
   }
   return body;
 }

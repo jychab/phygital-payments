@@ -18,7 +18,6 @@ export function useDasCollectible(mint: string | null) {
       return fetchDasCollectible(mint);
     },
     enabled: Boolean(mint),
-    retry: false,
     ...queryOptions.stable,
   });
 }
@@ -45,7 +44,6 @@ export function usePrefetchDasCollectibles(mints: string[]) {
       return map;
     },
     enabled: sorted.length > 0,
-    retry: false,
     ...queryOptions.stable,
     // Stable key identity when mint set is unchanged
     meta: { batchKey: key },

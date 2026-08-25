@@ -49,7 +49,15 @@ import type {
   PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
 
-export { queryFetch, readJson } from "./http";
+export {
+  queryFetch,
+  readJson,
+  QueryHttpError,
+  getQueryErrorStatus,
+  isRetryableQueryError,
+  shouldRetryQuery,
+} from "./http";
+
 
 // ============================================================================
 // Query keys

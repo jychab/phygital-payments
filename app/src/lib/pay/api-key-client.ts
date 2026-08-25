@@ -3,7 +3,7 @@ import {
   readApiKey,
   storeApiKey,
 } from "@/lib/pay/api-key-store";
-import { queryFetch } from "@/lib/queries/http";
+import { QueryHttpError, queryFetch } from "@/lib/queries/http";
 
 export async function verifyApiKey(
   wallet: string,
@@ -20,7 +20,10 @@ export async function verifyApiKey(
   });
   const body = (await res.json()) as { error?: string };
   if (!res.ok) {
-    const error = new Error(body.error ?? "Couldn’t use that");
+    const error = new QueryHttpError(
+      body.error ?? "Couldn’t use that",
+      res.status,
+    );
     if (res.status === 401 || res.status === 403) {
       error.name = "RejectedApiKeyError";
     }

@@ -26,6 +26,5 @@ export function useVerifiedApiKey(wallet: string | null) {
     },
     enabled: Boolean(wallet),
     ...queryOptions.default,
-    retry: false,
   });
 }

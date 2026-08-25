@@ -1,7 +1,7 @@
 /** Client helpers for the payer-side preauth spending window. */
 
 import { API_KEY_NOT_SET_UP, readApiKey } from "@/lib/pay/api-key-store";
-import { queryFetch, readJson } from "@/lib/queries/http";
+import { QueryHttpError, queryFetch, readJson } from "@/lib/queries/http";
 import type {
   PreauthStatusCopy,
   PreauthStatusResult,
@@ -59,6 +59,9 @@ export async function cancelPreauthForWallet(args: {
   });
   if (!res.ok && res.status !== 401) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(body.error ?? `Cancel preauth failed (${res.status})`);
+    throw new QueryHttpError(
+      body.error ?? `Cancel preauth failed (${res.status})`,
+      res.status,
+    );
   }
 }
