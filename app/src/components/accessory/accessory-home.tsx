@@ -3,13 +3,13 @@
 import { useState } from "react";
 
 import { AuthenticAccessoryPanel } from "@/components/accessory/authentic-accessory-panel";
-import { AccessoryBrowsePanel } from "@/components/accessory/accessory-browse-panel";
 import { ClaimPanel } from "@/components/claim/claim-panel";
 import { PayScreen } from "@/components/pay/pay-screen";
 import { PastePayKeyPanel } from "@/components/pay/paste-pay-key-panel";
 import { ConnectGate } from "@/components/shared/connect-gate";
 import { WalletSyncGate } from "@/components/shared/wallet-sync-gate";
 import { BackLink } from "@/components/shared/back-link";
+import { BackToCollection } from "@/components/shared/back-to-collection";
 import { PrivyGate } from "@/app/privy-wallet-root";
 import { LoadingStatus } from "@/components/shared/loading-status";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
@@ -31,23 +31,26 @@ import { copy } from "@/lib/copy/phygital";
 import { shortAddress } from "@/lib/utils";
 
 /**
- * Accessory task home after a check or claim.
+ * Accessory task home after a check, claim, or Collection open.
  *
  * WebAuthn-first: authenticity + Hold to Pay never mount Privy.
  * Manage / setup CTAs warm Privy only when Connect or signing is needed.
+ * Collection (`fromCollection`) shows Back; Confirmed only when session
+ * matches the linked owner (see CollectionVerifiedSeed).
  */
 export function AccessoryHome({
   token,
   liveConfirmed: liveConfirmedProp = false,
-  browseMode = false,
+  fromCollection = false,
 }: {
   token: PhygitalToken;
   /**
-   * True only when parent just proved via WebAuthn or tap-verify in this tree.
-   * Never seed from sessionStorage / claim finish / Collection browse.
+   * True when parent proved via WebAuthn/tap, or CollectionVerifiedSeed
+   * confirmed the connected wallet owns this token. Never from URL alone.
    */
   liveConfirmed?: boolean;
-  browseMode?: boolean;
+  /** Opened from Collection hub (`from=collection`) — Back link only. */
+  fromCollection?: boolean;
 }) {
   const {
     liveConfirmed,
@@ -60,7 +63,7 @@ export function AccessoryHome({
   const [showClaim, setShowClaim] = useState(false);
 
   const owner = String(token.currentOwner);
-  const canPay = !browseMode && token.isLocked && tokenAllowsPay(token);
+  const canPay = token.isLocked && tokenAllowsPay(token);
 
   function openPay(mode: AccessoryPayMode) {
     setShowPay({
@@ -69,10 +72,6 @@ export function AccessoryHome({
       surface: "accessory",
       mode,
     });
-  }
-
-  if (browseMode) {
-    return <AccessoryBrowsePanel token={token} />;
   }
 
   if (showInAppGate) {
@@ -139,23 +138,27 @@ export function AccessoryHome({
   }
 
   return (
-    <AuthenticAccessoryPanel
-      token={token}
-      liveConfirmed={liveConfirmed}
-      holdError={holdError}
-      onHoldToCheck={() => void holdToCheck()}
-      onClaim={() => setShowClaim(true)}
-      payAction={
-        canPay ? (
-          <AccessoryPayCta
-            owner={owner}
-            onOpenHold={() => openPay("hold")}
-            onOpenSetup={() => openPay("setup")}
-            onOpenManage={() => openPay("manage")}
-          />
-        ) : undefined
-      }
-    />
+    <div className="flex flex-1 flex-col">
+      {fromCollection ? <BackToCollection /> : null}
+      <AuthenticAccessoryPanel
+        token={token}
+        liveConfirmed={liveConfirmed}
+        fromCollection={fromCollection}
+        holdError={holdError}
+        onHoldToCheck={() => void holdToCheck()}
+        onClaim={() => setShowClaim(true)}
+        payAction={
+          canPay ? (
+            <AccessoryPayCta
+              owner={owner}
+              onOpenHold={() => openPay("hold")}
+              onOpenSetup={() => openPay("setup")}
+              onOpenManage={() => openPay("manage")}
+            />
+          ) : undefined
+        }
+      />
+    </div>
   );
 }
 

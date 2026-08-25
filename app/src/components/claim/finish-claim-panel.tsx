@@ -8,7 +8,7 @@ import { LoaderCircle, Wallet } from "lucide-react";
 import { AccessoryHome } from "@/components/accessory/accessory-home";
 import { CardHome } from "@/components/card/card-home";
 import { GateMessage } from "@/components/layout/gate-message";
-import { BackToDashboard } from "@/components/shared/back-to-dashboard";
+import { BackToCollection } from "@/components/shared/back-to-collection";
 import { ConnectGate } from "@/components/shared/connect-gate";
 import { ExpiryCountdown } from "@/components/shared/expiry-countdown";
 import { InlineError } from "@/components/shared/inline-error";
@@ -151,7 +151,7 @@ export function FinishClaimPanel() {
     };
     return (
       <div className="flex flex-1 flex-col gap-4">
-        <BackToDashboard />
+        <BackToCollection />
         {surfaceForToken(claimed) === "card" ? (
           <CardHome token={claimed} />
         ) : (

@@ -11,14 +11,19 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 /**
  * Hold-to-Check + Confirmed badge.
  *
- * Confirmed only when:
+ * Confirmed when:
  * - signed NFC tap params verify (`useTapVerify`), or
  * - `startAuthentication` succeeds in this page (optional seed from parent
- *   after the same-tree cold hold — never from sessionStorage).
+ *   after the same-tree cold hold), or
+ * - Collection open seeds verified-owned only when Privy session matches
+ *   `currentOwner` (URL `from=collection` alone is not trusted); never from
+ *   sessionStorage.
  */
 export function useHoldToCheck(
   token: PhygitalToken,
-  /** True only if this tree just completed WebAuthn (e.g. cold Hold landing). */
+  /**
+   * True when parent proved via WebAuthn/tap, or Collection seeds verified-owned.
+   */
   webauthnProvenInTree = false,
 ) {
   const inApp = useIsInAppBrowser();

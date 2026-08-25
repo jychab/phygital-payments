@@ -62,12 +62,14 @@ export const copy = {
   connectWallet: "Connect wallet",
   addToWallet: "Add to Wallet",
   holdToCollect: "Hold to Collect",
-  backToDashboard: "Back to dashboard",
+  backToCollection: "Back to Collection",
   registered: "Registered",
   confirmed: "Confirmed",
   registeredOnChain: "Registered on-chain.",
   confirmedJustNow: "Confirmed just now.",
-  connectDashboardBody: "Connect to see your cards and accessories.",
+/** Collection → detail; Confirmed copy when owner session verified (not URL alone). */
+  verifiedFromCollection: "Verified from your Collection.",
+  connectCollectionBody: "Connect to see your cards and accessories.",
   claimNetworkFee:
     "You'll pay a small network fee when you confirm in your wallet.",
   holdToAdd: "Hold to Add",

@@ -1,16 +1,19 @@
-/** Dashboard deep-link helpers for owned-item browse detail. */
+/** Collection hub deep-link helpers for owned-item detail. */
 
-export const DASHBOARD_FROM = "dashboard";
+/** URL `from=` value when opening `/card` or `/accessory` from Collection. */
+export const COLLECTION_FROM = "collection";
 
-/** True when `/card` or `/accessory` was opened from the owner dashboard. */
-export function isDashboardBrowse(
+/** True when `/card` or `/accessory` was opened from the Collection hub.
+ * Navigation hint only — Confirmed still requires owner wallet match
+ * (`CollectionVerifiedSeed`). */
+export function isFromCollection(
   searchParams: Pick<URLSearchParams, "get">,
 ): boolean {
-  return searchParams.get("from") === DASHBOARD_FROM;
+  return searchParams.get("from") === COLLECTION_FROM;
 }
 
-/** Browse-detail URL with `from=dashboard` for Back to dashboard. */
-export function dashboardDetailHref(
+/** Collection detail URL with `from=collection` for Back + verified seed. */
+export function collectionDetailHref(
   route: "card" | "accessory",
   tokenAddress: string,
 ): string {
@@ -18,5 +21,5 @@ export function dashboardDetailHref(
     route === "card"
       ? `/card?address=${encodeURIComponent(tokenAddress)}`
       : `/accessory?address=${encodeURIComponent(tokenAddress)}`;
-  return `${path}&from=${DASHBOARD_FROM}`;
+  return `${path}&from=${COLLECTION_FROM}`;
 }

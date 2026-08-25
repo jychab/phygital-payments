@@ -2,8 +2,8 @@
 
 /**
  * Column widths:
- * - gallery: dashboard + card/accessory browse (binder needs room)
- * - compact: NFC ceremony, claim, Pay, Collect (task focus)
+ * - gallery: Collection hub + card detail (binder needs room)
+ * - compact: NFC ceremony, claim, Pay, Collect, accessory task (task focus)
  *
  * Both step up once at `md` so desktop doesn’t feel like a stretched phone
  * on one route and a fixed strip on another.

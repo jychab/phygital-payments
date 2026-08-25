@@ -9,7 +9,7 @@ const MAX_BATCH = 50;
 
 /**
  * POST { ids: string[] } → { collectibles: Record<mint, Collectible | null> }
- * Used by the owner dashboard binder to avoid N parallel getAsset calls.
+ * Used by the Collection hub binder to avoid N parallel getAsset calls.
  */
 export async function POST(req: NextRequest) {
   let body: unknown;

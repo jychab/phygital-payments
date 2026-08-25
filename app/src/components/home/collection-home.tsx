@@ -14,13 +14,13 @@ import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import { usePrefetchDasCollectibles } from "@/hooks/accessory/use-das-collectible";
 import { usePhygitalTokensByOwner } from "@/hooks/home/use-phygital-tokens-by-owner";
-import { dashboardDetailHref } from "@/lib/journey";
+import { collectionDetailHref } from "@/lib/journey";
 import { tokenHasLinkedMint, type PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { cn } from "@/lib/utils";
 
-/** Owner dashboard — cards grid + browse-only accessories. */
-export function DashboardHome({ owner }: { owner: string }) {
+/** Collection hub — cards grid + accessories. */
+export function CollectionHome({ owner }: { owner: string }) {
   const isRestoring = useIsRestoring();
   const tokensQuery = usePhygitalTokensByOwner(owner);
 
@@ -58,15 +58,11 @@ export function DashboardHome({ owner }: { owner: string }) {
   const accessories = tokens.filter((t) => !tokenHasLinkedMint(t));
 
   return (
-    <DashboardCollection
-      owner={owner}
-      cards={cards}
-      accessories={accessories}
-    />
+    <CollectionBody owner={owner} cards={cards} accessories={accessories} />
   );
 }
 
-function DashboardCollection({
+function CollectionBody({
   owner,
   cards,
   accessories,
@@ -164,7 +160,7 @@ function AccessoryRow({
       )}
     >
       <Link
-        href={dashboardDetailHref("accessory", token.address)}
+        href={collectionDetailHref("accessory", token.address)}
         className={cn(
           "flex min-w-0 flex-1 items-center gap-3 px-3.5 py-3",
           "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",

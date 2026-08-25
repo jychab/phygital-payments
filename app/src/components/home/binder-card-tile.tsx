@@ -7,7 +7,7 @@ import { CollectionTokenMenu } from "@/components/home/collection-token-menu";
 import { useDasCollectible } from "@/hooks/accessory/use-das-collectible";
 import { fallbackCollectible } from "@/lib/tokens/collectible";
 import { tokenHasLinkedMint, type PhygitalToken } from "@/lib/phygital/token";
-import { dashboardDetailHref } from "@/lib/journey";
+import { collectionDetailHref } from "@/lib/journey";
 import { CardSlab } from "@/components/card/card-slab";
 import { staggerStyle } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -29,7 +29,7 @@ export function BinderCardTile({
   const loading = das.isLoading && !das.isFetched;
   const name = collectible?.name ?? "Card";
   const image = collectible?.image ?? null;
-  const href = dashboardDetailHref("card", token.address);
+  const href = collectionDetailHref("card", token.address);
 
   return (
     <div

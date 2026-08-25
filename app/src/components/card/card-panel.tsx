@@ -21,20 +21,21 @@ import { cn } from "@/lib/utils";
 export function CardPanel({
   token,
   liveConfirmed,
+  fromCollection = false,
   holdError,
-  browseMode = false,
   onHoldToCheck,
   onClaim,
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
+  /** Collection open — verified-owned status copy. */
+  fromCollection?: boolean;
   holdError?: string | null;
-  browseMode?: boolean;
   onHoldToCheck?: () => void;
   onClaim?: () => void;
 }) {
   const unclaimed = isUnclaimedToken(token);
-  const canClaim = !browseMode && (unclaimed || !token.isLocked) && Boolean(onClaim);
+  const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const das = useDasCollectible(mint);
   const collectible =
@@ -65,6 +66,7 @@ export function CardPanel({
           unclaimed={unclaimed}
           owner={String(token.currentOwner)}
           liveConfirmed={liveConfirmed}
+          fromCollection={fromCollection}
           holdError={holdError}
           onHoldToCheck={onHoldToCheck}
         />
@@ -97,6 +99,7 @@ function CardOwnerActions({
   unclaimed,
   owner,
   liveConfirmed,
+  fromCollection = false,
   holdError,
   onHoldToCheck,
 }: {
@@ -104,11 +107,17 @@ function CardOwnerActions({
   unclaimed: boolean;
   owner: string;
   liveConfirmed: boolean;
+  fromCollection?: boolean;
   holdError?: string | null;
   onHoldToCheck?: () => void;
 }) {
   return (
     <div className="flex w-full max-w-72 flex-col items-center gap-2 text-center">
+      {fromCollection && liveConfirmed ? (
+        <p className="text-xs text-muted-foreground">
+          {copy.verifiedFromCollection}
+        </p>
+      ) : null}
       <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
         <span>
           {unclaimed

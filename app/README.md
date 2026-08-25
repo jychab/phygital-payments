@@ -56,7 +56,7 @@ Routes live in `src/app`. Each has a top-level `*App` component. Domain code
 
 | Route | Component | Folder |
 |-------|-----------|--------|
-| `/` | `HomeApp` → `DashboardHome` | `home/` |
+| `/` | `HomeApp` → `CollectionHome` | `home/` |
 | `/collect` | `CollectApp` | `collect/` |
 | `/accessory` | `AccessoryApp` | `accessory/` |
 | `/card` | `CardApp` | `card/` |
@@ -86,11 +86,11 @@ Shared Pay UI is `PayScreen` in `components/pay/`:
 
 ### Home (`/`)
 
-Owner **dashboard** — connect a wallet via Privy to see your collection:
+Owner **Collection** hub — connect a wallet via Privy to see your collection:
 
-- **Cards** — minted phygital tokens in a two-column grid with DAS artwork. Tap opens `/card?address=…&from=dashboard` (browse detail with Back to dashboard).
-- **Accessories** — unminted NFC accessories listed below; tap opens `/accessory?address=…&from=dashboard` (browse-only detail).
-- No Pay, Activity, Collect, or lock/remove on `/` — those live on the `/accessory` task journey (NFC entry or bookmark).
+- **Cards** — minted phygital tokens in a two-column grid with DAS artwork. Tap opens `/card?address=…&from=collection` (same card home + Back to Collection + verified seed).
+- **Accessories** — unminted NFC accessories listed below; tap opens `/accessory?address=…&from=collection` (same accessory home + Pay CTAs when eligible).
+- No Activity or Collect on `/` — Collect is `/collect`; Pay lives on the `/accessory` task journey.
 
 ### Collect (`/collect`)
 
@@ -115,7 +115,7 @@ Cold entry (`/accessory` NFC or bookmark) shows **Hold to Check**. Signed NFC UR
 2. **Unclaimed / unlocked** — **Add to Wallet** (WebAuthn tap, then `?token=` to connect and confirm)
 3. **Locked and payment-capable** — **Pay** via primary CTA; Pay settings, Activity, lock/remove via header **⋯** menu (task mode only)
 
-Dashboard browse (`/accessory?address=&from=dashboard`) shows compact status — no NFC ring, Pay, or manage.
+Collection open (`/accessory?address=&from=collection`) uses the same authenticity + Pay home, with Back to Collection and a verified-owned Confirmed seed.
 
 ### Card (`/card`)
 

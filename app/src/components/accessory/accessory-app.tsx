@@ -9,12 +9,13 @@ import { AccessoryHome } from "@/components/accessory/accessory-home";
 import { GateMessage } from "@/components/layout/gate-message";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { LoadingStatus } from "@/components/shared/loading-status";
+import { CollectionVerifiedSeed } from "@/components/phygital/collection-verified-seed";
 import { PhygitalNfcApp } from "@/components/phygital/phygital-nfc-app";
 import { usePhygitalTokenByAddress } from "@/hooks/accessory/use-phygital-token";
 import { useEnsurePhygitalSurface } from "@/hooks/phygital/use-ensure-phygital-surface";
 import { useAccessoryPayOpen } from "@/hooks/accessory/use-accessory-pay-open";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
-import { isDashboardBrowse } from "@/lib/journey";
+import { isFromCollection } from "@/lib/journey";
 import { takeDiscovery } from "@/lib/phygital/discovery-handoff";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
@@ -34,14 +35,14 @@ const ACCESSORY_NFC_COPY = {
 
 /**
  * Route `/accessory` — WebAuthn/NFC first; wallet only for claim finish + Pay.
- * Confirmed badge requires tap-param verify or WebAuthn — never sessionStorage.
+ * Collection (`from=collection`) uses the same home with Back + verified seed.
  */
 export function AccessoryApp() {
   const embedded = useIsEmbedded();
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
   const address = searchParams.get("address")?.trim() ?? "";
-  const browseMode = isDashboardBrowse(searchParams);
+  const fromCollection = isFromCollection(searchParams);
 
   if (embedded === null) {
     return <EmbedBoot />;
@@ -62,7 +63,10 @@ export function AccessoryApp() {
 
   if (address) {
     return (
-      <AccessoryAddressRoute address={address} browseMode={browseMode} />
+      <AccessoryAddressRoute
+        address={address}
+        fromCollection={fromCollection}
+      />
     );
   }
 
@@ -89,19 +93,19 @@ function AccessoryNfcRoute() {
 }
 
 /**
- * `?address=` — Collection browse, deep link, or Pay resume.
- * Confirmed only if tap params still verify (kept on Pay open) or user Holds.
+ * `?address=` — Collection detail, deep link, or Pay resume.
+ * Collection Confirmed only if connected wallet matches owner (not URL alone).
  */
 function AccessoryAddressRoute({
   address,
-  browseMode,
+  fromCollection,
 }: {
   address: string;
-  browseMode: boolean;
+  fromCollection: boolean;
 }) {
   const [{ open: payOpen, mode: payMode }] = useAccessoryPayOpen();
   const consumedHandoff = useRef(false);
-  if (!browseMode && !consumedHandoff.current) {
+  if (!consumedHandoff.current) {
     // Clear passkey-only stash; never used for Confirmed.
     takeDiscovery("accessory");
     consumedHandoff.current = true;
@@ -109,15 +113,13 @@ function AccessoryAddressRoute({
   const tokenQuery = usePhygitalTokenByAddress(address);
   const mismatch = useEnsurePhygitalSurface(tokenQuery.data, "accessory");
   const walletActions =
-    !browseMode && payOpen && payMode === "manage"
-      ? ("full" as const)
-      : ("hidden" as const);
+    payOpen && payMode === "manage" ? ("full" as const) : ("hidden" as const);
 
   if (tokenQuery.isLoading || mismatch) {
     return (
       <PhygitalRouteShell
         modeLabel="Accessory"
-        layout={browseMode ? "gallery" : "compact"}
+        layout="compact"
         walletActions={walletActions}
       >
         <LoadingStatus label="Loading…" />
@@ -129,7 +131,7 @@ function AccessoryAddressRoute({
     return (
       <PhygitalRouteShell
         modeLabel="Accessory"
-        layout={browseMode ? "gallery" : "compact"}
+        layout="compact"
         walletActions={walletActions}
       >
         <GateMessage
@@ -144,13 +146,26 @@ function AccessoryAddressRoute({
     );
   }
 
+  const token = tokenQuery.data;
+
   return (
     <PhygitalRouteShell
       modeLabel="Accessory"
-      layout={browseMode ? "gallery" : "compact"}
+      layout="compact"
       walletActions={walletActions}
     >
-      <AccessoryHome token={tokenQuery.data} browseMode={browseMode} />
+      <CollectionVerifiedSeed
+        owner={String(token.currentOwner)}
+        fromCollection={fromCollection}
+      >
+        {({ fromCollection: fromHub, collectionVerified }) => (
+          <AccessoryHome
+            token={token}
+            fromCollection={fromHub}
+            liveConfirmed={collectionVerified}
+          />
+        )}
+      </CollectionVerifiedSeed>
     </PhygitalRouteShell>
   );
 }

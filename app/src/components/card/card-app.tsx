@@ -5,10 +5,11 @@ import { useSearchParams } from "next/navigation";
 
 import { CardHome } from "@/components/card/card-home";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
+import { CollectionVerifiedSeed } from "@/components/phygital/collection-verified-seed";
 import { PhygitalByAddressHome } from "@/components/phygital/phygital-by-address-home";
 import { PhygitalNfcApp } from "@/components/phygital/phygital-nfc-app";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
-import { isDashboardBrowse } from "@/lib/journey";
+import { isFromCollection } from "@/lib/journey";
 
 const PhygitalRouteShell = dynamic(
   () =>
@@ -33,7 +34,7 @@ export function CardApp() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
   const address = searchParams.get("address")?.trim() ?? "";
-  const browseMode = isDashboardBrowse(searchParams);
+  const fromCollection = isFromCollection(searchParams);
 
   if (embedded === null) {
     return <EmbedBoot />;
@@ -59,7 +60,18 @@ export function CardApp() {
           tokenAddress={address}
           surface="card"
           renderHome={({ token: loaded }) => (
-            <CardHome token={loaded} browseMode={browseMode} />
+            <CollectionVerifiedSeed
+              owner={String(loaded.currentOwner)}
+              fromCollection={fromCollection}
+            >
+              {({ fromCollection: fromHub, collectionVerified }) => (
+                <CardHome
+                  token={loaded}
+                  fromCollection={fromHub}
+                  liveConfirmed={collectionVerified}
+                />
+              )}
+            </CollectionVerifiedSeed>
           )}
         />
       </PhygitalRouteShell>

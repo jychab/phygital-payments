@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 export function AuthenticAccessoryPanel({
   token,
   liveConfirmed,
+  fromCollection = false,
   holdError,
   onHoldToCheck,
   onClaim,
@@ -27,6 +28,8 @@ export function AuthenticAccessoryPanel({
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
+  /** Collection open — Confirmed body is verified-owned, not live NFC. */
+  fromCollection?: boolean;
   holdError?: string | null;
   onHoldToCheck?: () => void;
   onClaim?: () => void;
@@ -38,7 +41,9 @@ export function AuthenticAccessoryPanel({
   const showPay =
     token.isLocked && tokenAllowsPay(token) && payAction != null;
   const statusLine = liveConfirmed
-    ? copy.confirmedJustNow
+    ? fromCollection
+      ? copy.verifiedFromCollection
+      : copy.confirmedJustNow
     : copy.registeredOnChain;
 
   // Ghost Hold when another primary exists; otherwise Hold is the primary.

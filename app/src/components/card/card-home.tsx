@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { ClaimPanel } from "@/components/claim/claim-panel";
 import { CardPanel } from "@/components/card/card-panel";
-import { BackToDashboard } from "@/components/shared/back-to-dashboard";
+import { BackToCollection } from "@/components/shared/back-to-collection";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { useHoldToCheck } from "@/hooks/phygital/use-hold-to-check";
@@ -13,15 +13,16 @@ import { galleryAnimate } from "@/lib/motion";
 import { isUnclaimedToken, type PhygitalToken } from "@/lib/phygital/token";
 import { cn } from "@/lib/utils";
 
-/** Card home after a check or claim. Authenticate and claim only — no Pay. */
+/** Card home after a check, claim, or Collection open. Authenticate and claim only — no Pay. */
 export function CardHome({
   token,
   liveConfirmed: liveConfirmedProp = false,
-  browseMode = false,
+  fromCollection = false,
 }: {
   token: PhygitalToken;
   liveConfirmed?: boolean;
-  browseMode?: boolean;
+  /** Opened from Collection hub (`from=collection`) — Back + verified copy. */
+  fromCollection?: boolean;
 }) {
   const {
     liveConfirmed,
@@ -63,14 +64,14 @@ export function CardHome({
 
   return (
     <div className="flex flex-1 flex-col">
-      {browseMode ? <BackToDashboard /> : null}
+      {fromCollection ? <BackToCollection /> : null}
       <CardPanel
         token={token}
         liveConfirmed={liveConfirmed}
+        fromCollection={fromCollection}
         holdError={holdError}
-        browseMode={browseMode}
         onHoldToCheck={() => void holdToCheck()}
-        onClaim={browseMode ? undefined : () => setShowClaim(true)}
+        onClaim={() => setShowClaim(true)}
       />
     </div>
   );

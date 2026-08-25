@@ -13,7 +13,7 @@ const HomeWalletShell = dynamic(
 );
 
 /**
- * Route `/` — owner dashboard (cards + accessories overview).
+ * Route `/` — Collection hub (cards + accessories overview).
  * NFC claim/pay starts by tapping a tag (opens `/card` or `/accessory`).
  */
 export function HomeApp() {

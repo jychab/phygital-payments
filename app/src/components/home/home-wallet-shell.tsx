@@ -3,7 +3,7 @@
 import { PrivyGate } from "@/app/privy-wallet-root";
 import { AppShell } from "@/components/layout/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
-import { DashboardHome } from "@/components/home/dashboard-home";
+import { CollectionHome } from "@/components/home/collection-home";
 import { ConnectGate } from "@/components/shared/connect-gate";
 import { LoadingStatus } from "@/components/shared/loading-status";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
@@ -47,7 +47,7 @@ function HomeScreen() {
           <ConnectGate onConnect={connect} />
         </div>
       ) : (
-        <DashboardHome owner={address} />
+        <CollectionHome owner={address} />
       )}
     </AppShell>
   );

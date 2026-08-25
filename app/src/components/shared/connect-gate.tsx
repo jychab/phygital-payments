@@ -10,7 +10,7 @@ import { copy } from "@/lib/copy/phygital";
 /** Full-width connect prompt — same pattern on Home, Collect, and claim. */
 export function ConnectGate({
   title = "Connect your wallet",
-  body = copy.connectDashboardBody,
+  body = copy.connectCollectionBody,
   onConnect,
   icon,
 }: {
