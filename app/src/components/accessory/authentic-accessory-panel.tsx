@@ -1,22 +1,20 @@
 "use client";
 
-import Link from "next/link";
-
-import { CollectibleHero } from "@/components/accessory/collectible-hero";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
+import { InlineError } from "@/components/shared/inline-error";
 import { Button } from "@/components/ui/button";
-import { useDasCollectible } from "@/hooks/accessory/use-das-collectible";
-import { collectHref } from "@/lib/collect/payment-request";
+import { copy } from "@/lib/copy/phygital";
+import { galleryAnimate } from "@/lib/motion";
 import {
   tokenAllowsPay,
-  tokenHasLinkedMint,
   isUnclaimedToken,
   type PhygitalToken,
 } from "@/lib/phygital/token";
 import { shortAddress } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
-/** Verified accessory — collectible art when DAS metadata exists, else NFC ring. */
+/** Task-mode accessory panel — NFC ring + one primary CTA (claim / Pay / Hold to Check). */
 export function AuthenticAccessoryPanel({
   token,
   liveConfirmed,
@@ -37,79 +35,53 @@ export function AuthenticAccessoryPanel({
   const unclaimed = isUnclaimedToken(token);
   const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
   const canPay = token.isLocked && tokenAllowsPay(token) && Boolean(onPay);
-  const collectUrl = collectHref({ recipient: String(token.currentOwner) });
-  const linkedMint = tokenHasLinkedMint(token) ? String(token.mint) : null;
-  const collectible = useDasCollectible(linkedMint).data;
-  const genuine = liveConfirmed
-    ? "Confirmed just now."
-    : "This accessory is genuine.";
+  const statusLine = liveConfirmed
+    ? copy.confirmedJustNow
+    : copy.registeredOnChain;
 
-  const status = (
-    <AccessoryStatus
-      token={token}
-      unclaimed={unclaimed}
-      owner={String(token.currentOwner)}
-      liveConfirmed={liveConfirmed}
-      holdError={holdError}
-      onHoldToCheck={onHoldToCheck}
-    />
-  );
+  const primaryAction = canClaim
+    ? { label: copy.addToWallet, onClick: onClaim }
+    : canPay
+      ? { label: payLabel, onClick: onPay }
+      : !liveConfirmed && onHoldToCheck
+        ? { label: copy.holdToCheck, onClick: onHoldToCheck }
+        : null;
 
   return (
     <div className="flex flex-1 flex-col">
-      {collectible ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-5 py-6 text-center">
-          <CollectibleHero collectible={collectible} />
-          <p className="text-sm text-muted-foreground">{genuine}</p>
-          {status}
-        </div>
-      ) : (
-        <NfcHoldStatus
-          size="lg"
-          tone="success"
-          pulsing={false}
-          title="Verified"
-          body={genuine}
-          action={status}
-        />
-      )}
+      <NfcHoldStatus
+        size="lg"
+        tone="success"
+        pulsing={false}
+        title={liveConfirmed ? copy.confirmed : copy.registered}
+        body={statusLine}
+        action={
+          <AccessoryStatus
+            token={token}
+            unclaimed={unclaimed}
+            owner={String(token.currentOwner)}
+            liveConfirmed={liveConfirmed}
+            holdError={holdError}
+            onHoldToCheck={onHoldToCheck}
+          />
+        }
+      />
 
-      {canClaim || canPay ? (
-        <div className="mt-auto flex flex-col gap-2.5 pt-2 motion-safe:animate-[wallet-rise_0.5s_cubic-bezier(0.22,1,0.36,1)_both]">
-          {canClaim ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="lg"
-              className="w-full"
-              onClick={onClaim}
-            >
-              Add to Wallet
-            </Button>
-          ) : null}
-
-          {canPay ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="w-full"
-                asChild
-              >
-                <Link href={collectUrl}>Collect</Link>
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="lg"
-                className="w-full"
-                onClick={onPay}
-              >
-                {payLabel}
-              </Button>
-            </>
-          ) : null}
+      {primaryAction ? (
+        <div
+          className={cn(
+            "mt-auto flex flex-col gap-2.5 pt-2",
+            galleryAnimate.rise,
+          )}
+        >
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={primaryAction.onClick}
+          >
+            {primaryAction.label}
+          </Button>
         </div>
       ) : null}
     </div>
@@ -132,7 +104,7 @@ function AccessoryStatus({
   onHoldToCheck?: () => void;
 }) {
   return (
-    <div className="flex w-full max-w-64 flex-col items-center gap-2">
+    <div className="flex w-full max-w-72 flex-col items-center gap-2">
       <div className="flex items-center gap-0.5">
         <p className="text-xs text-muted-foreground">
           {unclaimed
@@ -149,14 +121,10 @@ function AccessoryStatus({
           className="w-full"
           onClick={onHoldToCheck}
         >
-          Hold to Check
+          {copy.holdToCheck}
         </Button>
       ) : null}
-      {holdError ? (
-        <p className="w-full rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
-          {holdError}
-        </p>
-      ) : null}
+      {holdError ? <InlineError>{holdError}</InlineError> : null}
     </div>
   );
 }

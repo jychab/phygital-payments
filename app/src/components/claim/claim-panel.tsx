@@ -6,24 +6,28 @@ import { Nfc } from "lucide-react";
 
 import { GateMessage } from "@/components/layout/gate-message";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
+import { InlineError } from "@/components/shared/inline-error";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { BackLink } from "@/components/shared/back-link";
+import { StepProgress } from "@/components/shared/step-progress";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import { createPendingClaim } from "@/lib/accessory/pending-claim-client";
 import {
   assertCaptureReady,
   captureClaimTap,
-  accessoryClaimHref,
 } from "@/lib/accessory/claim";
 import { serializePendingClaimSession } from "../../../shared/pending-claim-wire";
+import { claimHref, surfaceForToken } from "@/lib/phygital/surface";
+import { copy } from "@/lib/copy/phygital";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 type Stage = "ready" | "reading";
 
 /**
- * Safari NFC tap, then replace to `/accessory?token=` for wallet connect.
+ * Safari NFC tap, then replace to `/card?token=` or `/accessory?token=`
+ * for wallet connect.
  */
 export function ClaimPanel({
   token,
@@ -40,7 +44,8 @@ export function ClaimPanel({
   const [stage, setStage] = useState<Stage>("ready");
   const [error, setError] = useState<string | null>(null);
 
-  const title = unclaimed ? "Add to Wallet" : "Move to a New Wallet";
+  const noun = surfaceForToken(token);
+  const title = unclaimed ? copy.addToWallet : "Move to a New Wallet";
 
   async function onCapture() {
     setError(null);
@@ -48,7 +53,7 @@ export function ClaimPanel({
       assertCaptureReady(token);
     } catch (err) {
       setError(
-        toUserErrorMessage(err, "Couldn’t add this accessory. Try again."),
+        toUserErrorMessage(err, `Couldn’t add this ${noun}. Try again.`),
       );
       return;
     }
@@ -71,13 +76,13 @@ export function ClaimPanel({
         auth,
       });
 
-      router.replace(accessoryClaimHref(pending.token));
+      router.replace(claimHref(pending.token, token));
     } catch (err) {
       setStage("ready");
       setError(
         toUserErrorMessage(
           err,
-          "Couldn’t read the accessory. Turn on NFC and hold it to the back of your phone.",
+          `Couldn’t read the ${noun}. Turn on NFC and hold it to the back of your phone.`,
         ),
       );
     }
@@ -85,34 +90,44 @@ export function ClaimPanel({
 
   if (inApp) {
     return (
-      <InAppBrowserGate body="To add an accessory, open this page in Safari or Chrome." />
+      <InAppBrowserGate
+        body={`To add a${noun === "accessory" ? "n accessory" : " card"}, open this page in Safari or Chrome.`}
+      />
     );
   }
 
   if (stage === "reading") {
     return (
-      <NfcHoldStatus
-        title="Hold Still…"
-        body="Keep holding until it reads."
-        pulsing
-      />
+      <div className="flex flex-1 flex-col gap-6">
+        <StepProgress
+          step={1}
+          total={2}
+          labels={[copy.claimStepHold, copy.claimStepConfirm]}
+        />
+        <NfcHoldStatus
+          title={copy.holdStill}
+          body={copy.holdStillBody}
+          pulsing
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col gap-5">
       {onBack ? <BackLink onClick={onBack} /> : null}
+      <StepProgress
+        step={1}
+        total={2}
+        labels={[copy.claimStepHold, copy.claimStepConfirm]}
+      />
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
         title={title}
-        body="Hold your accessory to this phone, then connect the wallet that should own it."
+        body={`Hold your ${noun} to this phone, then connect the wallet that should own it. ${copy.claimNetworkFee}`}
         action={
           <div className="flex w-full max-w-64 flex-col gap-3">
-            {error ? (
-              <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
-                {error}
-              </p>
-            ) : null}
+            {error ? <InlineError>{error}</InlineError> : null}
             <Button
               type="button"
               size="lg"
@@ -120,7 +135,7 @@ export function ClaimPanel({
               onClick={() => void onCapture()}
             >
               <Nfc className="size-4" />
-              {error ? "Try again" : "Hold to Add"}
+              {error ? "Try again" : copy.holdToAdd}
             </Button>
           </div>
         }

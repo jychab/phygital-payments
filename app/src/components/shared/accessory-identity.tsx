@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Lock, LockOpen, Nfc } from "lucide-react";
 
 import type { PhygitalToken } from "@/lib/phygital/token";
+import { tokenAllowsPay } from "@/lib/phygital/token";
 import { cn, shortAddress } from "@/lib/utils";
 
 /** NFC icon + passkey label + lock state — Accessories list and Pay accessory picker. */
@@ -30,6 +31,9 @@ export function AccessoryIdentity({
             <>
               <Lock className="size-3" />
               Locked
+              {tokenAllowsPay(token) ? (
+                <span className="text-muted-foreground/80">· Pay ready</span>
+              ) : null}
             </>
           ) : (
             <>

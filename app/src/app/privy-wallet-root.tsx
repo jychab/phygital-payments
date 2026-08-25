@@ -29,8 +29,9 @@ const PrivyWalletProvider = dynamic(
 
 /**
  * Single app-wide Privy mount. Stays in the root tree so Home ↔ Accessory ↔
- * Collect share one session. The Privy SDK chunk loads only after a
- * `PrivyGate` asks for it — Collect embeds never load `@privy-io/react-auth`.
+ * Collect ATA setup share one session. The Privy SDK chunk loads only after a
+ * `PrivyGate` asks for it — Collect itself does not gate on Privy (only ATA
+ * create does); Collect embeds never load `@privy-io/react-auth`.
  *
  * While the SDK loads, `{children}` stay as a sibling so local UI state is
  * not wiped. They move under `PrivyProvider` once the chunk is ready.

@@ -13,8 +13,8 @@ const HomeWalletShell = dynamic(
 );
 
 /**
- * Route `/` — Pay, Accessories, and Activity tabs (Privy).
- * NFC accessories and first-time setup start by tapping a tag (opens `/accessory`).
+ * Route `/` — owner dashboard (cards + accessories overview).
+ * NFC claim/pay starts by tapping a tag (opens `/card` or `/accessory`).
  */
 export function HomeApp() {
   return <HomeWalletShell />;

@@ -1,6 +1,6 @@
 import { shortAddress } from "@/lib/utils";
 
-/** Lean DAS collectible for `/accessory` — not a payment (fungible) token. */
+/** Lean DAS collectible for `/card` — not a payment (fungible) token. */
 export type Collectible = {
   mint: string;
   name: string;
@@ -57,5 +57,15 @@ export function collectibleFromDas(
     name: name || shortAddress(mint),
     image,
     collectionName: collection?.collection_metadata?.name?.trim() || null,
+  };
+}
+
+/** Mint address fallback when DAS has no name or image. */
+export function fallbackCollectible(mint: string): Collectible {
+  return {
+    mint,
+    name: shortAddress(mint),
+    image: null,
+    collectionName: null,
   };
 }

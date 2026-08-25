@@ -1,24 +1,15 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
 import { AppCard, AppShell } from "@/components/layout/app-shell";
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CollectPanel } from "@/components/collect/collect-panel";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import type { PaymentRequest } from "@/lib/collect/payment-request";
 
-const CollectWalletShell = dynamic(
-  () =>
-    import("@/components/collect/collect-wallet-shell").then(
-      (m) => m.CollectWalletShell,
-    ),
-  { ssr: false, loading: () => <EmbedBoot /> },
-);
-
 /**
- * Route `/collect` — merchant receive. Non-embed uses the connected wallet
- * or `?recipient=` (synced when both exist). Embeds stay sealed to the URL.
+ * Route `/collect` — merchant receive. Recipient always comes from
+ * `?recipient=` (URL). Privy loads only inside ATA setup when the receive
+ * account is missing (standalone only — embeds stay sealed).
  */
 export function CollectApp({
   paymentRequest,
@@ -31,10 +22,6 @@ export function CollectApp({
     return <EmbedBoot />;
   }
 
-  if (!embedded) {
-    return <CollectWalletShell paymentRequest={paymentRequest} />;
-  }
-
   const recipient = paymentRequest.recipient;
 
   if (!recipient) {
@@ -44,7 +31,7 @@ export function CollectApp({
         body={
           paymentRequest.hasRecipientParam
             ? "The link looks incomplete. Ask for a new one."
-            : "Ask the seller to send a working payment link."
+            : "Open a payment link with a recipient address, or ask the seller for one."
         }
       />
     );
@@ -57,11 +44,12 @@ export function CollectApp({
       recipient={recipientStr}
       walletActions="display-only"
       modeLabel="Collect"
+      layout="compact"
     >
       <AppCard>
         <CollectPanel
           paymentRequest={{ ...paymentRequest, recipient }}
-          allowWalletSetup={false}
+          allowWalletSetup={!embedded}
         />
       </AppCard>
     </AppShell>

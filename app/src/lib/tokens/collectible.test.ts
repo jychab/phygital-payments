@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { collectibleFromDas, type DasCollectibleAsset } from "./collectible";
+import { collectibleFromDas, fallbackCollectible, type DasCollectibleAsset } from "./collectible";
 
 const MINT = "F9Lw3ki3hJ7PF9HQXsBzoY8GyE6sPoEZZdXJBsTTD2rk";
 
@@ -95,5 +95,16 @@ describe("collectibleFromDas", () => {
     expect(collectibleFromDas(undefined)).toBeNull();
     expect(collectibleFromDas({})).toBeNull();
     expect(collectibleFromDas(asset({ content: {} }))).toBeNull();
+  });
+});
+
+describe("fallbackCollectible", () => {
+  it("uses a short mint as the name when DAS has no metadata", () => {
+    expect(fallbackCollectible(MINT)).toEqual({
+      mint: MINT,
+      name: "F9Lw…D2rk",
+      image: null,
+      collectionName: null,
+    });
   });
 });

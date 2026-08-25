@@ -1,19 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle, Wallet } from "lucide-react";
 
 import { AccessoryHome } from "@/components/accessory/accessory-home";
-import { CenteredStatus, GateMessage } from "@/components/layout/gate-message";
+import { CardHome } from "@/components/card/card-home";
+import { GateMessage } from "@/components/layout/gate-message";
+import { BackToDashboard } from "@/components/shared/back-to-dashboard";
+import { ConnectGate } from "@/components/shared/connect-gate";
 import { ExpiryCountdown } from "@/components/shared/expiry-countdown";
+import { InlineError } from "@/components/shared/inline-error";
+import { LoadingStatus } from "@/components/shared/loading-status";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
+import { StepProgress } from "@/components/shared/step-progress";
 import { Button } from "@/components/ui/button";
 import { consumePendingClaim } from "@/lib/accessory/pending-claim-client";
 import { usePendingClaim } from "@/hooks/accessory/use-pending-claim";
 import { usePhygitalTokenByAddress } from "@/hooks/accessory/use-phygital-token";
+import { useEnsurePhygitalSurface } from "@/hooks/phygital/use-ensure-phygital-surface";
 import { assertClaimReady, finishClaim } from "@/lib/accessory/claim";
+import { copy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import {
   invalidateOwnerQueries,
@@ -23,14 +31,20 @@ import {
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
 import { address as toAddress } from "@solana/kit";
+import {
+  surfaceForToken,
+  surfaceFromPathname,
+} from "@/lib/phygital/surface";
 
 type Phase = "confirming" | "done" | null;
 
-/** `/accessory?token=` — confirm claim in the wallet, then owned-accessory home. */
+/** Confirm claim in the wallet, then owned card or accessory home. */
 export function FinishClaimPanel() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const claimToken = searchParams.get("token")?.trim() ?? "";
+  const surface = surfaceFromPathname(pathname) ?? "accessory";
 
   const { address, isConnected, ready, connect } = useSolanaAddress();
   const signer = useWalletKitSigner();
@@ -38,6 +52,10 @@ export function FinishClaimPanel() {
   const pendingQuery = usePendingClaim(claimToken || null);
   const pending = pendingQuery.data;
   const tokenQuery = usePhygitalTokenByAddress(pending?.session.token ?? null);
+  const mismatch = useEnsurePhygitalSurface(tokenQuery.data, surface);
+  const noun = tokenQuery.data
+    ? surfaceForToken(tokenQuery.data)
+    : surface;
 
   const [phase, setPhase] = useState<Phase>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +67,7 @@ export function FinishClaimPanel() {
 
     const phygitalToken = tokenQuery.data;
     if (!phygitalToken) {
-      setError("Still loading accessory info. Try again in a moment.");
+      setError(`Still loading ${noun} info. Try again in a moment.`);
       return;
     }
 
@@ -57,7 +75,7 @@ export function FinishClaimPanel() {
       assertClaimReady(phygitalToken, signer.address);
     } catch (err) {
       setError(
-        toUserErrorMessage(err, "Couldn’t add this accessory. Try again."),
+        toUserErrorMessage(err, `Couldn’t add this ${noun}. Try again.`),
       );
       return;
     }
@@ -103,7 +121,7 @@ export function FinishClaimPanel() {
       <GateMessage
         icon={<Wallet className="size-5 text-destructive" />}
         title="Can’t finish"
-        body="This link is missing. Hold your accessory to your phone again."
+        body={`This link is missing. Hold your ${noun} to your phone again.`}
         destructive
       />
     );
@@ -111,33 +129,44 @@ export function FinishClaimPanel() {
 
   if (phase === "confirming") {
     return (
-      <NfcHoldStatus
-        title="Confirm in wallet…"
-        body="Approve in your wallet to continue."
-        busy
-      />
+      <div className="flex flex-1 flex-col gap-6 py-2">
+        <StepProgress
+          step={2}
+          total={2}
+          labels={[copy.claimStepHold, copy.claimStepConfirm]}
+        />
+        <NfcHoldStatus
+          title="Confirm in wallet…"
+          body="Approve in your wallet to continue."
+          busy
+        />
+      </div>
     );
   }
 
   if (phase === "done" && claimedOwner && tokenQuery.data) {
+    const claimed = {
+      ...tokenQuery.data,
+      currentOwner: toAddress(claimedOwner),
+    };
     return (
-      <AccessoryHome
-        token={{
-          ...tokenQuery.data,
-          currentOwner: toAddress(claimedOwner),
-        }}
-        liveConfirmed
-      />
+      <div className="flex flex-1 flex-col gap-4">
+        <BackToDashboard />
+        {surfaceForToken(claimed) === "card" ? (
+          <CardHome token={claimed} liveConfirmed />
+        ) : (
+          <AccessoryHome token={claimed} liveConfirmed />
+        )}
+      </div>
     );
   }
 
+  if (mismatch) {
+    return <LoadingStatus label="Loading…" />;
+  }
+
   if (pendingQuery.isPending) {
-    return (
-      <CenteredStatus>
-        <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      </CenteredStatus>
-    );
+    return <LoadingStatus label="Loading…" />;
   }
 
   if (pendingQuery.isError || !pending) {
@@ -147,7 +176,7 @@ export function FinishClaimPanel() {
         title="Can’t finish"
         body={toUserErrorMessage(
           pendingQuery.error,
-          "This expired. Hold your accessory to your phone again.",
+          `This expired. Hold your ${noun} to your phone again.`,
         )}
         destructive
       />
@@ -156,13 +185,19 @@ export function FinishClaimPanel() {
 
   return (
     <div className="flex flex-1 flex-col gap-5 py-2">
+      <StepProgress
+        step={2}
+        total={2}
+        labels={[copy.claimStepHold, copy.claimStepConfirm]}
+      />
+
       <div className="space-y-1.5 text-center">
         <p className="text-base font-medium text-foreground">
           Link your wallet
         </p>
         <p className="mx-auto max-w-72 text-sm text-muted-foreground">
-          Connect the wallet that should own this accessory, then confirm.
-          You&apos;ll pay a small network fee.
+          Connect the wallet that should own this {noun}, then confirm.{" "}
+          {copy.claimNetworkFee}
         </p>
       </div>
 
@@ -172,33 +207,16 @@ export function FinishClaimPanel() {
       />
 
       {!ready ? (
-        <CenteredStatus>
-          <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Loading wallet…</p>
-        </CenteredStatus>
+        <LoadingStatus label="Loading wallet…" />
       ) : !isConnected || !address ? (
-        <GateMessage
-          icon={<Wallet className="size-5 text-muted-foreground" />}
+        <ConnectGate
           title="Connect your wallet"
-          body="This wallet will own the accessory."
-          action={
-            <Button
-              type="button"
-              size="lg"
-              className="w-full"
-              onClick={connect}
-            >
-              Connect wallet
-            </Button>
-          }
+          body={`This wallet will own the ${noun}.`}
+          onConnect={connect}
         />
       ) : (
         <div className="flex flex-col gap-3">
-          {error ? (
-            <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
-              {error}
-            </p>
-          ) : null}
+          {error ? <InlineError>{error}</InlineError> : null}
           <Button
             type="button"
             size="lg"

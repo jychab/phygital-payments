@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { LoaderCircle, Search, X } from "lucide-react";
 
+import { ModalSheet } from "@/components/shared/modal-sheet";
 import { TokenListRow } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +31,6 @@ export function TokenPickerSheet({
   selectedMint: string;
   onSelect: (token: PaymentToken) => void;
 }) {
-  const titleId = useId();
   const [query, setQuery] = useState("");
   const verified = useVerifiedTokens();
   const catalog = verified.data ?? [];
@@ -43,39 +43,16 @@ export function TokenPickerSheet({
     if (!open) setQuery("");
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <button
-        type="button"
-        aria-label="Close"
-        className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
-        onClick={onClose}
-      />
+    <ModalSheet open={open} onClose={onClose} title="Choose a token">
       <div
-        role="dialog"
-        aria-modal
-        aria-labelledby={titleId}
         className={cn(
-          "relative z-10 flex h-[85dvh] w-full max-w-md flex-col",
+          "flex h-[85dvh] w-full flex-col",
           "rounded-t-2xl border border-border/60 bg-background shadow-xl sm:rounded-2xl",
-          "motion-safe:animate-[wallet-rise_0.35s_cubic-bezier(0.22,1,0.36,1)]",
         )}
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/50 px-4 py-3">
-          <p id={titleId} className="text-sm font-medium text-foreground">
-            Choose a token
-          </p>
+          <p className="text-sm font-medium text-foreground">Choose a token</p>
           <Button
             type="button"
             size="icon-sm"
@@ -130,7 +107,7 @@ export function TokenPickerSheet({
           )}
         </div>
       </div>
-    </div>
+    </ModalSheet>
   );
 }
 

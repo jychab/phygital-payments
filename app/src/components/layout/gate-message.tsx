@@ -2,14 +2,11 @@
 
 import type { ReactNode } from "react";
 
+import { centeredBlockClass } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 
 export function CenteredStatus({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 py-14 text-center">
-      {children}
-    </div>
-  );
+  return <div className={centeredBlockClass}>{children}</div>;
 }
 
 export function SuccessStatus({
@@ -50,7 +47,7 @@ export function GateMessage({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 py-14 text-center">
+    <div className={cn(centeredBlockClass, "gap-4")}>
       <div
         className={
           destructive
@@ -60,13 +57,13 @@ export function GateMessage({
       >
         {icon}
       </div>
-      <div className="max-w-64 space-y-1.5">
+      <div className="w-full max-w-72 space-y-1.5">
         <p className="text-sm font-medium text-foreground">{title}</p>
         {body ? (
           <p className="text-sm text-muted-foreground">{body}</p>
         ) : null}
       </div>
-      {action}
+      {action ? <div className="w-full max-w-72">{action}</div> : null}
     </div>
   );
 }

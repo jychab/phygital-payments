@@ -11,7 +11,7 @@ const inputVariants = cva(
         default: "bg-background/60",
         muted: "border-border/60 bg-muted/30",
         hero:
-          "h-auto min-h-0 border-transparent bg-transparent px-0 text-center font-[family-name:var(--font-display)] text-[2.75rem] leading-none tracking-tight tabular-nums placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 md:text-5xl",
+          "h-auto min-h-0 border-transparent bg-transparent px-0 text-center font-(family-name:--font-display) text-[2.75rem] leading-none tracking-tight tabular-nums placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 md:text-5xl",
       },
       size: {
         // 16px / 44pt — Safari zooms any focused control below 16px; HIG min hit target is 44pt.

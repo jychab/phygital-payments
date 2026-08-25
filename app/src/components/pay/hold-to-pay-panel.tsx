@@ -11,6 +11,7 @@ import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenSymbol } from "@/components/shared/token-chip";
 import { formatCountdown } from "@/components/shared/expiry-countdown";
 import { Button } from "@/components/ui/button";
+import { galleryAnimate } from "@/lib/motion";
 import {
   cancelPreauthForWallet,
   requestPreauthForWallet,
@@ -22,6 +23,7 @@ import { formatTokenAmount } from "@/lib/tokens/mint-delegate";
 import { resolvePaymentToken, type PaymentTokenHolding } from "@/lib/tokens/payment-token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { shortAddress } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 type Phase =
   | "idle"
@@ -155,17 +157,25 @@ export function HoldToPayPanel({
         <div className="relative flex size-24 items-center justify-center">
           <span
             aria-hidden
-            className="absolute inset-0 rounded-full bg-success/15 motion-safe:animate-[wallet-pulse_1.4s_ease-out]"
+            className={cn(
+              "absolute inset-0 rounded-full bg-success/15",
+              galleryAnimate.pulse,
+            )}
           />
-          <div className="relative flex size-16 items-center justify-center rounded-full bg-success text-success-foreground motion-safe:animate-[wallet-rise_0.4s_cubic-bezier(0.22,1,0.36,1)]">
+          <div
+            className={cn(
+              "relative flex size-16 items-center justify-center rounded-full bg-success text-success-foreground",
+              galleryAnimate.successRing,
+            )}
+          >
             <Check className="size-8" strokeWidth={2.75} />
           </div>
         </div>
         <div className="space-y-1">
           <p className="text-xl font-semibold tracking-tight">Paid</p>
-          <p className="font-(family-name:--font-display) text-[2.5rem] leading-none tracking-tight tabular-nums">
+          <p className="font-(family-name:--font-display) text-[2.5rem] leading-none tracking-tight tabular-nums md:text-5xl">
             {amountUi}
-            <span className="ml-2 inline-flex align-middle text-lg font-medium text-muted-foreground">
+            <span className="ml-2 inline-flex align-middle text-lg font-medium text-muted-foreground md:text-xl">
               <TokenSymbol
                 token={token}
                 size="sm"

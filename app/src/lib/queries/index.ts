@@ -10,6 +10,7 @@
  *                               Pay bootstrap (holdings ∩ delegates)
  *   lib/collect + hooks/collect `/collect` receive + ATA setup
  *   lib/accessory + hooks/accessory  NFC tap, Hold to Check, claim, `/accessory?token=`
+ *   lib/phygital + hooks/phygital    mint vs no-mint surface (`/card` vs `/accessory`)
  *   lib/home + hooks/home       Activity + Accessories tab
  *   lib/tokens + hooks/tokens   mint catalog, holdings (`use-payment-tokens`)
  *   lib/server                  API routes only (`import "server-only"`)
@@ -41,7 +42,7 @@ import {
   fetchHoldingsClient,
   fetchVerifiedTokensClient,
 } from "@/lib/tokens/verified-tokens-client";
-import { fetchDasCollectibleClient } from "@/lib/tokens/das-collectible-client";
+import { fetchDasCollectibleClient, fetchDasCollectiblesClient } from "@/lib/tokens/das-collectible-client";
 import type { Collectible } from "@/lib/tokens/collectible";
 import type {
   PaymentToken,
@@ -89,6 +90,8 @@ export const queryKeys = {
     all: () => ["dasCollectible"] as const,
     byMint: (mint: string | null) =>
       [...queryKeys.dasCollectible.all(), mint] as const,
+    batch: (mints: string[]) =>
+      [...queryKeys.dasCollectible.all(), "batch", ...mints] as const,
   },
 
   ataStatus: {
@@ -236,13 +239,24 @@ export const queryOptions = {
     refetchInterval: 60 * SECOND,
   },
   /**
+   * Owner collection list on `/`. Soft freshness: show cached paint, refetch
+   * on focus/reconnect, but skip remount churn while still fresh (30s).
+   * Mutations still invalidate via invalidateOwnerQueries.
+   */
+  ownerList: {
+    staleTime: 30 * SECOND,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  },
+  /**
    * Ownership / token accounts that change in another browser (wallet IAB)
    * or via an NFC tap that cannot invalidate this tab's cache. Persist may
    * paint instantly; always refetch on mount/focus/reconnect.
    */
   volatile: {
     staleTime: 0,
-    refetchOnMount: "always",
+    refetchOnMount: "always" as const,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   },
@@ -303,6 +317,12 @@ export function fetchHoldings(owner: string): Promise<PaymentTokenHolding[]> {
 
 export function fetchDasCollectible(mint: string): Promise<Collectible | null> {
   return fetchDasCollectibleClient(mint);
+}
+
+export function fetchDasCollectibles(
+  mints: string[],
+): Promise<Record<string, Collectible | null>> {
+  return fetchDasCollectiblesClient(mints);
 }
 
 export type {

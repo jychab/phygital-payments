@@ -41,6 +41,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-card-frame: var(--card-frame);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -51,79 +52,82 @@
 }
 
 :root {
-  /* Apple system type stack — SF Pro on Apple platforms, graceful elsewhere.
-     `@theme inline` maps --font-sans/--font-mono onto these, so every existing
-     font-sans / font-mono / var(--font-display) reference keeps working. */
   --font-display:
     -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
     "Helvetica Neue", system-ui, sans-serif;
   --font-geist-mono:
     ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Monaco, monospace;
 
-  /* Minimalist graphite canvas — near-neutral surfaces (a whisper cool) so the
-     accent is the only color that carries meaning. */
-  --background: oklch(0.145 0.004 260);
-  --foreground: oklch(0.97 0.004 260);
-  --card: oklch(0.185 0.005 260);
-  --card-foreground: oklch(0.97 0.004 260);
-  --popover: oklch(0.185 0.005 260);
-  --popover-foreground: oklch(0.97 0.004 260);
-  /* Near-monochrome: the primary action is a calm off-white, so the interface
-     reads as graphite + light. Color is spent in exactly one place — success. */
-  --primary: oklch(0.95 0.004 260);
-  --primary-foreground: oklch(0.2 0.006 260);
-  /* Reserved for confirmation only — the "payment received" checkmark. */
-  --success: oklch(0.75 0.15 152);
+  /* Gallery-neutral canvas — flat, quiet, lets card art carry color. */
+  --background: oklch(0.12 0.003 260);
+  --foreground: oklch(0.96 0.004 260);
+  --card: oklch(0.155 0.004 260);
+  --card-foreground: oklch(0.96 0.004 260);
+  --popover: oklch(0.155 0.004 260);
+  --popover-foreground: oklch(0.96 0.004 260);
+  --primary: oklch(0.94 0.004 260);
+  --primary-foreground: oklch(0.18 0.006 260);
+  --success: oklch(0.72 0.14 152);
   --success-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.245 0.006 260);
-  --secondary-foreground: oklch(0.96 0.004 260);
-  --muted: oklch(0.225 0.006 260);
-  --muted-foreground: oklch(0.705 0.008 260);
-  --accent: oklch(0.255 0.007 260);
-  --accent-foreground: oklch(0.96 0.004 260);
+  --secondary: oklch(0.2 0.005 260);
+  --secondary-foreground: oklch(0.94 0.004 260);
+  --muted: oklch(0.18 0.004 260);
+  --muted-foreground: oklch(0.62 0.008 260);
+  --accent: oklch(0.22 0.005 260);
+  --accent-foreground: oklch(0.94 0.004 260);
   --destructive: oklch(0.62 0.19 25);
-  --border: oklch(0.29 0.006 260);
-  --input: oklch(0.26 0.007 260);
-  --ring: oklch(0.7 0.006 260);
-  /* Ambient wash color for glows. Defaults to a soft neutral light. */
-  --accent-glow: oklch(0.8 0.006 260);
+  --border: oklch(0.24 0.005 260);
+  --input: oklch(0.2 0.005 260);
+  --ring: oklch(0.65 0.006 260);
+  --card-frame: oklch(0.28 0.006 260);
+  --card-shadow: oklch(0.05 0.002 260 / 0.55);
+  --verified: var(--success);
   --chart-1: oklch(0.8 0.006 260);
   --chart-2: oklch(0.7 0.09 220);
   --chart-3: oklch(0.75 0.08 90);
   --chart-4: oklch(0.6 0.06 160);
   --chart-5: oklch(0.5 0.03 260);
-  --radius: 0.75rem;
-  --sidebar: oklch(0.165 0.004 260);
-  --sidebar-foreground: oklch(0.97 0.004 260);
-  --sidebar-primary: oklch(0.95 0.004 260);
-  --sidebar-primary-foreground: oklch(0.2 0.006 260);
-  --sidebar-accent: oklch(0.245 0.006 260);
-  --sidebar-accent-foreground: oklch(0.96 0.004 260);
-  --sidebar-border: oklch(0.29 0.006 260);
-  --sidebar-ring: oklch(0.7 0.006 260);
+  --radius: 0.5rem;
+
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 220ms;
+  --duration-slow: 400ms;
+  --stagger-step: 40ms;
+
+  --sidebar: oklch(0.14 0.003 260);
+  --sidebar-foreground: oklch(0.96 0.004 260);
+  --sidebar-primary: oklch(0.94 0.004 260);
+  --sidebar-primary-foreground: oklch(0.18 0.006 260);
+  --sidebar-accent: oklch(0.2 0.005 260);
+  --sidebar-accent-foreground: oklch(0.94 0.004 260);
+  --sidebar-border: oklch(0.24 0.005 260);
+  --sidebar-ring: oklch(0.65 0.006 260);
 }
 
 .dark {
-  --background: oklch(0.145 0.004 260);
-  --foreground: oklch(0.97 0.004 260);
-  --card: oklch(0.185 0.005 260);
-  --card-foreground: oklch(0.97 0.004 260);
-  --popover: oklch(0.185 0.005 260);
-  --popover-foreground: oklch(0.97 0.004 260);
-  --primary: oklch(0.95 0.004 260);
-  --primary-foreground: oklch(0.2 0.006 260);
-  --success: oklch(0.75 0.15 152);
+  --background: oklch(0.12 0.003 260);
+  --foreground: oklch(0.96 0.004 260);
+  --card: oklch(0.155 0.004 260);
+  --card-foreground: oklch(0.96 0.004 260);
+  --popover: oklch(0.155 0.004 260);
+  --popover-foreground: oklch(0.96 0.004 260);
+  --primary: oklch(0.94 0.004 260);
+  --primary-foreground: oklch(0.18 0.006 260);
+  --success: oklch(0.72 0.14 152);
   --success-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.245 0.006 260);
-  --secondary-foreground: oklch(0.96 0.004 260);
-  --muted: oklch(0.225 0.006 260);
-  --muted-foreground: oklch(0.705 0.008 260);
-  --accent: oklch(0.255 0.007 260);
-  --accent-foreground: oklch(0.96 0.004 260);
+  --secondary: oklch(0.2 0.005 260);
+  --secondary-foreground: oklch(0.94 0.004 260);
+  --muted: oklch(0.18 0.004 260);
+  --muted-foreground: oklch(0.62 0.008 260);
+  --accent: oklch(0.22 0.005 260);
+  --accent-foreground: oklch(0.94 0.004 260);
   --destructive: oklch(0.62 0.19 25);
-  --border: oklch(0.29 0.006 260);
-  --input: oklch(0.26 0.007 260);
-  --ring: oklch(0.7 0.006 260);
+  --border: oklch(0.24 0.005 260);
+  --input: oklch(0.2 0.005 260);
+  --ring: oklch(0.65 0.006 260);
+  --card-frame: oklch(0.28 0.006 260);
 }
 
 @layer base {
@@ -138,27 +142,30 @@
   }
 }
 
-/*
- * Opacity-only "breathing" glow. Deliberately does NOT animate transform:
- * these gradients carry `blur-3xl`, and scaling a blurred layer forces the
- * browser to re-rasterize the full Gaussian blur every frame — which, running
- * infinitely behind a modal, made it feel laggy. Opacity stays on the
- * compositor and doesn't trigger repaints of what's behind it.
- */
-@keyframes wallet-breathe {
-  0%,
-  100% {
-    opacity: 0.92;
-  }
-  50% {
-    opacity: 1;
-  }
+/* Shared typography — use across routes instead of ad-hoc display stacks. */
+@utility text-display-xl {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+@utility text-display-md {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+@utility text-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
-@keyframes wallet-rise {
+@keyframes gallery-rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -166,7 +173,47 @@
   }
 }
 
-@keyframes wallet-pulse {
+@keyframes gallery-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gallery-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes gallery-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes gallery-check {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes gallery-pulse {
   0% {
     opacity: 0.55;
     transform: scale(0.92);

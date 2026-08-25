@@ -8,7 +8,7 @@ import { getDefaultMint, isDefaultMint } from "@/lib/tokens/payment-token";
 export type PaymentRequest = {
   amount: string | null;
   mint: Address;
-  /** Recipient from `?recipient=`, when present and valid. */
+  /** Recipient from `?recipient=` — required for Collect to run. */
   recipient: Address | null;
   /** True when `?recipient=` was present (even if invalid). */
   hasRecipientParam: boolean;
@@ -31,17 +31,6 @@ function normalizeAmount(
   const [whole = "0", ...rest] = cleaned.split(".");
   const frac = rest.join("").slice(0, maxDecimals);
   return frac.length > 0 ? `${whole}.${frac}` : whole;
-}
-
-/**
- * Settle-to address: connected wallet wins, else `?recipient=`.
- * When both exist, the session wallet is the source of truth (URL is synced).
- */
-export function resolveCollectRecipient(
-  walletAddress: string | null | undefined,
-  urlRecipient: Address | null,
-): Address | null {
-  return tryParseAddress(walletAddress) ?? urlRecipient;
 }
 
 /** Parse `?amount=&recipient=&mint=` into a receive-flow payment request. */

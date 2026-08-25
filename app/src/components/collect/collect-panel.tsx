@@ -21,6 +21,8 @@ import { TokenPickerSheet } from "@/components/shared/token-picker-sheet";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
+import { copy } from "@/lib/copy/phygital";
+import { galleryAnimate } from "@/lib/motion";
 import { uiAmountToRaw } from "@/lib/tokens/mint-delegate";
 import {
   collectHref,
@@ -40,6 +42,7 @@ import {
   logPaymentError,
   toUserFacingError,
 } from "@/lib/user-errors";
+import { cn } from "@/lib/utils";
 import { useMintProgram } from "@/hooks/tokens/use-mint-program";
 import { useRecipientAtaStatus } from "@/hooks/collect/use-recipient-ata-status";
 import { useCollectMutation } from "@/hooks/collect/use-collect-mutation";
@@ -72,8 +75,6 @@ const CollectAtaSetup = dynamic(
 
 type Phase = "idle" | "awaiting-tap" | "confirming" | "success" | "failed";
 
-const SUCCESS_HOLD_MS = 3200;
-
 function syncCollectUrl(args: {
   recipient: string;
   mint: string;
@@ -89,16 +90,15 @@ function syncCollectUrl(args: {
 }
 
 /**
- * Collect receive UI. Settle-to wallet is the resolved `recipient` (session
- * wallet or `?recipient=`). Merchant chooses mint. Missing ATA connects in
- * place (accessory-setup flow).
+ * Collect receive UI. Settle-to wallet is always `?recipient=` from the URL.
+ * Merchant chooses mint. Missing ATA loads Privy in place (standalone only).
  */
 export function CollectPanel({
   paymentRequest,
   allowWalletSetup = false,
 }: {
   paymentRequest: PaymentRequest & { recipient: Address };
-  /** Non-embed Collect: Privy connect + create ATA in this panel. */
+  /** Standalone Collect: Privy connect + create ATA when the receive account is missing. */
   allowWalletSetup?: boolean;
 }) {
   const recipient = paymentRequest.recipient;
@@ -208,7 +208,6 @@ export function CollectPanel({
         /* ignore */
       }
       if (!amountLocked) setAmount("");
-      window.setTimeout(() => setPhase("idle"), SUCCESS_HOLD_MS);
     } catch (error) {
       logPaymentError("collect", error);
       const facing = toUserFacingError(error, {
@@ -247,17 +246,25 @@ export function CollectPanel({
         <div className="relative flex size-24 items-center justify-center">
           <span
             aria-hidden
-            className="absolute inset-0 rounded-full bg-success/15 motion-safe:animate-[wallet-pulse_1.4s_ease-out]"
+            className={cn(
+              "absolute inset-0 rounded-full bg-success/15",
+              galleryAnimate.pulse,
+            )}
           />
-          <div className="relative flex size-16 items-center justify-center rounded-full bg-success text-success-foreground motion-safe:animate-[wallet-rise_0.4s_cubic-bezier(0.22,1,0.36,1)]">
+          <div
+            className={cn(
+              "relative flex size-16 items-center justify-center rounded-full bg-success text-success-foreground",
+              galleryAnimate.successRing,
+            )}
+          >
             <Check className="size-8" strokeWidth={2.75} />
           </div>
         </div>
         <div className="space-y-1">
           <p className="text-xl font-semibold tracking-tight">Received</p>
-          <p className="font-(family-name:--font-display) text-[2.5rem] leading-none tracking-tight tabular-nums">
+          <p className="font-(family-name:--font-display) text-[2.5rem] leading-none tracking-tight tabular-nums md:text-5xl">
             {settledAmount || amount || "0"}
-            <span className="ml-2 inline-flex align-middle text-lg font-medium text-muted-foreground">
+            <span className="ml-2 inline-flex align-middle text-lg font-medium text-muted-foreground md:text-xl">
               <TokenSymbol
                 token={token}
                 size="sm"
@@ -319,7 +326,7 @@ export function CollectPanel({
     return (
       <div className="flex flex-1 flex-col py-6 text-center">
         <div className="space-y-1">
-          <p className="font-(family-name:--font-display) text-[2.75rem] leading-none tracking-tight tabular-nums">
+          <p className="font-(family-name:--font-display) text-[2.75rem] leading-none tracking-tight tabular-nums md:text-5xl">
             {amount || "0"}
             <span className="ml-2 inline-flex align-middle text-xl font-medium text-muted-foreground">
               <TokenSymbol
@@ -407,6 +414,12 @@ export function CollectPanel({
         />
       </div>
 
+      {amountLocked ? (
+        <p className="text-center text-xs text-muted-foreground">
+          {copy.amountLocked}
+        </p>
+      ) : null}
+
       <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/35 px-4 py-2.5 text-xs">
         <span className="text-muted-foreground">To</span>
         <CopyableAddress address={recipient} length={6} label="recipient" />
@@ -477,7 +490,7 @@ export function CollectPanel({
           }
         >
           <Nfc className="size-4" />
-          Hold to Collect
+          {copy.holdToCollect}
         </Button>
         {sponsoredAvailable ? (
           <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">

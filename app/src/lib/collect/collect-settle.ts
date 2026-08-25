@@ -158,8 +158,8 @@ export async function buildCreateRecipientAtaInstructions(args: {
 
 /**
  * NFC passkey + build Pattern B transfer payload for a given recipient.
- * The recipient is an explicit address (connected wallet or `?recipient=`).
- * Receive itself does not sign with the session wallet.
+ * The recipient is always an explicit address from `?recipient=`.
+ * Receive itself does not sign with a session wallet.
  */
 async function buildReceiveTransfer(args: {
   recipient: Address;
@@ -329,8 +329,8 @@ async function resolveOwnerVerifierRoute(
 
 /**
  * Complete receive after passkey tap. The backend fee-payer submits the
- * transfer (sponsored). The recipient is an explicit address (session wallet
- * or payment link); receive does not require the wallet to sign.
+ * transfer (sponsored). The recipient is always `?recipient=` from the
+ * payment link; receive does not require the wallet to sign.
  */
 export async function receiveTransfer(args: {
   recipient: Address;

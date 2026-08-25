@@ -75,7 +75,12 @@ export function deserializeQueryCache(cached: string): PersistedClient {
 
 export function isPersistedQueryKey(queryKey: readonly unknown[]): boolean {
   const root = queryKey[0];
-  return typeof root === "string" && PERSISTED_QUERY_ROOTS.has(root);
+  if (typeof root !== "string" || !PERSISTED_QUERY_ROOTS.has(root)) {
+    return false;
+  }
+  // Prefetch batch keys are ephemeral; per-mint entries are what we restore.
+  if (root === "dasCollectible" && queryKey[1] === "batch") return false;
+  return true;
 }
 
 export function shouldDehydrateQuery(query: Query): boolean {

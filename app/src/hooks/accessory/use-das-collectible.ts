@@ -1,9 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   fetchDasCollectible,
+  fetchDasCollectibles,
   queryKeys,
   queryOptions,
   type Collectible,
@@ -19,5 +20,34 @@ export function useDasCollectible(mint: string | null) {
     enabled: Boolean(mint),
     retry: false,
     ...queryOptions.stable,
+  });
+}
+
+/**
+ * Prefetch binder DAS metadata in one round-trip and seed per-mint caches
+ * so `useDasCollectible` on each tile hits warm data.
+ */
+export function usePrefetchDasCollectibles(mints: string[]) {
+  const queryClient = useQueryClient();
+  const sorted = [...new Set(mints.filter(Boolean))].sort();
+  const key = sorted.join(",");
+
+  return useQuery({
+    queryKey: queryKeys.dasCollectible.batch(sorted),
+    queryFn: async () => {
+      const map = await fetchDasCollectibles(sorted);
+      for (const mint of sorted) {
+        queryClient.setQueryData(
+          queryKeys.dasCollectible.byMint(mint),
+          map[mint] ?? null,
+        );
+      }
+      return map;
+    },
+    enabled: sorted.length > 0,
+    retry: false,
+    ...queryOptions.stable,
+    // Stable key identity when mint set is unchanged
+    meta: { batchKey: key },
   });
 }

@@ -42,11 +42,25 @@ Routes live in `src/app`. Each has a top-level `*App` component. Domain code
 
 | Route | Component | Folder |
 |-------|-----------|--------|
-| `/` | `HomeApp` | `home/` |
+| `/` | `HomeApp` → `DashboardHome` | `home/` |
 | `/collect` | `CollectApp` | `collect/` |
 | `/accessory` | `AccessoryApp` | `accessory/` |
+| `/card` | `CardApp` | `card/` |
 
-Shared Pay UI (Home tab and owned accessory) is `PayScreen` in `components/pay/`:
+Shared surfaces (used by multiple routes):
+
+- `components/phygital/` — NFC app, by-address loader, `PhygitalRouteShell`
+- `components/claim/` — `ClaimPanel` + `FinishClaimPanel` (card and accessory)
+- `components/pay/` — Pay setup / Hold to Pay
+
+Owned-accessory home after a check or claim is `AccessoryHome` (`accessory/accessory-home.tsx`).
+One `PrivyProvider` lives in `PrivyWalletRoot` (root layout). Home, claim
+finish, and Collect ATA setup ask for it via `PrivyGate`. Collect itself and
+Collect embeds do not load the Privy SDK until ATA create. Do not wrap
+`PrivyWalletProvider` again on a route.
+The connected wallet is always passed as `owner` (not `recipient` / `expectedOwner`). Collect’s settle-to address is always `?recipient=` from the URL.
+
+Shared Pay UI is `PayScreen` in `components/pay/`:
 
 - `pay-screen.tsx` — orchestrator (spending limit → Pay home)
 - `hold-to-pay-panel.tsx` — ready to tap, or Press Pay when Confirm Payments is on
@@ -54,46 +68,46 @@ Shared Pay UI (Home tab and owned accessory) is `PayScreen` in `components/pay/`
 - `manage-pay-panel.tsx` — spending limits + Confirm Payments
 - `api-key-panel.tsx` — paste / issue / rotate (only after confirmation is on)
 
-Owned-accessory home after a check or claim is `AccessoryHome` (`accessory/accessory-home.tsx`).
-One `PrivyProvider` lives in `PrivyWalletRoot` (root layout). Home, `/accessory` claim
-finish, and non-embed Collect ask for it via `PrivyGate`. The `/accessory` authenticity
-path does not load Privy until Pay. Collect embeds do not load
-the Privy SDK. Do not wrap `PrivyWalletProvider` again on a route.
-The connected wallet is always passed as `owner` (not `recipient` / `expectedOwner`), except Collect's settle-to address which stays `recipient`.
-
 ## Modes
 
 ### Home (`/`)
 
-Connect a wallet via Privy, then use tabs:
+Owner **dashboard** — connect a wallet via Privy to see your collection:
 
-- **Pay** — After a spending limit: confirmation off (default) opens **Pay Settings**; confirmation on opens Hold to Pay (**Pay**, then tap). Requires a spending limit and at least one NFC accessory.
-- **Accessories** — list of NFC accessories for this wallet. Hold an accessory on `/accessory` to check it, then claim it to this wallet if you want.
-- **Activity** — recent payments for the connected wallet.
-
-Pay settings (spending limits, Confirm Payments) are the Pay tab when confirmation is off, and **Pay Settings** from Hold to Pay when it is on. Turning confirmation on wallet-signs and may issue an API key stored in **localStorage** on this phone. **Use on Another Phone** (copy/paste/rotate) appears only while confirmation is on.
+- **Cards** — minted phygital tokens in a two-column grid with DAS artwork. Tap opens `/card?address=…&from=dashboard` (browse detail with Back to dashboard).
+- **Accessories** — unminted NFC accessories listed below; tap opens `/accessory?address=…&from=dashboard` (browse-only detail).
+- No Pay, Activity, Collect, or lock/remove on `/` — those live on the `/accessory` task journey (NFC entry or bookmark).
 
 ### Collect (`/collect`)
 
-Destination flow. The settle-to wallet comes from the **connected wallet** or `?recipient=`. When both exist, they stay in sync (session wallet is the source of truth; the URL is updated to match).
+Isolated merchant receive flow. Entry via `/collect?recipient=` or embed only — not linked from Home or accessory surfaces.
 
-- Header shows the same wallet chip as Home. Connect on `/collect` with no `?recipient=` to start collecting to that wallet.
+**Recipient always comes from `?recipient=`** in the URL. Privy is not loaded for Collect unless the recipient needs an Associated Token Account created (standalone only).
+
+- Static **Collect** header + display-only destination chip (URL recipient).
 - Enter an amount, then hold NFC. Must run in Safari/Chrome (not a wallet in-app browser).
-- If the wallet has no receive account for the selected token yet, Collect shows **Connect wallet** on the same page (same flow as accessory setup). After the matching wallet connects, create the receive account, then collect.
-- Missing or invalid `?recipient=` with no connected wallet prompts to connect (or shows an error in embeds).
-- Connected Collect shows the Home/Collect dropdown. Embeds stay sealed (static Collect label, display-only destination chip, no dropdown).
-
-Activity lives on Home, not Collect.
+- If the recipient has no receive account for the selected token yet, standalone Collect loads Privy in place to **Connect wallet** (must match recipient) and create the ATA.
+- Embeds stay sealed — no wallet setup; show a finish-setup message instead.
+- Success holds until you tap **Done** (no auto-reset).
+- Missing or invalid `?recipient=` shows an error gate.
 
 ### Accessory (`/accessory`)
 
-Authenticity first. Claim and Pay are optional.
+Accessory **task journey** — authenticity, claim, Pay, and manage. Only phygital tokens **without** a linked mint stay here; minted tokens redirect to `/card`.
 
-`/accessory` with no tap params shows **Hold to Check** (live WebAuthn in the browser). A signed NFC URL (`/accessory?pk=&s=&c=&n=`) verifies silently, then shows **Verified**. Optional **Hold to Check** upgrades the subtitle to **Confirmed just now.** Privy is not loaded until Pay or `/accessory?token=`.
+Cold entry (`/accessory` NFC or bookmark) shows **Hold to Check**. Signed NFC URLs verify silently, then show **Registered** (on-chain). Optional **Hold to Check** upgrades to **Confirmed**. Privy loads for Pay, claim finish (`?token=`), or wallet-connected overflow actions.
 
-1. **Hold to Check** (no URL) or silent URL verify → **Verified**
-2. **Unclaimed / unlocked** — optional **Claim to wallet** (WebAuthn tap, then `/accessory?token=` to connect and confirm)
-3. **Locked and payment-capable** — **Collect** and **Pay** (same Pay tab as Home). Connect a wallet only when signing a limit or turning on Confirm Payments.
+1. **Hold to Check** (no URL) or silent URL verify → **Registered**
+2. **Unclaimed / unlocked** — **Add to Wallet** (WebAuthn tap, then `?token=` to connect and confirm)
+3. **Locked and payment-capable** — **Pay** via primary CTA; Pay settings, Activity, lock/remove via header **⋯** menu (task mode only)
+
+Dashboard browse (`/accessory?address=&from=dashboard`) shows compact status — no NFC ring, Pay, or manage.
+
+### Card (`/card`)
+
+Phygital tokens **with** a linked mint. Shows DAS mint metadata (name, image, collection). Authenticate with **Hold to Check**. Optionally **Add to Wallet**. No Pay or Collect.
+
+A signed NFC URL or Hold to Check that resolves a minted token redirects from `/accessory` to `/card` (query string preserved). The reverse happens for tokens with no mint.
 
 API keys live in localStorage on this phone, keyed by wallet, and are only needed when Confirm Payments is on. **Use on Another Phone** copies, pastes, or issues/rotates a key. Setting a spending limit requires a balance for that token in the linked wallet.
 
@@ -144,7 +158,7 @@ curl --max-time 150 -H "x-api-key: ppk_…" "https://<host>/api/preauth/status?g
 
 ### Payment link (`/collect?recipient=<solana-address>`)
 
-Collect can also open from a payment link. Settles to `?recipient=` until a wallet is connected; connecting syncs the URL to that wallet. The header shows a wallet chip (embeds show a sealed destination chip). Optional `?amount=` prefills (and locks) the amount. Optional `?mint=` selects a Jupiter-verified classic SPL mint (defaults to USDC). Without a valid `?recipient=` or connected wallet, Collect prompts to connect. If the recipient has no receive account yet, Collect offers **Connect wallet** on the same page.
+Collect opens from a payment link. Settles to `?recipient=` only (wallet connect does not change the destination). The header shows a sealed destination chip. Optional `?amount=` prefills (and locks) the amount. Optional `?mint=` selects a Jupiter-verified classic SPL mint (defaults to USDC). Without a valid `?recipient=`, Collect shows an error. If the recipient has no receive account yet, standalone Collect offers **Connect wallet** on the same page to create the ATA (wallet must match the recipient).
 
 ### iframe embed
 

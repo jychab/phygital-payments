@@ -42,7 +42,7 @@ export function NfcHoldStatus({
           "absolute inset-0 rounded-full border",
           success ? "border-success/25" : "border-primary/25",
           showPulse &&
-            "motion-safe:animate-[wallet-pulse_1.6s_ease-out_infinite]",
+            "motion-safe:animate-[gallery-pulse_1.6s_ease-out_infinite]",
         )}
       />
       <div
@@ -66,12 +66,13 @@ export function NfcHoldStatus({
   );
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-5 py-12 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center gap-5 py-14 text-center">
       {onRingClick && !busy ? (
         <button
           type="button"
           onClick={onRingClick}
           aria-label={ringAriaLabel ?? title}
+          aria-busy={busy}
           className={cn(
             "rounded-full outline-none transition-transform",
             "focus-visible:ring-3 focus-visible:ring-ring/50",
@@ -81,10 +82,10 @@ export function NfcHoldStatus({
           {ring}
         </button>
       ) : (
-        ring
+        <div aria-busy={busy}>{ring}</div>
       )}
-      <div className="space-y-1">
-        <p className="font-[family-name:var(--font-display)] text-xl tracking-tight">
+      <div className="w-full max-w-72 space-y-1 motion-safe:animate-[gallery-fade_0.22s_ease-out_both]">
+        <p className="text-display-md tracking-tight md:text-2xl">
           {title}
         </p>
         {body ? (

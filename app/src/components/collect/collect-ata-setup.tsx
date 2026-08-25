@@ -22,7 +22,7 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 
 /**
  * In-place receive-account setup on `/collect`. Same connect → sign flow as
- * accessory claim (`FinishClaimPanel`): Connect wallet, then confirm the tx.
+ * claim finish (`FinishClaimPanel`): Connect wallet, then confirm the tx.
  */
 export function CollectAtaSetup({
   recipient,
@@ -82,7 +82,7 @@ function CollectAtaSetupCard({
       </div>
       <div className="min-w-0 flex-1 space-y-2.5">
         <p className="text-sm font-medium text-foreground">
-          Finish Setup
+          Create Associated Token Account
         </p>
         <p className="text-xs text-muted-foreground">
           This wallet isn’t ready to receive{" "}
@@ -92,7 +92,7 @@ function CollectAtaSetupCard({
             className="mx-0.5"
             symbolClassName="font-medium text-foreground"
           />{" "}
-          yet. Connect it to finish setup.
+          yet.
         </p>
         {!ready ? (
           <div className="flex justify-center py-1">
@@ -145,7 +145,7 @@ function CollectAtaSetupCard({
               ) : (
                 <>
                   <Plus className="size-4" />
-                  {error ? "Try again" : "Set up receiving"}
+                  {error ? "Try again" : `Create ${token.symbol} ATA`}
                 </>
               )}
             </Button>

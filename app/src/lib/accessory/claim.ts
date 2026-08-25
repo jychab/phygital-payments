@@ -7,12 +7,13 @@ import {
 import { address, getBase58Encoder, type Address, type TransactionSigner } from "@solana/kit";
 import type { PendingClaimRecord } from "../../../shared/pending-claim-wire";
 import type { PhygitalToken } from "@/lib/phygital/token";
+import { claimHref } from "@/lib/phygital/surface";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { sendTransaction } from "@/lib/solana/tx";
 
 /** `/accessory?token=` — pending claim (same-tab or wallet in-app browser). */
 export function accessoryClaimHref(token: string): string {
-  return `/accessory?token=${encodeURIComponent(token)}`;
+  return claimHref(token);
 }
 
 /** Pre-NFC checks from cached token view — run before showing NFC hold UI. */
