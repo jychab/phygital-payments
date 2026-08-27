@@ -326,10 +326,10 @@ impl TestContext {
     ) {
         let token_data = PhygitalToken {
             discriminator: PHYGITAL_TOKEN_DISCRIMINATOR,
-            token_type: PhygitalTokenType::Controlled,
+            token_type: PhygitalTokenType::Controlled as u8,
             owner: owner.to_bytes().into(),
             last_sign_count,
-            is_locked,
+            is_locked: is_locked as u8,
             public_key,
             identifier,
             mint: Pubkey::default().to_bytes().into(),
@@ -385,7 +385,7 @@ impl TestContext {
                 verifier,
                 config: self.config_pda(),
                 owner_verifier: self.owner_verifier_pda(owner),
-                token: asset,
+                phygital_token: asset,
                 mint,
                 recipient,
                 program_authority: self.program_authority(asset),
@@ -549,7 +549,8 @@ fn program_artifact_paths(manifest_dir: &std::path::Path, name: &str) -> Vec<std
 }
 
 fn phygital_token_artifact_paths(manifest_dir: &std::path::Path) -> Vec<std::path::PathBuf> {
-    let mut paths = program_artifact_paths(manifest_dir, "phygital_token");
+    let mut paths = vec![manifest_dir.join("../../phygital_token.so")];
+    paths.extend(program_artifact_paths(manifest_dir, "phygital_token"));
     paths.push(
         manifest_dir
             .join("../../../phygital-token/target/deploy/phygital_token.so"),

@@ -4,7 +4,7 @@ import {
   type Instruction,
   type TransactionSigner,
 } from "@solana/kit";
-import { getSecp256r1VerifyInstruction } from "phygital-token-sdk";
+import { getSecp256r1VerifyInstruction } from "../../../shared/secp256r1-verify";
 import { getTransferInstruction } from "phygital-payments-sdk";
 
 import { base64ToBytes } from "@/lib/crypto/base64";
@@ -37,7 +37,7 @@ export function buildSettleInstructions(
     verifier,
     config: address(transfer.config),
     ownerVerifier: address(transfer.ownerVerifier),
-    token: address(transfer.token),
+    phygitalToken: address(transfer.token),
     mint: address(transfer.mint),
     recipient: address(transfer.recipient),
     programAuthority: address(transfer.programAuthority),

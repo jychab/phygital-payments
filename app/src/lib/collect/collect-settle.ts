@@ -9,12 +9,9 @@ import {
 import { getCreateAssociatedTokenIdempotentInstruction } from "@solana-program/token";
 import {
   PhygitalTokenType,
-  authenticatePasskeyForVerify,
-  beginVerify,
-  buildVerifyArgs,
-  buildVerifyInputFromWebAuthn,
+  authenticatePasskeyForSecp256r1Verify,
+  buildSecp256r1VerifyInstruction,
   fetchPhygitalToken,
-  parseSecp256r1Pubkey,
 } from "phygital-token-sdk";
 import {
   buildTransferChallenge,
@@ -25,6 +22,7 @@ import {
 
 import { bytesToBase64 } from "@/lib/crypto/base64";
 import { getSolanaRpc } from "@/lib/solana/rpc";
+import { secp256r1EntriesFromInstruction } from "../../../shared/secp256r1-verify";
 import {
   simulateSponsoredInstructions,
 } from "@/lib/solana/simulate-sponsored";
@@ -189,13 +187,18 @@ async function buildReceiveTransfer(args: {
 
   const { slotHash, slotNumber } = await fetchSlotHash();
   const messageHash = buildTransferChallenge(mint, recipient, rawAmount, slotHash);
-  const session = await beginVerify({ messageHash });
-
-  const response = await authenticatePasskeyForVerify(session);
+  const response = await authenticatePasskeyForSecp256r1Verify({ messageHash });
   // Card UX: leave "Hold NFC accessory" the moment the tap returns; RPC/submit = Confirming.
   args.onPasskeyComplete?.();
 
-  const { tokenPda, clientDataJson } = await buildVerifyArgs(response);
+  const { secp256r1VerifyInstruction, phygitalTokenPda, secp256r1VerifyArgs } =
+    await buildSecp256r1VerifyInstruction(response);
+  const [secpEntry] = secp256r1EntriesFromInstruction(secp256r1VerifyInstruction);
+  if (!secpEntry) {
+    throw new Error("Passkey tap did not produce a secp256r1 signature");
+  }
+  const { clientDataJson } = secp256r1VerifyArgs;
+  const tokenPda = phygitalTokenPda;
 
   const { data: token } = await fetchPhygitalToken(rpc, tokenPda);
   if (token.tokenType !== PhygitalTokenType.Controlled || !token.isLocked) {
@@ -208,11 +211,6 @@ async function buildReceiveTransfer(args: {
       "This NFC accessory belongs to the receiving wallet — you can’t collect a payment from yourself.",
     );
   }
-
-  const secpEntry = buildVerifyInputFromWebAuthn({
-    secp256r1PublicKey: parseSecp256r1Pubkey(response.id),
-    response,
-  });
 
   const reviFeePayer = process.env.NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY?.trim();
   if (!reviFeePayer) {

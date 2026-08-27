@@ -26,7 +26,7 @@ export function useSetLockStateMutation(owner: string | null) {
       if (!signer) throw new Error("Connect your wallet");
       const instruction = getSetLockStateInstruction({
         owner: signer,
-        token,
+        phygitalToken: token,
         isLocked,
       });
       const sent = await sendTransaction({
@@ -68,7 +68,7 @@ export function useRemoveOwnershipMutation(owner: string | null) {
       if (!signer) throw new Error("Connect your wallet");
       const instruction = getRemoveOwnershipInstruction({
         owner: signer,
-        token,
+        phygitalToken: token,
       });
       const sent = await sendTransaction({
         instructions: [instruction],

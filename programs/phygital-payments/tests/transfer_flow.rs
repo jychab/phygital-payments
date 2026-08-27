@@ -60,6 +60,51 @@ fn transfer_succeeds_and_moves_tokens() {
 }
 
 #[test]
+fn transfer_reports_compute_units() {
+    let mut ctx = TestContext::new();
+    let passkey = common::TestPasskey::generate();
+    let identifier = TestContext::unique_identifier();
+    let owner = Keypair::new();
+    let recipient = Keypair::new().pubkey();
+    let asset = ctx.asset_pda(&passkey.compressed_pubkey);
+    let amount = 1_000_000u64;
+
+    ctx.write_locked_asset(
+        asset,
+        owner.pubkey(),
+        identifier,
+        passkey.compressed_pubkey,
+        0,
+    );
+    let (payment_mint, sender_token, recipient_token) =
+        setup_delegated_payment(&mut ctx, &owner, asset, recipient, amount);
+
+    let meta = ctx
+        .send_transfer(
+            asset,
+            payment_mint,
+            recipient,
+            sender_token,
+            recipient_token,
+            owner.pubkey(),
+            amount,
+            &passkey,
+            true,
+        )
+        .expect("transfer should succeed");
+
+    eprintln!(
+        "transfer compute units (secp + transfer): {}",
+        meta.compute_units_consumed
+    );
+    assert!(
+        meta.compute_units_consumed < 35_000,
+        "transfer used {} CU",
+        meta.compute_units_consumed
+    );
+}
+
+#[test]
 fn transfer_rejects_wrong_rp_id() {
     let mut ctx = TestContext::new();
     let passkey = common::TestPasskey::generate();

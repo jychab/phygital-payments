@@ -1,10 +1,10 @@
 import { address, type Address, type Rpc, type SolanaRpcApi } from "@solana/kit";
 import {
-  fetchAllTokensFromOwner,
   fetchMaybePhygitalToken,
   fetchPhygitalToken as fetchPhygitalTokenAccount,
-  fetchTokenByIdentifier,
-  findTokenPda,
+  fetchPhygitalTokenByIdentifier as fetchPhygitalTokenAccountByIdentifier,
+  fetchPhygitalTokensByOwner as fetchPhygitalTokenAccountsByOwner,
+  findPhygitalTokenPda,
   PhygitalTokenType,
   type PhygitalToken as PhygitalTokenAccount,
 } from "phygital-token-sdk";
@@ -34,11 +34,11 @@ export function phygitalTokenFromAccount(
   account: PhygitalTokenAccount,
 ): PhygitalToken {
   return {
-    tokenType: account.tokenType,
+    tokenType: account.tokenType as PhygitalTokenType,
     identifier: bytesToBase64Url(new Uint8Array(account.identifier[0])),
     secp256r1PublicKey: bytesToBase64Url(new Uint8Array(account.publicKey[0])),
     address: tokenAddress,
-    isLocked: account.isLocked,
+    isLocked: account.isLocked !== 0,
     currentOwner: account.owner,
     lastSignCount: account.lastSignCount,
     mint: account.mint,
@@ -63,7 +63,7 @@ export async function fetchMaybePhygitalTokenByPasskey(
   rpc: Rpc<SolanaRpcApi>,
   secp256r1PublicKey: string,
 ): Promise<PhygitalToken | null> {
-  const tokenAddress = await findTokenPda(secp256r1PublicKey);
+  const tokenAddress = await findPhygitalTokenPda(secp256r1PublicKey);
   const account = await fetchMaybePhygitalToken(rpc, tokenAddress);
   if (!account.exists) return null;
   return phygitalTokenFromAccount(tokenAddress, account.data);
@@ -77,11 +77,11 @@ export async function fetchPhygitalTokenByIdentifier(
   rpc: Rpc<SolanaRpcApi>,
   identifier: string,
 ): Promise<PhygitalToken> {
-  const account = await fetchTokenByIdentifier(rpc, identifier);
+  const account = await fetchPhygitalTokenAccountByIdentifier(rpc, identifier);
   if (!account) {
     throw new Error("Token not found for identifier");
   }
-  const tokenAddress = await findTokenPda(account.publicKey);
+  const tokenAddress = await findPhygitalTokenPda(account.publicKey);
   return phygitalTokenFromAccount(tokenAddress, account);
 }
 
@@ -90,10 +90,10 @@ export async function fetchPhygitalTokensByOwner(
   rpc: Rpc<SolanaRpcApi>,
   owner: Address,
 ): Promise<PhygitalToken[]> {
-  const accounts = await fetchAllTokensFromOwner(owner, rpc);
+  const accounts = await fetchPhygitalTokenAccountsByOwner(rpc, owner);
   return Promise.all(
     accounts.map(async (account) => {
-      const tokenAddress = await findTokenPda(account.publicKey);
+      const tokenAddress = await findPhygitalTokenPda(account.publicKey);
       return phygitalTokenFromAccount(tokenAddress, account);
     }),
   );

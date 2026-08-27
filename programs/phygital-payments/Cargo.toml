@@ -26,7 +26,7 @@ custom-panic = []
 [dependencies]
 anchor-lang = { version = "1.0.2", features = ["init-if-needed"] }
 anchor-spl = "1.0.2"
-phygital-token-client = { version = "0.12.0", features = ["anchor"] }
+phygital-token-client = { version = "1.0.0", features = ["anchor"] }
 solana-sdk-ids = "3"
 solana-sha256-hasher = "3"
 
@@ -37,7 +37,7 @@ base64 = "0.22.1"
 borsh = "1"
 litesvm = { version = "0.10.0", features = ["precompiles"] }
 p256 = { version = "0.13.2", features = ["ecdsa"] }
-phygital-token-client = { version = "0.12.0", features = ["anchor"] }
+phygital-token-client = { version = "1.0.0", features = ["anchor"] }
 rand = "0.8"
 sha2 = "0.10"
 solana-account = "3"

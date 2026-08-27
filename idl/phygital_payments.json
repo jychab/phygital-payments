@@ -315,38 +315,10 @@
             "Optional per-owner verifier override PDA.",
             "Uninitialized (system-owned / empty) → use `config.verifiers`.",
             "Initialized → ONLY `owner_verifier.verifier` is accepted."
-          ],
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  111,
-                  119,
-                  110,
-                  101,
-                  114,
-                  95,
-                  118,
-                  101,
-                  114,
-                  105,
-                  102,
-                  105,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "token.owner",
-                "account": "PhygitalToken"
-              }
-            ]
-          }
+          ]
         },
         {
-          "name": "token",
+          "name": "phygital_token",
           "writable": true
         },
         {
@@ -383,7 +355,7 @@
               },
               {
                 "kind": "account",
-                "path": "token"
+                "path": "phygital_token"
               }
             ]
           }
@@ -535,6 +507,11 @@
       "code": 6011,
       "name": "InvalidSysvarDataFormat",
       "msg": "Invalid SlotHashes sysvar data format"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidAccountData",
+      "msg": "Account data is missing or malformed"
     }
   ],
   "types": [

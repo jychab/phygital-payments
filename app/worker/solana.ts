@@ -21,7 +21,7 @@ import {
   type SolanaRpcApi,
   type TransactionSigner,
 } from "@solana/kit";
-import { getSecp256r1VerifyInstruction } from "phygital-token-sdk";
+import { getSecp256r1VerifyInstruction } from "../shared/secp256r1-verify";
 import {
   getTransferInstruction,
   PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
@@ -120,7 +120,7 @@ export function buildTransferIx(
     verifier: feePayer,
     config: address(transfer.config),
     ownerVerifier: address(transfer.ownerVerifier),
-    token: address(transfer.token),
+    phygitalToken: address(transfer.token),
     mint: address(transfer.mint),
     recipient: address(transfer.recipient),
     programAuthority: address(transfer.programAuthority),

@@ -48,7 +48,7 @@ export async function captureClaimTap(args: {
 }> {
   const session = await beginTransfer({
     rpc: getSolanaRpc(),
-    token: args.token,
+    phygitalToken: args.token,
   });
   const auth = await authenticatePasskeyForTransfer(session);
   args.onPasskeyComplete?.();
@@ -61,10 +61,12 @@ function hydrateTransferSession(
 ): TransferSession {
   return {
     rpc: getSolanaRpc(),
-    token: address(json.token),
+    phygitalToken: address(json.token),
     slotNumber: BigInt(json.slotNumber),
     slotHash: new Uint8Array(getBase58Encoder().encode(json.slotHash)),
     challenge: new Uint8Array(getBase58Encoder().encode(json.challenge)),
+    rpId:
+      typeof window !== "undefined" ? window.location.hostname : "",
   };
 }
 

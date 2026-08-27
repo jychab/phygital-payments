@@ -36,7 +36,7 @@ export function serializePendingClaimSession(
   session: TransferSession,
 ): PendingClaimSessionJson {
   return {
-    token: session.token.toString(),
+    token: session.phygitalToken.toString(),
     slotNumber: session.slotNumber.toString(),
     slotHash: getBase58Decoder().decode(session.slotHash),
     challenge: getBase58Decoder().decode(session.challenge),

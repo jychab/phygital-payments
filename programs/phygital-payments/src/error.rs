@@ -26,4 +26,6 @@ pub enum PhygitalError {
     InvalidSlotHash,
     #[msg("Invalid SlotHashes sysvar data format")]
     InvalidSysvarDataFormat,
+    #[msg("Account data is missing or malformed")]
+    InvalidAccountData,
 }

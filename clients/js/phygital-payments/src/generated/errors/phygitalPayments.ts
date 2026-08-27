@@ -38,9 +38,12 @@ export const PHYGITAL_PAYMENTS_ERROR__ENDPOINT_TOO_LONG = 0x1779; // 6009
 export const PHYGITAL_PAYMENTS_ERROR__INVALID_SLOT_HASH = 0x177a; // 6010
 /** InvalidSysvarDataFormat: Invalid SlotHashes sysvar data format */
 export const PHYGITAL_PAYMENTS_ERROR__INVALID_SYSVAR_DATA_FORMAT = 0x177b; // 6011
+/** InvalidAccountData: Account data is missing or malformed */
+export const PHYGITAL_PAYMENTS_ERROR__INVALID_ACCOUNT_DATA = 0x177c; // 6012
 
 export type PhygitalPaymentsError =
   | typeof PHYGITAL_PAYMENTS_ERROR__ENDPOINT_TOO_LONG
+  | typeof PHYGITAL_PAYMENTS_ERROR__INVALID_ACCOUNT_DATA
   | typeof PHYGITAL_PAYMENTS_ERROR__INVALID_ENDPOINT
   | typeof PHYGITAL_PAYMENTS_ERROR__INVALID_SLOT_HASH
   | typeof PHYGITAL_PAYMENTS_ERROR__INVALID_SYSVAR_DATA_FORMAT
@@ -58,6 +61,7 @@ let phygitalPaymentsErrorMessages:
 if (process.env["NODE_ENV"] !== "production") {
   phygitalPaymentsErrorMessages = {
     [PHYGITAL_PAYMENTS_ERROR__ENDPOINT_TOO_LONG]: `Verifier endpoint URL exceeds max length`,
+    [PHYGITAL_PAYMENTS_ERROR__INVALID_ACCOUNT_DATA]: `Account data is missing or malformed`,
     [PHYGITAL_PAYMENTS_ERROR__INVALID_ENDPOINT]: `Verifier endpoint URL is empty or invalid`,
     [PHYGITAL_PAYMENTS_ERROR__INVALID_SLOT_HASH]: `Slot not found in SlotHashes sysvar — signature has expired or is being replayed`,
     [PHYGITAL_PAYMENTS_ERROR__INVALID_SYSVAR_DATA_FORMAT]: `Invalid SlotHashes sysvar data format`,
