@@ -5,7 +5,6 @@ import {
   fetchPhygitalToken as fetchPhygitalTokenAccount,
   fetchTokenByIdentifier,
   findTokenPda,
-  parseSecp256r1Pubkey,
   PhygitalTokenType,
   type PhygitalToken as PhygitalTokenAccount,
 } from "phygital-token-sdk";
@@ -64,9 +63,7 @@ export async function fetchMaybePhygitalTokenByPasskey(
   rpc: Rpc<SolanaRpcApi>,
   secp256r1PublicKey: string,
 ): Promise<PhygitalToken | null> {
-  const tokenAddress = await findTokenPda(
-    parseSecp256r1Pubkey(secp256r1PublicKey),
-  );
+  const tokenAddress = await findTokenPda(secp256r1PublicKey);
   const account = await fetchMaybePhygitalToken(rpc, tokenAddress);
   if (!account.exists) return null;
   return phygitalTokenFromAccount(tokenAddress, account.data);

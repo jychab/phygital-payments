@@ -17,11 +17,11 @@ import {
   PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
   findProgramAuthorityPda,
 } from "phygital-payments-sdk";
-import { beginVerifyAsset } from "phygital-token-sdk";
+import { beginVerify } from "phygital-token-sdk";
 
 // Fetch latest slot hash, then:
 const messageHash = buildTransferChallenge(mint, recipient, amount, slotHash);
-const session = await beginVerifyAsset({ messageHash });
+const session = await beginVerify({ messageHash });
 // Tap → secp256r1_verify + getTransferInstruction({ ..., slotNumber, clientDataJson })
 ```
 
