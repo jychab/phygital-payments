@@ -41,7 +41,7 @@ void initOpenNextCloudflareForDev();
 const workspaceRoot = path.join(__dirname, "..");
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["phygital-payments-sdk", "phygital-token-sdk"],
+  transpilePackages: ["phygital-payments-sdk"],
   outputFileTracingRoot: workspaceRoot,
   turbopack: {
     root: workspaceRoot,
