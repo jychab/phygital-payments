@@ -54,7 +54,8 @@ export function getInitializeConfigDiscriminatorBytes(): ReadonlyUint8Array {
 
 export type InitializeConfigInstruction<
   TProgram extends string = typeof PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
-  TAccountAdmin extends string | AccountMeta<string> = string,
+  TAccountAdmin extends string | AccountMeta<string> =
+    "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF",
   TAccountConfig extends string | AccountMeta<string> = string,
   TAccountSystemProgram extends string | AccountMeta<string> =
     "11111111111111111111111111111111",
@@ -118,7 +119,7 @@ export type InitializeConfigAsyncInput<
   TAccountConfig extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  admin: TransactionSigner<TAccountAdmin>;
+  admin?: TransactionSigner<TAccountAdmin>;
   config?: Address<TAccountConfig>;
   systemProgram?: Address<TAccountSystemProgram>;
   initialVerifiers: InitializeConfigInstructionDataArgs["initialVerifiers"];
@@ -163,6 +164,10 @@ export async function getInitializeConfigInstructionAsync<
   const args = { ...input };
 
   // Resolve default values.
+  if (!accounts.admin.value) {
+    accounts.admin.value =
+      "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF" as Address<"G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF">;
+  }
   if (!accounts.config.value) {
     accounts.config.value = await findConfigPda();
   }
@@ -195,7 +200,7 @@ export type InitializeConfigInput<
   TAccountConfig extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
-  admin: TransactionSigner<TAccountAdmin>;
+  admin?: TransactionSigner<TAccountAdmin>;
   config: Address<TAccountConfig>;
   systemProgram?: Address<TAccountSystemProgram>;
   initialVerifiers: InitializeConfigInstructionDataArgs["initialVerifiers"];
@@ -238,6 +243,10 @@ export function getInitializeConfigInstruction<
   const args = { ...input };
 
   // Resolve default values.
+  if (!accounts.admin.value) {
+    accounts.admin.value =
+      "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF" as Address<"G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF">;
+  }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
       "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;

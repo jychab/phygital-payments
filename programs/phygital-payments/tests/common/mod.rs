@@ -14,7 +14,7 @@ use anchor_spl::token_2022::ID as TOKEN_2022_ID;
 use borsh::BorshDeserialize;
 use litesvm::LiteSVM;
 use phygital_payments::{
-    CONFIG_SEED, OWNER_VERIFIER_SEED, PROGRAM_AUTHORITY_SEED, PHYGITAL_TOKEN_PROGRAM_ID,
+    ADMIN, CONFIG_SEED, OWNER_VERIFIER_SEED, PROGRAM_AUTHORITY_SEED, PHYGITAL_TOKEN_PROGRAM_ID,
     Secp256r1VerifyArgs,
 };
 use phygital_token_client::{PhygitalToken, PhygitalTokenType, PHYGITAL_TOKEN_DISCRIMINATOR};
@@ -24,6 +24,7 @@ use solana_message::{Message, VersionedMessage};
 use solana_sdk_ids::sysvar::{
     instructions::ID as INSTRUCTIONS_SYSVAR_ID, slot_hashes::ID as SLOT_HASHES_SYSVAR_ID,
 };
+use solana_signature::Signature;
 use solana_signer::Signer;
 use solana_transaction::versioned::VersionedTransaction;
 
@@ -34,7 +35,8 @@ pub struct TestContext {
     pub svm: LiteSVM,
     pub payer: Keypair,
     pub verifier: Keypair,
-    pub admin: Keypair,
+    /// Hardcoded program admin (`ADMIN`); no secret needed — LiteSVM sigverify is off.
+    pub admin: Pubkey,
     pub program_id: Pubkey,
     pub mint_authority: Keypair,
 }
@@ -42,7 +44,9 @@ pub struct TestContext {
 impl TestContext {
     pub fn new() -> Self {
         let program_id = phygital_payments::ID;
-        let mut svm = LiteSVM::new().with_precompiles();
+        // Sigverify off so tests can act as the fixed `ADMIN` pubkey without its private key.
+        // Secp256r1 precompile verification is unaffected.
+        let mut svm = LiteSVM::new().with_precompiles().with_sigverify(false);
         let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
 
         Self::deploy_program(
@@ -60,17 +64,16 @@ impl TestContext {
 
         let payer = Keypair::new();
         let verifier = Keypair::new();
-        let admin = Keypair::new();
         svm.airdrop(&payer.pubkey(), 10 * LAMPORTS_PER_SOL)
             .expect("airdrop payer");
-        svm.airdrop(&admin.pubkey(), LAMPORTS_PER_SOL)
+        svm.airdrop(&ADMIN, LAMPORTS_PER_SOL)
             .expect("airdrop admin");
 
         let mut ctx = Self {
             svm,
             payer,
             verifier,
-            admin,
+            admin: ADMIN,
             program_id,
             mint_authority: Keypair::new(),
         };
@@ -94,7 +97,7 @@ impl TestContext {
         let ix = anchor_lang::solana_program::instruction::Instruction {
             program_id: self.program_id,
             accounts: phygital_payments::accounts::InitializeConfig {
-                admin: self.admin.pubkey(),
+                admin: self.admin,
                 config: self.config_pda(),
                 system_program: anchor_lang::system_program::ID,
             }
@@ -104,7 +107,7 @@ impl TestContext {
             }
             .data(),
         };
-        Self::send_instructions(&mut self.svm, &[ix], &[&self.admin])
+        Self::send_instructions(&mut self.svm, &[ix], &[self.admin])
     }
 
     pub fn set_owner_verifier(
@@ -130,7 +133,7 @@ impl TestContext {
             }
             .data(),
         };
-        Self::send_instructions(&mut self.svm, &[ix], &[owner])
+        Self::send_instructions(&mut self.svm, &[ix], &[owner.pubkey()])
     }
 
     pub fn clear_owner_verifier(
@@ -146,7 +149,7 @@ impl TestContext {
             .to_account_metas(None),
             data: phygital_payments::instruction::ClearOwnerVerifier {}.data(),
         };
-        Self::send_instructions(&mut self.svm, &[ix], &[owner])
+        Self::send_instructions(&mut self.svm, &[ix], &[owner.pubkey()])
     }
 
     fn deploy_program(
@@ -206,7 +209,7 @@ impl TestContext {
             Mint::LEN as u64,
             &TOKEN_2022_ID,
         );
-        Self::send_instruction(&mut self.svm, create_ix, &[&self.payer, &mint])
+        Self::send_instruction(&mut self.svm, create_ix, &[self.payer.pubkey(), mint.pubkey()])
             .expect("create mint");
 
         let init_ix = initialize_mint2(
@@ -217,7 +220,7 @@ impl TestContext {
             6,
         )
         .expect("initialize_mint2");
-        Self::send_instruction(&mut self.svm, init_ix, &[&self.payer]).expect("init mint");
+        Self::send_instruction(&mut self.svm, init_ix, &[self.payer.pubkey()]).expect("init mint");
 
         mint.pubkey()
     }
@@ -234,8 +237,12 @@ impl TestContext {
             TokenAccountState::LEN as u64,
             &TOKEN_2022_ID,
         );
-        Self::send_instruction(&mut self.svm, create_ix, &[&self.payer, &token_account])
-            .expect("create token account");
+        Self::send_instruction(
+            &mut self.svm,
+            create_ix,
+            &[self.payer.pubkey(), token_account.pubkey()],
+        )
+        .expect("create token account");
 
         let init_ix = initialize_account3(
             &TOKEN_2022_ID,
@@ -244,7 +251,8 @@ impl TestContext {
             &owner,
         )
         .expect("initialize_account3");
-        Self::send_instruction(&mut self.svm, init_ix, &[&self.payer]).expect("init token account");
+        Self::send_instruction(&mut self.svm, init_ix, &[self.payer.pubkey()])
+            .expect("init token account");
 
         token_account.pubkey()
     }
@@ -259,8 +267,12 @@ impl TestContext {
             amount,
         )
         .expect("mint_to");
-        Self::send_instruction(&mut self.svm, ix, &[&self.payer, &self.mint_authority])
-            .expect("mint tokens");
+        Self::send_instruction(
+            &mut self.svm,
+            ix,
+            &[self.payer.pubkey(), self.mint_authority.pubkey()],
+        )
+        .expect("mint tokens");
     }
 
     pub fn approve_delegate(
@@ -284,7 +296,8 @@ impl TestContext {
             decimals,
         )
         .expect("approve_checked");
-        Self::send_instruction(&mut self.svm, ix, &[&self.payer, owner]).expect("approve delegate");
+        Self::send_instruction(&mut self.svm, ix, &[self.payer.pubkey(), owner.pubkey()])
+            .expect("approve delegate");
     }
 
     pub fn fund_program_authority(&mut self, asset: Pubkey) {
@@ -504,16 +517,20 @@ impl TestContext {
 
         // payer always signs; verifier signs when distinct.
         if verifier.pubkey() == self.payer.pubkey() {
-            Self::send_instructions(&mut self.svm, &instructions, &[&self.payer])
+            Self::send_instructions(&mut self.svm, &instructions, &[self.payer.pubkey()])
         } else {
-            Self::send_instructions(&mut self.svm, &instructions, &[&self.payer, verifier])
+            Self::send_instructions(
+                &mut self.svm,
+                &instructions,
+                &[self.payer.pubkey(), verifier.pubkey()],
+            )
         }
     }
 
     pub fn send_instruction(
         svm: &mut LiteSVM,
         instruction: anchor_lang::solana_program::instruction::Instruction,
-        signers: &[&Keypair],
+        signers: &[Pubkey],
     ) -> litesvm::types::TransactionResult {
         Self::send_instructions(svm, &[instruction], signers)
     }
@@ -521,16 +538,16 @@ impl TestContext {
     pub fn send_instructions(
         svm: &mut LiteSVM,
         instructions: &[anchor_lang::solana_program::instruction::Instruction],
-        signers: &[&Keypair],
+        signers: &[Pubkey],
     ) -> litesvm::types::TransactionResult {
         let blockhash = svm.latest_blockhash();
-        let payer = signers
-            .first()
-            .map(|kp| kp.pubkey())
-            .expect("at least one signer");
+        let payer = *signers.first().expect("at least one signer");
         let msg = Message::new_with_blockhash(instructions, Some(&payer), &blockhash);
-        let tx = VersionedTransaction::try_new(VersionedMessage::Legacy(msg), signers)
-            .expect("build tx");
+        let signatures = vec![Signature::default(); msg.header.num_required_signatures as usize];
+        let tx = VersionedTransaction {
+            signatures,
+            message: VersionedMessage::Legacy(msg),
+        };
         let result = svm.send_transaction(tx);
         svm.expire_blockhash();
         result
@@ -538,13 +555,12 @@ impl TestContext {
 }
 
 fn program_artifact_paths(manifest_dir: &std::path::Path, name: &str) -> Vec<std::path::PathBuf> {
-    let mut paths = Vec::new();
+    // Prefer the workspace Anchor deploy output over CARGO_TARGET_DIR — the latter
+    // can be a sandbox/cache path that still holds a stale .so.
+    let mut paths = vec![manifest_dir.join(format!("../../target/deploy/{name}.so"))];
     if let Ok(cargo_target_dir) = std::env::var("CARGO_TARGET_DIR") {
-        let base = std::path::PathBuf::from(cargo_target_dir);
-        paths.push(base.join(format!("deploy/{name}.so")));
+        paths.push(std::path::PathBuf::from(cargo_target_dir).join(format!("deploy/{name}.so")));
     }
-    let workspace_target = manifest_dir.join("../../target");
-    paths.push(workspace_target.join(format!("deploy/{name}.so")));
     paths
 }
 

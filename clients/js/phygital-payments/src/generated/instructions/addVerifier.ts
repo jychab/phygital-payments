@@ -52,7 +52,8 @@ export function getAddVerifierDiscriminatorBytes(): ReadonlyUint8Array {
 
 export type AddVerifierInstruction<
   TProgram extends string = typeof PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
-  TAccountAdmin extends string | AccountMeta<string> = string,
+  TAccountAdmin extends string | AccountMeta<string> =
+    "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF",
   TAccountConfig extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
@@ -108,7 +109,7 @@ export type AddVerifierAsyncInput<
   TAccountAdmin extends string = string,
   TAccountConfig extends string = string,
 > = {
-  admin: TransactionSigner<TAccountAdmin>;
+  admin?: TransactionSigner<TAccountAdmin>;
   config?: Address<TAccountConfig>;
   verifier: AddVerifierInstructionDataArgs["verifier"];
 };
@@ -141,6 +142,10 @@ export async function getAddVerifierInstructionAsync<
   const args = { ...input };
 
   // Resolve default values.
+  if (!accounts.admin.value) {
+    accounts.admin.value =
+      "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF" as Address<"G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF">;
+  }
   if (!accounts.config.value) {
     accounts.config.value = await findConfigPda();
   }
@@ -162,7 +167,7 @@ export type AddVerifierInput<
   TAccountAdmin extends string = string,
   TAccountConfig extends string = string,
 > = {
-  admin: TransactionSigner<TAccountAdmin>;
+  admin?: TransactionSigner<TAccountAdmin>;
   config: Address<TAccountConfig>;
   verifier: AddVerifierInstructionDataArgs["verifier"];
 };
@@ -191,6 +196,12 @@ export function getAddVerifierInstruction<
 
   // Original args.
   const args = { ...input };
+
+  // Resolve default values.
+  if (!accounts.admin.value) {
+    accounts.admin.value =
+      "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF" as Address<"G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF">;
+  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({

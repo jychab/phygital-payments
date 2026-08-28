@@ -52,7 +52,8 @@ export function getRemoveVerifierDiscriminatorBytes(): ReadonlyUint8Array {
 
 export type RemoveVerifierInstruction<
   TProgram extends string = typeof PHYGITAL_PAYMENTS_PROGRAM_ADDRESS,
-  TAccountAdmin extends string | AccountMeta<string> = string,
+  TAccountAdmin extends string | AccountMeta<string> =
+    "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF",
   TAccountConfig extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
@@ -108,7 +109,7 @@ export type RemoveVerifierAsyncInput<
   TAccountAdmin extends string = string,
   TAccountConfig extends string = string,
 > = {
-  admin: TransactionSigner<TAccountAdmin>;
+  admin?: TransactionSigner<TAccountAdmin>;
   config?: Address<TAccountConfig>;
   verifier: RemoveVerifierInstructionDataArgs["verifier"];
 };
@@ -141,6 +142,10 @@ export async function getRemoveVerifierInstructionAsync<
   const args = { ...input };
 
   // Resolve default values.
+  if (!accounts.admin.value) {
+    accounts.admin.value =
+      "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF" as Address<"G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF">;
+  }
   if (!accounts.config.value) {
     accounts.config.value = await findConfigPda();
   }
@@ -166,7 +171,7 @@ export type RemoveVerifierInput<
   TAccountAdmin extends string = string,
   TAccountConfig extends string = string,
 > = {
-  admin: TransactionSigner<TAccountAdmin>;
+  admin?: TransactionSigner<TAccountAdmin>;
   config: Address<TAccountConfig>;
   verifier: RemoveVerifierInstructionDataArgs["verifier"];
 };
@@ -195,6 +200,12 @@ export function getRemoveVerifierInstruction<
 
   // Original args.
   const args = { ...input };
+
+  // Resolve default values.
+  if (!accounts.admin.value) {
+    accounts.admin.value =
+      "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF" as Address<"G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF">;
+  }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
   return Object.freeze({

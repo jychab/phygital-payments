@@ -23,3 +23,5 @@ pub const PHYGITAL_TOKEN_PROGRAM_ID: Pubkey =
 pub const WHITELISTED_RPID: &str = "app.revibase.com";
 
 pub const WHITELISTED_ORIGIN: &str = "https://app.revibase.com";
+
+pub const ADMIN: Pubkey = pubkey!("G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF");

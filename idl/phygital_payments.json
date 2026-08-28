@@ -23,6 +23,7 @@
         {
           "name": "admin",
           "signer": true,
+          "address": "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF",
           "relations": [
             "config"
           ]
@@ -124,7 +125,8 @@
         {
           "name": "admin",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "address": "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF"
         },
         {
           "name": "config",
@@ -175,6 +177,7 @@
         {
           "name": "admin",
           "signer": true,
+          "address": "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF",
           "relations": [
             "config"
           ]

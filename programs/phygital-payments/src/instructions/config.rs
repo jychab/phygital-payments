@@ -1,12 +1,16 @@
 use anchor_lang::prelude::*;
 
+use crate::ADMIN;
 use crate::constants::{CONFIG_SEED, MAX_VERIFIERS};
 use crate::error::PhygitalError;
 use crate::state::Config;
 
 #[derive(Accounts)]
 pub struct InitializeConfig<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        address = ADMIN
+    )]
     pub admin: Signer<'info>,
 
     #[account(
@@ -39,6 +43,9 @@ pub fn initialize_config_handler(
 
 #[derive(Accounts)]
 pub struct AddVerifier<'info> {
+    #[account(
+        address = ADMIN
+    )]
     pub admin: Signer<'info>,
 
     #[account(
@@ -66,6 +73,9 @@ pub fn add_verifier_handler(ctx: Context<AddVerifier>, verifier: Pubkey) -> Resu
 
 #[derive(Accounts)]
 pub struct RemoveVerifier<'info> {
+    #[account(
+        address = ADMIN
+    )]
     pub admin: Signer<'info>,
 
     #[account(
