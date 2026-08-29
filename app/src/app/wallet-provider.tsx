@@ -11,20 +11,17 @@ import { brand } from "@/lib/copy/phygital";
 import { getChainId, RPC_URL } from "@/lib/solana/cluster";
 
 const APP_NAME = brand.company;
+const APP_URL ="https://app.revibase.com";
 
 /** ConnectorKit provider. Mounted once from `WalletRoot` (dynamic, client-only). */
 export function SolanaWalletProvider({ children }: { children: ReactNode }) {
   const { connectorConfig, mobile } = useMemo(() => {
     const chainId = getChainId();
-    const appUrl =
-      typeof window !== "undefined"
-        ? window.location.origin
-        : "https://revibase.com";
 
     return {
       connectorConfig: getDefaultConfig({
         appName: APP_NAME,
-        appUrl,
+        appUrl: APP_URL,
         autoConnect: true,
         enableMobile: true,
         clusters: [
@@ -34,13 +31,10 @@ export function SolanaWalletProvider({ children }: { children: ReactNode }) {
             url: RPC_URL,
           },
         ],
-        wallets: {
-          featured: ["Phantom", "Solflare", "Backpack"],
-        },
       }),
       mobile: getDefaultMobileConfig({
         appName: APP_NAME,
-        appUrl,
+        appUrl: APP_URL,
       }),
     };
   }, []);
