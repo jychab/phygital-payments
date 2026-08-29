@@ -4,12 +4,12 @@ import { QUERY_NO_STORE } from "@/lib/queries/http";
 import {
   evaluateCounter,
   TAP_SESSION_TTL_MS,
-} from "@/lib/accessory/tap/counter-session";
+} from "@/lib/token/tap/counter-session";
 import {
   readCounterSession,
   writeCounterSession,
-} from "@/lib/accessory/tap/counter-store";
-import { verifyDynamicUrlWithoutCounterCheck } from "@/lib/accessory/tap/verify-dynamic-url";
+} from "@/lib/token/tap/counter-store";
+import { verifyDynamicUrlWithoutCounterCheck } from "@/lib/token/tap/verify-dynamic-url";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 function json(body: unknown, status = 200) {

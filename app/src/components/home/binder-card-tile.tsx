@@ -4,11 +4,10 @@ import Link from "next/link";
 import { Lock, LockOpen } from "lucide-react";
 
 import { CollectionTokenMenu } from "@/components/home/collection-token-menu";
-import { useDasCollectible } from "@/hooks/accessory/use-das-collectible";
-import { fallbackCollectible } from "@/lib/tokens/collectible";
+import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
 import { tokenHasLinkedMint, type PhygitalToken } from "@/lib/phygital/token";
 import { collectionDetailHref } from "@/lib/journey";
-import { CardSlab } from "@/components/card/card-slab";
+import { CardSlab } from "@/components/token/card-slab";
 import { staggerStyle } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -23,13 +22,10 @@ export function BinderCardTile({
   index: number;
 }) {
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
-  const das = useDasCollectible(mint);
-  const collectible =
-    das.data ?? (das.isFetched && mint ? fallbackCollectible(mint) : null);
-  const loading = das.isLoading && !das.isFetched;
+  const { collectible, loading } = useResolvedDasCollectible(mint);
   const name = collectible?.name ?? "Card";
   const image = collectible?.image ?? null;
-  const href = collectionDetailHref("card", token.address);
+  const href = collectionDetailHref(token.address);
 
   return (
     <div

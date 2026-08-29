@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 
-import { PrivyWalletRoot } from "./privy-wallet-root";
+import { WalletRoot } from "./wallet-root";
 import { Toaster } from "@/components/ui/sonner";
 import { useResumeQueryRefresh } from "@/hooks/layout/use-resume-query-refresh";
 import {
@@ -18,7 +18,7 @@ import { queryKeys, queryOptions, shouldRetryQuery } from "@/lib/queries";
 
 /**
  * Shared by all routes: React Query (localStorage-persisted, only browser cache) + toasts.
- * One Privy tree (`PrivyWalletRoot`) — the SDK loads only when a route gates on it.
+ * One wallet tree (`WalletRoot`) — ConnectorKit always available for the wallet chip.
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -55,11 +55,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
         });
       }}
     >
-      <PrivyWalletRoot>
+      <WalletRoot>
         <ResumeQueryRefresh />
         {children}
         <Toaster richColors position="top-center" />
-      </PrivyWalletRoot>
+      </WalletRoot>
     </PersistQueryClientProvider>
   );
 }

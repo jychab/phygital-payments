@@ -19,7 +19,7 @@ export function WalletSyncGate({
   const wallet = useExpectedWallet(linkedOwner ?? "");
   const { disconnect } = useSolanaAddress();
   const blocked = Boolean(
-    linkedOwner && wallet.ready && wallet.isConnected && wallet.wrongWallet,
+    linkedOwner && wallet.isConnected && wallet.wrongWallet,
   );
 
   if (!blocked) return children;

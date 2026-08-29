@@ -80,7 +80,7 @@ describe("toUserErrorMessage", () => {
     ).toBe("Pay Isn’t Ready");
   });
 
-  it("maps a closed onramp sheet to Cancelled", () => {
+  it("maps a closed wallet sheet to Cancelled", () => {
     expect(
       toUserErrorMessage(new Error("The user closed the flow")),
     ).toBe("Cancelled");

@@ -8,7 +8,7 @@ import { getDefaultMint, isDefaultMint } from "@/lib/tokens/payment-token";
 export type PaymentRequest = {
   amount: string | null;
   mint: Address;
-  /** Recipient from `?recipient=` — required for Collect to run. */
+  /** Recipient from `?recipient=`, or null when Collect should use the connected wallet. */
   recipient: Address | null;
   /** True when `?recipient=` was present (even if invalid). */
   hasRecipientParam: boolean;

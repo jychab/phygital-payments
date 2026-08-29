@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import type { Address } from "@solana/kit";
 
-import { PrivyGate } from "@/app/privy-wallet-root";
 import { TokenSymbol } from "@/components/shared/token-chip";
+import { WrongWalletNotice } from "@/components/shared/wallet-notices";
 import { Button } from "@/components/ui/button";
 import { useCreateAtaMutation } from "@/hooks/collect/use-create-ata-mutation";
 import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
@@ -21,8 +21,8 @@ import type { PaymentToken } from "@/lib/tokens/payment-token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 /**
- * In-place receive-account setup on `/collect`. Same connect → sign flow as
- * claim finish (`FinishClaimPanel`): Connect wallet, then confirm the tx.
+ * In-place receive-account setup on `/collect`.
+ * Connected wallet must match `recipient`.
  */
 export function CollectAtaSetup({
   recipient,
@@ -33,29 +33,7 @@ export function CollectAtaSetup({
   mint: Address;
   token: PaymentToken;
 }) {
-  return (
-    <PrivyGate
-      fallback={
-        <div className="flex justify-center py-2">
-          <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
-        </div>
-      }
-    >
-      <CollectAtaSetupCard recipient={recipient} mint={mint} token={token} />
-    </PrivyGate>
-  );
-}
-
-function CollectAtaSetupCard({
-  recipient,
-  mint,
-  token,
-}: {
-  recipient: Address;
-  mint: Address;
-  token: PaymentToken;
-}) {
-  const { ready, isConnected, matched, wrongWallet, ownerShort, connect } =
+  const { isConnected, matched, wrongWallet, ownerShort, connect } =
     useExpectedWallet(String(recipient));
   const { disconnect } = useSolanaAddress();
   const signer = useWalletKitSigner();
@@ -94,11 +72,7 @@ function CollectAtaSetupCard({
           />{" "}
           yet.
         </p>
-        {!ready ? (
-          <div className="flex justify-center py-1">
-            <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
-          </div>
-        ) : !isConnected ? (
+        {!isConnected ? (
           <Button
             type="button"
             size="lg"
@@ -110,9 +84,7 @@ function CollectAtaSetupCard({
           </Button>
         ) : wrongWallet ? (
           <div className="space-y-2">
-            <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
-              Wrong wallet. Disconnect, then connect {ownerShort}.
-            </p>
+            <WrongWalletNotice ownerShort={ownerShort} />
             <Button
               type="button"
               size="lg"

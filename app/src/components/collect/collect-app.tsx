@@ -8,14 +8,17 @@ import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
 import { CollectPanel } from "@/components/collect/collect-panel";
 import { HistoryPanel } from "@/components/home/history-panel";
 import { BackLink } from "@/components/shared/back-link";
+import { ConnectGate } from "@/components/shared/connect-gate";
 import { Button } from "@/components/ui/button";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
+import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import type { PaymentRequest } from "@/lib/collect/payment-request";
+import { tryParseAddress } from "@/lib/solana/address";
 
 /**
- * Route `/collect` — merchant receive. Recipient always comes from
- * `?recipient=` (URL). Activity is public-by-address (no Privy).
- * Privy loads only inside ATA setup when the receive account is missing.
+ * Route `/collect` — merchant receive.
+ * Recipient from `?recipient=` when present; otherwise the connected wallet.
+ * Embeds still require `?recipient=` (sealed chip, no connect).
  */
 export function CollectApp({
   paymentRequest,
@@ -23,33 +26,56 @@ export function CollectApp({
   paymentRequest: PaymentRequest;
 }) {
   const embedded = useIsEmbedded();
+  const { address, connect } = useSolanaAddress();
   const [view, setView] = useState<"collect" | "activity">("collect");
 
   if (embedded === null) {
     return <EmbedBoot />;
   }
 
-  const recipient = paymentRequest.recipient;
-
-  if (!recipient) {
+  if (paymentRequest.hasRecipientParam && !paymentRequest.recipient) {
     return (
       <EmbedError
         title="This payment link isn’t set up"
-        body={
-          paymentRequest.hasRecipientParam
-            ? "The link looks incomplete. Ask for a new one."
-            : "Open a payment link with a recipient address, or ask the seller for one."
-        }
+        body="The link looks incomplete. Ask for a new one."
       />
     );
   }
 
+  if (embedded && !paymentRequest.recipient) {
+    return (
+      <EmbedError
+        title="This payment link isn’t set up"
+        body="Open a payment link with a recipient address, or ask the seller for one."
+      />
+    );
+  }
+
+  const recipient =
+    paymentRequest.recipient ??
+    (address ? tryParseAddress(address) : null);
+
+  if (!recipient) {
+    return (
+      <AppShell modeLabel="Collect" layout="compact">
+        <div className="flex flex-1 flex-col items-center justify-center py-14">
+          <ConnectGate
+            title="Connect your wallet"
+            body="Payments will be sent to the wallet you connect."
+            onConnect={connect}
+          />
+        </div>
+      </AppShell>
+    );
+  }
+
   const recipientStr = recipient.toString();
+  const sealedFromUrl = Boolean(paymentRequest.recipient);
 
   return (
     <AppShell
-      recipient={recipientStr}
-      walletActions="display-only"
+      recipient={sealedFromUrl ? recipientStr : undefined}
+      walletActions={embedded ? "display-only" : "full"}
       modeLabel="Collect"
       layout="compact"
       headerExtra={

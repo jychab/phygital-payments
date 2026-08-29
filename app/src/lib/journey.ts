@@ -1,9 +1,9 @@
 /** Collection hub deep-link helpers for owned-item detail. */
 
-/** URL `from=` value when opening `/card` or `/accessory` from Collection. */
+/** URL `from=` value when opening `/token` from Collection. */
 export const COLLECTION_FROM = "collection";
 
-/** True when `/card` or `/accessory` was opened from the Collection hub.
+/** True when `/token` was opened from the Collection hub.
  * Navigation hint only — Confirmed still requires owner wallet match
  * (`CollectionVerifiedSeed`). */
 export function isFromCollection(
@@ -13,13 +13,6 @@ export function isFromCollection(
 }
 
 /** Collection detail URL with `from=collection` for Back + verified seed. */
-export function collectionDetailHref(
-  route: "card" | "accessory",
-  tokenAddress: string,
-): string {
-  const path =
-    route === "card"
-      ? `/card?address=${encodeURIComponent(tokenAddress)}`
-      : `/accessory?address=${encodeURIComponent(tokenAddress)}`;
-  return `${path}&from=${COLLECTION_FROM}`;
+export function collectionDetailHref(tokenAddress: string): string {
+  return `/token?address=${encodeURIComponent(tokenAddress)}&from=${COLLECTION_FROM}`;
 }

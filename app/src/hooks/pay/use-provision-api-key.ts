@@ -1,36 +1,22 @@
 "use client";
 
-import {
-  useSignMessage,
-  useWallets,
-} from "@privy-io/react-auth/solana";
-
 import { bytesToBase64 } from "@/lib/crypto/base64";
 import { verifyStoredApiKey } from "@/lib/pay/api-key-client";
 import { storeApiKey } from "@/lib/pay/api-key-store";
 import { QueryHttpError, queryFetch } from "@/lib/queries/http";
+import { useWalletSignMessage } from "@/hooks/wallet/use-wallet-sign-message";
 
 type ProvisionArgs = {
   wallet: string;
-  signMessage: ReturnType<typeof useSignMessage>["signMessage"];
-  solanaWallet: NonNullable<ReturnType<typeof useWallets>["wallets"][number]>;
+  signMessage: (message: Uint8Array) => Promise<Uint8Array>;
   rotate?: boolean;
 };
 
 async function provisionApiKey(args: ProvisionArgs): Promise<string> {
   const message = `phygital-pay:provision:${args.wallet}:${Date.now()}`;
-  const { signature } = await args.signMessage({
-    message: new TextEncoder().encode(message),
-    wallet: args.solanaWallet,
-    options: {
-      uiOptions: {
-        title: args.rotate ? "Rotate API key" : "Generate API key",
-        description: args.rotate
-          ? "Other browsers will stop working. This does not move funds."
-          : "Revibase Pay will work in this browser. This does not move funds.",
-      },
-    },
-  });
+  const signature = await args.signMessage(
+    new TextEncoder().encode(message),
+  );
 
   const res = await queryFetch("/api/preauth/provision", {
     method: "POST",
@@ -62,17 +48,13 @@ async function provisionAndStoreApiKey(
 
 /** Wallet-sign a provision message, store the issued API key in this browser. */
 export function useProvisionApiKey() {
-  const { wallets } = useWallets();
-  const { signMessage } = useSignMessage();
-  const solanaWallet = wallets[0] ?? null;
+  const { signMessage } = useWalletSignMessage();
 
   return {
     async provisionKey(wallet: string, opts?: { rotate?: boolean }) {
-      if (!solanaWallet) throw new Error("Connect your wallet first");
       await provisionAndStoreApiKey({
         wallet,
         signMessage,
-        solanaWallet,
         rotate: opts?.rotate,
       });
     },

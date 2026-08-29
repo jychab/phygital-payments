@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
-import { PrivyGate } from "@/app/privy-wallet-root";
 import { CopyableAddress } from "@/components/shared/copyable-address";
 import { brand } from "@/lib/copy/phygital";
 import {
@@ -23,7 +22,7 @@ const WalletChip = dynamic(
 export type WalletActionsMode = "full" | "display-only" | "hidden";
 
 /** Product / object chrome labels — not company name. */
-export type AppMode = "Collection" | "Collect" | "Accessory" | "Card" | "Pay";
+export type AppMode = "Collection" | "Collect" | "Token" | "Pay";
 
 /** Chrome for every route: company wordmark OR product/object label. */
 export function AppShell({
@@ -85,15 +84,7 @@ export function AppShell({
           <div className="flex shrink-0 items-center gap-1">
             {headerExtra}
             {walletActions === "full" ? (
-              <PrivyGate
-                fallback={
-                  <span className="inline-flex h-8 items-center rounded-full border border-border/60 px-2.5 text-xs text-muted-foreground">
-                    …
-                  </span>
-                }
-              >
-                <WalletChip />
-              </PrivyGate>
+              <WalletChip />
             ) : walletActions === "display-only" && recipient ? (
               <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-2.5 py-1.5 text-xs">
                 <span

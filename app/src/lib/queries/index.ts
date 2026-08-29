@@ -9,12 +9,12 @@
  *   lib/pay + hooks/pay         This Browser (Pay key), Hold to Pay, limits,
  *                               Pay bootstrap (holdings ∩ delegates)
  *   lib/collect + hooks/collect `/collect` receive + ATA setup
- *   lib/accessory + hooks/accessory  NFC tap, Hold to Check, claim, `/accessory?token=`
- *   lib/phygital + hooks/phygital    mint vs no-mint surface (`/card` vs `/accessory`)
- *   lib/home + hooks/home       Activity + Accessories tab
+ *   lib/token + hooks/token          NFC tap, Hold to Check, claim, `/token`
+ *   lib/phygital                     Phygital token account helpers
+ *   lib/home + hooks/home       Collection hub + Activity
  *   lib/tokens + hooks/tokens   mint catalog, holdings (`use-payment-tokens`)
  *   lib/server                  API routes only (`import "server-only"`)
- *   hooks/wallet                Privy address, expected-wallet match, query refresh
+ *   hooks/wallet                ConnectorKit address, expected-wallet match, query refresh
  *   hooks/layout                iframe / in-app browser
  */
 
@@ -124,12 +124,6 @@ export const queryKeys = {
     all: () => ["tapVerify"] as const,
     byParams: (params: string) =>
       [...queryKeys.tapVerify.all(), params] as const,
-  },
-
-  pendingClaim: {
-    all: () => ["pendingClaim"] as const,
-    byToken: (token: string | null) =>
-      [...queryKeys.pendingClaim.all(), token] as const,
   },
 
   apiKey: {

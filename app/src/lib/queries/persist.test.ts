@@ -58,7 +58,6 @@ describe("isPersistedQueryKey", () => {
     expect(isPersistedQueryKey(["verifiedTokens"])).toBe(false);
     expect(isPersistedQueryKey(["history", "owner"])).toBe(false);
     expect(isPersistedQueryKey(["tapVerify", "pk=1"])).toBe(false);
-    expect(isPersistedQueryKey(["pendingClaim", "token"])).toBe(false);
     expect(isPersistedQueryKey(["ataStatus", "owner", "mint"])).toBe(false);
     expect(isPersistedQueryKey(["mintProgram", "mint"])).toBe(false);
     expect(isPersistedQueryKey(["preauthRequired", "owner"])).toBe(false);

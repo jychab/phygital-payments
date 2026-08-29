@@ -132,12 +132,11 @@ function ConfirmPaymentsRow({
   pending: boolean;
 }) {
   const { setRequired } = useSetPreauthRequired();
-  const { matched, ready, connect, wrongWallet, ownerShort } =
+  const { matched, connect, wrongWallet, ownerShort } =
     useExpectedWallet(owner);
   const [busy, setBusy] = useState(false);
 
   async function onToggle() {
-    if (!ready) return;
     if (wrongWallet) return;
     if (!matched) {
       connect();
@@ -164,9 +163,9 @@ function ConfirmPaymentsRow({
         }
         truncate={false}
         onSelect={() => void onToggle()}
-        disabled={busy || pending || !ready || wrongWallet}
+        disabled={busy || pending || wrongWallet}
         trailing={
-          busy || pending || !ready ? (
+          busy || pending ? (
             <LoaderCircle className="size-3.5 animate-spin text-muted-foreground" />
           ) : (
             <span
@@ -184,7 +183,7 @@ function ConfirmPaymentsRow({
         <p className="px-2 text-center text-xs text-destructive">
           Disconnect above, then connect {ownerShort} to change this.
         </p>
-      ) : !matched && ready ? (
+      ) : !matched ? (
         <p className="px-2 text-center text-xs text-muted-foreground">
           Connect {ownerShort} to change confirmation.
         </p>

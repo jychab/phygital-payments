@@ -3,9 +3,6 @@
 
 NEXTJS_ENV=development
 
-# Privy (required for login + Solana wallets)
-NEXT_PUBLIC_PRIVY_APP_ID=
-
 # Solana
 # NEXT_PUBLIC_SOLANA_CLUSTER=devnet
 # NEXT_PUBLIC_SOLANA_RPC_URL=https://api.devnet.solana.com

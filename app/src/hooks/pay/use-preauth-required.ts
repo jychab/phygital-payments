@@ -1,12 +1,9 @@
 "use client";
 
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import {
-  useSignMessage,
-  useWallets,
-} from "@privy-io/react-auth/solana";
 
 import { markApiKeyVerified } from "@/hooks/pay/use-verified-api-key";
+import { useWalletSignMessage } from "@/hooks/wallet/use-wallet-sign-message";
 import { bytesToBase64 } from "@/lib/crypto/base64";
 import { readApiKey, storeApiKey } from "@/lib/pay/api-key-store";
 import { queryFetch, queryKeys, queryOptions, readJson } from "@/lib/queries";
@@ -48,29 +45,13 @@ export function markPreauthRequired(
 /** Wallet-sign to turn Confirm Payments on or off. */
 export function useSetPreauthRequired() {
   const queryClient = useQueryClient();
-  const { wallets } = useWallets();
-  const { signMessage } = useSignMessage();
-  const solanaWallet = wallets[0] ?? null;
+  const { signMessage } = useWalletSignMessage();
 
   return {
     async setRequired(wallet: string, required: boolean) {
-      if (!solanaWallet) throw new Error("Connect your wallet first");
       const action = required ? "on" : "off";
       const message = `${REQUIRED_MESSAGE_PREFIX}${wallet}:${action}:${Date.now()}`;
-      const { signature } = await signMessage({
-        message: new TextEncoder().encode(message),
-        wallet: solanaWallet,
-        options: {
-          uiOptions: {
-            title: required
-              ? "Turn On Confirmation"
-              : "Turn Off Confirmation",
-            description: required
-              ? "You’ll press Pay here before a tap goes through."
-              : "Payments will go through when you tap, without pressing Pay.",
-          },
-        },
-      });
+      const signature = await signMessage(new TextEncoder().encode(message));
 
       const res = await queryFetch("/api/preauth/required", {
         method: "POST",

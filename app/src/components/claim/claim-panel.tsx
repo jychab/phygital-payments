@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Nfc } from "lucide-react";
 
 import { GateMessage } from "@/components/layout/gate-message";
+import { ConnectGate } from "@/components/shared/connect-gate";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { InlineError } from "@/components/shared/inline-error";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
@@ -12,39 +13,53 @@ import { BackLink } from "@/components/shared/back-link";
 import { StepProgress } from "@/components/shared/step-progress";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
-import { createPendingClaim } from "@/lib/accessory/pending-claim-client";
+import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
+import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
 import {
   assertCaptureReady,
+  assertClaimReady,
   captureClaimTap,
-} from "@/lib/accessory/claim";
-import { serializePendingClaimSession } from "../../../shared/pending-claim-wire";
-import { claimHref, surfaceForToken } from "@/lib/phygital/surface";
+  finishClaim,
+} from "@/lib/token/claim";
 import { copy } from "@/lib/copy/phygital";
 import type { PhygitalToken } from "@/lib/phygital/token";
+import {
+  invalidateOwnerQueries,
+  invalidatePhygitalTokenQueries,
+} from "@/lib/queries";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
-type Stage = "ready" | "reading";
+type Stage = "ready" | "reading" | "confirm" | "confirming";
+
+type CapturedTap = Awaited<ReturnType<typeof captureClaimTap>>;
 
 /**
- * Safari NFC tap, then replace to `/card?token=` or `/accessory?token=`
- * for wallet connect.
+ * In-place claim: NFC tap → connect wallet → confirm.
+ * On success, calls `onClaimed` so the parent home can update owner and exit claim UI.
  */
 export function ClaimPanel({
   token,
+  noun,
   unclaimed = false,
   onBack,
+  onClaimed,
 }: {
   token: PhygitalToken;
+  /** User-facing word from mint (`card`) or no-mint (`accessory`). */
+  noun: "card" | "accessory";
   unclaimed?: boolean;
   onBack?: () => void;
+  onClaimed: (owner: string) => void;
 }) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const inApp = useIsInAppBrowser();
+  const { address, connect } = useSolanaAddress();
+  const signer = useWalletKitSigner();
 
   const [stage, setStage] = useState<Stage>("ready");
   const [error, setError] = useState<string | null>(null);
+  const [tap, setTap] = useState<CapturedTap | null>(null);
 
-  const noun = surfaceForToken(token);
   const title = unclaimed ? copy.addToWallet : "Move to a New Wallet";
 
   async function onCapture() {
@@ -60,7 +75,7 @@ export function ClaimPanel({
 
     setStage("reading");
     try {
-      const { session, auth } = await captureClaimTap({
+      const captured = await captureClaimTap({
         token: token.address,
         onPasskeyComplete: () => {
           try {
@@ -70,19 +85,55 @@ export function ClaimPanel({
           }
         },
       });
-
-      const pending = await createPendingClaim({
-        session: serializePendingClaimSession(session),
-        auth,
-      });
-
-      router.replace(claimHref(pending.token, token));
+      setTap(captured);
+      setStage("confirm");
     } catch (err) {
       setStage("ready");
       setError(
         toUserErrorMessage(
           err,
           `Couldn’t read the ${noun}. Turn on NFC and hold it to the back of your phone.`,
+        ),
+      );
+    }
+  }
+
+  async function onFinish() {
+    if (!signer || !address || !tap) return;
+    setError(null);
+
+    try {
+      assertClaimReady(token, signer.address);
+    } catch (err) {
+      setError(
+        toUserErrorMessage(err, `Couldn’t add this ${noun}. Try again.`),
+      );
+      return;
+    }
+
+    setStage("confirming");
+    try {
+      await finishClaim({
+        session: tap.session,
+        auth: tap.auth,
+        recipient: signer,
+      });
+
+      invalidateOwnerQueries(queryClient, address);
+      await invalidatePhygitalTokenQueries(queryClient, {
+        address: String(token.address),
+        identifier: token.identifier,
+        secp256r1PublicKey: token.secp256r1PublicKey,
+        currentOwner: address,
+      });
+
+      onClaimed(address);
+    } catch (err) {
+      setStage("confirm");
+      setError(
+        toUserErrorMessage(
+          err,
+          "That didn't go through. Approve in your wallet and try again.",
         ),
       );
     }
@@ -113,6 +164,66 @@ export function ClaimPanel({
     );
   }
 
+  if (stage === "confirming") {
+    return (
+      <div className="flex flex-1 flex-col gap-6 py-2">
+        <StepProgress
+          step={2}
+          total={2}
+          labels={[copy.claimStepHold, copy.claimStepConfirm]}
+        />
+        <NfcHoldStatus
+          title="Confirm in wallet…"
+          body="Approve in your wallet to continue."
+          busy
+        />
+      </div>
+    );
+  }
+
+  if (stage === "confirm") {
+    return (
+      <div className="flex flex-1 flex-col gap-5 py-2">
+        <StepProgress
+          step={2}
+          total={2}
+          labels={[copy.claimStepHold, copy.claimStepConfirm]}
+        />
+
+        <div className="space-y-1.5 text-center">
+          <p className="text-base font-medium text-foreground">
+            Link your wallet
+          </p>
+          <p className="mx-auto max-w-72 text-sm text-muted-foreground">
+            The hold is done — connect the wallet that should own this {noun},
+            then confirm. {copy.claimNetworkFee}
+          </p>
+        </div>
+
+        {!address ? (
+          <ConnectGate
+            title="Connect your wallet"
+            body={`This wallet will own the ${noun}.`}
+            onConnect={connect}
+          />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {error ? <InlineError>{error}</InlineError> : null}
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              disabled={!signer}
+              onClick={() => void onFinish()}
+            >
+              {error ? "Try again" : "Confirm in wallet"}
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-5">
       {onBack ? <BackLink onClick={onBack} /> : null}
@@ -124,7 +235,7 @@ export function ClaimPanel({
       <GateMessage
         icon={<Nfc className="size-5 text-muted-foreground" />}
         title={title}
-        body={`Stay in Safari or Chrome and hold your ${noun} to this phone. After it reads, you’ll connect a wallet — that step can open your wallet app. ${copy.claimNetworkFee}`}
+        body={`Stay in Safari or Chrome and hold your ${noun} to this phone. Then connect a wallet and confirm. ${copy.claimNetworkFee}`}
         action={
           <div className="flex w-full max-w-64 flex-col gap-3">
             {error ? <InlineError>{error}</InlineError> : null}

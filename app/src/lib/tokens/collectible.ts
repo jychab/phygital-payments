@@ -1,6 +1,6 @@
 import { shortAddress } from "@/lib/utils";
 
-/** Lean DAS collectible for `/card` — not a payment (fungible) token. */
+/** Lean DAS collectible for minted `/token` UI — not a payment (fungible) token. */
 export type Collectible = {
   mint: string;
   name: string;

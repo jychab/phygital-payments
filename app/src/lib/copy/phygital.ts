@@ -49,8 +49,7 @@ export type ProductId = keyof typeof products;
 /** Document titles for object / task surfaces. */
 export const pageTitles = {
   home: products.collection.title,
-  card: "Card — Revibase",
-  accessory: "Accessory — Revibase",
+  token: "Token — Revibase",
   collect: products.collect.title,
 } as const;
 

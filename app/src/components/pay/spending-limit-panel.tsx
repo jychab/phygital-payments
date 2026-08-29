@@ -12,7 +12,6 @@ import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import { GateMessage } from "@/components/layout/gate-message";
-import { useBuyUsdc } from "@/hooks/wallet/use-buy-usdc";
 import { useDelegateStatus } from "@/hooks/pay/use-delegate-status";
 import { useMintProgram } from "@/hooks/tokens/use-mint-program";
 import {
@@ -29,10 +28,11 @@ import {
   resolvePaymentToken,
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
-import { ONRAMP_DEFAULT_AMOUNT } from "@/lib/wallet/fiat-onramp";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 import { shortAddress } from "@/lib/utils";
+
+const DEFAULT_LIMIT_AMOUNT = "50";
 
 function tryUiAmountToRaw(amount: string, decimals: number): bigint | null {
   try {
@@ -71,10 +71,7 @@ export function SpendingLimitPanel({
   const { address: walletAddress, matched, ownerShort } =
     useExpectedWallet(owner);
   const mintAddress = address(mint);
-  const [amount, setAmount] = useState(ONRAMP_DEFAULT_AMOUNT);
-  const { buyUsdc, pending: onrampPending } = useBuyUsdc(
-    matched ? owner : null,
-  );
+  const [amount, setAmount] = useState(DEFAULT_LIMIT_AMOUNT);
 
   const seeded =
     walletMatch?.status &&
@@ -108,10 +105,8 @@ export function SpendingLimitPanel({
   const busy =
     setAllowance.isPending ||
     revoke.isPending ||
-    onrampPending ||
     (!seeded && statusQuery.isLoading);
   const decimals = mintQuery.data?.decimals ?? token.decimals;
-  const canBuyUsdc = isDefaultMint(mint) && matched;
 
   const limitRaw = tryUiAmountToRaw(amount, decimals);
 
@@ -197,34 +192,15 @@ export function SpendingLimitPanel({
           title={`Add ${token.symbol} first`}
           body={
             isDefaultMint(mint)
-              ? "Add USDC to this wallet to set a spending limit."
-              : "Add some of this token to this wallet to set a spending limit."
+              ? "Add USDC to this wallet, then tap refresh."
+              : "Add some of this token to this wallet, then tap refresh."
           }
           action={
             <div className="flex w-full max-w-xs flex-col gap-2">
-              {canBuyUsdc ? (
-                <Button
-                  type="button"
-                  size="lg"
-                  className="w-full"
-                  onClick={() =>
-                    void buyUsdc(amount || ONRAMP_DEFAULT_AMOUNT)
-                  }
-                  disabled={busy}
-                >
-                  {onrampPending ? (
-                    <>
-                      <LoaderCircle className="size-4 animate-spin" />
-                      Opening…
-                    </>
-                  ) : (
-                    "Buy USDC"
-                  )}
-                </Button>
-              ) : isDefaultMint(mint) && !matched ? (
+              {!matched ? (
                 <ExpectedWalletConnect
                   owner={owner}
-                  hint={`Connect ${ownerShort} to buy USDC.`}
+                  hint={`Connect ${ownerShort} to continue.`}
                   disabled={busy}
                 />
               ) : null}

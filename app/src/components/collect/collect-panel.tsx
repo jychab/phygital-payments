@@ -90,15 +90,16 @@ function syncCollectUrl(args: {
 }
 
 /**
- * Collect receive UI. Settle-to wallet is always `?recipient=` from the URL.
- * Merchant chooses mint. Missing ATA loads Privy in place (standalone only).
+ * Collect receive UI. Settle-to is `?recipient=` when present, else the
+ * connected wallet (see `CollectApp`). Merchant chooses mint. Missing ATA
+ * loads wallet connect in place (standalone only).
  */
 export function CollectPanel({
   paymentRequest,
   allowWalletSetup = false,
 }: {
   paymentRequest: PaymentRequest & { recipient: Address };
-  /** Standalone Collect: Privy connect + create ATA when the receive account is missing. */
+  /** Standalone Collect: wallet connect + create ATA when the receive account is missing. */
   allowWalletSetup?: boolean;
 }) {
   const recipient = paymentRequest.recipient;

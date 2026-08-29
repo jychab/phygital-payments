@@ -10,7 +10,6 @@ import { BackLink } from "@/components/shared/back-link";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenSymbol } from "@/components/shared/token-chip";
-import { formatCountdown } from "@/components/shared/expiry-countdown";
 import { Button } from "@/components/ui/button";
 import {
   useHoldToPay,
@@ -23,13 +22,7 @@ import {
   resolvePaymentToken,
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
-import { shortAddress } from "@/lib/utils";
-import { cn } from "@/lib/utils";
-
-export {
-  HoldToPayHint,
-  HoldToPayIdleActions,
-} from "@/components/pay/hold-to-pay-actions";
+import { shortAddress, cn } from "@/lib/utils";
 
 /**
  * Pay home: ready to tap, or Press Pay when Confirm Payments is on.
@@ -213,7 +206,7 @@ export function HoldToPayPhaseView({
         title="Hold to Pay"
         body={
           secondsLeft > 0
-            ? `${formatCountdown(secondsLeft)} remaining`
+            ? `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")} remaining`
             : "Confirming payment…"
         }
         pulsing

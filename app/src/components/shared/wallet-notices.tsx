@@ -1,6 +1,6 @@
 "use client";
 
-import { LoaderCircle, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
@@ -24,27 +24,6 @@ export function WrongWalletNotice({
   );
 }
 
-export function ConnectWalletNotice({
-  ownerShort,
-  hint,
-  className,
-}: {
-  ownerShort: string;
-  hint?: string;
-  className?: string;
-}) {
-  return (
-    <p
-      className={
-        className ??
-        "rounded-xl border border-border/60 bg-muted/25 px-3 py-2 text-center text-xs text-muted-foreground"
-      }
-    >
-      {hint ?? `Connect ${ownerShort} above to continue.`}
-    </p>
-  );
-}
-
 /** Connect CTA when the expected wallet is not linked yet. */
 export function ExpectedWalletConnect({
   owner,
@@ -57,16 +36,8 @@ export function ExpectedWalletConnect({
   label?: string;
   disabled?: boolean;
 }) {
-  const { ready, wrongWallet, matched, ownerShort, connect } =
+  const { wrongWallet, matched, ownerShort, connect } =
     useExpectedWallet(owner);
-
-  if (!ready) {
-    return (
-      <div className="flex justify-center py-2">
-        <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   if (wrongWallet) {
     return (

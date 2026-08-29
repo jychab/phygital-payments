@@ -12,7 +12,7 @@ import { LoadingStatus } from "@/components/shared/loading-status";
 import { MotionSection } from "@/components/shared/motion-section";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
-import { usePrefetchDasCollectibles } from "@/hooks/accessory/use-das-collectible";
+import { usePrefetchDasCollectibles } from "@/hooks/token/use-das-collectible";
 import { usePhygitalTokensByOwner } from "@/hooks/home/use-phygital-tokens-by-owner";
 import { collectionDetailHref } from "@/lib/journey";
 import { tokenHasLinkedMint, type PhygitalToken } from "@/lib/phygital/token";
@@ -160,7 +160,7 @@ function AccessoryRow({
       )}
     >
       <Link
-        href={collectionDetailHref("accessory", token.address)}
+        href={collectionDetailHref(token.address)}
         className={cn(
           "flex min-w-0 flex-1 items-center gap-3 px-3.5 py-3",
           "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
