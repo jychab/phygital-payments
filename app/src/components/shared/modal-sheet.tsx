@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { galleryAnimate } from "@/lib/motion";
 import { shellLayoutClass } from "@/lib/layout";
@@ -66,9 +67,10 @@ export function ModalSheet({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
+  // Portal past card/gallery transforms so `fixed` is viewport-relative.
+  return createPortal(
     <div
       className={cn(
         "fixed inset-0 z-50 flex justify-center p-4",
@@ -103,6 +105,7 @@ export function ModalSheet({
         ) : null}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
