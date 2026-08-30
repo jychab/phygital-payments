@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { CheckCircle2, LoaderCircle, Nfc } from "lucide-react";
 
 import { galleryAnimate } from "@/lib/motion";
@@ -20,6 +20,7 @@ export function CollectibleOrb({
   onClick,
   ariaLabel,
   className,
+  style,
 }: {
   src?: string | null;
   alt?: string;
@@ -30,6 +31,7 @@ export function CollectibleOrb({
   onClick?: () => void;
   ariaLabel?: string;
   className?: string;
+  style?: CSSProperties;
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const shell = size === "lg" ? "size-28" : "size-24";
@@ -47,6 +49,7 @@ export function CollectibleOrb({
         galleryAnimate.scaleIn,
         className,
       )}
+      style={style}
     >
       <div
         className={cn(

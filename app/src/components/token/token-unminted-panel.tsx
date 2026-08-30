@@ -6,9 +6,10 @@ import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { CopyableAddress } from "@/components/shared/copyable-address";
 import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
 import { InlineError } from "@/components/shared/inline-error";
-import { TokenStickyActions } from "@/components/token/token-sticky-actions";
+import { StickyActions } from "@/components/shared/sticky-actions";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy/phygital";
+import { STICKY_ENTER_DELAY_MS } from "@/lib/motion";
 import {
   tokenAllowsPay,
   isUnclaimedToken,
@@ -71,7 +72,7 @@ export function TokenUnmintedPanel({
       />
 
       {hasSticky ? (
-        <TokenStickyActions>
+        <StickyActions enterDelayMs={STICKY_ENTER_DELAY_MS}>
           {showVerify ? (
             <Button
               type="button"
@@ -95,7 +96,7 @@ export function TokenUnmintedPanel({
           ) : null}
           {showPay ? payAction : null}
           {collectAction}
-        </TokenStickyActions>
+        </StickyActions>
       ) : null}
     </div>
   );

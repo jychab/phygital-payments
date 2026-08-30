@@ -6,6 +6,7 @@ import { LoaderCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { BackLink } from "@/components/shared/back-link";
+import { StickyActions } from "@/components/shared/sticky-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { markApiKeyVerified } from "@/hooks/pay/use-verified-api-key";
@@ -80,38 +81,36 @@ export function PastePayKeyPanel({
         className="font-mono"
       />
 
-      <div className="mt-auto flex flex-col items-center gap-2.5">
-        <div className="flex w-full max-w-xs flex-col gap-2.5">
+      <StickyActions blur={false}>
+        <Button
+          type="button"
+          size="lg"
+          className="w-full"
+          onClick={() => void onSave()}
+          disabled={busy || !pasteValue.trim()}
+        >
+          {busy ? (
+            <>
+              <LoaderCircle className="size-4 animate-spin" />
+              Checking…
+            </>
+          ) : (
+            "Continue"
+          )}
+        </Button>
+        {onNeedWallet ? (
           <Button
             type="button"
+            variant="ghost"
             size="lg"
             className="w-full"
-            onClick={() => void onSave()}
-            disabled={busy || !pasteValue.trim()}
+            onClick={onNeedWallet}
+            disabled={busy}
           >
-            {busy ? (
-              <>
-                <LoaderCircle className="size-4 animate-spin" />
-                Checking…
-              </>
-            ) : (
-              "Continue"
-            )}
+            {payCopy.generateKey}
           </Button>
-          {onNeedWallet ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="lg"
-              className="w-full"
-              onClick={onNeedWallet}
-              disabled={busy}
-            >
-              {payCopy.generateKey}
-            </Button>
-          ) : null}
-        </div>
-      </div>
+        ) : null}
+      </StickyActions>
     </div>
   );
 }

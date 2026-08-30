@@ -6,7 +6,7 @@ import { CollectibleDetails } from "@/components/token/collectible-details";
 import { CollectibleHeader } from "@/components/token/collectible-header";
 import { CollectibleHero } from "@/components/token/collectible-hero";
 import { CollectibleShortcuts } from "@/components/token/collectible-shortcuts";
-import { TokenStickyActions } from "@/components/token/token-sticky-actions";
+import { StickyActions } from "@/components/shared/sticky-actions";
 import { InlineError } from "@/components/shared/inline-error";
 import { MotionSection } from "@/components/shared/motion-section";
 import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useCollectibleShortcuts } from "@/hooks/token/use-collectible-shortcuts";
 import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
 import { copy } from "@/lib/copy/phygital";
+import { STICKY_ENTER_DELAY_MS } from "@/lib/motion";
 import {
   isUnclaimedToken,
   tokenHasLinkedMint,
@@ -128,7 +129,7 @@ export function TokenMintedPanel({
       </div>
 
       {hasSticky ? (
-        <TokenStickyActions>
+        <StickyActions enterDelayMs={STICKY_ENTER_DELAY_MS}>
           {showVerify ? (
             <Button
               type="button"
@@ -151,7 +152,7 @@ export function TokenMintedPanel({
               {copy.addToWallet}
             </Button>
           ) : null}
-        </TokenStickyActions>
+        </StickyActions>
       ) : null}
     </div>
   );

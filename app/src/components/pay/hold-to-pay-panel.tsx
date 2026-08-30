@@ -9,6 +9,7 @@ import {
 import { BackLink } from "@/components/shared/back-link";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
+import { StickyActions } from "@/components/shared/sticky-actions";
 import { TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,14 +78,16 @@ export function HoldToPayPanel({
         </p>
       </div>
 
-      <HoldToPayIdleActions
-        confirmationRequired={confirmationRequired}
-        keyReady={keyReady}
-        busy={hold.busy}
-        onPay={() => void hold.onPay()}
-        onSetupPhone={onSetupPhone}
-        onManage={onManage}
-      />
+      <StickyActions blur={false}>
+        <HoldToPayIdleActions
+          confirmationRequired={confirmationRequired}
+          keyReady={keyReady}
+          busy={hold.busy}
+          onPay={() => void hold.onPay()}
+          onSetupPhone={onSetupPhone}
+          onManage={onManage}
+        />
+      </StickyActions>
     </div>
   );
 }

@@ -1,7 +1,9 @@
 /** Gallery motion tokens — compositor-friendly Tailwind arbitrary animations. */
 
-export const STAGGER_STEP_MS = 40;
+export const STAGGER_STEP_MS = 60;
 export const STAGGER_CAP = 6;
+/** Sticky dock trails content settle on token / claim landings. */
+export const STICKY_ENTER_DELAY_MS = 80;
 
 /** Cap stagger index so grids with many items don't cascade too long. */
 export function staggerStyle(index: number): { animationDelay: string } {
@@ -23,5 +25,8 @@ export const galleryAnimate = {
   slideUp:
     "motion-safe:animate-[gallery-slide-up_0.5s_cubic-bezier(0.22,1,0.36,1)_both]",
   stage:
-    "motion-safe:animate-[gallery-stage_0.28s_cubic-bezier(0.22,1,0.36,1)_both]",
+    "motion-safe:animate-[gallery-stage_0.45s_cubic-bezier(0.22,1,0.36,1)_both]",
+  /** Opacity-only — preferred for wrappers that contain sticky + blur. */
+  stageFade:
+    "motion-safe:animate-[gallery-stage-fade_0.45s_ease-out_both]",
 } as const;

@@ -6,6 +6,7 @@ import { address as toAddress } from "@solana/kit";
 import { ClaimPanel } from "@/components/claim/claim-panel";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
+import { StageTransition } from "@/components/shared/stage-transition";
 import { useHoldToCheck } from "@/hooks/token/use-hold-to-check";
 import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
 import { copy } from "@/lib/copy/phygital";
@@ -14,6 +15,7 @@ import {
   tokenHasLinkedMint,
   type PhygitalToken,
 } from "@/lib/phygital/token";
+import { cn } from "@/lib/utils";
 
 /**
  * Shared claim + Hold-to-Check session for minted and unminted token homes.
@@ -64,46 +66,62 @@ function PendingVerifyCeremony({ token }: { token: PhygitalToken }) {
   );
 }
 
+type GateMode = "landing" | "pending" | "claim";
+
 /**
- * Renders in-app gate, claim panel, or hold-pending chrome before the home body.
+ * Keeps the landing tree mounted across verify/claim so dossier state and
+ * enter animations are not replayed on return.
  */
 export function TokenClaimSessionGate({
   session,
   noun,
   inAppBody,
-  claimWrapperClassName,
   children,
 }: {
   session: TokenClaimSession;
   noun: "card" | "accessory";
   inAppBody: string;
-  claimWrapperClassName?: string;
   children: ReactNode;
 }) {
   if (session.showInAppGate) {
     return <InAppBrowserGate body={inAppBody} />;
   }
 
-  if (session.showClaim) {
-    const panel = (
-      <ClaimPanel
-        token={session.token}
-        noun={noun}
-        unclaimed={isUnclaimedToken(session.token)}
-        onBack={session.closeClaim}
-        onClaimed={session.onClaimed}
-      />
-    );
-    return claimWrapperClassName ? (
-      <div className={claimWrapperClassName}>{panel}</div>
-    ) : (
-      panel
-    );
-  }
+  const mode: GateMode = session.showClaim
+    ? "claim"
+    : session.pending
+      ? "pending"
+      : "landing";
+  const onLanding = mode === "landing";
 
-  if (session.pending) {
-    return <PendingVerifyCeremony token={session.token} />;
-  }
-
-  return children;
+  return (
+    <div className="flex flex-1 flex-col">
+      <div
+        className={cn("flex flex-1 flex-col", !onLanding && "hidden")}
+        aria-hidden={!onLanding}
+        inert={!onLanding || undefined}
+      >
+        {children}
+      </div>
+      {!onLanding ? (
+        <StageTransition
+          stageKey={mode}
+          variant="fade"
+          className="flex flex-1 flex-col"
+        >
+          {mode === "claim" ? (
+            <ClaimPanel
+              token={session.token}
+              noun={noun}
+              unclaimed={isUnclaimedToken(session.token)}
+              onBack={session.closeClaim}
+              onClaimed={session.onClaimed}
+            />
+          ) : (
+            <PendingVerifyCeremony token={session.token} />
+          )}
+        </StageTransition>
+      ) : null}
+    </div>
+  );
 }

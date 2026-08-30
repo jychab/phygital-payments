@@ -32,12 +32,13 @@ export function NfcHoldStatus({
   onRingClick?: () => void;
   ringAriaLabel?: string;
   action?: ReactNode;
-  /** Optional chrome above the ring (e.g. collectible context). */
   header?: ReactNode;
   /** DAS mint art for the circular hold target; NFC glyph if missing. */
   imageSrc?: string | null;
   imageAlt?: string;
 }) {
+  const base = header ? 1 : 0;
+
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-5 py-14 text-center">
       {header ? (
@@ -48,33 +49,34 @@ export function NfcHoldStatus({
           {header}
         </div>
       ) : null}
-      <div style={staggerStyle(header ? 1 : 0)}>
-        <CollectibleOrb
-          src={imageSrc}
-          alt={imageAlt}
-          size={size}
-          pulsing={pulsing}
-          busy={busy}
-          tone={tone}
-          onClick={onRingClick}
-          ariaLabel={ringAriaLabel ?? title}
-        />
-      </div>
+      <CollectibleOrb
+        src={imageSrc}
+        alt={imageAlt}
+        size={size}
+        pulsing={pulsing}
+        busy={busy}
+        tone={tone}
+        onClick={onRingClick}
+        ariaLabel={ringAriaLabel ?? title}
+        style={staggerStyle(base)}
+      />
       <div
-        className={cn(
-          "w-full max-w-72 space-y-1",
-          galleryAnimate.rise,
-        )}
-        style={staggerStyle(header ? 2 : 1)}
+        className={cn("w-full max-w-72 space-y-1", galleryAnimate.rise)}
+        style={staggerStyle(base + 1)}
       >
-        <p className="text-display-md tracking-tight md:text-2xl">
-          {title}
-        </p>
+        <p className="text-display-md tracking-tight md:text-2xl">{title}</p>
         {body ? (
           <p className="text-sm text-muted-foreground">{body}</p>
         ) : null}
       </div>
-      {action}
+      {action ? (
+        <div
+          className={cn("w-full max-w-xs", galleryAnimate.rise)}
+          style={staggerStyle(base + 2)}
+        >
+          {action}
+        </div>
+      ) : null}
     </div>
   );
 }

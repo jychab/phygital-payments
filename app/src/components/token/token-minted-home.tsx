@@ -7,9 +7,7 @@ import {
   useTokenClaimSession,
 } from "@/hooks/token/use-token-claim-session";
 import { copy } from "@/lib/copy/phygital";
-import { galleryAnimate } from "@/lib/motion";
 import type { PhygitalToken } from "@/lib/phygital/token";
-import { cn } from "@/lib/utils";
 
 /** Minted-token home after a check, claim, or Collection open. No Pay. */
 export function TokenMintedHome({
@@ -29,7 +27,6 @@ export function TokenMintedHome({
       session={session}
       noun="card"
       inAppBody={copy.openInBrowser}
-      claimWrapperClassName={cn(galleryAnimate.fade)}
     >
       <div className="flex flex-1 flex-col">
         {fromCollection ? <BackToCollection /> : null}

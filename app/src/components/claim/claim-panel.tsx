@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { ConnectGate } from "@/components/shared/connect-gate";
@@ -9,9 +9,10 @@ import { InlineError } from "@/components/shared/inline-error";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { BackLink } from "@/components/shared/back-link";
 import { StageTransition } from "@/components/shared/stage-transition";
+import { StickyActions } from "@/components/shared/sticky-actions";
 import { StepProgress } from "@/components/shared/step-progress";
+import { MotionSection } from "@/components/shared/motion-section";
 import { CollectibleOrb } from "@/components/token/collectible-orb";
-import { TokenStickyActions } from "@/components/token/token-sticky-actions";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
@@ -24,6 +25,7 @@ import {
   finishClaim,
 } from "@/lib/token/claim";
 import { copy } from "@/lib/copy/phygital";
+import { staggerStyle } from "@/lib/motion";
 import {
   tokenHasLinkedMint,
   type PhygitalToken,
@@ -37,6 +39,54 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 type Stage = "ready" | "reading" | "confirm" | "confirming";
 
 type CapturedTap = Awaited<ReturnType<typeof captureClaimTap>>;
+
+/** Shared ready/confirm center: mint orb + staggered title/body. */
+function ClaimHoldChrome({
+  orbSrc,
+  orbAlt,
+  pulsing,
+  onOrbClick,
+  orbAriaLabel,
+  title,
+  body,
+  extra,
+  dock,
+}: {
+  orbSrc: string | null;
+  orbAlt: string;
+  pulsing: boolean;
+  onOrbClick?: () => void;
+  orbAriaLabel?: string;
+  title: string;
+  body: string;
+  extra?: ReactNode;
+  dock: ReactNode;
+}) {
+  return (
+    <>
+      <div className="mx-auto flex flex-1 flex-col items-center justify-center gap-5 py-6">
+        <CollectibleOrb
+          src={orbSrc}
+          alt={orbAlt}
+          size="lg"
+          pulsing={pulsing}
+          onClick={onOrbClick}
+          ariaLabel={orbAriaLabel}
+          style={staggerStyle(0)}
+        />
+        <MotionSection
+          staggerIndex={1}
+          className="w-full max-w-72 space-y-1.5 text-center"
+        >
+          <p className="text-base font-medium text-foreground">{title}</p>
+          <p className="text-sm text-muted-foreground">{body}</p>
+          {extra}
+        </MotionSection>
+      </div>
+      {dock}
+    </>
+  );
+}
 
 /**
  * In-place claim: NFC tap → connect wallet → confirm.
@@ -152,8 +202,8 @@ export function ClaimPanel({
     return <InAppBrowserGate body={copy.openInBrowser} />;
   }
 
-  const chrome = (
-    <>
+  return (
+    <div className="flex flex-1 flex-col gap-4">
       {onBack && stage !== "confirming" ? (
         <BackLink onClick={onBack} />
       ) : null}
@@ -162,12 +212,6 @@ export function ClaimPanel({
         total={2}
         labels={[copy.claimStepHold, copy.claimStepConfirm]}
       />
-    </>
-  );
-
-  return (
-    <div className="flex flex-1 flex-col gap-4">
-      {chrome}
       <StageTransition
         stageKey={stage}
         className="flex flex-1 flex-col gap-4"
@@ -193,80 +237,62 @@ export function ClaimPanel({
         ) : null}
 
         {stage === "confirm" ? (
-          <>
-            <div className="mx-auto flex flex-1 flex-col items-center justify-center gap-5 py-6">
-              <CollectibleOrb
-                src={orbSrc}
-                alt={orbAlt}
-                size="lg"
-                pulsing={false}
-              />
-              <div className="w-full max-w-72 space-y-1.5 text-center">
-                <p className="text-base font-medium text-foreground">
-                  {copy.claimConfirmTitle}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {copy.claimConfirmBody(noun)}
-                </p>
-              </div>
-            </div>
-            <TokenStickyActions>
-              {!address ? (
-                <ConnectGate
-                  title="Connect your wallet"
-                  body={`This wallet will own the ${noun}.`}
-                  onConnect={connect}
-                />
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {error ? <InlineError>{error}</InlineError> : null}
-                  <Button
-                    type="button"
-                    size="lg"
-                    className="w-full"
-                    disabled={!signer}
-                    onClick={() => void onFinish()}
-                  >
-                    {error ? "Try again" : "Confirm in wallet"}
-                  </Button>
-                </div>
-              )}
-            </TokenStickyActions>
-          </>
+          <ClaimHoldChrome
+            orbSrc={orbSrc}
+            orbAlt={orbAlt}
+            pulsing={false}
+            title={copy.claimConfirmTitle}
+            body={copy.claimConfirmBody(noun)}
+            dock={
+              <StickyActions animate={false}>
+                {!address ? (
+                  <ConnectGate
+                    title="Connect your wallet"
+                    body={`This wallet will own the ${noun}.`}
+                    onConnect={connect}
+                  />
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {error ? <InlineError>{error}</InlineError> : null}
+                    <Button
+                      type="button"
+                      size="lg"
+                      className="w-full"
+                      disabled={!signer}
+                      onClick={() => void onFinish()}
+                    >
+                      {error ? "Try again" : "Confirm in wallet"}
+                    </Button>
+                  </div>
+                )}
+              </StickyActions>
+            }
+          />
         ) : null}
 
         {stage === "ready" ? (
-          <>
-            <div className="mx-auto flex flex-1 flex-col items-center justify-center gap-5 py-6">
-              <CollectibleOrb
-                src={orbSrc}
-                alt={orbAlt}
-                size="lg"
-                pulsing
-                onClick={() => void onCapture()}
-                ariaLabel={copy.holdToAdd}
-              />
-              <div className="w-full max-w-72 space-y-1.5 text-center">
-                <p className="text-base font-medium text-foreground">
-                  {title}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {copy.claimReadyBody(noun)}
-                </p>
-                {error ? <InlineError>{error}</InlineError> : null}
-              </div>
-            </div>
-            <TokenStickyActions>
-              <Button
-                type="button"
-                size="lg"
-                className="w-full"
-                onClick={() => void onCapture()}
-              >
-                {error ? "Try again" : copy.holdToAdd}
-              </Button>
-            </TokenStickyActions>
-          </>
+          <ClaimHoldChrome
+            orbSrc={orbSrc}
+            orbAlt={orbAlt}
+            pulsing
+            onOrbClick={() => void onCapture()}
+            orbAriaLabel={copy.holdToAdd}
+            title={title}
+            body={copy.claimReadyBody(noun)}
+            extra={error ? <InlineError>{error}</InlineError> : null}
+            dock={
+              <StickyActions animate={false}>
+                <Button
+                  type="button"
+                  size="lg"
+                  className="w-full"
+                  onClick={() => void onCapture()}
+                >
+                  {error ? "Try again" : copy.holdToAdd}
+                </Button>
+              </StickyActions>
+            }
+          />
         ) : null}
       </StageTransition>
     </div>

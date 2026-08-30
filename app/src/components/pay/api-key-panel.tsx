@@ -6,6 +6,7 @@ import { Copy, Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { BackLink } from "@/components/shared/back-link";
+import { StickyActions } from "@/components/shared/sticky-actions";
 import { ExpectedWalletConnect } from "@/components/shared/wallet-notices";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -165,7 +166,7 @@ export function ApiKeyPanel({
         />
       ) : null}
 
-      <div className="mt-auto flex flex-col gap-2.5">
+      <StickyActions blur={false}>
         {step === "home" && !hasStoredKey ? (
           <>
             <ProvisionAction
@@ -260,7 +261,7 @@ export function ApiKeyPanel({
             Not Now
           </Button>
         ) : null}
-      </div>
+      </StickyActions>
     </div>
   );
 }

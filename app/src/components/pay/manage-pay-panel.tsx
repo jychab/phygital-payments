@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { ApiKeyPanel } from "@/components/pay/api-key-panel";
 import { BackLink } from "@/components/shared/back-link";
+import { StickyActions } from "@/components/shared/sticky-actions";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { SettingsListRow } from "@/components/shared/settings-list-row";
 import { TokenListRow } from "@/components/shared/token-chip";
@@ -105,8 +106,8 @@ export function ManagePayPanel({
         />
       </div>
 
-      <div className="mt-auto flex flex-col gap-2">
-        {confirmationOn ? (
+      {confirmationOn ? (
+        <StickyActions blur={false}>
           <Button
             type="button"
             variant="outline"
@@ -116,8 +117,8 @@ export function ManagePayPanel({
           >
             {payCopy.manageKey}
           </Button>
-        ) : null}
-      </div>
+        </StickyActions>
+      ) : null}
     </div>
   );
 }

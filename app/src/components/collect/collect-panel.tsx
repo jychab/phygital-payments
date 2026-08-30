@@ -18,6 +18,7 @@ import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { TokenChip, TokenSymbol } from "@/components/shared/token-chip";
 import { TokenPickerSheet } from "@/components/shared/token-picker-sheet";
+import { StickyActions } from "@/components/shared/sticky-actions";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
@@ -476,7 +477,7 @@ export function CollectPanel({
         </div>
       ) : null}
 
-      <div className="mt-auto flex flex-col gap-3">
+      <StickyActions blur={false}>
         <Button
           type="button"
           size="lg"
@@ -503,7 +504,7 @@ export function CollectPanel({
             Payments aren’t available right now.
           </p>
         )}
-      </div>
+      </StickyActions>
 
       <TokenPickerSheet
         open={pickerOpen}

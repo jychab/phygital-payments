@@ -7,6 +7,7 @@ import { address } from "@solana/kit";
 
 import { AmountField } from "@/components/shared/amount-field";
 import { BackLink } from "@/components/shared/back-link";
+import { StickyActions } from "@/components/shared/sticky-actions";
 import { ExpectedWalletConnect } from "@/components/shared/wallet-notices";
 import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenSymbol } from "@/components/shared/token-chip";
@@ -258,7 +259,7 @@ export function SpendingLimitPanel({
         ) : null}
       </p>
 
-      <div className="mt-auto flex flex-col gap-2.5">
+      <StickyActions blur={false}>
         {!matched ? (
           <ExpectedWalletConnect
             owner={owner}
@@ -311,7 +312,7 @@ export function SpendingLimitPanel({
             Not Now
           </Button>
         ) : null}
-      </div>
+      </StickyActions>
     </div>
   );
 }
