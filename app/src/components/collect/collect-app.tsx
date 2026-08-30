@@ -9,6 +9,7 @@ import { CollectPanel } from "@/components/collect/collect-panel";
 import { HistoryPanel } from "@/components/home/history-panel";
 import { BackLink } from "@/components/shared/back-link";
 import { ConnectGate } from "@/components/shared/connect-gate";
+import { WalletSyncGate } from "@/components/shared/wallet-sync-gate";
 import { Button } from "@/components/ui/button";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
@@ -19,6 +20,7 @@ import { tryParseAddress } from "@/lib/solana/address";
  * Route `/collect` — merchant receive.
  * Recipient from `?recipient=` when present; otherwise the connected wallet.
  * Embeds still require `?recipient=` (sealed chip, no connect).
+ * When URL recipient and a connected wallet both exist, they must match.
  */
 export function CollectApp({
   paymentRequest,
@@ -92,17 +94,19 @@ export function CollectApp({
         ) : null
       }
     >
-      {view === "activity" ? (
-        <div className="flex flex-1 flex-col">
-          <BackLink onClick={() => setView("collect")} />
-          <HistoryPanel owner={recipientStr} />
-        </div>
-      ) : (
-        <CollectPanel
-          paymentRequest={{ ...paymentRequest, recipient }}
-          allowWalletSetup={!embedded}
-        />
-      )}
+      <WalletSyncGate linkedOwner={sealedFromUrl ? recipientStr : null}>
+        {view === "activity" ? (
+          <div className="flex flex-1 flex-col">
+            <BackLink onClick={() => setView("collect")} />
+            <HistoryPanel owner={recipientStr} />
+          </div>
+        ) : (
+          <CollectPanel
+            paymentRequest={{ ...paymentRequest, recipient }}
+            allowWalletSetup={!embedded}
+          />
+        )}
+      </WalletSyncGate>
     </AppShell>
   );
 }
