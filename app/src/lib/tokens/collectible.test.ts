@@ -3,19 +3,31 @@ import { describe, expect, it } from "vitest";
 import { collectibleFromDas, fallbackCollectible, type DasCollectibleAsset } from "./collectible";
 
 const MINT = "F9Lw3ki3hJ7PF9HQXsBzoY8GyE6sPoEZZdXJBsTTD2rk";
+const COLLECTION = "J1S9H3QjnRtBbbuD4HjPV6RpRhwuk4zKbxsnCHuTgh9w";
 
 function asset(overrides: DasCollectibleAsset = {}): DasCollectibleAsset {
   return { id: MINT, ...overrides };
 }
 
 describe("collectibleFromDas", () => {
-  it("maps name, cdn image, and collection metadata", () => {
+  it("maps name, cdn image, collection, description, attributes, and external url", () => {
     expect(
       collectibleFromDas(
         asset({
           content: {
-            metadata: { name: "Mad Lads #8420" },
-            links: { image: "https://example.com/fallback.png" },
+            metadata: {
+              name: "Mad Lads #8420",
+              description: "A legendary Mad Lad.",
+              attributes: [
+                { trait_type: "Background", value: "Blue" },
+                { trait_type: "Hat", value: "Crown" },
+                { traitType: "Empty", value: "  " },
+              ],
+            },
+            links: {
+              image: "https://example.com/fallback.png",
+              external_url: "https://madlads.com",
+            },
             files: [
               {
                 uri: "https://example.com/raw.png",
@@ -26,7 +38,7 @@ describe("collectibleFromDas", () => {
           grouping: [
             {
               group_key: "collection",
-              group_value: "J1S9H3QjnRtBbbuD4HjPV6RpRhwuk4zKbxsnCHuTgh9w",
+              group_value: COLLECTION,
               collection_metadata: { name: "Mad Lads" },
             },
           ],
@@ -37,6 +49,13 @@ describe("collectibleFromDas", () => {
       name: "Mad Lads #8420",
       image: "https://cdn.helius-rpc.com/image.png",
       collectionName: "Mad Lads",
+      collectionMint: COLLECTION,
+      description: "A legendary Mad Lad.",
+      attributes: [
+        { traitType: "Background", value: "Blue" },
+        { traitType: "Hat", value: "Crown" },
+      ],
+      externalUrl: "https://madlads.com",
     });
   });
 
@@ -71,6 +90,10 @@ describe("collectibleFromDas", () => {
       name: "F9Lw…D2rk",
       image: "https://example.com/nft.png",
       collectionName: null,
+      collectionMint: null,
+      description: null,
+      attributes: [],
+      externalUrl: null,
     });
   });
 
@@ -87,6 +110,10 @@ describe("collectibleFromDas", () => {
       name: "Named",
       image: null,
       collectionName: null,
+      collectionMint: "abc",
+      description: null,
+      attributes: [],
+      externalUrl: null,
     });
   });
 
@@ -105,6 +132,10 @@ describe("fallbackCollectible", () => {
       name: "F9Lw…D2rk",
       image: null,
       collectionName: null,
+      collectionMint: null,
+      description: null,
+      attributes: [],
+      externalUrl: null,
     });
   });
 });

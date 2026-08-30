@@ -1,10 +1,17 @@
 "use client";
 
-import { CardMetadata } from "@/components/token/card-metadata";
-import { CardSlab } from "@/components/token/card-slab";
+import { CollectibleAttributes } from "@/components/token/collectible-attributes";
+import { CollectibleDescription } from "@/components/token/collectible-description";
+import { CollectibleDetails } from "@/components/token/collectible-details";
+import { CollectibleHeader } from "@/components/token/collectible-header";
+import { CollectibleHero } from "@/components/token/collectible-hero";
+import { CollectibleShortcuts } from "@/components/token/collectible-shortcuts";
+import { TokenStickyActions } from "@/components/token/token-sticky-actions";
 import { InlineError } from "@/components/shared/inline-error";
+import { MotionSection } from "@/components/shared/motion-section";
 import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
+import { useCollectibleShortcuts } from "@/hooks/token/use-collectible-shortcuts";
 import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
 import { copy } from "@/lib/copy/phygital";
 import {
@@ -12,11 +19,9 @@ import {
   tokenHasLinkedMint,
   type PhygitalToken,
 } from "@/lib/phygital/token";
-import { galleryAnimate } from "@/lib/motion";
 import { shortAddress } from "@/lib/utils";
-import { cn } from "@/lib/utils";
 
-/** Verified card — gallery slab, metadata, authenticity, optional claim. */
+/** Verified card — collector detail: DAS art, authenticity, claim, dossier. */
 export function TokenMintedPanel({
   token,
   liveConfirmed,
@@ -35,105 +40,119 @@ export function TokenMintedPanel({
 }) {
   const unclaimed = isUnclaimedToken(token);
   const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
+  const showVerify = !liveConfirmed && Boolean(onHoldToCheck);
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const { collectible, loading } = useResolvedDasCollectible(mint);
+  const shortcutsQuery = useCollectibleShortcuts(
+    collectible?.externalUrl,
+    collectible?.collectionMint,
+  );
+  const shortcuts = shortcutsQuery.data ?? [];
+
+  const name = collectible?.name ?? "Card";
+  const owner = String(token.currentOwner);
+  const hasSticky = showVerify || canClaim;
+  let stagger = 0;
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex flex-1 flex-col items-center gap-6 py-4">
-        <CardSlab
+      <div className="flex flex-1 flex-col gap-6 pb-4">
+        <CollectibleHero
           src={collectible?.image ?? null}
-          alt={collectible?.name ?? "Card"}
-          fallbackLabel={collectible?.name ?? "Card"}
+          alt={name}
+          fallbackLabel={name}
           loading={loading}
-          reveal={!loading && Boolean(collectible)}
+          reveal={!loading && Boolean(collectible?.image)}
         />
 
-        {collectible ? (
-          <CardMetadata
-            name={collectible.name}
-            collectionName={collectible.collectionName}
-            liveConfirmed={liveConfirmed}
-          />
+        <MotionSection staggerIndex={stagger++}>
+          {collectible ? (
+            <CollectibleHeader
+              name={collectible.name}
+              collectionName={collectible.collectionName}
+              liveConfirmed={liveConfirmed}
+            />
+          ) : loading ? (
+            <div
+              className="h-14 animate-pulse rounded-xl bg-muted/40"
+              aria-hidden
+            />
+          ) : null}
+        </MotionSection>
+
+        <MotionSection staggerIndex={stagger++}>
+          <div className="flex w-full flex-col gap-1.5 text-left">
+            {fromCollection && liveConfirmed ? (
+              <p className="text-xs text-muted-foreground">
+                {copy.verifiedFromCollection}
+              </p>
+            ) : null}
+            <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
+              <span>
+                {unclaimed
+                  ? copy.notLinked
+                  : copy.linkedTo(shortAddress(owner))}
+              </span>
+              <PhygitalTokenRefreshButton token={token} />
+            </div>
+            {holdError ? <InlineError>{holdError}</InlineError> : null}
+          </div>
+        </MotionSection>
+
+        {shortcuts.length > 0 ? (
+          <MotionSection staggerIndex={stagger++}>
+            <CollectibleShortcuts shortcuts={shortcuts} />
+          </MotionSection>
         ) : null}
 
-        <TokenMintedActions
-          token={token}
-          unclaimed={unclaimed}
-          owner={String(token.currentOwner)}
-          liveConfirmed={liveConfirmed}
-          fromCollection={fromCollection}
-          holdError={holdError}
-          onHoldToCheck={onHoldToCheck}
-        />
+        {collectible?.description ? (
+          <MotionSection staggerIndex={stagger++}>
+            <CollectibleDescription description={collectible.description} />
+          </MotionSection>
+        ) : null}
+
+        {collectible && collectible.attributes.length > 0 ? (
+          <MotionSection staggerIndex={stagger++}>
+            <CollectibleAttributes attributes={collectible.attributes} />
+          </MotionSection>
+        ) : null}
+
+        {mint ? (
+          <MotionSection staggerIndex={stagger++}>
+            <CollectibleDetails
+              mint={mint}
+              collectionMint={collectible?.collectionMint}
+            />
+          </MotionSection>
+        ) : null}
       </div>
 
-      {canClaim ? (
-        <div
-          className={cn(
-            "mt-auto flex flex-col gap-2.5 pt-2",
-            galleryAnimate.rise,
-          )}
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            className="w-full"
-            onClick={onClaim}
-          >
-            {copy.addToWallet}
-          </Button>
-        </div>
+      {hasSticky ? (
+        <TokenStickyActions>
+          {showVerify ? (
+            <Button
+              type="button"
+              variant={canClaim ? "outline" : "default"}
+              size="lg"
+              className="w-full"
+              onClick={onHoldToCheck}
+            >
+              {copy.holdToCheck}
+            </Button>
+          ) : null}
+          {canClaim ? (
+            <Button
+              type="button"
+              variant="default"
+              size="lg"
+              className="w-full"
+              onClick={onClaim}
+            >
+              {copy.addToWallet}
+            </Button>
+          ) : null}
+        </TokenStickyActions>
       ) : null}
-    </div>
-  );
-}
-
-function TokenMintedActions({
-  token,
-  unclaimed,
-  owner,
-  liveConfirmed,
-  fromCollection = false,
-  holdError,
-  onHoldToCheck,
-}: {
-  token: PhygitalToken;
-  unclaimed: boolean;
-  owner: string;
-  liveConfirmed: boolean;
-  fromCollection?: boolean;
-  holdError?: string | null;
-  onHoldToCheck?: () => void;
-}) {
-  return (
-    <div className="flex w-full max-w-72 flex-col items-center gap-2 text-center">
-      {fromCollection && liveConfirmed ? (
-        <p className="text-xs text-muted-foreground">
-          {copy.verifiedFromCollection}
-        </p>
-      ) : null}
-      <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
-        <span>
-          {unclaimed
-            ? "Not linked to a wallet."
-            : `Linked to ${shortAddress(owner)}.`}
-        </span>
-        <PhygitalTokenRefreshButton token={token} />
-      </div>
-      {!liveConfirmed && onHoldToCheck ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="lg"
-          className="w-full"
-          onClick={onHoldToCheck}
-        >
-          {copy.holdToCheck}
-        </Button>
-      ) : null}
-      {holdError ? <InlineError>{holdError}</InlineError> : null}
     </div>
   );
 }

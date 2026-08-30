@@ -22,8 +22,9 @@ const STORAGE_KEY = "phygital-pay.react-query";
  * v8: phygital-token-sdk 0.22 tokenType/mint (was assetType).
  * v9: drop asset query keys / wire fields (phygitalTokens + transfer.token).
  * v10: ownerPayDelegates is Pay bootstrap (holdings + delegates).
+ * v11: Collectible gains description/attributes/externalUrl/collectionMint.
  */
-const CACHE_BUSTER = "v10";
+const CACHE_BUSTER = "v11";
 
 export { CACHE_BUSTER };
 

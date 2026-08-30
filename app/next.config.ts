@@ -46,6 +46,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: workspaceRoot,
   },
+  redirects() {
+    return [{ source: "/accessory", destination: "/token", permanent: true }];
+  },
   async headers() {
     return [
       {

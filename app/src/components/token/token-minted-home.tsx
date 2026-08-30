@@ -6,6 +6,7 @@ import {
   TokenClaimSessionGate,
   useTokenClaimSession,
 } from "@/hooks/token/use-token-claim-session";
+import { copy } from "@/lib/copy/phygital";
 import { galleryAnimate } from "@/lib/motion";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,7 @@ export function TokenMintedHome({
     <TokenClaimSessionGate
       session={session}
       noun="card"
-      inAppBody="To check a card, open this page in Safari or Chrome."
+      inAppBody={copy.openInBrowser}
       claimWrapperClassName={cn(galleryAnimate.fade)}
     >
       <div className="flex flex-1 flex-col">

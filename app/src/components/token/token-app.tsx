@@ -11,6 +11,7 @@ import { TokenMintedHome } from "@/components/token/token-minted-home";
 import { TokenNfcApp } from "@/components/token/token-nfc-app";
 import { TokenUnmintedHome } from "@/components/token/token-unminted-home";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
+import { copy } from "@/lib/copy/phygital";
 import { isFromCollection } from "@/lib/journey";
 import {
   tokenHasLinkedMint,
@@ -26,8 +27,8 @@ const TokenRouteShell = dynamic(
 );
 
 const TOKEN_NFC_COPY = {
-  inAppCheck: "To check this item, open this page in Safari or Chrome.",
-  holdBody: "Hold your item to the back of this phone.",
+  inAppCheck: copy.openInBrowser,
+  holdBody: copy.holdItemBody,
   notSetUp: "This item isn’t set up yet.",
 };
 
@@ -106,7 +107,7 @@ export function TokenApp() {
   }
 
   return (
-    <TokenRouteShell>
+    <TokenRouteShell layout="gallery">
       <TokenNfcApp
         copy={TOKEN_NFC_COPY}
         renderHome={({ token: loaded, liveConfirmed }) => (

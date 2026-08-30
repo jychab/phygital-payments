@@ -5,10 +5,11 @@ import { Smartphone } from "lucide-react";
 
 import { GateMessage } from "@/components/layout/gate-message";
 import { Button } from "@/components/ui/button";
+import { copy } from "@/lib/copy/phygital";
 
 /** Block WebAuthn NFC steps inside wallet / social in-app browsers. */
 export function InAppBrowserGate({
-  body = "This step only works in Safari or Chrome. Copy this link and open it in your phone’s browser.",
+  body = copy.openInBrowser,
 }: {
   body?: string;
 }) {
@@ -17,7 +18,7 @@ export function InAppBrowserGate({
   return (
     <GateMessage
       icon={<Smartphone className="size-5 text-muted-foreground" />}
-      title="Open in Safari or Chrome"
+      title="Open in your browser"
       body={body}
       action={
         <div className="flex w-full max-w-64 flex-col gap-2.5">

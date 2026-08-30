@@ -20,4 +20,8 @@ export const galleryAnimate = {
   pulse: "motion-safe:animate-[gallery-pulse_1.4s_ease-out]",
   successRing:
     "motion-safe:animate-[gallery-rise_0.4s_cubic-bezier(0.22,1,0.36,1)]",
+  slideUp:
+    "motion-safe:animate-[gallery-slide-up_0.5s_cubic-bezier(0.22,1,0.36,1)_both]",
+  stage:
+    "motion-safe:animate-[gallery-stage_0.28s_cubic-bezier(0.22,1,0.36,1)_both]",
 } as const;

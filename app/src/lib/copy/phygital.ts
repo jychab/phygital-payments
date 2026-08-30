@@ -55,9 +55,10 @@ export const pageTitles = {
 
 /** Shared product copy — keep verbs and status labels consistent. */
 export const copy = {
-  holdToCheck: "Hold to Check",
+  /** Authenticity CTA — gesture taught by ceremony body, not this label. */
+  holdToCheck: "Verify",
   holdStill: "Hold Still…",
-  holdStillBody: "Keep holding until it reads.",
+  holdStillBody: "Keep holding.",
   connectWallet: "Connect wallet",
   addToWallet: "Add to Wallet",
   holdToCollect: "Hold to Collect",
@@ -69,15 +70,33 @@ export const copy = {
   /** Collection → detail; Confirmed when owner session verified (not URL alone). */
   verifiedFromCollection: "Verified from your Collection.",
   connectCollectionBody: "Connect to see your cards and accessories.",
-  claimNetworkFee:
-    "You'll pay a small network fee when you confirm in your wallet.",
-  holdToAdd: "Hold to Add",
-  claimStepHold: "Hold to add",
-  claimStepConfirm: "Confirm in wallet",
+  /** Claim ready primary — NFC hold is in the body, not the button. */
+  holdToAdd: "Continue",
+  claimStepHold: "Hold",
+  claimStepConfirm: "Confirm",
+  claimReadyBody: (noun: "card" | "accessory") =>
+    `Hold your ${noun} to the back of this phone, then connect a wallet.`,
+  claimConfirmBody: (noun: "card" | "accessory") =>
+    `Connect the wallet that should own this ${noun}.`,
+  claimConfirmTitle: "Link your wallet",
+  openInBrowser:
+    "Open this link in your phone’s browser to continue.",
+  holdCardBody: "Hold your card to the back of this phone.",
+  holdItemBody: "Hold your item to the back of this phone.",
   verifyingChip: "Verifying chip signature…",
   amountLocked: "Amount set by payment link",
   collect: products.collect.name,
   getPaid: "Get paid",
+  about: "About",
+  attributes: "Attributes",
+  shortcuts: "Shortcuts",
+  details: "Details",
+  showMore: "Show more",
+  showLess: "Show less",
+  mintAddress: "Mint",
+  collectionAddress: "Collection",
+  notLinked: "Not linked to a wallet.",
+  linkedTo: (short: string) => `Linked to ${short}.`,
 } as const;
 
 /**

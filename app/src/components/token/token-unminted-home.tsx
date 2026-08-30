@@ -121,7 +121,7 @@ export function TokenUnmintedHome({
     <TokenClaimSessionGate
       session={session}
       noun="accessory"
-      inAppBody="To check an accessory, open this page in Safari or Chrome."
+      inAppBody={copy.openInBrowser}
     >
       {canPay ? (
         <TokenPayHome

@@ -6,17 +6,16 @@ import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { CopyableAddress } from "@/components/shared/copyable-address";
 import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
 import { InlineError } from "@/components/shared/inline-error";
+import { TokenStickyActions } from "@/components/token/token-sticky-actions";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy/phygital";
-import { galleryAnimate } from "@/lib/motion";
 import {
   tokenAllowsPay,
   isUnclaimedToken,
   type PhygitalToken,
 } from "@/lib/phygital/token";
-import { cn } from "@/lib/utils";
 
-/** Unminted-token panel — NFC ring + claim / Hold / integrated Pay CTAs. */
+/** Unminted-token panel — NFC ring + sticky claim / Verify / Pay CTAs. */
 export function TokenUnmintedPanel({
   token,
   liveConfirmed,
@@ -43,36 +42,15 @@ export function TokenUnmintedPanel({
   const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
   const showPay =
     token.isLocked && tokenAllowsPay(token) && payAction != null;
+  const showVerify = !liveConfirmed && Boolean(onHoldToCheck);
   const statusLine = liveConfirmed
     ? fromCollection
       ? copy.verifiedFromCollection
       : copy.confirmedJustNow
     : copy.registeredOnChain;
 
-  // Ghost Hold when another primary exists; otherwise Hold is the primary.
-  const ghostHold =
-    !liveConfirmed && Boolean(onHoldToCheck) && (canClaim || showPay);
-
-  const primaryAction = canClaim
-    ? { label: copy.addToWallet, onClick: onClaim! }
-    : !showPay && !liveConfirmed && onHoldToCheck
-      ? { label: copy.holdToCheck, onClick: onHoldToCheck }
-      : null;
-
-  const footer = showPay ? (
-    payAction
-  ) : primaryAction ? (
-    <Button
-      type="button"
-      size="lg"
-      className="w-full"
-      onClick={primaryAction.onClick}
-    >
-      {primaryAction.label}
-    </Button>
-  ) : null;
-
-  const hasFooter = footer != null || collectAction != null;
+  const hasSticky =
+    showVerify || canClaim || showPay || collectAction != null;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -88,24 +66,36 @@ export function TokenUnmintedPanel({
             unclaimed={unclaimed}
             owner={String(token.currentOwner)}
             holdError={holdError}
-            ghostHold={ghostHold}
-            onHoldToCheck={onHoldToCheck}
           />
         }
       />
 
-      {hasFooter ? (
-        <div
-          className={cn(
-            "mt-auto flex w-full flex-col items-center gap-2.5 pt-2",
-            galleryAnimate.rise,
-          )}
-        >
-          <div className="flex w-full max-w-xs flex-col gap-2.5">
-            {footer}
-            {collectAction}
-          </div>
-        </div>
+      {hasSticky ? (
+        <TokenStickyActions>
+          {showVerify ? (
+            <Button
+              type="button"
+              variant={canClaim || showPay ? "outline" : "default"}
+              size="lg"
+              className="w-full"
+              onClick={onHoldToCheck}
+            >
+              {copy.holdToCheck}
+            </Button>
+          ) : null}
+          {canClaim ? (
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              onClick={onClaim}
+            >
+              {copy.addToWallet}
+            </Button>
+          ) : null}
+          {showPay ? payAction : null}
+          {collectAction}
+        </TokenStickyActions>
       ) : null}
     </div>
   );
@@ -116,23 +106,18 @@ function TokenUnmintedStatus({
   unclaimed,
   owner,
   holdError,
-  ghostHold,
-  onHoldToCheck,
 }: {
   token: PhygitalToken;
   unclaimed: boolean;
   owner: string;
   holdError?: string | null;
-  ghostHold: boolean;
-  onHoldToCheck?: () => void;
 }) {
   return (
     <div className="flex w-full max-w-xs flex-col items-center gap-2">
-      {/* Balance the refresh control so “Linked to …” stays optically centered. */}
       <div className="flex w-full items-center justify-center gap-0.5">
         <span className="size-9 shrink-0" aria-hidden />
         {unclaimed ? (
-          <p className="text-xs text-muted-foreground">Not linked to a wallet.</p>
+          <p className="text-xs text-muted-foreground">{copy.notLinked}</p>
         ) : (
           <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <span>Linked to</span>
@@ -146,17 +131,6 @@ function TokenUnmintedStatus({
         )}
         <PhygitalTokenRefreshButton token={token} className="shrink-0" />
       </div>
-      {ghostHold && onHoldToCheck ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="lg"
-          className="w-full"
-          onClick={onHoldToCheck}
-        >
-          {copy.holdToCheck}
-        </Button>
-      ) : null}
       {holdError ? <InlineError>{holdError}</InlineError> : null}
     </div>
   );

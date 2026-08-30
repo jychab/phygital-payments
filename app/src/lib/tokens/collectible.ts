@@ -1,18 +1,35 @@
 import { shortAddress } from "@/lib/utils";
 
+export type CollectibleAttribute = {
+  traitType: string;
+  value: string;
+};
+
 /** Lean DAS collectible for minted `/token` UI — not a payment (fungible) token. */
 export type Collectible = {
   mint: string;
   name: string;
   image: string | null;
   collectionName: string | null;
+  collectionMint: string | null;
+  description: string | null;
+  attributes: CollectibleAttribute[];
+  externalUrl: string | null;
 };
 
 export type DasCollectibleAsset = {
   id?: string;
   content?: {
-    metadata?: { name?: string };
-    links?: { image?: string };
+    metadata?: {
+      name?: string;
+      description?: string;
+      attributes?: Array<{
+        trait_type?: string;
+        traitType?: string;
+        value?: string | number | boolean;
+      }>;
+    };
+    links?: { image?: string; external_url?: string };
     files?: Array<{ uri?: string; cdn_uri?: string }>;
   };
   grouping?: Array<{
@@ -28,6 +45,24 @@ function firstHttpsUrl(...candidates: Array<string | undefined>): string | null 
     if (url?.startsWith("https://")) return url;
   }
   return null;
+}
+
+function mapAttributes(
+  raw: DasCollectibleAsset["content"],
+): CollectibleAttribute[] {
+  const list = raw?.metadata?.attributes;
+  if (!Array.isArray(list) || list.length === 0) return [];
+
+  const out: CollectibleAttribute[] = [];
+  for (const item of list) {
+    const traitType = (item.trait_type ?? item.traitType)?.trim();
+    if (!traitType) continue;
+    if (item.value === undefined || item.value === null) continue;
+    const value = String(item.value).trim();
+    if (!value) continue;
+    out.push({ traitType, value });
+  }
+  return out;
 }
 
 /**
@@ -52,11 +87,21 @@ export function collectibleFromDas(
   if (!name && !image) return null;
 
   const collection = asset.grouping?.find((g) => g.group_key === "collection");
+  const description =
+    asset.content?.metadata?.description?.trim() || null;
+  const externalUrl = firstHttpsUrl(
+    asset.content?.links?.external_url,
+  );
+
   return {
     mint,
     name: name || shortAddress(mint),
     image,
     collectionName: collection?.collection_metadata?.name?.trim() || null,
+    collectionMint: collection?.group_value?.trim() || null,
+    description,
+    attributes: mapAttributes(asset.content),
+    externalUrl,
   };
 }
 
@@ -67,5 +112,9 @@ export function fallbackCollectible(mint: string): Collectible {
     name: shortAddress(mint),
     image: null,
     collectionName: null,
+    collectionMint: null,
+    description: null,
+    attributes: [],
+    externalUrl: null,
   };
 }

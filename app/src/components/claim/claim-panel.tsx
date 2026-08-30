@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Nfc } from "lucide-react";
 
-import { GateMessage } from "@/components/layout/gate-message";
 import { ConnectGate } from "@/components/shared/connect-gate";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { InlineError } from "@/components/shared/inline-error";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { BackLink } from "@/components/shared/back-link";
+import { StageTransition } from "@/components/shared/stage-transition";
 import { StepProgress } from "@/components/shared/step-progress";
+import { CollectibleOrb } from "@/components/token/collectible-orb";
+import { TokenStickyActions } from "@/components/token/token-sticky-actions";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
+import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
 import {
@@ -22,7 +24,10 @@ import {
   finishClaim,
 } from "@/lib/token/claim";
 import { copy } from "@/lib/copy/phygital";
-import type { PhygitalToken } from "@/lib/phygital/token";
+import {
+  tokenHasLinkedMint,
+  type PhygitalToken,
+} from "@/lib/phygital/token";
 import {
   invalidateOwnerQueries,
   invalidatePhygitalTokenQueries,
@@ -61,6 +66,10 @@ export function ClaimPanel({
   const [tap, setTap] = useState<CapturedTap | null>(null);
 
   const title = unclaimed ? copy.addToWallet : "Move to a New Wallet";
+  const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
+  const { collectible } = useResolvedDasCollectible(mint);
+  const orbSrc = collectible?.image ?? null;
+  const orbAlt = collectible?.name ?? "";
 
   async function onCapture() {
     setError(null);
@@ -140,117 +149,126 @@ export function ClaimPanel({
   }
 
   if (inApp) {
-    return (
-      <InAppBrowserGate
-        body={`To add a${noun === "accessory" ? "n accessory" : " card"}, open this page in Safari or Chrome.`}
-      />
-    );
+    return <InAppBrowserGate body={copy.openInBrowser} />;
   }
 
-  if (stage === "reading") {
-    return (
-      <div className="flex flex-1 flex-col gap-6">
-        <StepProgress
-          step={1}
-          total={2}
-          labels={[copy.claimStepHold, copy.claimStepConfirm]}
-        />
-        <NfcHoldStatus
-          title={copy.holdStill}
-          body={copy.holdStillBody}
-          pulsing
-        />
-      </div>
-    );
-  }
-
-  if (stage === "confirming") {
-    return (
-      <div className="flex flex-1 flex-col gap-6 py-2">
-        <StepProgress
-          step={2}
-          total={2}
-          labels={[copy.claimStepHold, copy.claimStepConfirm]}
-        />
-        <NfcHoldStatus
-          title="Confirm in wallet…"
-          body="Approve in your wallet to continue."
-          busy
-        />
-      </div>
-    );
-  }
-
-  if (stage === "confirm") {
-    return (
-      <div className="flex flex-1 flex-col gap-5 py-2">
-        <StepProgress
-          step={2}
-          total={2}
-          labels={[copy.claimStepHold, copy.claimStepConfirm]}
-        />
-
-        <div className="space-y-1.5 text-center">
-          <p className="text-base font-medium text-foreground">
-            Link your wallet
-          </p>
-          <p className="mx-auto max-w-72 text-sm text-muted-foreground">
-            The hold is done — connect the wallet that should own this {noun},
-            then confirm. {copy.claimNetworkFee}
-          </p>
-        </div>
-
-        {!address ? (
-          <ConnectGate
-            title="Connect your wallet"
-            body={`This wallet will own the ${noun}.`}
-            onConnect={connect}
-          />
-        ) : (
-          <div className="flex flex-col gap-3">
-            {error ? <InlineError>{error}</InlineError> : null}
-            <Button
-              type="button"
-              size="lg"
-              className="w-full"
-              disabled={!signer}
-              onClick={() => void onFinish()}
-            >
-              {error ? "Try again" : "Confirm in wallet"}
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-1 flex-col gap-5">
-      {onBack ? <BackLink onClick={onBack} /> : null}
+  const chrome = (
+    <>
+      {onBack && stage !== "confirming" ? (
+        <BackLink onClick={onBack} />
+      ) : null}
       <StepProgress
-        step={1}
+        step={stage === "confirm" || stage === "confirming" ? 2 : 1}
         total={2}
         labels={[copy.claimStepHold, copy.claimStepConfirm]}
       />
-      <GateMessage
-        icon={<Nfc className="size-5 text-muted-foreground" />}
-        title={title}
-        body={`Stay in Safari or Chrome and hold your ${noun} to this phone. Then connect a wallet and confirm. ${copy.claimNetworkFee}`}
-        action={
-          <div className="flex w-full max-w-64 flex-col gap-3">
-            {error ? <InlineError>{error}</InlineError> : null}
-            <Button
-              type="button"
-              size="lg"
-              className="w-full"
-              onClick={() => void onCapture()}
-            >
-              <Nfc className="size-4" />
-              {error ? "Try again" : copy.holdToAdd}
-            </Button>
-          </div>
-        }
-      />
+    </>
+  );
+
+  return (
+    <div className="flex flex-1 flex-col gap-4">
+      {chrome}
+      <StageTransition
+        stageKey={stage}
+        className="flex flex-1 flex-col gap-4"
+      >
+        {stage === "reading" ? (
+          <NfcHoldStatus
+            title={copy.holdStill}
+            body={copy.holdStillBody}
+            pulsing
+            imageSrc={orbSrc}
+            imageAlt={orbAlt}
+          />
+        ) : null}
+
+        {stage === "confirming" ? (
+          <NfcHoldStatus
+            title="Confirm in wallet…"
+            body="Approve in your wallet to continue."
+            busy
+            imageSrc={orbSrc}
+            imageAlt={orbAlt}
+          />
+        ) : null}
+
+        {stage === "confirm" ? (
+          <>
+            <div className="mx-auto flex flex-1 flex-col items-center justify-center gap-5 py-6">
+              <CollectibleOrb
+                src={orbSrc}
+                alt={orbAlt}
+                size="lg"
+                pulsing={false}
+              />
+              <div className="w-full max-w-72 space-y-1.5 text-center">
+                <p className="text-base font-medium text-foreground">
+                  {copy.claimConfirmTitle}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {copy.claimConfirmBody(noun)}
+                </p>
+              </div>
+            </div>
+            <TokenStickyActions>
+              {!address ? (
+                <ConnectGate
+                  title="Connect your wallet"
+                  body={`This wallet will own the ${noun}.`}
+                  onConnect={connect}
+                />
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {error ? <InlineError>{error}</InlineError> : null}
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="w-full"
+                    disabled={!signer}
+                    onClick={() => void onFinish()}
+                  >
+                    {error ? "Try again" : "Confirm in wallet"}
+                  </Button>
+                </div>
+              )}
+            </TokenStickyActions>
+          </>
+        ) : null}
+
+        {stage === "ready" ? (
+          <>
+            <div className="mx-auto flex flex-1 flex-col items-center justify-center gap-5 py-6">
+              <CollectibleOrb
+                src={orbSrc}
+                alt={orbAlt}
+                size="lg"
+                pulsing
+                onClick={() => void onCapture()}
+                ariaLabel={copy.holdToAdd}
+              />
+              <div className="w-full max-w-72 space-y-1.5 text-center">
+                <p className="text-base font-medium text-foreground">
+                  {title}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {copy.claimReadyBody(noun)}
+                </p>
+                {error ? <InlineError>{error}</InlineError> : null}
+              </div>
+            </div>
+            <TokenStickyActions>
+              <Button
+                type="button"
+                size="lg"
+                className="w-full"
+                onClick={() => void onCapture()}
+              >
+                {error ? "Try again" : copy.holdToAdd}
+              </Button>
+            </TokenStickyActions>
+          </>
+        ) : null}
+      </StageTransition>
     </div>
   );
 }

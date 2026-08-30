@@ -44,6 +44,8 @@ import {
 } from "@/lib/tokens/verified-tokens-client";
 import { fetchDasCollectibleClient, fetchDasCollectiblesClient } from "@/lib/tokens/das-collectible-client";
 import type { Collectible } from "@/lib/tokens/collectible";
+import { fetchCollectibleShortcutsClient } from "@/lib/tokens/shortcuts-client";
+import type { CollectibleShortcut } from "@/lib/tokens/shortcuts";
 import type {
   PaymentToken,
   PaymentTokenHolding,
@@ -100,6 +102,19 @@ export const queryKeys = {
       [...queryKeys.dasCollectible.all(), mint] as const,
     batch: (mints: string[]) =>
       [...queryKeys.dasCollectible.all(), "batch", ...mints] as const,
+  },
+
+  collectibleShortcuts: {
+    all: () => ["collectibleShortcuts"] as const,
+    byExternalUrl: (
+      externalUrl: string | null,
+      collectionMint: string | null,
+    ) =>
+      [
+        ...queryKeys.collectibleShortcuts.all(),
+        externalUrl,
+        collectionMint,
+      ] as const,
   },
 
   ataStatus: {
@@ -327,8 +342,16 @@ export function fetchDasCollectibles(
   return fetchDasCollectiblesClient(mints);
 }
 
+export function fetchCollectibleShortcuts(
+  externalUrl: string,
+  collectionMint: string | null,
+): Promise<CollectibleShortcut[]> {
+  return fetchCollectibleShortcutsClient(externalUrl, collectionMint);
+}
+
 export type {
   Collectible,
+  CollectibleShortcut,
   MintDelegateStatus,
   OwnerPayDelegates,
   PayBootstrap,

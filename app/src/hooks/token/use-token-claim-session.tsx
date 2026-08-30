@@ -7,8 +7,13 @@ import { ClaimPanel } from "@/components/claim/claim-panel";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { useHoldToCheck } from "@/hooks/token/use-hold-to-check";
+import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
 import { copy } from "@/lib/copy/phygital";
-import { isUnclaimedToken, type PhygitalToken } from "@/lib/phygital/token";
+import {
+  isUnclaimedToken,
+  tokenHasLinkedMint,
+  type PhygitalToken,
+} from "@/lib/phygital/token";
 
 /**
  * Shared claim + Hold-to-Check session for minted and unminted token homes.
@@ -42,6 +47,22 @@ export function useTokenClaimSession(
 }
 
 export type TokenClaimSession = ReturnType<typeof useTokenClaimSession>;
+
+function PendingVerifyCeremony({ token }: { token: PhygitalToken }) {
+  const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
+  const { collectible } = useResolvedDasCollectible(mint);
+
+  return (
+    <NfcHoldStatus
+      size="lg"
+      busy
+      title={copy.holdStill}
+      body={copy.holdStillBody}
+      imageSrc={collectible?.image}
+      imageAlt={collectible?.name ?? ""}
+    />
+  );
+}
 
 /**
  * Renders in-app gate, claim panel, or hold-pending chrome before the home body.
@@ -81,14 +102,7 @@ export function TokenClaimSessionGate({
   }
 
   if (session.pending) {
-    return (
-      <NfcHoldStatus
-        size="lg"
-        busy
-        title={copy.holdStill}
-        body={copy.holdStillBody}
-      />
-    );
+    return <PendingVerifyCeremony token={session.token} />;
   }
 
   return children;
