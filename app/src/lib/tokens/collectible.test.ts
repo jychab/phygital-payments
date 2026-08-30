@@ -39,7 +39,11 @@ describe("collectibleFromDas", () => {
             {
               group_key: "collection",
               group_value: COLLECTION,
-              collection_metadata: { name: "Mad Lads" },
+              collection_metadata: {
+                name: "Mad Lads",
+                image: "https://cdn.helius-rpc.com/collection.png",
+                description: "The Mad Lads collection.",
+              },
             },
           ],
         }),
@@ -49,6 +53,8 @@ describe("collectibleFromDas", () => {
       name: "Mad Lads #8420",
       image: "https://cdn.helius-rpc.com/image.png",
       collectionName: "Mad Lads",
+      collectionImage: "https://cdn.helius-rpc.com/collection.png",
+      collectionDescription: "The Mad Lads collection.",
       collectionMint: COLLECTION,
       description: "A legendary Mad Lad.",
       attributes: [
@@ -90,6 +96,8 @@ describe("collectibleFromDas", () => {
       name: "F9Lw…D2rk",
       image: "https://example.com/nft.png",
       collectionName: null,
+      collectionImage: null,
+      collectionDescription: null,
       collectionMint: null,
       description: null,
       attributes: [],
@@ -110,10 +118,37 @@ describe("collectibleFromDas", () => {
       name: "Named",
       image: null,
       collectionName: null,
+      collectionImage: null,
+      collectionDescription: null,
       collectionMint: "abc",
       description: null,
       attributes: [],
       externalUrl: null,
+    });
+  });
+
+  it("ignores non-https collection images", () => {
+    expect(
+      collectibleFromDas(
+        asset({
+          content: { metadata: { name: "Chip" } },
+          grouping: [
+            {
+              group_key: "collection",
+              group_value: COLLECTION,
+              collection_metadata: {
+                name: "Demo",
+                image: "ipfs://bag",
+              },
+            },
+          ],
+        }),
+      ),
+    ).toMatchObject({
+      collectionName: "Demo",
+      collectionImage: null,
+      collectionDescription: null,
+      collectionMint: COLLECTION,
     });
   });
 
@@ -132,6 +167,8 @@ describe("fallbackCollectible", () => {
       name: "F9Lw…D2rk",
       image: null,
       collectionName: null,
+      collectionImage: null,
+      collectionDescription: null,
       collectionMint: null,
       description: null,
       attributes: [],

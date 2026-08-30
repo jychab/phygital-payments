@@ -59,7 +59,7 @@ export function CollectApp({
 
   if (!recipient) {
     return (
-      <AppShell modeLabel="Collect" layout="compact">
+      <AppShell layout="compact">
         <div className="flex flex-1 flex-col items-center justify-center py-14">
           <ConnectGate
             title="Connect your wallet"
@@ -78,7 +78,6 @@ export function CollectApp({
     <AppShell
       recipient={sealedFromUrl ? recipientStr : undefined}
       walletActions={embedded ? "display-only" : "full"}
-      modeLabel="Collect"
       layout="compact"
       headerExtra={
         view === "collect" ? (

@@ -19,7 +19,9 @@ const APP_URL = "https://app.revibase.com";
 const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "";
 
 const solanaConnectors = toSolanaWalletConnectors({
-  shouldAutoConnect: true,
+  // Avoid silently reconnecting a prior Phantom/etc. that then races the
+  // wallet the user just logged in with (Google embedded or SIWS).
+  shouldAutoConnect: false,
 });
 
 /** Register MWA once so Android SMS wallets appear via Wallet Standard. */
@@ -50,9 +52,7 @@ export function SolanaWalletProvider({ children }: { children: ReactNode }) {
       loginMethods: ["google", "wallet"] as ("google" | "wallet")[],
       appearance: {
         theme: "dark" as const,
-        // Near-white primary matches app buttons on the gallery-dark canvas.
         accentColor: "#E9EBEE" as `#${string}`,
-        logo: "",
         landingHeader: APP_NAME,
         walletChainType: "solana-only" as const,
         walletList: ["detected_solana_wallets"] as ("detected_solana_wallets")[],

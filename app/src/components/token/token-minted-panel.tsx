@@ -71,6 +71,7 @@ export function TokenMintedPanel({
             <CollectibleHeader
               name={collectible.name}
               collectionName={collectible.collectionName}
+              collectionImage={collectible.collectionImage}
               liveConfirmed={liveConfirmed}
             />
           ) : loading ? (
@@ -122,7 +123,9 @@ export function TokenMintedPanel({
           <MotionSection staggerIndex={stagger++}>
             <CollectibleDetails
               mint={mint}
-              collectionMint={collectible?.collectionMint}
+              collectionName={collectible?.collectionName}
+              collectionImage={collectible?.collectionImage}
+              collectionDescription={collectible?.collectionDescription}
             />
           </MotionSection>
         ) : null}

@@ -14,7 +14,7 @@ export function TokenRouteShell({
   layout?: ShellLayout;
 }) {
   return (
-    <AppShell walletActions="full" modeLabel="Token" layout={layout}>
+    <AppShell walletActions="full" layout={layout}>
       {children}
     </AppShell>
   );

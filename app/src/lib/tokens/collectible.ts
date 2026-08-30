@@ -11,6 +11,9 @@ export type Collectible = {
   name: string;
   image: string | null;
   collectionName: string | null;
+  /** Collection logo from DAS `collection_metadata.image` (https only). */
+  collectionImage: string | null;
+  collectionDescription: string | null;
   collectionMint: string | null;
   description: string | null;
   attributes: CollectibleAttribute[];
@@ -35,7 +38,12 @@ export type DasCollectibleAsset = {
   grouping?: Array<{
     group_key?: string;
     group_value?: string;
-    collection_metadata?: { name?: string };
+    collection_metadata?: {
+      name?: string;
+      image?: string;
+      description?: string;
+      external_url?: string;
+    };
   }>;
 };
 
@@ -98,6 +106,9 @@ export function collectibleFromDas(
     name: name || shortAddress(mint),
     image,
     collectionName: collection?.collection_metadata?.name?.trim() || null,
+    collectionImage: firstHttpsUrl(collection?.collection_metadata?.image),
+    collectionDescription:
+      collection?.collection_metadata?.description?.trim() || null,
     collectionMint: collection?.group_value?.trim() || null,
     description,
     attributes: mapAttributes(asset.content),
@@ -112,6 +123,8 @@ export function fallbackCollectible(mint: string): Collectible {
     name: shortAddress(mint),
     image: null,
     collectionName: null,
+    collectionImage: null,
+    collectionDescription: null,
     collectionMint: null,
     description: null,
     attributes: [],

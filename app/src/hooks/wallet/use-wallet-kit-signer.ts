@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import {
   useSignTransaction,
-  useWallets,
   type ConnectedStandardSolanaWallet,
 } from "@privy-io/react-auth/solana";
 import {
@@ -16,6 +15,7 @@ import {
   type TransactionWithinSizeLimit,
 } from "@solana/kit";
 
+import { useActiveSolanaWallet } from "@/hooks/wallet/use-active-solana-wallet";
 import { getChainId } from "@/lib/solana/cluster";
 
 type SignTransactionFn = ReturnType<
@@ -60,9 +60,8 @@ function createPrivyKitSigner(
 
 /** Privy-backed `@solana/kit` TransactionModifyingSigner for the active wallet. */
 export function useWalletKitSigner(): TransactionModifyingSigner | null {
-  const { wallets } = useWallets();
+  const { wallet } = useActiveSolanaWallet();
   const { signTransaction } = useSignTransaction();
-  const wallet = wallets[0] ?? null;
 
   return useMemo(() => {
     if (!wallet) return null;

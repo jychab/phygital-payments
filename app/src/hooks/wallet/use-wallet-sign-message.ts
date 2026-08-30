@@ -1,16 +1,17 @@
 "use client";
 
 import { useCallback } from "react";
-import { useSignMessage, useWallets } from "@privy-io/react-auth/solana";
+import { useSignMessage } from "@privy-io/react-auth/solana";
+
+import { useActiveSolanaWallet } from "@/hooks/wallet/use-active-solana-wallet";
 
 /**
  * Sign an arbitrary message with the connected Solana wallet.
  * Used for Pay API-key provision and Confirm Payments.
  */
 export function useWalletSignMessage() {
-  const { wallets, ready } = useWallets();
+  const { ready, wallet } = useActiveSolanaWallet();
   const { signMessage: privySignMessage } = useSignMessage();
-  const wallet = wallets[0] ?? null;
 
   const signMessage = useCallback(
     async (message: Uint8Array): Promise<Uint8Array> => {

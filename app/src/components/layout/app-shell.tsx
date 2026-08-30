@@ -13,6 +13,7 @@ import {
 import { galleryAnimate } from "@/lib/motion";
 import { isMainnet } from "@/lib/solana/cluster";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 const WalletChip = dynamic(
   () => import("@/components/shared/wallet-chip").then((m) => m.WalletChip),
@@ -29,18 +30,13 @@ export function AppShell({
   recipient,
   children,
   walletActions = "full",
-  modeLabel,
   layout = "compact",
-  wordmark = false,
   headerExtra,
 }: {
   /** Required for `walletActions="display-only"` (sealed Collect chip). */
   recipient?: string | null;
   children: ReactNode;
   walletActions?: WalletActionsMode;
-  modeLabel?: AppMode;
-  /** Company wordmark (use on `/` hub only). */
-  wordmark?: boolean;
   layout?: ShellLayout;
   headerExtra?: ReactNode;
 }) {
@@ -60,15 +56,9 @@ export function AppShell({
           )}
         >
           <div className="flex min-w-0 items-center gap-2">
-            {wordmark ? (
-              <span className="font-(family-name:--font-display) text-sm font-medium tracking-tight text-foreground">
-                {brand.company}
-              </span>
-            ) : modeLabel ? (
-              <span className="text-eyebrow text-muted-foreground">
-                {modeLabel}
-              </span>
-            ) : null}
+            <Link href="/" className="font-(family-name:--font-display) text-sm font-medium tracking-tight text-foreground">
+              {brand.company}
+            </Link>
             {!isMainnet() ? (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                 <span
@@ -77,9 +67,7 @@ export function AppShell({
                 />
                 Devnet
               </span>
-            ) : wordmark || modeLabel ? null : (
-              <span aria-hidden />
-            )}
+            ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {headerExtra}
