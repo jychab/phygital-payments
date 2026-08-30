@@ -1,23 +1,32 @@
 "use client";
 
 import { useCallback } from "react";
-import { useTransactionSigner } from "@solana/connector/react";
+import { useSignMessage, useWallets } from "@privy-io/react-auth/solana";
 
 /**
- * Sign an arbitrary message with the connected wallet (Wallet Standard
- * `solana:signMessage`). Used for Pay API-key provision and Confirm Payments.
+ * Sign an arbitrary message with the connected Solana wallet.
+ * Used for Pay API-key provision and Confirm Payments.
  */
 export function useWalletSignMessage() {
-  const { signer, ready, capabilities } = useTransactionSigner();
+  const { wallets, ready } = useWallets();
+  const { signMessage: privySignMessage } = useSignMessage();
+  const wallet = wallets[0] ?? null;
 
   const signMessage = useCallback(
     async (message: Uint8Array): Promise<Uint8Array> => {
-      if (!ready || !signer?.signMessage || !capabilities.canSignMessage) {
+      if (!ready || !wallet) {
         throw new Error("Connect a wallet that can sign messages");
       }
-      return signer.signMessage(message);
+      const { signature } = await privySignMessage({
+        message,
+        wallet,
+        options: {
+          uiOptions: { showWalletUIs: true },
+        },
+      });
+      return signature;
     },
-    [ready, signer, capabilities.canSignMessage],
+    [ready, wallet, privySignMessage],
   );
 
   return { signMessage };

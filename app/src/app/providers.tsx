@@ -18,7 +18,7 @@ import { queryKeys, queryOptions, shouldRetryQuery } from "@/lib/queries";
 
 /**
  * Shared by all routes: React Query (localStorage-persisted, only browser cache) + toasts.
- * One wallet tree (`WalletRoot`) — ConnectorKit always available for the wallet chip.
+ * One wallet tree (`WalletRoot`) — Privy always available for the wallet chip.
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
