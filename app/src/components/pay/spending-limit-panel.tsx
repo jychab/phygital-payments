@@ -259,7 +259,7 @@ export function SpendingLimitPanel({
         ) : null}
       </p>
 
-      <StickyActions blur={false}>
+      <StickyActions>
         {!matched ? (
           <ExpectedWalletConnect
             owner={owner}

@@ -166,7 +166,7 @@ export function ApiKeyPanel({
         />
       ) : null}
 
-      <StickyActions blur={false}>
+      <StickyActions>
         {step === "home" && !hasStoredKey ? (
           <>
             <ProvisionAction

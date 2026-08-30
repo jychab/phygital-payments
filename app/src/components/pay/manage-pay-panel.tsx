@@ -107,7 +107,7 @@ export function ManagePayPanel({
       </div>
 
       {confirmationOn ? (
-        <StickyActions blur={false}>
+        <StickyActions>
           <Button
             type="button"
             variant="outline"

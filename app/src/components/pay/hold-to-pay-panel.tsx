@@ -78,7 +78,7 @@ export function HoldToPayPanel({
         </p>
       </div>
 
-      <StickyActions blur={false}>
+      <StickyActions>
         <HoldToPayIdleActions
           confirmationRequired={confirmationRequired}
           keyReady={keyReady}

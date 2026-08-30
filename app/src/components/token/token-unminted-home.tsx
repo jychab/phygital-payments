@@ -157,12 +157,7 @@ export function TokenUnmintedHome({
 /** Opens Collect as this wallet — friends pay with their accessories. */
 function CollectLaunchLink({ recipient }: { recipient: string }) {
   return (
-    <Button
-      asChild
-      variant="ghost"
-      size="lg"
-      className="w-full text-muted-foreground"
-    >
+    <Button asChild variant="outline" size="lg" className="w-full">
       <Link href={collectHref({ recipient })}>{copy.collect}</Link>
     </Button>
   );

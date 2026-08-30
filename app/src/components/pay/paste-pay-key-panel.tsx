@@ -81,7 +81,7 @@ export function PastePayKeyPanel({
         className="font-mono"
       />
 
-      <StickyActions blur={false}>
+      <StickyActions>
         <Button
           type="button"
           size="lg"

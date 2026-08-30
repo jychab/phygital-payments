@@ -477,7 +477,7 @@ export function CollectPanel({
         </div>
       ) : null}
 
-      <StickyActions blur={false}>
+      <StickyActions>
         <Button
           type="button"
           size="lg"
