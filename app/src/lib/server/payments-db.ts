@@ -11,7 +11,7 @@ type D1PreparedStatement = {
   all<T = unknown>(): Promise<D1Result<T>>;
   first<T = unknown>(): Promise<T | null>;
 };
-type D1Database = {
+export type D1Database = {
   prepare(query: string): D1PreparedStatement;
   batch(statements: D1PreparedStatement[]): Promise<unknown[]>;
   exec(query: string): Promise<unknown>;

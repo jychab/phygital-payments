@@ -1,8 +1,26 @@
 import { shortAddress } from "@/lib/utils";
+import type { RarityTier } from "@/lib/tokens/rarity/rarity-tier";
+
+export type { RarityTier };
 
 export type CollectibleAttribute = {
   traitType: string;
   value: string;
+};
+
+export type CollectibleAttributeWithRarity = CollectibleAttribute & {
+  rarityPercent?: number;
+  tier?: RarityTier;
+};
+
+export type CollectibleRarity = {
+  algorithm: "trait_normalized";
+  rank: number;
+  total: number;
+  rankSharedWith: number;
+  score: number;
+  tier: RarityTier;
+  attributes: CollectibleAttributeWithRarity[];
 };
 
 /** Lean DAS collectible for minted `/token` UI — not a payment (fungible) token. */
@@ -55,7 +73,7 @@ function firstHttpsUrl(...candidates: Array<string | undefined>): string | null 
   return null;
 }
 
-function mapAttributes(
+export function mapAttributesFromDasContent(
   raw: DasCollectibleAsset["content"],
 ): CollectibleAttribute[] {
   const list = raw?.metadata?.attributes;
@@ -111,7 +129,7 @@ export function collectibleFromDas(
       collection?.collection_metadata?.description?.trim() || null,
     collectionMint: collection?.group_value?.trim() || null,
     description,
-    attributes: mapAttributes(asset.content),
+    attributes: mapAttributesFromDasContent(asset.content),
     externalUrl,
   };
 }

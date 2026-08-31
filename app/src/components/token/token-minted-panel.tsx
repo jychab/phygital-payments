@@ -11,9 +11,11 @@ import { InlineError } from "@/components/shared/inline-error";
 import { MotionSection } from "@/components/shared/motion-section";
 import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
+import { useCollectibleRarity } from "@/hooks/token/use-collectible-rarity";
 import { useCollectibleShortcuts } from "@/hooks/token/use-collectible-shortcuts";
 import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
 import { copy } from "@/lib/copy/phygital";
+import type { CollectibleAttributeWithRarity } from "@/lib/tokens/collectible";
 import { STICKY_ENTER_DELAY_MS } from "@/lib/motion";
 import {
   isUnclaimedToken,
@@ -44,11 +46,21 @@ export function TokenMintedPanel({
   const showVerify = !liveConfirmed && Boolean(onHoldToCheck);
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const { collectible, loading } = useResolvedDasCollectible(mint);
+  const rarityQuery = useCollectibleRarity(mint);
+  const rarity = rarityQuery.data ?? null;
   const shortcutsQuery = useCollectibleShortcuts(
     collectible?.externalUrl,
     collectible?.collectionMint,
   );
   const shortcuts = shortcutsQuery.data ?? [];
+
+  const attributesWithRarity: CollectibleAttributeWithRarity[] =
+    collectible?.attributes.map((attr) => {
+      const enriched = rarity?.attributes.find(
+        (r) => r.traitType === attr.traitType && r.value === attr.value,
+      );
+      return enriched ?? attr;
+    }) ?? [];
 
   const name = collectible?.name ?? "Card";
   const owner = String(token.currentOwner);
@@ -74,6 +86,7 @@ export function TokenMintedPanel({
               collectionImage={collectible.collectionImage}
               liveConfirmed={liveConfirmed}
               onConfirmPresence={onHoldToCheck}
+              rarity={rarity}
             />
           ) : loading ? (
             <div
@@ -114,9 +127,9 @@ export function TokenMintedPanel({
           </MotionSection>
         ) : null}
 
-        {collectible && collectible.attributes.length > 0 ? (
+        {collectible && attributesWithRarity.length > 0 ? (
           <MotionSection staggerIndex={stagger++}>
-            <CollectibleAttributes attributes={collectible.attributes} />
+            <CollectibleAttributes attributes={attributesWithRarity} />
           </MotionSection>
         ) : null}
 

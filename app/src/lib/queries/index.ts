@@ -43,7 +43,8 @@ import {
   fetchVerifiedTokensClient,
 } from "@/lib/tokens/verified-tokens-client";
 import { fetchDasCollectibleClient, fetchDasCollectiblesClient } from "@/lib/tokens/das-collectible-client";
-import type { Collectible } from "@/lib/tokens/collectible";
+import { fetchCollectibleRarityClient } from "@/lib/tokens/rarity-client";
+import type { Collectible, CollectibleRarity } from "@/lib/tokens/collectible";
 import { fetchCollectibleShortcutsClient } from "@/lib/tokens/shortcuts-client";
 import type { CollectibleShortcut } from "@/lib/tokens/shortcuts";
 import type {
@@ -102,6 +103,12 @@ export const queryKeys = {
       [...queryKeys.dasCollectible.all(), mint] as const,
     batch: (mints: string[]) =>
       [...queryKeys.dasCollectible.all(), "batch", ...mints] as const,
+  },
+
+  collectibleRarity: {
+    all: () => ["collectibleRarity"] as const,
+    byMint: (mint: string | null) =>
+      [...queryKeys.collectibleRarity.all(), mint] as const,
   },
 
   collectibleShortcuts: {
@@ -347,6 +354,12 @@ export function fetchDasCollectibles(
   return fetchDasCollectiblesClient(mints);
 }
 
+export function fetchCollectibleRarity(
+  mint: string,
+): Promise<CollectibleRarity | null> {
+  return fetchCollectibleRarityClient(mint);
+}
+
 export function fetchCollectibleShortcuts(
   externalUrl: string,
   collectionMint: string | null,
@@ -356,6 +369,7 @@ export function fetchCollectibleShortcuts(
 
 export type {
   Collectible,
+  CollectibleRarity,
   CollectibleShortcut,
   MintDelegateStatus,
   OwnerPayDelegates,

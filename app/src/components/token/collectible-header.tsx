@@ -3,6 +3,9 @@
 import { useState } from "react";
 
 import { AuthenticityBadge } from "@/components/token/authenticity-badge";
+import { RarityTierBadge } from "@/components/token/rarity-tier-badge";
+import { formatRarityRankWithTie } from "@/lib/copy/phygital";
+import type { CollectibleRarity } from "@/lib/tokens/collectible";
 import { cn } from "@/lib/utils";
 
 /** Collectible identity — left-aligned like Phantom/Backpack detail. */
@@ -12,6 +15,7 @@ export function CollectibleHeader({
   collectionImage,
   liveConfirmed = false,
   onConfirmPresence,
+  rarity,
   className,
 }: {
   name: string;
@@ -20,6 +24,10 @@ export function CollectibleHeader({
   liveConfirmed?: boolean;
   /** When Confirmed, tap the badge to run a fresh presence check. */
   onConfirmPresence?: () => void;
+  rarity?: Pick<
+    CollectibleRarity,
+    "rank" | "total" | "tier" | "rankSharedWith"
+  > | null;
   className?: string;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -56,6 +64,16 @@ export function CollectibleHeader({
             liveConfirmed ? onConfirmPresence : undefined
           }
         />
+        {rarity ? (
+          <RarityTierBadge
+            tier={rarity.tier}
+            detail={formatRarityRankWithTie(
+              rarity.rank,
+              rarity.total,
+              rarity.rankSharedWith,
+            )}
+          />
+        ) : null}
       </div>
     </div>
   );

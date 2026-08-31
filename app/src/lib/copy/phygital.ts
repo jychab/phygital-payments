@@ -105,6 +105,13 @@ export const copy = {
   linkedTo: (short: string) => `Linked to ${short}.`,
 } as const;
 
+export {
+  formatRarityPercent,
+  formatRarityRank,
+  formatRarityRankWithTie,
+  formatTraitRarityLine,
+} from "@/lib/tokens/rarity/format";
+
 /**
  * Revibase Pay surface copy — Collection and NFC accessory share these strings.
  * Product name on setup/settings; short **Pay** only for the arm-payment action.
