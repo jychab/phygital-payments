@@ -140,7 +140,7 @@ function ConfirmPaymentsRow({
   async function onToggle() {
     if (wrongWallet) return;
     if (!matched) {
-      connect();
+      void connect();
       return;
     }
     try {

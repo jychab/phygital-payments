@@ -60,8 +60,13 @@ export const copy = {
   /** Live re-check after Confirmed (badge / title affordance). */
   confirmPresence: "Confirm it’s with you",
   confirmPresenceBody: "Hold your item to the back of this phone.",
+  /** Shown under Confirmed when tappable for re-verify. */
+  confirmPresenceHint: "Tap to verify again",
+  /** After a successful re-verify from Confirmed. */
+  confirmedAgain: "Verified again",
+  confirmedAgainBody: "Your item is still with you.",
   /** Accessible name when Confirmed is tappable. */
-  confirmedRecheckAria: "Confirmed. Confirm it’s with you.",
+  confirmedRecheckAria: "Confirmed. Tap to verify again.",
   holdStill: "Hold still…",
   holdStillBody: "Keep your item against the phone.",
   connectWallet: "Connect wallet",

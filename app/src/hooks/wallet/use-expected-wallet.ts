@@ -8,7 +8,7 @@ import { shortAddress } from "@/lib/utils";
  * Only compares when both `owner` and a connected address are present.
  */
 export function useExpectedWallet(owner: string) {
-  const { address, connect } = useSolanaAddress();
+  const { address, connect, connectReady } = useSolanaAddress();
   const hasExpected = Boolean(owner);
   const wrongWallet =
     hasExpected && address != null && address !== owner;
@@ -18,6 +18,7 @@ export function useExpectedWallet(owner: string) {
   return {
     address,
     isConnected: Boolean(address),
+    connectReady,
     connect,
     wrongWallet,
     matched,

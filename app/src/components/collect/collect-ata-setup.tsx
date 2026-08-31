@@ -33,7 +33,7 @@ export function CollectAtaSetup({
   mint: Address;
   token: PaymentToken;
 }) {
-  const { isConnected, matched, wrongWallet, ownerShort, connect } =
+  const { isConnected, matched, wrongWallet, ownerShort, connect, connectReady } =
     useExpectedWallet(String(recipient));
   const { disconnect } = useSolanaAddress();
   const signer = useWalletKitSigner();
@@ -77,10 +77,12 @@ export function CollectAtaSetup({
             type="button"
             size="lg"
             className="w-full"
-            onClick={connect}
+            disabled={!connectReady}
+            aria-busy={!connectReady}
+            onClick={() => void connect()}
           >
             <Wallet className="size-4" />
-            Connect wallet
+            {connectReady ? "Connect wallet" : "Loading…"}
           </Button>
         ) : wrongWallet ? (
           <div className="space-y-2">

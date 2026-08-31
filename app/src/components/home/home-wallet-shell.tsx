@@ -13,7 +13,7 @@ import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
  */
 export function HomeWalletShell() {
   const embedded = useIsEmbedded();
-  const { address, connect } = useSolanaAddress();
+  const { address, connect, connectReady } = useSolanaAddress();
 
   if (embedded === null) {
     return <EmbedBoot />;
@@ -32,7 +32,7 @@ export function HomeWalletShell() {
     <AppShell layout="gallery">
       {!address ? (
         <div className="flex flex-1 flex-col items-center justify-center py-14">
-          <ConnectGate onConnect={connect} />
+          <ConnectGate onConnect={connect} connectReady={connectReady} />
         </div>
       ) : (
         <CollectionHome owner={address} />

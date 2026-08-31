@@ -18,6 +18,7 @@ export function NfcHoldStatus({
   ringAriaLabel,
   onTitleClick,
   titleAriaLabel,
+  titleHint,
   action,
   header,
   imageSrc,
@@ -36,6 +37,8 @@ export function NfcHoldStatus({
   /** When set, the title is the control (e.g. Confirmed → re-check). */
   onTitleClick?: () => void;
   titleAriaLabel?: string;
+  /** Hint below a tappable title (e.g. "Tap to verify again"). */
+  titleHint?: string;
   action?: ReactNode;
   header?: ReactNode;
   /** DAS mint art for the circular hold target; NFC glyph if missing. */
@@ -78,7 +81,7 @@ export function NfcHoldStatus({
             aria-label={titleAriaLabel ?? title}
             className={cn(
               titleClassName,
-              "mx-auto block rounded-lg px-2 py-0.5 transition-opacity hover:opacity-80",
+              "mx-auto block rounded-lg border border-dashed border-success/30 px-3 py-1 transition-colors hover:bg-success/10 active:scale-[0.98]",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             )}
           >
@@ -87,6 +90,9 @@ export function NfcHoldStatus({
         ) : (
           <p className={titleClassName}>{title}</p>
         )}
+        {titleHint ? (
+          <p className="text-xs text-success/80">{titleHint}</p>
+        ) : null}
         {body ? (
           <p className="text-sm text-muted-foreground">{body}</p>
         ) : null}

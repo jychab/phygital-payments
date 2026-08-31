@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useAuthenticateToken } from "@/hooks/token/use-authenticate-token";
 import { useTapVerify } from "@/hooks/token/use-tap-verify";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
+
+const RECHECK_SUCCESS_MS = 2000;
 
 /**
  * Hold-to-Check + Confirmed badge.
@@ -33,21 +35,39 @@ export function useHoldToCheck(
 
   const [holdConfirmed, setHoldConfirmed] = useState(false);
   const [pending, setPending] = useState(false);
+  const [recheckSuccess, setRecheckSuccess] = useState(false);
   const [showInAppGate, setShowInAppGate] = useState(false);
   const [holdError, setHoldError] = useState<string | null>(null);
+  const recheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (recheckTimer.current) clearTimeout(recheckTimer.current);
+    };
+  }, []);
 
   async function holdToCheck() {
     if (inApp) {
       setShowInAppGate(true);
       return;
     }
+    const wasAlreadyConfirmed =
+      holdConfirmed || tapConfirmed || webauthnProvenInTree;
     setHoldError(null);
+    setRecheckSuccess(false);
     setPending(true);
     try {
       await authenticate({ expectedPublicKey: token.secp256r1PublicKey });
       // Set confirmed before clearing pending so the gate never flashes the
       // Verify landing between authenticate()'s finally and this update.
       setHoldConfirmed(true);
+      if (wasAlreadyConfirmed) {
+        setRecheckSuccess(true);
+        if (recheckTimer.current) clearTimeout(recheckTimer.current);
+        recheckTimer.current = setTimeout(() => {
+          setRecheckSuccess(false);
+        }, RECHECK_SUCCESS_MS);
+      }
     } catch (err) {
       setHoldError(
         toUserErrorMessage(
@@ -65,6 +85,7 @@ export function useHoldToCheck(
     // when they arrive after the first render (wallet ready, etc.).
     liveConfirmed: holdConfirmed || tapConfirmed || webauthnProvenInTree,
     pending,
+    recheckSuccess,
     holdError,
     showInAppGate,
     holdToCheck,

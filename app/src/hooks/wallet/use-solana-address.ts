@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useLogin, usePrivy } from "@privy-io/react-auth";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { useActiveSolanaWallet } from "@/hooks/wallet/use-active-solana-wallet";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
+import { toUserErrorMessage } from "@/lib/user-errors";
 import { clearAppClientStorage } from "@/lib/wallet/clear-client-session";
 
 /**
@@ -18,6 +20,7 @@ export function useSolanaAddress() {
   const queryClient = useQueryClient();
   const { ready: privyReady, authenticated, logout } = usePrivy();
   const { login } = useLogin();
+  const loginInFlight = useRef(false);
   const {
     ready: walletsReady,
     wallet,
@@ -26,11 +29,25 @@ export function useSolanaAddress() {
     isEmbeddedWallet,
   } = useActiveSolanaWallet();
 
-  const connect = useCallback(() => {
-    if (inEmbed || !privyReady || !walletsReady) return;
-    if (address) return;
-    login();
-  }, [inEmbed, privyReady, walletsReady, address, login]);
+  const connectReady = !inEmbed && privyReady && walletsReady;
+
+  const connect = useCallback(async () => {
+    if (inEmbed || address || loginInFlight.current) return;
+    if (!connectReady) {
+      toast.message("Wallet is still loading", {
+        description: "Try Connect again in a moment.",
+      });
+      return;
+    }
+    loginInFlight.current = true;
+    try {
+      login();
+    } catch (err) {
+      toast.error(toUserErrorMessage(err, "Couldn’t open wallet login"));
+    } finally {
+      loginInFlight.current = false;
+    }
+  }, [inEmbed, connectReady, address, login]);
 
   const disconnect = useCallback(async () => {
     clearAppClientStorage();
@@ -52,6 +69,7 @@ export function useSolanaAddress() {
   return {
     address,
     isConnected: Boolean(address),
+    connectReady,
     walletIcon: wallet?.standardWallet.icon ?? null,
     walletName:
       wallet?.standardWallet.name ??

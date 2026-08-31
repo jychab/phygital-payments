@@ -12,11 +12,13 @@ export function ConnectGate({
   title = "Connect your wallet",
   body = copy.connectCollectionBody,
   onConnect,
+  connectReady = true,
   icon,
 }: {
   title?: string;
   body?: string;
-  onConnect: () => void;
+  onConnect: () => void | Promise<void>;
+  connectReady?: boolean;
   icon?: ReactNode;
 }) {
   return (
@@ -25,8 +27,15 @@ export function ConnectGate({
       title={title}
       body={body}
       action={
-        <Button type="button" size="lg" className="w-full" onClick={onConnect}>
-          {copy.connectWallet}
+        <Button
+          type="button"
+          size="lg"
+          className="w-full"
+          disabled={!connectReady}
+          aria-busy={!connectReady}
+          onClick={() => void onConnect()}
+        >
+          {connectReady ? copy.connectWallet : "Loading…"}
         </Button>
       }
     />

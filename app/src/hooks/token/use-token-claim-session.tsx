@@ -35,6 +35,7 @@ export function useTokenClaimSession(
     token,
     liveConfirmed: hold.liveConfirmed,
     pending: hold.pending,
+    recheckSuccess: hold.recheckSuccess,
     holdError: hold.holdError,
     showInAppGate: hold.showInAppGate,
     holdToCheck: hold.holdToCheck,
@@ -49,6 +50,27 @@ export function useTokenClaimSession(
 }
 
 export type TokenClaimSession = ReturnType<typeof useTokenClaimSession>;
+
+function RecheckSuccessCeremony({
+  token,
+}: {
+  token: PhygitalToken;
+}) {
+  const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
+  const { collectible } = useResolvedDasCollectible(mint);
+
+  return (
+    <NfcHoldStatus
+      size="lg"
+      tone="success"
+      pulsing={false}
+      title={copy.confirmedAgain}
+      body={copy.confirmedAgainBody}
+      imageSrc={collectible?.image}
+      imageAlt={collectible?.name ?? ""}
+    />
+  );
+}
 
 function PendingVerifyCeremony({
   token,
@@ -73,7 +95,7 @@ function PendingVerifyCeremony({
   );
 }
 
-type GateMode = "landing" | "pending" | "claim";
+type GateMode = "landing" | "pending" | "recheckSuccess" | "claim";
 
 /**
  * Keeps the landing tree mounted across verify/claim so dossier state and
@@ -96,9 +118,11 @@ export function TokenClaimSessionGate({
 
   const mode: GateMode = session.showClaim
     ? "claim"
-    : session.pending
-      ? "pending"
-      : "landing";
+    : session.recheckSuccess
+      ? "recheckSuccess"
+      : session.pending
+        ? "pending"
+        : "landing";
   const onLanding = mode === "landing";
 
   return (
@@ -124,6 +148,8 @@ export function TokenClaimSessionGate({
               onBack={session.closeClaim}
               onClaimed={session.onClaimed}
             />
+          ) : mode === "recheckSuccess" ? (
+            <RecheckSuccessCeremony token={session.token} />
           ) : (
             <PendingVerifyCeremony
               token={session.token}

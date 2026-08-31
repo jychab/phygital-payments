@@ -44,16 +44,19 @@ export function TokenUnmintedPanel({
   const showPay =
     token.isLocked && tokenAllowsPay(token) && payAction != null;
   const showVerify = !liveConfirmed && Boolean(onHoldToCheck);
+  const confirmPresence =
+    liveConfirmed && onHoldToCheck ? onHoldToCheck : undefined;
   const statusLine = liveConfirmed
     ? fromCollection
       ? copy.verifiedFromCollection
-      : copy.confirmedJustNow
+      : confirmPresence
+        ? copy.confirmPresenceHint
+        : copy.confirmedJustNow
     : copy.registeredOnChain;
 
   const hasSticky =
     showVerify || canClaim || showPay || collectAction != null;
-  const confirmPresence =
-    liveConfirmed && onHoldToCheck ? onHoldToCheck : undefined;
+
 
   return (
     <div className="flex flex-1 flex-col">
@@ -67,6 +70,7 @@ export function TokenUnmintedPanel({
         titleAriaLabel={
           confirmPresence ? copy.confirmedRecheckAria : undefined
         }
+        titleHint={confirmPresence ? copy.confirmPresenceHint : undefined}
         action={
           <TokenUnmintedStatus
             token={token}

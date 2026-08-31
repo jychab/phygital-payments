@@ -36,7 +36,7 @@ export function ExpectedWalletConnect({
   label?: string;
   disabled?: boolean;
 }) {
-  const { wrongWallet, matched, ownerShort, connect } =
+  const { wrongWallet, matched, ownerShort, connect, connectReady } =
     useExpectedWallet(owner);
 
   if (wrongWallet) {
@@ -60,11 +60,12 @@ export function ExpectedWalletConnect({
         variant="outline"
         size="lg"
         className="w-full"
-        onClick={connect}
-        disabled={disabled}
+        onClick={() => void connect()}
+        disabled={disabled || !connectReady}
+        aria-busy={!connectReady}
       >
         <Wallet className="size-4" />
-        {label}
+        {connectReady ? label : "Loading…"}
       </Button>
     </div>
   );

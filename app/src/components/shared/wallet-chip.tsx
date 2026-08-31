@@ -52,6 +52,7 @@ export function WalletChip({ className }: { className?: string }) {
     walletIcon,
     walletName,
     isEmbeddedWallet,
+    connectReady,
     connect,
     disconnect,
   } = useSolanaAddress();
@@ -83,9 +84,11 @@ export function WalletChip({ className }: { className?: string }) {
         size="sm"
         variant="outline"
         className={cn("h-8 rounded-full px-3 text-xs", className)}
-        onClick={connect}
+        disabled={!connectReady}
+        aria-busy={!connectReady}
+        onClick={() => void connect()}
       >
-        Connect
+        {connectReady ? "Connect" : "Loading…"}
       </Button>
     );
   }
