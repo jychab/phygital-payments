@@ -7,9 +7,9 @@ import {
 } from "@/lib/tokens/collectible";
 import {
   enrichAttributes,
-  scoreMintFromCounts,
+  scoreMintHowRare,
   traitKey,
-} from "@/lib/tokens/rarity/trait-normalized";
+} from "@/lib/tokens/rarity/howrare";
 import { tierFromRank } from "@/lib/tokens/rarity/rarity-tier";
 import { postDasRpc } from "@/lib/server/das-rpc";
 import {
@@ -20,10 +20,7 @@ import {
   getCollectionRarityMeta,
   getMintRarityRow,
   getRarityDb,
-  loadAllAttrCountFrequencies,
   loadAllTraitCounts,
-  loadMaxAttrCountFrequency,
-  loadMaxTraitCounts,
   loadUnscoredMintBatch,
   scheduleRarityBackgroundWork,
   updateCollectionRarityMeta,
@@ -136,10 +133,11 @@ async function scoreNextBatches(
   collectionMint: string,
   maxBatches: number,
 ): Promise<void> {
-  const maxByType = await loadMaxTraitCounts(db, collectionMint);
-  const maxAttrCountFrequency = await loadMaxAttrCountFrequency(db, collectionMint);
+  const meta = await getCollectionRarityMeta(db, collectionMint);
+  const totalSupply = meta?.totalSupply ?? 0;
+  if (totalSupply <= 0) return;
+
   const traitCounts = await loadAllTraitCounts(db, collectionMint);
-  const attrCountFreqs = await loadAllAttrCountFrequencies(db, collectionMint);
 
   for (let batch = 0; batch < maxBatches; batch += 1) {
     const rows = await loadUnscoredMintBatch(db, collectionMint, SCORE_BATCH_SIZE);
@@ -147,14 +145,11 @@ async function scoreNextBatches(
 
     const scores = rows.map((row) => {
       const attributes = parseTraitsJson(row.traitsJson);
-      const score = scoreMintFromCounts({
+      const score = scoreMintHowRare({
         attributes,
-        attrCount: row.attrCount,
+        totalSupply,
         getTraitCount: (traitType, traitValue) =>
           traitCounts.get(traitKey(traitType, traitValue)) ?? 0,
-        maxCountByTraitType: maxByType,
-        attrCountFrequency: attrCountFreqs.get(row.attrCount) ?? 0,
-        maxAttrCountFrequency,
       });
       return { mint: row.mint, score };
     });
@@ -304,7 +299,7 @@ async function buildCollectibleRarity(args: {
   });
 
   return {
-    algorithm: "trait_normalized",
+    algorithm: "howrare",
     rank: mintRow.rank!,
     total,
     rankSharedWith: mintRow.rankSharedWith,

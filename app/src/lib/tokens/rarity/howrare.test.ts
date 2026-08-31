@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  ATTR_COUNT_TRAIT_TYPE,
   enrichAttributes,
-  scoreMintFromCounts,
+  scoreMintHowRare,
   traitRarityPercent,
-} from "./trait-normalized";
+} from "./howrare";
 
 describe("traitRarityPercent", () => {
   it("computes frequency as percentage of supply", () => {
@@ -14,44 +13,35 @@ describe("traitRarityPercent", () => {
   });
 });
 
-describe("scoreMintFromCounts", () => {
-  it("sums maxCount/count per trait plus attribute-count pseudo-trait", () => {
+describe("scoreMintHowRare", () => {
+  it("sums 1/rarity% per present trait (no attribute-count)", () => {
     const counts = new Map<string, number>([
       ["Background|Blue", 1],
-      ["Background|Red", 3],
-      ["Hat|Crown", 1],
+      ["Background|Red", 2500],
+      ["Hat|Crown", 50],
     ]);
-    const maxByType = new Map<string, number>([
-      ["Background", 3],
-      ["Hat", 1],
-    ]);
+    const total = 5000;
 
-    const scoreA = scoreMintFromCounts({
+    const scoreA = scoreMintHowRare({
       attributes: [
         { traitType: "Background", value: "Blue" },
         { traitType: "Hat", value: "Crown" },
       ],
-      attrCount: 2,
+      totalSupply: total,
       getTraitCount: (t, v) => counts.get(`${t}|${v}`) ?? 0,
-      maxCountByTraitType: maxByType,
-      attrCountFrequency: 2,
-      maxAttrCountFrequency: 3,
     });
 
-    // Background Blue: 3/1 = 3, Hat Crown: 1/1 = 1, attr count: 3/2 = 1.5
-    expect(scoreA).toBeCloseTo(5.5, 5);
+    // Blue: 5000/(1*100)=50, Crown: 5000/(50*100)=1
+    expect(scoreA).toBeCloseTo(51, 5);
 
-    const scoreB = scoreMintFromCounts({
+    const scoreB = scoreMintHowRare({
       attributes: [{ traitType: "Background", value: "Red" }],
-      attrCount: 1,
+      totalSupply: total,
       getTraitCount: (t, v) => counts.get(`${t}|${v}`) ?? 0,
-      maxCountByTraitType: maxByType,
-      attrCountFrequency: 1,
-      maxAttrCountFrequency: 3,
     });
 
-    // Background Red: 3/3 = 1, attr count: 3/1 = 3
-    expect(scoreB).toBeCloseTo(4, 5);
+    // Red: 5000/(2500*100)=0.02
+    expect(scoreB).toBeCloseTo(0.02, 5);
     expect(scoreA).toBeGreaterThan(scoreB);
   });
 });
@@ -65,6 +55,5 @@ describe("enrichAttributes", () => {
     });
     expect(enriched[0]?.rarityPercent).toBeCloseTo(0.02, 5);
     expect(enriched[0]?.tier).toBe("mythic");
-    expect(ATTR_COUNT_TRAIT_TYPE).toBe("Attribute Count");
   });
 });

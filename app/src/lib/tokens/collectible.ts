@@ -14,7 +14,7 @@ export type CollectibleAttributeWithRarity = CollectibleAttribute & {
 };
 
 export type CollectibleRarity = {
-  algorithm: "trait_normalized";
+  algorithm: "howrare";
   rank: number;
   total: number;
   rankSharedWith: number;

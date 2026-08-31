@@ -3,7 +3,8 @@ import "server-only";
 
 import { getPaymentsDb, type D1Database } from "@/lib/server/payments-db";
 
-export const RARITY_ALGORITHM_VERSION = 1;
+/** Bump when score formula changes — forces per-collection D1 rebuild. */
+export const RARITY_ALGORITHM_VERSION = 3;
 
 export type CollectionRarityStatus =
   | "scanning"
@@ -62,11 +63,6 @@ type CountRow = {
 type AttrCountRow = {
   attr_count: number;
   count: number;
-};
-
-type MaxCountRow = {
-  trait_type: string;
-  max_count: number;
 };
 
 const D1_BATCH_CHUNK = 100;
@@ -348,37 +344,6 @@ export async function countUnscoredMints(
     .bind(collectionMint)
     .first<{ count: number }>();
   return row?.count ?? 0;
-}
-
-export async function loadMaxTraitCounts(
-  db: D1Database,
-  collectionMint: string,
-): Promise<Map<string, number>> {
-  const { results } = await db
-    .prepare(
-      `SELECT trait_type, MAX(count) AS max_count
-       FROM collection_trait_counts
-       WHERE collection_mint = ?
-       GROUP BY trait_type`,
-    )
-    .bind(collectionMint)
-    .all<MaxCountRow>();
-
-  return new Map(results.map((r) => [r.trait_type, r.max_count]));
-}
-
-export async function loadMaxAttrCountFrequency(
-  db: D1Database,
-  collectionMint: string,
-): Promise<number> {
-  const row = await db
-    .prepare(
-      `SELECT MAX(count) AS max_count FROM collection_attr_counts
-       WHERE collection_mint = ?`,
-    )
-    .bind(collectionMint)
-    .first<{ max_count: number | null }>();
-  return row?.max_count ?? 0;
 }
 
 export async function loadTraitCount(
