@@ -123,8 +123,8 @@ const RULES: Rule[] = [
   },
   {
     test: /tap proof expired|slot hash no longer valid/i,
-    title: "This Expired",
-    body: "Hold your accessory to this phone again.",
+    title: "Session ended",
+    body: "Hold your item here again, then tap the ring to verify.",
   },
   {
     test: /slot hashes|slot hash/i,
@@ -157,29 +157,29 @@ const RULES: Rule[] = [
     body: "You can’t collect a payment from your own accessory.",
   },
   {
-    test: /this tap was already used/i,
-    title: "Already Used",
-    body: "Hold your accessory to this phone again.",
+    test: /this tap timed out|this tap was already used/i,
+    title: "Session ended",
+    body: "Hold your item here again, then tap the ring to verify.",
   },
   {
     test: /this is not the same NFC accessory/i,
-    title: "Couldn’t Verify",
-    body: "Hold the same accessory against the back of your phone.",
+    title: "Wrong item",
+    body: "Hold the same item against the back of your phone.",
   },
   {
     test: /couldn't verify this NFC accessory|message mismatch/i,
-    title: "Couldn’t Verify",
-    body: "Hold it flat against the back of your phone and try again.",
+    title: "Couldn't verify",
+    body: "Hold your item flat against the back of your phone and tap the ring to try again.",
   },
   {
     test: /isn't set up|not registered/i,
-    title: "Not Set Up",
-    body: "This accessory isn’t set up yet.",
+    title: "Not set up",
+    body: "This item isn't registered on Revibase yet.",
   },
   {
     test: /missing tap parameters|verification failed|invalid signature/i,
-    title: "Couldn’t Verify",
-    body: "Hold it flat against the back of your phone and try again.",
+    title: "Couldn't verify",
+    body: "Hold your item flat against the back of your phone and tap the ring to try again.",
   },
   {
     test: /connect your wallet|connect a wallet|sign in to continue/i,
@@ -188,8 +188,8 @@ const RULES: Rule[] = [
   },
   {
     test: /NFC accessory not found|accessory not found|missing passkey/i,
-    title: "Accessory Not Found",
-    body: "Hold your accessory to this phone again.",
+    title: "Item not found",
+    body: "Hold your item here again, then tap the ring to verify.",
   },
   {
     test: /only classic spl|token-2022/i,

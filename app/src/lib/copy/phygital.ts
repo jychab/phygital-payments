@@ -57,24 +57,34 @@ export const pageTitles = {
 export const copy = {
   /** First-time authenticity CTA in the sticky dock. */
   holdToCheck: "Verify",
+  /** Cold NFC / Hold-to-Check landing (tap the ring). */
+  verifyIntroBody:
+    "Hold your item flat against the back of this phone, then tap the ring.",
+  /** Tap URL or verification session timed out — user must hold again. */
+  verifySessionExpiredTitle: "Session ended",
+  verifySessionExpiredBody:
+    "Your last check timed out. Hold your item here again, then tap the ring to continue.",
   /** Live re-check after Verified (ceremony title). */
-  confirmPresence: "Verify",
-  confirmPresenceBody: "Hold your item to the back of this phone.",
+  confirmPresence: "Verify again",
+  confirmPresenceBody:
+    "Hold your item flat against the back of this phone.",
   /** Shown under Verified when tappable for re-verify. */
-  confirmPresenceHint: "Verify again",
+  confirmPresenceHint: "Tap to verify again",
   /** After a successful re-verify from Verified. */
-  confirmedAgain: "Success",
-  confirmedAgainBody: "This item checked out.",
+  confirmedAgain: "Verified",
+  confirmedAgainBody: "This item is authentic.",
   /** Hold / re-check failed — full-screen retry (no return to detail). */
   verifyFailed: "Couldn't verify",
   confirmFailed: "Couldn't verify",
+  verifyFailedBody:
+    "Hold your item flat against the back of your phone and tap the ring to try again.",
   verifyFailedRetry: "Tap the ring to try again.",
   /** Accessible name for failed-screen ring retry. */
-  verifyFailedRetryAria: "Tap to verify again.",
+  verifyFailedRetryAria: "Tap the ring to verify again.",
   /** Accessible name when Verified row is tappable. */
   confirmedRecheckAria: "Verified. Tap to verify again.",
   holdStill: "Hold still…",
-  holdStillBody: "Keep your item against the phone.",
+  holdStillBody: "Keep your item against the phone until this finishes.",
   connectWallet: "Connect wallet",
   addToWallet: "Add to Wallet",
   holdToCollect: "Hold to Collect",
@@ -91,14 +101,15 @@ export const copy = {
   rarity: "Rarity",
   notVerified: "Not verified",
   verified: "Verified",
-  notVerifiedHint: "Hold your item to the back of this phone.",
+  notVerifiedHint:
+    "Tap Verify and hold your item here to confirm it's authentic.",
   verifyAgain: "Verify again",
-  verifyAgainHint: "Hold to confirm.",
+  verifyAgainHint: "Hold here to re-check",
   signedInAsOwner: "You're signed in as the owner.",
   /** Unminted status when not yet verified this visit. */
   notVerifiedYet: "Not verified yet.",
   /** Tap-URL proof — authentic open, not a fresh presence check. */
-  confirmedJustNow: "Verified from this tap.",
+  confirmedJustNow: "Verified from your tap",
   connectCollectionBody: "Connect to see your cards and accessories.",
   /** Claim ready primary — NFC hold is in the body, not the button. */
   holdToAdd: "Continue",
@@ -111,9 +122,12 @@ export const copy = {
   claimConfirmTitle: "Link your wallet",
   openInBrowser:
     "Open this link in your phone’s browser to continue.",
-  holdCardBody: "Hold your card to the back of this phone.",
-  holdItemBody: "Hold your item to the back of this phone.",
-  verifyingChip: "Verifying…",
+  holdCardBody: "Hold your card flat against the back of this phone, then tap the ring.",
+  holdItemBody:
+    "Hold your item flat against the back of this phone, then tap the ring.",
+  verifyingChip: "Checking your item…",
+  notSetUpTitle: "Not set up",
+  notSetUpBody: "This item isn't registered on Revibase yet.",
   amountLocked: "Amount set by payment link",
   collect: products.collect.name,
   getPaid: "Get paid",

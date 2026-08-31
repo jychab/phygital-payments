@@ -28,8 +28,11 @@ const TokenRouteShell = dynamic(
 
 const TOKEN_NFC_COPY = {
   inAppCheck: copy.openInBrowser,
-  holdBody: copy.holdItemBody,
-  notSetUp: "This item isn’t set up yet.",
+  holdBody: copy.verifyIntroBody,
+  sessionExpiredTitle: copy.verifySessionExpiredTitle,
+  sessionExpiredBody: copy.verifySessionExpiredBody,
+  notSetUpTitle: copy.notSetUpTitle,
+  notSetUpBody: copy.notSetUpBody,
 };
 
 function TokenHome({

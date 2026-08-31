@@ -52,7 +52,9 @@ export function TokenUnmintedPanel({
       : confirmPresence
         ? copy.verifyAgainHint
         : copy.confirmedJustNow
-    : copy.notVerifiedYet;
+    : showVerify
+      ? copy.notVerifiedHint
+      : copy.notVerifiedYet;
 
   const hasSticky =
     showVerify || canClaim || showPay || collectAction != null;

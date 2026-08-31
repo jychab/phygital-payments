@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
 import { useIsRestoring } from "@tanstack/react-query";
 
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
@@ -10,9 +11,12 @@ import { copy as productCopy } from "@/lib/copy/phygital";
 import { useAuthenticateToken } from "@/hooks/token/use-authenticate-token";
 import {
   usePhygitalToken,
-  usePhygitalTokenByPasskey,
 } from "@/hooks/token/use-phygital-token";
 import { useTapVerify } from "@/hooks/token/use-tap-verify";
+import {
+  initWebauthnSessionSnapshot,
+  useWebauthnSession,
+} from "@/hooks/token/use-webauthn-session";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
@@ -20,7 +24,10 @@ import { toUserErrorMessage } from "@/lib/user-errors";
 export type TokenNfcCopy = {
   inAppCheck: string;
   holdBody: string;
-  notSetUp: string;
+  sessionExpiredTitle: string;
+  sessionExpiredBody: string;
+  notSetUpTitle: string;
+  notSetUpBody: string;
 };
 
 export function TokenNfcApp({
@@ -34,39 +41,72 @@ export function TokenNfcApp({
     liveConfirmed?: boolean;
   }) => ReactNode;
 }) {
+  useEffect(() => {
+    initWebauthnSessionSnapshot();
+  }, []);
+
   const { pk, hasTapProof, verify, verifyPending } = useTapVerify();
+  const { session: webauthnSession, markVerified } = useWebauthnSession();
+
+  const tapReady = hasTapProof && verify === "verified";
+  const webauthnReady = Boolean(webauthnSession?.secp256r1PublicKey);
+  const resolvedPk = pk ?? webauthnSession?.secp256r1PublicKey ?? null;
 
   if (hasTapProof && (verifyPending || verify === "pending")) {
     return <LoadingStatus label={productCopy.verifyingChip} />;
   }
 
-  // Missing, incomplete, invalid, or failed tap → Hold to Check (cold entry).
-  if (!hasTapProof || verify !== "verified") {
-    return <HoldToCheckLanding copy={copy} renderHome={renderHome} />;
+  if ((tapReady || webauthnReady) && resolvedPk) {
+    return (
+      <VerifiedTokenFlow
+        pk={resolvedPk}
+        copy={copy}
+        renderHome={renderHome}
+        liveConfirmed
+      />
+    );
   }
 
-  return <TapTokenFlow pk={pk} copy={copy} renderHome={renderHome} />;
+  return (
+    <HoldToCheckLanding
+      copy={copy}
+      sessionExpired={hasTapProof && verify === "failed"}
+      onWebauthnVerified={markVerified}
+    />
+  );
+}
+
+function stripExpiredTapProofFromUrl(
+  router: ReturnType<typeof useRouter>,
+  searchParams: URLSearchParams,
+  passkey: string,
+): void {
+  const next = new URLSearchParams(searchParams.toString());
+  next.delete("s");
+  next.delete("c");
+  next.delete("n");
+  next.set("pk", passkey);
+  const qs = next.toString();
+  router.replace(qs ? `/token?${qs}` : "/token", { scroll: false });
 }
 
 function HoldToCheckLanding({
   copy,
-  renderHome,
+  sessionExpired,
+  onWebauthnVerified,
 }: {
   copy: TokenNfcCopy;
-  renderHome: (args: {
-    token: PhygitalToken;
-    liveConfirmed?: boolean;
-  }) => ReactNode;
+  sessionExpired: boolean;
+  onWebauthnVerified: (secp256r1PublicKey: string) => void;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const inApp = useIsInAppBrowser();
   const { authenticate } = useAuthenticateToken();
 
   const [showInAppGate, setShowInAppGate] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [passkey, setPasskey] = useState<string | null>(null);
-  const [webauthnProven, setWebauthnProven] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const tokenQuery = usePhygitalTokenByPasskey(passkey);
 
   async function onCheck() {
     if (inApp) {
@@ -74,19 +114,14 @@ function HoldToCheckLanding({
       return;
     }
     setError(null);
-    setPasskey(null);
-    setWebauthnProven(false);
     setBusy(true);
     try {
       const { secp256r1PublicKey } = await authenticate();
-      setPasskey(secp256r1PublicKey);
-      setWebauthnProven(true);
+      onWebauthnVerified(secp256r1PublicKey);
+      stripExpiredTapProofFromUrl(router, searchParams, secp256r1PublicKey);
     } catch (err) {
       setError(
-        toUserErrorMessage(
-          err,
-          "Hold it flat against the back of your phone and try again.",
-        ),
+        toUserErrorMessage(err, productCopy.verifyFailedBody),
       );
     } finally {
       setBusy(false);
@@ -97,20 +132,7 @@ function HoldToCheckLanding({
     return <InAppBrowserGate body={copy.inAppCheck} />;
   }
 
-  // Prefer cached/persisted token data — don't wait on isFetchedAfterMount or
-  // a volatile refetch, or a failed refetch will bounce back to Hold.
-  if (tokenQuery.data) {
-    return renderHome({
-      token: tokenQuery.data,
-      liveConfirmed: webauthnProven,
-    });
-  }
-
-  const checking =
-    busy ||
-    (Boolean(passkey) &&
-      (tokenQuery.isPending || tokenQuery.isFetching || !tokenQuery.isFetched));
-  if (checking) {
+  if (busy) {
     return (
       <NfcHoldStatus
         size="lg"
@@ -121,72 +143,60 @@ function HoldToCheckLanding({
     );
   }
 
-  if (passkey && tokenQuery.isError) {
-    return (
-      <NfcHoldStatus
-        size="lg"
-        title="Couldn’t Verify"
-        body="Hold it flat against the back of your phone and try again."
-        onRingClick={() => void onCheck()}
-        ringAriaLabel={productCopy.holdToCheck}
-      />
-    );
-  }
-
-  if (passkey && tokenQuery.isSuccess && tokenQuery.data === null) {
-    return (
-      <NfcHoldStatus
-        size="lg"
-        pulsing={false}
-        title="Not Set Up"
-        body={copy.notSetUp}
-        onRingClick={() => void onCheck()}
-        ringAriaLabel={productCopy.holdToCheck}
-      />
-    );
-  }
-
   if (error) {
     return (
       <NfcHoldStatus
         size="lg"
-        title="Couldn’t Verify"
-        body="Hold it flat against the back of your phone and try again."
+        title={productCopy.verifyFailed}
+        body={error || productCopy.verifyFailedBody}
         onRingClick={() => void onCheck()}
         ringAriaLabel={productCopy.holdToCheck}
+        action={
+          <p className="text-center text-xs text-muted-foreground">
+            {productCopy.verifyFailedRetry}
+          </p>
+        }
       />
     );
   }
 
+  const landingTitle = sessionExpired
+    ? copy.sessionExpiredTitle
+    : productCopy.holdToCheck;
+  const landingBody = sessionExpired
+    ? copy.sessionExpiredBody
+    : copy.holdBody;
+
   return (
     <NfcHoldStatus
       size="lg"
-      title={productCopy.holdToCheck}
-      body={copy.holdBody}
+      title={landingTitle}
+      body={landingBody}
       onRingClick={() => void onCheck()}
       ringAriaLabel={productCopy.holdToCheck}
     />
   );
 }
 
-function TapTokenFlow({
+function VerifiedTokenFlow({
   pk,
   copy,
   renderHome,
+  liveConfirmed,
 }: {
-  pk: string | null;
+  pk: string;
   copy: TokenNfcCopy;
   renderHome: (args: {
     token: PhygitalToken;
     liveConfirmed?: boolean;
   }) => ReactNode;
+  liveConfirmed: boolean;
 }) {
   const isRestoring = useIsRestoring();
   const tokenQuery = usePhygitalToken(pk);
 
   if (tokenQuery.data) {
-    // Tap params already verified by /api/verify-tap — Confirmed is earned.
-    return renderHome({ token: tokenQuery.data, liveConfirmed: true });
+    return renderHome({ token: tokenQuery.data, liveConfirmed });
   }
 
   if (
@@ -202,8 +212,8 @@ function TapTokenFlow({
     <NfcHoldStatus
       size="lg"
       pulsing={false}
-      title="Not Set Up"
-      body={copy.notSetUp}
+      title={copy.notSetUpTitle}
+      body={copy.notSetUpBody}
     />
   );
 }

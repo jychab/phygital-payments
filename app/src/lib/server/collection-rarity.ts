@@ -17,12 +17,12 @@ import {
   countUnscoredMints,
   ensureCollectionRarityMeta,
   ensureRaritySchema,
-  getCollectionRarityMeta,
   getMintRarityRow,
   getRarityDb,
   loadAllTraitCounts,
   loadTraitCountsForAttributes,
   loadUnscoredMintBatch,
+  patchCollectionRarityMeta,
   scheduleRarityBackgroundWork,
   updateCollectionRarityMeta,
   updateMintScores,
@@ -35,6 +35,9 @@ const DAS_PAGE_LIMIT = 1000;
 const SYNC_SCAN_PAGES = 3;
 const SCORE_BATCH_SIZE = 500;
 const SYNC_SCORE_BATCHES = 2;
+const BG_SCAN_PAGES = 5;
+const BG_SCORE_BATCHES = 4;
+const MAX_INDEX_LOOPS = 500;
 
 type DasGroupResponse = {
   items?: DasCollectibleAsset[];
@@ -108,11 +111,16 @@ async function scanNextPages(
       .map(assetToScannedMint)
       .filter((m): m is ScannedMintInput => m != null);
 
-    await upsertScannedMintPage(db, collectionMint, nextPage, mints);
+    const progress = await upsertScannedMintPage(
+      db,
+      collectionMint,
+      nextPage,
+      mints,
+      current,
+    );
+    current = patchCollectionRarityMeta(current, progress);
     pagesDone += 1;
     nextPage += 1;
-
-    current = (await getCollectionRarityMeta(db, collectionMint)) ?? current;
 
     if (items.length === 0 || items.length < DAS_PAGE_LIMIT) {
       await updateCollectionRarityMeta(db, collectionMint, {
@@ -120,7 +128,11 @@ async function scanNextPages(
         scanComplete: true,
         errorMessage: null,
       });
-      current = (await getCollectionRarityMeta(db, collectionMint)) ?? current;
+      current = patchCollectionRarityMeta(current, {
+        status: "scoring",
+        scanComplete: true,
+        errorMessage: null,
+      });
       break;
     }
   }
@@ -131,10 +143,10 @@ async function scanNextPages(
 async function scoreNextBatches(
   db: ReturnType<typeof getRarityDb>,
   collectionMint: string,
+  meta: CollectionRarityMeta,
   maxBatches: number,
 ): Promise<void> {
-  const meta = await getCollectionRarityMeta(db, collectionMint);
-  const totalSupply = meta?.totalSupply ?? 0;
+  const totalSupply = meta.totalSupply;
   if (totalSupply <= 0) return;
 
   const traitCounts = await loadAllTraitCounts(db, collectionMint);
@@ -161,14 +173,21 @@ async function scoreNextBatches(
 async function tryFinalizeRank(
   db: ReturnType<typeof getRarityDb>,
   collectionMint: string,
-): Promise<void> {
+  meta: CollectionRarityMeta,
+): Promise<CollectionRarityMeta> {
   const unscored = await countUnscoredMints(db, collectionMint);
-  if (unscored > 0) return;
+  if (unscored > 0) return meta;
 
   await assignCollectionRanks(db, collectionMint);
+  const builtAt = Math.floor(Date.now() / 1000);
   await updateCollectionRarityMeta(db, collectionMint, {
     status: "ready",
-    builtAt: Math.floor(Date.now() / 1000),
+    builtAt,
+    errorMessage: null,
+  });
+  return patchCollectionRarityMeta(meta, {
+    status: "ready",
+    builtAt,
     errorMessage: null,
   });
 }
@@ -188,7 +207,10 @@ export async function advanceCollectionRarityIndex(
       status: meta.scanComplete ? "scoring" : "scanning",
       errorMessage: null,
     });
-    meta = (await getCollectionRarityMeta(db, collectionMint)) ?? meta;
+    meta = patchCollectionRarityMeta(meta, {
+      status: meta.scanComplete ? "scoring" : "scanning",
+      errorMessage: null,
+    });
   }
 
   const scanPages = opts?.scanPages ?? SYNC_SCAN_PAGES;
@@ -199,11 +221,9 @@ export async function advanceCollectionRarityIndex(
       meta = await scanNextPages(db, collectionMint, meta, scanPages);
     }
 
-    meta = (await getCollectionRarityMeta(db, collectionMint)) ?? meta;
     if (meta.status === "scoring") {
-      await scoreNextBatches(db, collectionMint, scoreBatches);
-      await tryFinalizeRank(db, collectionMint);
-      meta = (await getCollectionRarityMeta(db, collectionMint)) ?? meta;
+      await scoreNextBatches(db, collectionMint, meta, scoreBatches);
+      meta = await tryFinalizeRank(db, collectionMint, meta);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Index build failed";
@@ -211,17 +231,20 @@ export async function advanceCollectionRarityIndex(
       status: "failed",
       errorMessage: message,
     });
-    meta = (await getCollectionRarityMeta(db, collectionMint)) ?? meta;
+    meta = patchCollectionRarityMeta(meta, {
+      status: "failed",
+      errorMessage: message,
+    });
   }
 
   return meta;
 }
 
 async function continueIndexUntilReady(collectionMint: string): Promise<void> {
-  for (let i = 0; i < 500; i += 1) {
+  for (let i = 0; i < MAX_INDEX_LOOPS; i += 1) {
     const meta = await advanceCollectionRarityIndex(collectionMint, {
-      scanPages: 5,
-      scoreBatches: 4,
+      scanPages: BG_SCAN_PAGES,
+      scoreBatches: BG_SCORE_BATCHES,
     });
     if (meta.status === "ready" || meta.status === "failed") return;
   }

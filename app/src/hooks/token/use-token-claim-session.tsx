@@ -183,8 +183,7 @@ export function TokenClaimSessionGate({
               token={session.token}
               recheck={session.failedRecheck}
               errorMessage={
-                session.holdError ??
-                "Hold it flat against the back of your phone and try again."
+                session.holdError ?? copy.verifyFailedBody
               }
               onRetry={() => void session.holdToCheck()}
             />

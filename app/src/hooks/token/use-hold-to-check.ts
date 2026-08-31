@@ -88,10 +88,7 @@ export function useHoldToCheck(
       }
     } catch (err) {
       setHoldError(
-        toUserErrorMessage(
-          err,
-          "Hold it flat against the back of your phone and try again.",
-        ),
+        toUserErrorMessage(err, copy.verifyFailedBody),
       );
       setFailedRecheck(isRecheckRef.current);
       setOverlay("failed");

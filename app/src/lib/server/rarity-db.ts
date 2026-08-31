@@ -1,7 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import "server-only";
 
-import { getPaymentsDb, type D1Database } from "@/lib/server/payments-db";
+import { getPaymentsDb, D1_BATCH_CHUNK, type D1Database } from "@/lib/server/payments-db";
 
 /** Bump when score formula changes — forces per-collection D1 rebuild. */
 export const RARITY_ALGORITHM_VERSION = 4;
@@ -59,8 +59,6 @@ type CountRow = {
   trait_value: string;
   count: number;
 };
-
-const D1_BATCH_CHUNK = 100;
 
 let schemaReady: Promise<void> | null = null;
 
@@ -145,6 +143,29 @@ function rowToMeta(row: MetaRow): CollectionRarityMeta {
   };
 }
 
+/** Merge a meta patch in memory — avoids a D1 re-read after each write. */
+export function patchCollectionRarityMeta(
+  meta: CollectionRarityMeta,
+  patch: Partial<{
+    status: CollectionRarityStatus;
+    totalSupply: number;
+    scanPage: number;
+    scanComplete: boolean;
+    builtAt: number | null;
+    errorMessage: string | null;
+  }>,
+): CollectionRarityMeta {
+  return {
+    ...meta,
+    ...(patch.status !== undefined && { status: patch.status }),
+    ...(patch.totalSupply !== undefined && { totalSupply: patch.totalSupply }),
+    ...(patch.scanPage !== undefined && { scanPage: patch.scanPage }),
+    ...(patch.scanComplete !== undefined && { scanComplete: patch.scanComplete }),
+    ...(patch.builtAt !== undefined && { builtAt: patch.builtAt }),
+    ...(patch.errorMessage !== undefined && { errorMessage: patch.errorMessage }),
+  };
+}
+
 export async function getCollectionRarityMeta(
   db: D1Database,
   collectionMint: string,
@@ -217,7 +238,6 @@ export async function updateCollectionRarityMeta(
     totalSupply: number;
     scanPage: number;
     scanComplete: boolean;
-    scoreCursor: string | null;
     builtAt: number | null;
     errorMessage: string | null;
   }>,
@@ -240,10 +260,6 @@ export async function updateCollectionRarityMeta(
   if (patch.scanComplete != null) {
     sets.push("scan_complete = ?");
     values.push(patch.scanComplete ? 1 : 0);
-  }
-  if (patch.scoreCursor !== undefined) {
-    sets.push("score_cursor = ?");
-    values.push(patch.scoreCursor);
   }
   if (patch.builtAt !== undefined) {
     sets.push("built_at = ?");
@@ -272,15 +288,24 @@ export type ScannedMintInput = {
   attributes: Array<{ traitType: string; value: string }>;
 };
 
+export type ScanPageProgress = {
+  totalSupply: number;
+  scanPage: number;
+};
+
 export async function upsertScannedMintPage(
   db: D1Database,
   collectionMint: string,
   page: number,
   mints: ScannedMintInput[],
-): Promise<void> {
+  currentMeta: CollectionRarityMeta,
+): Promise<ScanPageProgress> {
   if (mints.length === 0) {
     await updateCollectionRarityMeta(db, collectionMint, { scanPage: page });
-    return;
+    return {
+      totalSupply: currentMeta.totalSupply,
+      scanPage: Math.max(currentMeta.scanPage, page),
+    };
   }
 
   // Only aggregate traits for mints not already indexed (avoids double-count on retry).
@@ -313,13 +338,6 @@ export async function upsertScannedMintPage(
      ON CONFLICT(collection_mint, trait_type, trait_value)
      DO UPDATE SET count = count + 1`,
   );
-  const attrCountStmt = db.prepare(
-    `INSERT INTO collection_attr_counts
-       (collection_mint, attr_count, count)
-     VALUES (?, ?, 1)
-     ON CONFLICT(collection_mint, attr_count)
-     DO UPDATE SET count = count + 1`,
-  );
 
   const statements = [];
   for (const mint of mints) {
@@ -333,7 +351,6 @@ export async function upsertScannedMintPage(
         traitStmt.bind(collectionMint, attr.traitType, attr.value),
       );
     }
-    statements.push(attrCountStmt.bind(collectionMint, mint.attrCount));
   }
 
   for (let i = 0; i < statements.length; i += D1_BATCH_CHUNK) {
@@ -348,7 +365,9 @@ export async function upsertScannedMintPage(
     .bind(collectionMint)
     .first<{ count: number }>();
 
-  // Monotonic scan cursor + authoritative supply (never += page size).
+  const totalSupply = countRow?.count ?? 0;
+  const scanPage = Math.max(currentMeta.scanPage, page);
+
   await db
     .prepare(
       `UPDATE collection_rarity_meta
@@ -356,8 +375,10 @@ export async function upsertScannedMintPage(
            scan_page = CASE WHEN scan_page < ? THEN ? ELSE scan_page END
        WHERE collection_mint = ?`,
     )
-    .bind(countRow?.count ?? 0, page, page, collectionMint)
+    .bind(totalSupply, page, page, collectionMint)
     .run();
+
+  return { totalSupply, scanPage };
 }
 
 export async function countUnscoredMints(

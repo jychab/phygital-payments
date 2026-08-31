@@ -103,6 +103,9 @@ export function ensurePaymentsSchema(db: D1Database): Promise<void> {
 
 const D1_BATCH_CHUNK = 100;
 
+/** Shared D1 batch size for multi-statement writes. */
+export { D1_BATCH_CHUNK };
+
 /** Idempotent bulk insert (ignores rows already indexed). Chunked for D1 batch limits. */
 export async function insertPayments(
   db: D1Database,
