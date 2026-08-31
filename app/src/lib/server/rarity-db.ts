@@ -4,7 +4,7 @@ import "server-only";
 import { getPaymentsDb, type D1Database } from "@/lib/server/payments-db";
 
 /** Bump when score formula changes — forces per-collection D1 rebuild. */
-export const RARITY_ALGORITHM_VERSION = 3;
+export const RARITY_ALGORITHM_VERSION = 4;
 
 export type CollectionRarityStatus =
   | "scanning"
@@ -57,11 +57,6 @@ type MintRow = {
 type CountRow = {
   trait_type: string;
   trait_value: string;
-  count: number;
-};
-
-type AttrCountRow = {
-  attr_count: number;
   count: number;
 };
 
@@ -288,6 +283,24 @@ export async function upsertScannedMintPage(
     return;
   }
 
+  // Only aggregate traits for mints not already indexed (avoids double-count on retry).
+  const existing = new Set<string>();
+  const LOOKUP_CHUNK = 100;
+  for (let i = 0; i < mints.length; i += LOOKUP_CHUNK) {
+    const chunk = mints.slice(i, i + LOOKUP_CHUNK);
+    const placeholders = chunk.map(() => "?").join(", ");
+    const { results } = await db
+      .prepare(
+        `SELECT mint FROM collection_mint_rarity
+         WHERE collection_mint = ? AND mint IN (${placeholders})`,
+      )
+      .bind(collectionMint, ...chunk.map((m) => m.mint))
+      .all<{ mint: string }>();
+    for (const row of results) existing.add(row.mint);
+  }
+
+  const newcomers = mints.filter((m) => !existing.has(m.mint));
+
   const mintStmt = db.prepare(
     `INSERT OR IGNORE INTO collection_mint_rarity
        (collection_mint, mint, attr_count, traits_json)
@@ -313,6 +326,8 @@ export async function upsertScannedMintPage(
     statements.push(
       mintStmt.bind(collectionMint, mint.mint, mint.attrCount, mint.traitsJson),
     );
+  }
+  for (const mint of newcomers) {
     for (const attr of mint.attributes) {
       statements.push(
         traitStmt.bind(collectionMint, attr.traitType, attr.value),
@@ -325,11 +340,24 @@ export async function upsertScannedMintPage(
     await db.batch(statements.slice(i, i + D1_BATCH_CHUNK));
   }
 
-  const meta = await getCollectionRarityMeta(db, collectionMint);
-  await updateCollectionRarityMeta(db, collectionMint, {
-    scanPage: page,
-    totalSupply: (meta?.totalSupply ?? 0) + mints.length,
-  });
+  const countRow = await db
+    .prepare(
+      `SELECT COUNT(*) AS count FROM collection_mint_rarity
+       WHERE collection_mint = ?`,
+    )
+    .bind(collectionMint)
+    .first<{ count: number }>();
+
+  // Monotonic scan cursor + authoritative supply (never += page size).
+  await db
+    .prepare(
+      `UPDATE collection_rarity_meta
+       SET total_supply = ?,
+           scan_page = CASE WHEN scan_page < ? THEN ? ELSE scan_page END
+       WHERE collection_mint = ?`,
+    )
+    .bind(countRow?.count ?? 0, page, page, collectionMint)
+    .run();
 }
 
 export async function countUnscoredMints(
@@ -342,22 +370,6 @@ export async function countUnscoredMints(
        WHERE collection_mint = ? AND score IS NULL`,
     )
     .bind(collectionMint)
-    .first<{ count: number }>();
-  return row?.count ?? 0;
-}
-
-export async function loadTraitCount(
-  db: D1Database,
-  collectionMint: string,
-  traitType: string,
-  traitValue: string,
-): Promise<number> {
-  const row = await db
-    .prepare(
-      `SELECT count FROM collection_trait_counts
-       WHERE collection_mint = ? AND trait_type = ? AND trait_value = ?`,
-    )
-    .bind(collectionMint, traitType, traitValue)
     .first<{ count: number }>();
   return row?.count ?? 0;
 }
@@ -471,34 +483,43 @@ export async function loadAllTraitCounts(
   );
 }
 
-export async function loadAllAttrCountFrequencies(
+/** Counts for a mint's traits only — avoids loading the full collection map. */
+export async function loadTraitCountsForAttributes(
   db: D1Database,
   collectionMint: string,
-): Promise<Map<number, number>> {
-  const { results } = await db
-    .prepare(
-      `SELECT attr_count, count FROM collection_attr_counts
-       WHERE collection_mint = ?`,
-    )
-    .bind(collectionMint)
-    .all<AttrCountRow>();
+  attributes: Array<{ traitType: string; value: string }>,
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (attributes.length === 0) return out;
 
-  return new Map(results.map((row) => [row.attr_count, row.count]));
-}
+  const unique = new Map<string, { traitType: string; value: string }>();
+  for (const attr of attributes) {
+    unique.set(`${attr.traitType}|${attr.value}`, attr);
+  }
+  const list = [...unique.values()];
 
-export async function loadAttrCountFrequency(
-  db: D1Database,
-  collectionMint: string,
-  attrCount: number,
-): Promise<number> {
-  const row = await db
-    .prepare(
-      `SELECT count FROM collection_attr_counts
-       WHERE collection_mint = ? AND attr_count = ?`,
-    )
-    .bind(collectionMint, attrCount)
-    .first<{ count: number }>();
-  return row?.count ?? 0;
+  // D1 has no great tuple IN binding — one SELECT with OR chain, chunked.
+  const CHUNK = 40;
+  for (let i = 0; i < list.length; i += CHUNK) {
+    const chunk = list.slice(i, i + CHUNK);
+    const clauses = chunk.map(() => `(trait_type = ? AND trait_value = ?)`).join(" OR ");
+    const binds: unknown[] = [collectionMint];
+    for (const attr of chunk) {
+      binds.push(attr.traitType, attr.value);
+    }
+    const { results } = await db
+      .prepare(
+        `SELECT trait_type, trait_value, count
+         FROM collection_trait_counts
+         WHERE collection_mint = ? AND (${clauses})`,
+      )
+      .bind(...binds)
+      .all<CountRow>();
+    for (const row of results) {
+      out.set(`${row.trait_type}|${row.trait_value}`, row.count);
+    }
+  }
+  return out;
 }
 
 /** Best-effort background continuation after the HTTP response. */

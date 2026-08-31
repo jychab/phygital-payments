@@ -31,7 +31,6 @@ describe("scoreMintHowRare", () => {
       getTraitCount: (t, v) => counts.get(`${t}|${v}`) ?? 0,
     });
 
-    // Blue: 5000/(1*100)=50, Crown: 5000/(50*100)=1
     expect(scoreA).toBeCloseTo(51, 5);
 
     const scoreB = scoreMintHowRare({
@@ -40,7 +39,6 @@ describe("scoreMintHowRare", () => {
       getTraitCount: (t, v) => counts.get(`${t}|${v}`) ?? 0,
     });
 
-    // Red: 5000/(2500*100)=0.02
     expect(scoreB).toBeCloseTo(0.02, 5);
     expect(scoreA).toBeGreaterThan(scoreB);
   });

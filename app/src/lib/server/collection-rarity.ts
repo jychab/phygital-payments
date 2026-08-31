@@ -21,13 +21,13 @@ import {
   getMintRarityRow,
   getRarityDb,
   loadAllTraitCounts,
+  loadTraitCountsForAttributes,
   loadUnscoredMintBatch,
   scheduleRarityBackgroundWork,
   updateCollectionRarityMeta,
   updateMintScores,
   upsertScannedMintPage,
   type CollectionRarityMeta,
-  type CollectionRarityStatus,
   type ScannedMintInput,
 } from "@/lib/server/rarity-db";
 
@@ -257,91 +257,63 @@ export async function ensureCollectionIndexStarted(
   return updated;
 }
 
-export async function fetchCollectibleRarity(args: {
-  mint: string;
-  collectionMint: string;
-  attributes: CollectibleAttribute[];
-}): Promise<CollectibleRarity | null> {
-  const db = getRarityDb();
-  await ensureRaritySchema(db);
-
-  const meta = await getCollectionRarityMeta(db, args.collectionMint);
-  if (!meta || meta.status !== "ready") return null;
-
-  const mintRow = await getMintRarityRow(db, args.collectionMint, args.mint);
-  if (!mintRow?.rank || mintRow.score == null) return null;
-
-  return buildCollectibleRarity({
-    db,
-    collectionMint: args.collectionMint,
-    attributes: args.attributes,
-    meta,
-    mintRow,
-  });
-}
-
 async function buildCollectibleRarity(args: {
   db: ReturnType<typeof getRarityDb>;
-  collectionMint: string;
   attributes: CollectibleAttribute[];
   meta: CollectionRarityMeta;
-  mintRow: NonNullable<Awaited<ReturnType<typeof getMintRarityRow>>>;
+  mintRow: {
+    rank: number;
+    score: number;
+    rankSharedWith: number;
+  };
 }): Promise<CollectibleRarity> {
   const { meta, mintRow } = args;
   const total = meta.totalSupply;
-  const allTraitCounts = await loadAllTraitCounts(args.db, args.collectionMint);
-
-  const attributes = enrichAttributes({
-    attributes: args.attributes,
-    totalSupply: total,
-    getTraitCount: (traitType, traitValue) =>
-      allTraitCounts.get(traitKey(traitType, traitValue)) ?? 0,
-  });
+  const traitCounts = await loadTraitCountsForAttributes(
+    args.db,
+    meta.collectionMint,
+    args.attributes,
+  );
 
   return {
     algorithm: "howrare",
-    rank: mintRow.rank!,
+    rank: mintRow.rank,
     total,
     rankSharedWith: mintRow.rankSharedWith,
-    score: mintRow.score!,
-    tier: tierFromRank(mintRow.rank!, total),
-    attributes,
+    score: mintRow.score,
+    tier: tierFromRank(mintRow.rank, total),
+    attributes: enrichAttributes({
+      attributes: args.attributes,
+      totalSupply: total,
+      getTraitCount: (traitType, traitValue) =>
+        traitCounts.get(traitKey(traitType, traitValue)) ?? 0,
+    }),
   };
 }
 
+/** Advance index if needed, then read rarity for one mint (no duplicate meta fetch). */
 export async function getCollectibleRarityForMint(args: {
   mint: string;
   collectionMint: string | null;
   attributes: CollectibleAttribute[];
-}): Promise<{
-  rarity: CollectibleRarity | null;
-  status: CollectionRarityStatus | null;
-  totalSupply: number;
-  scanPage: number;
-  errorMessage: string | null;
-}> {
-  if (!args.collectionMint) {
-    return {
-      rarity: null,
-      status: null,
-      totalSupply: 0,
-      scanPage: 0,
-      errorMessage: null,
-    };
-  }
+}): Promise<CollectibleRarity | null> {
+  if (!args.collectionMint) return null;
 
   const meta = await ensureCollectionIndexStarted(args.collectionMint);
-  const rarity = await fetchCollectibleRarity({
-    mint: args.mint,
-    collectionMint: args.collectionMint,
-    attributes: args.attributes,
-  });
+  if (meta.status !== "ready") return null;
 
-  return {
-    rarity,
-    status: meta.status,
-    totalSupply: meta.totalSupply,
-    scanPage: meta.scanPage,
-    errorMessage: meta.errorMessage,
-  };
+  const db = getRarityDb();
+  const mintRow = await getMintRarityRow(db, args.collectionMint, args.mint);
+  if (mintRow?.rank == null || mintRow.score == null) return null;
+
+  return buildCollectibleRarity({
+    db,
+    attributes: args.attributes,
+    meta,
+    mintRow: {
+      rank: mintRow.rank,
+      score: mintRow.score,
+      rankSharedWith: mintRow.rankSharedWith,
+    },
+  });
 }

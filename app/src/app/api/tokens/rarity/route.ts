@@ -6,6 +6,7 @@ import { getCollectibleRarityForMint } from "@/lib/server/collection-rarity";
 import { fetchDasCollectible } from "@/lib/server/das-collectible";
 import { getErrorMessage } from "@/lib/utils";
 
+/** Standalone rarity read — prefer `/api/tokens/minted` on the minted landing. */
 export async function GET(req: NextRequest) {
   const idRaw = req.nextUrl.searchParams.get("id")?.trim() ?? "";
   const id = tryParseAddress(idRaw);
@@ -18,54 +19,23 @@ export async function GET(req: NextRequest) {
 
   try {
     const collectible = await fetchDasCollectible(id);
-    if (!collectible) {
+    if (!collectible?.collectionMint) {
       return NextResponse.json(
-        {
-          rarity: null,
-          status: null,
-          collectionMint: null,
-          reason: "collectible_not_found",
-        },
+        { rarity: null },
         { headers: QUERY_NO_STORE },
       );
     }
 
-    if (!collectible.collectionMint) {
-      return NextResponse.json(
-        {
-          rarity: null,
-          status: null,
-          collectionMint: null,
-          reason: "no_collection",
-        },
-        { headers: QUERY_NO_STORE },
-      );
-    }
-
-    const result = await getCollectibleRarityForMint({
+    const rarity = await getCollectibleRarityForMint({
       mint: id,
       collectionMint: collectible.collectionMint,
       attributes: collectible.attributes,
     });
 
-    return NextResponse.json(
-      {
-        rarity: result.rarity,
-        status: result.status,
-        collectionMint: collectible.collectionMint,
-        totalSupply: result.totalSupply,
-        scanPage: result.scanPage,
-        errorMessage: result.errorMessage,
-      },
-      { headers: QUERY_NO_STORE },
-    );
+    return NextResponse.json({ rarity }, { headers: QUERY_NO_STORE });
   } catch (error) {
     return NextResponse.json(
-      {
-        error: getErrorMessage(error, "Failed to load rarity"),
-        rarity: null,
-        status: "failed",
-      },
+      { error: getErrorMessage(error, "Failed to load rarity") },
       { status: 502, headers: QUERY_NO_STORE },
     );
   }

@@ -13,9 +13,7 @@ import { CopyableAddress } from "@/components/shared/copyable-address";
 import { StickyActions } from "@/components/shared/sticky-actions";
 import { MotionSection } from "@/components/shared/motion-section";
 import { Button } from "@/components/ui/button";
-import { useCollectibleRarity } from "@/hooks/token/use-collectible-rarity";
-import { useCollectibleShortcuts } from "@/hooks/token/use-collectible-shortcuts";
-import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
+import { useMintedCollectibleView } from "@/hooks/token/use-minted-collectible-view";
 import { copy } from "@/lib/copy/phygital";
 import type { CollectibleAttributeWithRarity } from "@/lib/tokens/collectible";
 import { STICKY_ENTER_DELAY_MS } from "@/lib/motion";
@@ -48,22 +46,11 @@ export function TokenMintedPanel({
   const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
   const showVerify = !liveConfirmed && Boolean(onHoldToCheck);
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
-  const { collectible, loading } = useResolvedDasCollectible(mint);
-  const rarityQuery = useCollectibleRarity(mint);
-  const rarity = rarityQuery.data ?? null;
-  const shortcutsQuery = useCollectibleShortcuts(
-    collectible?.externalUrl,
-    collectible?.collectionMint,
-  );
-  const shortcuts = shortcutsQuery.data ?? [];
+  const { collectible, rarity, shortcuts, loading, rarityLoading } =
+    useMintedCollectibleView(mint);
 
   const attributesWithRarity: CollectibleAttributeWithRarity[] =
-    collectible?.attributes.map((attr) => {
-      const enriched = rarity?.attributes.find(
-        (r) => r.traitType === attr.traitType && r.value === attr.value,
-      );
-      return enriched ?? attr;
-    }) ?? [];
+    rarity?.attributes ?? collectible?.attributes ?? [];
 
   const name = collectible?.name ?? "Card";
   const cardOwner = String(token.currentOwner);
@@ -76,7 +63,6 @@ export function TokenMintedPanel({
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col gap-6 pb-4">
-        {/* 1. Identity */}
         <CollectibleHero
           src={collectible?.image ?? null}
           alt={name}
@@ -92,7 +78,7 @@ export function TokenMintedPanel({
               collectionName={collectible.collectionName}
               collectionImage={collectible.collectionImage}
               rarity={rarity}
-              rarityLoading={rarityQuery.isLoading && !rarity}
+              rarityLoading={rarityLoading}
             />
           ) : loading ? (
             <div
@@ -102,7 +88,6 @@ export function TokenMintedPanel({
           ) : null}
         </MotionSection>
 
-        {/* 2. Primary status — verify + link (pairs with sticky CTAs) */}
         <MotionSection staggerIndex={stagger++}>
           <div className="flex w-full flex-col gap-1.5 text-left">
             {collectionFootnote ? (
@@ -130,28 +115,24 @@ export function TokenMintedPanel({
           </div>
         </MotionSection>
 
-        {/* 3. Secondary actions — marketplace / project links */}
         {shortcuts.length > 0 ? (
           <MotionSection staggerIndex={stagger++}>
             <CollectibleShortcuts shortcuts={shortcuts} />
           </MotionSection>
         ) : null}
 
-        {/* 4. Traits — what collectors scan first on Tensor / ME */}
         {collectible && attributesWithRarity.length > 0 ? (
           <MotionSection staggerIndex={stagger++}>
             <CollectibleAttributes attributes={attributesWithRarity} />
           </MotionSection>
         ) : null}
 
-        {/* 5. Story */}
         {collectible?.description ? (
           <MotionSection staggerIndex={stagger++}>
             <CollectibleDescription description={collectible.description} />
           </MotionSection>
         ) : null}
 
-        {/* 6. Set context */}
         {collectible ? (
           <MotionSection staggerIndex={stagger++}>
             <CollectibleDetails
@@ -162,7 +143,6 @@ export function TokenMintedPanel({
           </MotionSection>
         ) : null}
 
-        {/* 7. Reference — chip + on-chain addresses */}
         <MotionSection staggerIndex={stagger++}>
           <TokenDetails
             cardId={token.secp256r1PublicKey}

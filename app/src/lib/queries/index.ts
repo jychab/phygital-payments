@@ -43,6 +43,7 @@ import {
   fetchVerifiedTokensClient,
 } from "@/lib/tokens/verified-tokens-client";
 import { fetchDasCollectibleClient, fetchDasCollectiblesClient } from "@/lib/tokens/das-collectible-client";
+import { fetchMintedCollectibleViewClient } from "@/lib/tokens/minted-collectible-view-client";
 import { fetchCollectibleRarityClient } from "@/lib/tokens/rarity-client";
 import type { Collectible, CollectibleRarity } from "@/lib/tokens/collectible";
 import { fetchCollectibleShortcutsClient } from "@/lib/tokens/shortcuts-client";
@@ -109,6 +110,12 @@ export const queryKeys = {
     all: () => ["collectibleRarity"] as const,
     byMint: (mint: string | null) =>
       [...queryKeys.collectibleRarity.all(), mint] as const,
+  },
+
+  mintedCollectibleView: {
+    all: () => ["mintedCollectibleView"] as const,
+    byMint: (mint: string | null) =>
+      [...queryKeys.mintedCollectibleView.all(), mint] as const,
   },
 
   collectibleShortcuts: {
@@ -359,6 +366,10 @@ export async function fetchCollectibleRarity(
 ): Promise<CollectibleRarity | null> {
   const res = await fetchCollectibleRarityClient(mint);
   return res.rarity;
+}
+
+export function fetchMintedCollectibleView(mint: string) {
+  return fetchMintedCollectibleViewClient(mint);
 }
 
 export function fetchCollectibleShortcuts(

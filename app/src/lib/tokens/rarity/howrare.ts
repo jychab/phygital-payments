@@ -1,11 +1,9 @@
-import type { CollectibleAttribute } from "@/lib/tokens/collectible";
+import type {
+  CollectibleAttribute,
+  CollectibleAttributeWithRarity,
+} from "@/lib/tokens/collectible";
 
-import { tierFromPercentile, type RarityTier } from "./rarity-tier";
-
-export type CollectibleAttributeWithRarity = CollectibleAttribute & {
-  rarityPercent?: number;
-  tier?: RarityTier;
-};
+import { tierFromPercentile } from "./rarity-tier";
 
 export function traitKey(traitType: string, value: string): string {
   return `${traitType}|${value}`;
@@ -17,11 +15,8 @@ export function traitRarityPercent(count: number, total: number): number {
 }
 
 /**
- * HowRare / Tensor methodology score: sum of `1 / rarity%` over present traits.
- *
- * rarity% = (count / totalSupply) × 100, so each term is `totalSupply / (count × 100)`.
- * Attribute-count is intentionally omitted — Tensor’s HowRare ranks match this
- * (including it shifts Mad Lads #7343 from #112 → #120).
+ * HowRare / Tensor methodology: sum of `1 / rarity%` over present traits.
+ * Attribute-count omitted — Tensor’s HowRare ranks match this (Mad Lads #7343 → #112).
  */
 export function scoreMintHowRare(args: {
   attributes: CollectibleAttribute[];
