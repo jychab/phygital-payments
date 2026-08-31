@@ -86,14 +86,7 @@ function VerifyFailedCeremony({
   );
 }
 
-function RecheckSuccessCeremony({
-  token,
-}: {
-  token: PhygitalToken;
-}) {
-  const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
-  const { collectible } = useResolvedDasCollectible(mint);
-
+function RecheckSuccessCeremony() {
   return (
     <NfcHoldStatus
       size="lg"
@@ -101,8 +94,6 @@ function RecheckSuccessCeremony({
       pulsing={false}
       title={copy.confirmedAgain}
       body={copy.confirmedAgainBody}
-      imageSrc={collectible?.image}
-      imageAlt={collectible?.name ?? ""}
     />
   );
 }
@@ -186,7 +177,7 @@ export function TokenClaimSessionGate({
               onClaimed={session.onClaimed}
             />
           ) : mode === "recheckSuccess" ? (
-            <RecheckSuccessCeremony token={session.token} />
+            <RecheckSuccessCeremony />
           ) : mode === "failed" ? (
             <VerifyFailedCeremony
               token={session.token}

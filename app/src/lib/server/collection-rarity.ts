@@ -30,6 +30,7 @@ import {
   updateMintScores,
   upsertScannedMintPage,
   type CollectionRarityMeta,
+  type CollectionRarityStatus,
   type ScannedMintInput,
 } from "@/lib/server/rarity-db";
 
@@ -317,14 +318,35 @@ export async function getCollectibleRarityForMint(args: {
   mint: string;
   collectionMint: string | null;
   attributes: CollectibleAttribute[];
-}): Promise<CollectibleRarity | null> {
-  if (!args.collectionMint) return null;
+}): Promise<{
+  rarity: CollectibleRarity | null;
+  status: CollectionRarityStatus | null;
+  totalSupply: number;
+  scanPage: number;
+  errorMessage: string | null;
+}> {
+  if (!args.collectionMint) {
+    return {
+      rarity: null,
+      status: null,
+      totalSupply: 0,
+      scanPage: 0,
+      errorMessage: null,
+    };
+  }
 
-  await ensureCollectionIndexStarted(args.collectionMint);
-
-  return fetchCollectibleRarity({
+  const meta = await ensureCollectionIndexStarted(args.collectionMint);
+  const rarity = await fetchCollectibleRarity({
     mint: args.mint,
     collectionMint: args.collectionMint,
     attributes: args.attributes,
   });
+
+  return {
+    rarity,
+    status: meta.status,
+    totalSupply: meta.totalSupply,
+    scanPage: meta.scanPage,
+    errorMessage: meta.errorMessage,
+  };
 }

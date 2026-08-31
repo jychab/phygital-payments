@@ -75,8 +75,7 @@ export function CopyableAddress({
         <Copy
           className={cn(
             "absolute size-3.5 text-muted-foreground/70 transition-all duration-200",
-            "opacity-0 group-hover/copy:opacity-100",
-            copied && "opacity-0",
+            copied ? "opacity-0" : "opacity-100",
           )}
         />
         <Check

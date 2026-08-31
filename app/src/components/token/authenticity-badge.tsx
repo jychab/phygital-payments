@@ -54,6 +54,3 @@ export function VerificationMetadataRow({
     </CollectibleMetadataRow>
   );
 }
-
-/** @deprecated Use VerificationMetadataRow */
-export const AuthenticityBadge = VerificationMetadataRow;

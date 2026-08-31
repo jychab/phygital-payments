@@ -32,7 +32,7 @@ export function CollectibleMetadataRow({
   onPress,
   className,
 }: {
-  label: string;
+  label: ReactNode;
   children: ReactNode;
   trailing?: ReactNode;
   subtitle?: ReactNode;
@@ -56,7 +56,7 @@ export function CollectibleMetadataRow({
     </>
   );
 
-  const rowClasses = cn("flex items-start justify-between gap-3 px-4 py-3 text-xs", className);
+  const rowClasses = cn("flex items-center py-2 justify-between gap-3 text-xs", className);
 
   if (onPress) {
     return (

@@ -354,10 +354,11 @@ export function fetchDasCollectibles(
   return fetchDasCollectiblesClient(mints);
 }
 
-export function fetchCollectibleRarity(
+export async function fetchCollectibleRarity(
   mint: string,
 ): Promise<CollectibleRarity | null> {
-  return fetchCollectibleRarityClient(mint);
+  const res = await fetchCollectibleRarityClient(mint);
+  return res.rarity;
 }
 
 export function fetchCollectibleShortcuts(

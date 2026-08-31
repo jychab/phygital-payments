@@ -58,12 +58,12 @@ export const copy = {
   /** First-time authenticity CTA in the sticky dock. */
   holdToCheck: "Verify",
   /** Live re-check after Verified (ceremony title). */
-  confirmPresence: "Verify it's with you",
+  confirmPresence: "Verify",
   confirmPresenceBody: "Hold your item to the back of this phone.",
   /** Shown under Verified when tappable for re-verify. */
   confirmPresenceHint: "Verify again",
   /** After a successful re-verify from Verified. */
-  confirmedAgain: "Still with you",
+  confirmedAgain: "Success",
   confirmedAgainBody: "This item checked out.",
   /** Hold / re-check failed — full-screen retry (no return to detail). */
   verifyFailed: "Couldn't verify",
@@ -81,26 +81,24 @@ export const copy = {
   backToCollection: "Back to Collection",
   /** Metadata row labels. */
   verification: "Verification",
+  cardOwner: "Card Owner",
+  linked: "Linked",
+  mintOwner: "Mint Owner",
+  cardId: "Card ID",
+  cardIdHint:
+    "The card’s secp256r1 public key (credential ID) — the unique identity of this physical card.",
   owner: "Owner",
   rarity: "Rarity",
   notVerified: "Not verified",
   verified: "Verified",
   notVerifiedHint: "Hold your item to the back of this phone.",
   verifyAgain: "Verify again",
-  verifyAgainHint: "Hold to confirm it's still with you.",
+  verifyAgainHint: "Hold to confirm.",
   signedInAsOwner: "You're signed in as the owner.",
-  /** @deprecated Use notVerified — kept for gradual migration. */
-  registered: "Registered",
-  /** @deprecated Use verified — kept for gradual migration. */
-  confirmed: "Confirmed",
   /** Unminted status when not yet verified this visit. */
   notVerifiedYet: "Not verified yet.",
   /** Tap-URL proof — authentic open, not a fresh presence check. */
   confirmedJustNow: "Verified from this tap.",
-  /** @deprecated Use signedInAsOwner */
-  verifiedFromCollection: "You're signed in as the owner.",
-  /** @deprecated Use notVerifiedYet */
-  registeredOnChain: "Not verified yet.",
   connectCollectionBody: "Connect to see your cards and accessories.",
   /** Claim ready primary — NFC hold is in the body, not the button. */
   holdToAdd: "Continue",
@@ -123,13 +121,14 @@ export const copy = {
   attributes: "Attributes",
   shortcuts: "Shortcuts",
   details: "Details",
+  mintDetails: "Mint details",
+  cardDetails: "Card details",
+  collection: "Collection",
   showMore: "Show more",
   showLess: "Show less",
   mintAddress: "Mint",
   collectionAddress: "Collection",
   notLinked: "Not linked",
-  /** @deprecated Owner row uses CopyableAddress instead. */
-  linkedTo: (short: string) => `Linked to ${short}.`,
 } as const;
 
 export {

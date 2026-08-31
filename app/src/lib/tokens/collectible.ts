@@ -36,10 +36,13 @@ export type Collectible = {
   description: string | null;
   attributes: CollectibleAttribute[];
   externalUrl: string | null;
+  /** SPL NFT holder from DAS `ownership.owner`. */
+  mintOwner: string | null;
 };
 
 export type DasCollectibleAsset = {
   id?: string;
+  ownership?: { owner?: string };
   content?: {
     metadata?: {
       name?: string;
@@ -131,6 +134,7 @@ export function collectibleFromDas(
     description,
     attributes: mapAttributesFromDasContent(asset.content),
     externalUrl,
+    mintOwner: asset.ownership?.owner?.trim() || null,
   };
 }
 
@@ -147,5 +151,6 @@ export function fallbackCollectible(mint: string): Collectible {
     description: null,
     attributes: [],
     externalUrl: null,
+    mintOwner: null,
   };
 }

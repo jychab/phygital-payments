@@ -39,7 +39,8 @@ export function CollectibleOrb({
   const icon = size === "lg" ? "size-7" : "size-6";
   const success = tone === "success";
   const showPulse = pulsing && !busy && !success;
-  const showArt = Boolean(src) && failedSrc !== src;
+  // Success always shows the check — mint art stays for pending / default holds.
+  const showArt = !success && Boolean(src) && failedSrc !== src;
 
   const orb = (
     <div

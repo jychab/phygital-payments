@@ -6,9 +6,12 @@ import { CollectibleDetails } from "@/components/token/collectible-details";
 import { CollectibleHeader } from "@/components/token/collectible-header";
 import { CollectibleHero } from "@/components/token/collectible-hero";
 import { CollectibleShortcuts } from "@/components/token/collectible-shortcuts";
+import { VerificationMetadataRow } from "@/components/token/authenticity-badge";
+import { CollectibleMetadataRow } from "@/components/token/collectible-metadata-group";
+import { TokenDetails } from "@/components/token/token-details";
+import { CopyableAddress } from "@/components/shared/copyable-address";
 import { StickyActions } from "@/components/shared/sticky-actions";
 import { MotionSection } from "@/components/shared/motion-section";
-import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import { useCollectibleRarity } from "@/hooks/token/use-collectible-rarity";
 import { useCollectibleShortcuts } from "@/hooks/token/use-collectible-shortcuts";
@@ -22,7 +25,10 @@ import {
   type PhygitalToken,
 } from "@/lib/phygital/token";
 
-/** Verified card — collector detail: DAS art, authenticity, claim, dossier. */
+/**
+ * Minted landing — Tensor/ME-inspired priority:
+ * identity → actions → traits → story → reference details.
+ */
 export function TokenMintedPanel({
   token,
   liveConfirmed,
@@ -60,7 +66,7 @@ export function TokenMintedPanel({
     }) ?? [];
 
   const name = collectible?.name ?? "Card";
-  const owner = String(token.currentOwner);
+  const cardOwner = String(token.currentOwner);
   const hasSticky = showVerify || canClaim;
   let stagger = 0;
 
@@ -70,6 +76,7 @@ export function TokenMintedPanel({
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col gap-6 pb-4">
+        {/* 1. Identity */}
         <CollectibleHero
           src={collectible?.image ?? null}
           alt={name}
@@ -84,16 +91,8 @@ export function TokenMintedPanel({
               name={collectible.name}
               collectionName={collectible.collectionName}
               collectionImage={collectible.collectionImage}
-              liveConfirmed={liveConfirmed}
-              onConfirmPresence={onHoldToCheck}
               rarity={rarity}
               rarityLoading={rarityQuery.isLoading && !rarity}
-              owner={owner}
-              unclaimed={unclaimed}
-              ownerRefresh={
-                <PhygitalTokenRefreshButton token={token} className="size-7" />
-              }
-              collectionFootnote={collectionFootnote}
             />
           ) : loading ? (
             <div
@@ -103,34 +102,74 @@ export function TokenMintedPanel({
           ) : null}
         </MotionSection>
 
+        {/* 2. Primary status — verify + link (pairs with sticky CTAs) */}
+        <MotionSection staggerIndex={stagger++}>
+          <div className="flex w-full flex-col gap-1.5 text-left">
+            {collectionFootnote ? (
+              <p className="text-xs text-muted-foreground">{collectionFootnote}</p>
+            ) : null}
+            <div className="divide-y divide-border/40">
+              <VerificationMetadataRow
+                liveConfirmed={liveConfirmed}
+                onVerifyAgain={onHoldToCheck}
+              />
+              <CollectibleMetadataRow label={copy.linked}>
+                {unclaimed ? (
+                  <span className="font-medium text-muted-foreground">
+                    {copy.notLinked}
+                  </span>
+                ) : (
+                  <CopyableAddress
+                    address={cardOwner}
+                    length={4}
+                    label="linked wallet"
+                  />
+                )}
+              </CollectibleMetadataRow>
+            </div>
+          </div>
+        </MotionSection>
+
+        {/* 3. Secondary actions — marketplace / project links */}
         {shortcuts.length > 0 ? (
           <MotionSection staggerIndex={stagger++}>
             <CollectibleShortcuts shortcuts={shortcuts} />
           </MotionSection>
         ) : null}
 
-        {collectible?.description ? (
-          <MotionSection staggerIndex={stagger++}>
-            <CollectibleDescription description={collectible.description} />
-          </MotionSection>
-        ) : null}
-
+        {/* 4. Traits — what collectors scan first on Tensor / ME */}
         {collectible && attributesWithRarity.length > 0 ? (
           <MotionSection staggerIndex={stagger++}>
             <CollectibleAttributes attributes={attributesWithRarity} />
           </MotionSection>
         ) : null}
 
-        {mint ? (
+        {/* 5. Story */}
+        {collectible?.description ? (
+          <MotionSection staggerIndex={stagger++}>
+            <CollectibleDescription description={collectible.description} />
+          </MotionSection>
+        ) : null}
+
+        {/* 6. Set context */}
+        {collectible ? (
           <MotionSection staggerIndex={stagger++}>
             <CollectibleDetails
-              mint={mint}
-              collectionName={collectible?.collectionName}
-              collectionImage={collectible?.collectionImage}
-              collectionDescription={collectible?.collectionDescription}
+              collectionName={collectible.collectionName}
+              collectionImage={collectible.collectionImage}
+              collectionDescription={collectible.collectionDescription}
             />
           </MotionSection>
         ) : null}
+
+        {/* 7. Reference — chip + on-chain addresses */}
+        <MotionSection staggerIndex={stagger++}>
+          <TokenDetails
+            cardId={token.secp256r1PublicKey}
+            mint={mint}
+            mintOwner={collectible?.mintOwner}
+          />
+        </MotionSection>
       </div>
 
       {hasSticky ? (

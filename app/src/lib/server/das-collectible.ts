@@ -24,7 +24,9 @@ async function fetchDasCollectibleFromRpc(
       id: "collectible",
       params: {
         id: mint,
-        displayOptions: { showCollectionMetadata: true },
+        displayOptions: {
+          showCollectionMetadata: true,
+        },
       },
     });
     return collectibleFromDas(result);
@@ -107,7 +109,9 @@ export async function fetchDasCollectibles(
       id: "collectible-batch",
       params: {
         ids: missing,
-        displayOptions: { showCollectionMetadata: true },
+        displayOptions: {
+          showCollectionMetadata: true,
+        },
       },
     });
     const byId = new Map<string, DasCollectibleAsset>();

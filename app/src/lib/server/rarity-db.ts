@@ -73,60 +73,65 @@ const D1_BATCH_CHUNK = 100;
 
 let schemaReady: Promise<void> | null = null;
 
-function raritySchemaManagedExternally(): boolean {
-  return process.env.NEXTJS_ENV === "production";
-}
-
 export function getRarityDb(): D1Database {
   return getPaymentsDb();
 }
 
+/**
+ * Idempotent CREATE IF NOT EXISTS — safe in every environment.
+ * Production still ships migration 0007; this covers forgotten applies and local Miniflare.
+ */
 export function ensureRaritySchema(db: D1Database): Promise<void> {
-  if (raritySchemaManagedExternally()) return Promise.resolve();
   if (!schemaReady) {
     schemaReady = (async () => {
-      await db.exec(`
-        CREATE TABLE IF NOT EXISTS collection_rarity_meta (
-          collection_mint   TEXT PRIMARY KEY,
-          status            TEXT NOT NULL,
-          algorithm_version INTEGER NOT NULL DEFAULT 1,
-          total_supply      INTEGER NOT NULL DEFAULT 0,
-          scan_page         INTEGER NOT NULL DEFAULT 0,
-          scan_complete     INTEGER NOT NULL DEFAULT 0,
-          score_cursor      TEXT,
-          built_at          INTEGER,
-          error_message     TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS collection_trait_counts (
-          collection_mint TEXT NOT NULL,
-          trait_type      TEXT NOT NULL,
-          trait_value     TEXT NOT NULL,
-          count           INTEGER NOT NULL,
-          PRIMARY KEY (collection_mint, trait_type, trait_value)
-        );
-
-        CREATE TABLE IF NOT EXISTS collection_attr_counts (
-          collection_mint TEXT NOT NULL,
-          attr_count      INTEGER NOT NULL,
-          count           INTEGER NOT NULL,
-          PRIMARY KEY (collection_mint, attr_count)
-        );
-
-        CREATE TABLE IF NOT EXISTS collection_mint_rarity (
-          collection_mint    TEXT NOT NULL,
-          mint               TEXT NOT NULL,
-          attr_count         INTEGER NOT NULL,
-          traits_json        TEXT NOT NULL,
-          score              REAL,
-          rank               INTEGER,
-          rank_shared_with   INTEGER NOT NULL DEFAULT 0,
-          PRIMARY KEY (collection_mint, mint)
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_mint_rarity_score
-          ON collection_mint_rarity (collection_mint, score DESC);
-      `);
+      await db.batch([
+        db.prepare(`
+          CREATE TABLE IF NOT EXISTS collection_rarity_meta (
+            collection_mint   TEXT PRIMARY KEY,
+            status            TEXT NOT NULL,
+            algorithm_version INTEGER NOT NULL DEFAULT 1,
+            total_supply      INTEGER NOT NULL DEFAULT 0,
+            scan_page         INTEGER NOT NULL DEFAULT 0,
+            scan_complete     INTEGER NOT NULL DEFAULT 0,
+            score_cursor      TEXT,
+            built_at          INTEGER,
+            error_message     TEXT
+          )
+        `),
+        db.prepare(`
+          CREATE TABLE IF NOT EXISTS collection_trait_counts (
+            collection_mint TEXT NOT NULL,
+            trait_type      TEXT NOT NULL,
+            trait_value     TEXT NOT NULL,
+            count           INTEGER NOT NULL,
+            PRIMARY KEY (collection_mint, trait_type, trait_value)
+          )
+        `),
+        db.prepare(`
+          CREATE TABLE IF NOT EXISTS collection_attr_counts (
+            collection_mint TEXT NOT NULL,
+            attr_count      INTEGER NOT NULL,
+            count           INTEGER NOT NULL,
+            PRIMARY KEY (collection_mint, attr_count)
+          )
+        `),
+        db.prepare(`
+          CREATE TABLE IF NOT EXISTS collection_mint_rarity (
+            collection_mint    TEXT NOT NULL,
+            mint               TEXT NOT NULL,
+            attr_count         INTEGER NOT NULL,
+            traits_json        TEXT NOT NULL,
+            score              REAL,
+            rank               INTEGER,
+            rank_shared_with   INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (collection_mint, mint)
+          )
+        `),
+        db.prepare(`
+          CREATE INDEX IF NOT EXISTS idx_mint_rarity_score
+            ON collection_mint_rarity (collection_mint, score DESC)
+        `),
+      ]);
     })().catch((error) => {
       schemaReady = null;
       throw error;

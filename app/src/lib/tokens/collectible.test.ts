@@ -62,6 +62,7 @@ describe("collectibleFromDas", () => {
         { traitType: "Hat", value: "Crown" },
       ],
       externalUrl: "https://madlads.com",
+      mintOwner: null,
     });
   });
 
@@ -102,6 +103,7 @@ describe("collectibleFromDas", () => {
       description: null,
       attributes: [],
       externalUrl: null,
+      mintOwner: null,
     });
   });
 
@@ -124,6 +126,7 @@ describe("collectibleFromDas", () => {
       description: null,
       attributes: [],
       externalUrl: null,
+      mintOwner: null,
     });
   });
 
@@ -152,6 +155,17 @@ describe("collectibleFromDas", () => {
     });
   });
 
+  it("maps DAS ownership.owner to mintOwner", () => {
+    expect(
+      collectibleFromDas(
+        asset({
+          content: { metadata: { name: "Chip" } },
+          ownership: { owner: "7xK9ownerWalletAddressForMintOwnerTest" },
+        }),
+      )?.mintOwner,
+    ).toBe("7xK9ownerWalletAddressForMintOwnerTest");
+  });
+
   it("returns null when there is neither a name nor an image", () => {
     expect(collectibleFromDas(null)).toBeNull();
     expect(collectibleFromDas(undefined)).toBeNull();
@@ -173,6 +187,7 @@ describe("fallbackCollectible", () => {
       description: null,
       attributes: [],
       externalUrl: null,
+      mintOwner: null,
     });
   });
 });
