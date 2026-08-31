@@ -57,29 +57,50 @@ export const pageTitles = {
 export const copy = {
   /** First-time authenticity CTA in the sticky dock. */
   holdToCheck: "Verify",
-  /** Live re-check after Confirmed (badge / title affordance). */
-  confirmPresence: "Confirm it’s with you",
+  /** Live re-check after Verified (ceremony title). */
+  confirmPresence: "Verify it's with you",
   confirmPresenceBody: "Hold your item to the back of this phone.",
-  /** Shown under Confirmed when tappable for re-verify. */
-  confirmPresenceHint: "Tap to verify again",
-  /** After a successful re-verify from Confirmed. */
-  confirmedAgain: "Verified again",
-  confirmedAgainBody: "Your item is still with you.",
-  /** Accessible name when Confirmed is tappable. */
-  confirmedRecheckAria: "Confirmed. Tap to verify again.",
+  /** Shown under Verified when tappable for re-verify. */
+  confirmPresenceHint: "Verify again",
+  /** After a successful re-verify from Verified. */
+  confirmedAgain: "Still with you",
+  confirmedAgainBody: "This item checked out.",
+  /** Hold / re-check failed — full-screen retry (no return to detail). */
+  verifyFailed: "Couldn't verify",
+  confirmFailed: "Couldn't verify",
+  verifyFailedRetry: "Tap the ring to try again.",
+  /** Accessible name for failed-screen ring retry. */
+  verifyFailedRetryAria: "Tap to verify again.",
+  /** Accessible name when Verified row is tappable. */
+  confirmedRecheckAria: "Verified. Tap to verify again.",
   holdStill: "Hold still…",
   holdStillBody: "Keep your item against the phone.",
   connectWallet: "Connect wallet",
   addToWallet: "Add to Wallet",
   holdToCollect: "Hold to Collect",
   backToCollection: "Back to Collection",
+  /** Metadata row labels. */
+  verification: "Verification",
+  owner: "Owner",
+  rarity: "Rarity",
+  notVerified: "Not verified",
+  verified: "Verified",
+  notVerifiedHint: "Hold your item to the back of this phone.",
+  verifyAgain: "Verify again",
+  verifyAgainHint: "Hold to confirm it's still with you.",
+  signedInAsOwner: "You're signed in as the owner.",
+  /** @deprecated Use notVerified — kept for gradual migration. */
   registered: "Registered",
+  /** @deprecated Use verified — kept for gradual migration. */
   confirmed: "Confirmed",
-  registeredOnChain: "Registered on-chain.",
+  /** Unminted status when not yet verified this visit. */
+  notVerifiedYet: "Not verified yet.",
   /** Tap-URL proof — authentic open, not a fresh presence check. */
-  confirmedJustNow: "Confirmed from this tap.",
-  /** Collection → detail; owner session matched. */
-  verifiedFromCollection: "Verified in your Collection.",
+  confirmedJustNow: "Verified from this tap.",
+  /** @deprecated Use signedInAsOwner */
+  verifiedFromCollection: "You're signed in as the owner.",
+  /** @deprecated Use notVerifiedYet */
+  registeredOnChain: "Not verified yet.",
   connectCollectionBody: "Connect to see your cards and accessories.",
   /** Claim ready primary — NFC hold is in the body, not the button. */
   holdToAdd: "Continue",
@@ -106,7 +127,8 @@ export const copy = {
   showLess: "Show less",
   mintAddress: "Mint",
   collectionAddress: "Collection",
-  notLinked: "Not linked to a wallet.",
+  notLinked: "Not linked",
+  /** @deprecated Owner row uses CopyableAddress instead. */
   linkedTo: (short: string) => `Linked to ${short}.`,
 } as const;
 

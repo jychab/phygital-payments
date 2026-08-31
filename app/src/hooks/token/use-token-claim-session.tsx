@@ -34,6 +34,8 @@ export function useTokenClaimSession(
   return {
     token,
     liveConfirmed: hold.liveConfirmed,
+    overlay: hold.overlay,
+    failedRecheck: hold.failedRecheck,
     pending: hold.pending,
     recheckSuccess: hold.recheckSuccess,
     holdError: hold.holdError,
@@ -50,6 +52,39 @@ export function useTokenClaimSession(
 }
 
 export type TokenClaimSession = ReturnType<typeof useTokenClaimSession>;
+
+function VerifyFailedCeremony({
+  token,
+  recheck,
+  errorMessage,
+  onRetry,
+}: {
+  token: PhygitalToken;
+  recheck: boolean;
+  errorMessage: string;
+  onRetry: () => void;
+}) {
+  const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
+  const { collectible } = useResolvedDasCollectible(mint);
+
+  return (
+    <NfcHoldStatus
+      size="lg"
+      pulsing
+      title={recheck ? copy.confirmFailed : copy.verifyFailed}
+      body={errorMessage}
+      imageSrc={collectible?.image}
+      imageAlt={collectible?.name ?? ""}
+      onRingClick={onRetry}
+      ringAriaLabel={copy.verifyFailedRetryAria}
+      action={
+        <p className="text-center text-xs text-muted-foreground">
+          {copy.verifyFailedRetry}
+        </p>
+      }
+    />
+  );
+}
 
 function RecheckSuccessCeremony({
   token,
@@ -95,7 +130,7 @@ function PendingVerifyCeremony({
   );
 }
 
-type GateMode = "landing" | "pending" | "recheckSuccess" | "claim";
+type GateMode = "landing" | "pending" | "recheckSuccess" | "failed" | "claim";
 
 /**
  * Keeps the landing tree mounted across verify/claim so dossier state and
@@ -118,11 +153,13 @@ export function TokenClaimSessionGate({
 
   const mode: GateMode = session.showClaim
     ? "claim"
-    : session.recheckSuccess
+    : session.overlay === "recheck-success"
       ? "recheckSuccess"
-      : session.pending
-        ? "pending"
-        : "landing";
+      : session.overlay === "failed"
+        ? "failed"
+        : session.overlay === "pending"
+          ? "pending"
+          : "landing";
   const onLanding = mode === "landing";
 
   return (
@@ -150,6 +187,16 @@ export function TokenClaimSessionGate({
             />
           ) : mode === "recheckSuccess" ? (
             <RecheckSuccessCeremony token={session.token} />
+          ) : mode === "failed" ? (
+            <VerifyFailedCeremony
+              token={session.token}
+              recheck={session.failedRecheck}
+              errorMessage={
+                session.holdError ??
+                "Hold it flat against the back of your phone and try again."
+              }
+              onRetry={() => void session.holdToCheck()}
+            />
           ) : (
             <PendingVerifyCeremony
               token={session.token}

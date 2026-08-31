@@ -7,7 +7,6 @@ import { CollectibleHeader } from "@/components/token/collectible-header";
 import { CollectibleHero } from "@/components/token/collectible-hero";
 import { CollectibleShortcuts } from "@/components/token/collectible-shortcuts";
 import { StickyActions } from "@/components/shared/sticky-actions";
-import { InlineError } from "@/components/shared/inline-error";
 import { MotionSection } from "@/components/shared/motion-section";
 import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
@@ -22,14 +21,12 @@ import {
   tokenHasLinkedMint,
   type PhygitalToken,
 } from "@/lib/phygital/token";
-import { shortAddress } from "@/lib/utils";
 
 /** Verified card — collector detail: DAS art, authenticity, claim, dossier. */
 export function TokenMintedPanel({
   token,
   liveConfirmed,
   fromCollection = false,
-  holdError,
   onHoldToCheck,
   onClaim,
 }: {
@@ -67,6 +64,9 @@ export function TokenMintedPanel({
   const hasSticky = showVerify || canClaim;
   let stagger = 0;
 
+  const collectionFootnote =
+    fromCollection && liveConfirmed ? copy.signedInAsOwner : null;
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col gap-6 pb-4">
@@ -87,6 +87,13 @@ export function TokenMintedPanel({
               liveConfirmed={liveConfirmed}
               onConfirmPresence={onHoldToCheck}
               rarity={rarity}
+              rarityLoading={rarityQuery.isLoading && !rarity}
+              owner={owner}
+              unclaimed={unclaimed}
+              ownerRefresh={
+                <PhygitalTokenRefreshButton token={token} className="size-7" />
+              }
+              collectionFootnote={collectionFootnote}
             />
           ) : loading ? (
             <div
@@ -94,25 +101,6 @@ export function TokenMintedPanel({
               aria-hidden
             />
           ) : null}
-        </MotionSection>
-
-        <MotionSection staggerIndex={stagger++}>
-          <div className="flex w-full flex-col gap-1.5 text-left">
-            {fromCollection && liveConfirmed ? (
-              <p className="text-xs text-muted-foreground">
-                {copy.verifiedFromCollection}
-              </p>
-            ) : null}
-            <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
-              <span>
-                {unclaimed
-                  ? copy.notLinked
-                  : copy.linkedTo(shortAddress(owner))}
-              </span>
-              <PhygitalTokenRefreshButton token={token} />
-            </div>
-            {holdError ? <InlineError>{holdError}</InlineError> : null}
-          </div>
         </MotionSection>
 
         {shortcuts.length > 0 ? (

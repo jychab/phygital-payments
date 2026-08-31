@@ -1,5 +1,7 @@
 import { tierLabel, type RarityTier } from "@/lib/tokens/rarity/rarity-tier";
 import { cn } from "@/lib/utils";
+import { CollectibleMetadataRow } from "@/components/token/collectible-metadata-group";
+import { copy } from "@/lib/copy/phygital";
 
 const TIER_CLASS: Record<
   RarityTier,
@@ -64,5 +66,26 @@ export function RarityTierBadge({
         <span className="truncate font-normal opacity-85">· {detail}</span>
       ) : null}
     </span>
+  );
+}
+
+/** Rarity row for the metadata card (full width, no pill truncation). */
+export function RarityMetadataRow({
+  tier,
+  detail,
+}: {
+  tier: RarityTier;
+  detail?: string;
+}) {
+  const styles = TIER_CLASS[tier];
+  return (
+    <CollectibleMetadataRow label={copy.rarity}>
+      <span className="inline-flex flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
+        <span className={cn("font-medium", styles.text)}>{tierLabel(tier)}</span>
+        {detail ? (
+          <span className="tabular-nums text-muted-foreground">{detail}</span>
+        ) : null}
+      </span>
+    </CollectibleMetadataRow>
   );
 }

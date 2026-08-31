@@ -48,11 +48,11 @@ export function TokenUnmintedPanel({
     liveConfirmed && onHoldToCheck ? onHoldToCheck : undefined;
   const statusLine = liveConfirmed
     ? fromCollection
-      ? copy.verifiedFromCollection
+      ? copy.signedInAsOwner
       : confirmPresence
-        ? copy.confirmPresenceHint
+        ? copy.verifyAgainHint
         : copy.confirmedJustNow
-    : copy.registeredOnChain;
+    : copy.notVerifiedYet;
 
   const hasSticky =
     showVerify || canClaim || showPay || collectAction != null;
@@ -64,13 +64,13 @@ export function TokenUnmintedPanel({
         size="lg"
         tone="success"
         pulsing={false}
-        title={liveConfirmed ? copy.confirmed : copy.registered}
+        title={liveConfirmed ? copy.verified : copy.notVerified}
         body={statusLine}
         onTitleClick={confirmPresence}
         titleAriaLabel={
           confirmPresence ? copy.confirmedRecheckAria : undefined
         }
-        titleHint={confirmPresence ? copy.confirmPresenceHint : undefined}
+        titleHint={confirmPresence ? copy.verifyAgain : undefined}
         action={
           <TokenUnmintedStatus
             token={token}
@@ -131,11 +131,11 @@ function TokenUnmintedStatus({
           <p className="text-xs text-muted-foreground">{copy.notLinked}</p>
         ) : (
           <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <span>Linked to</span>
+            <span>{copy.owner}</span>
             <CopyableAddress
               address={owner}
               length={4}
-              label="linked wallet"
+              label="owner wallet"
               className="text-xs text-muted-foreground"
             />
           </p>

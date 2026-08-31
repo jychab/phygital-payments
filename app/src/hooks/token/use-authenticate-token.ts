@@ -11,7 +11,10 @@ export function useAuthenticateToken() {
   const [pending, setPending] = useState(false);
 
   const authenticate = useCallback(
-    async (args?: { expectedPublicKey?: string }) => {
+    async (args?: {
+      expectedPublicKey?: string;
+      onPasskeyComplete?: () => void;
+    }) => {
       setPending(true);
       try {
         return await authenticateToken({
@@ -22,6 +25,7 @@ export function useAuthenticateToken() {
             } catch {
               /* ignore */
             }
+            args?.onPasskeyComplete?.();
           },
         });
       } finally {

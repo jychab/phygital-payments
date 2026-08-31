@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { useAuthenticateToken } from "@/hooks/token/use-authenticate-token";
 import { useTapVerify } from "@/hooks/token/use-tap-verify";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
+import { copy } from "@/lib/copy/phygital";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
-const RECHECK_SUCCESS_MS = 2000;
+const RECHECK_SUCCESS_MS = 2800;
+
+export type HoldToCheckOverlay =
+  | null
+  | "pending"
+  | "recheck-success"
+  | "failed";
 
 /**
  * Hold-to-Check + Confirmed badge.
@@ -34,11 +42,12 @@ export function useHoldToCheck(
   const tapConfirmed = hasTapProof && verify === "verified";
 
   const [holdConfirmed, setHoldConfirmed] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [recheckSuccess, setRecheckSuccess] = useState(false);
+  const [overlay, setOverlay] = useState<HoldToCheckOverlay>(null);
   const [showInAppGate, setShowInAppGate] = useState(false);
   const [holdError, setHoldError] = useState<string | null>(null);
+  const [failedRecheck, setFailedRecheck] = useState(false);
   const recheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isRecheckRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -46,27 +55,36 @@ export function useHoldToCheck(
     };
   }, []);
 
+  const liveConfirmed = holdConfirmed || tapConfirmed || webauthnProvenInTree;
+
   async function holdToCheck() {
     if (inApp) {
       setShowInAppGate(true);
       return;
     }
-    const wasAlreadyConfirmed =
-      holdConfirmed || tapConfirmed || webauthnProvenInTree;
+
+    isRecheckRef.current = liveConfirmed;
     setHoldError(null);
-    setRecheckSuccess(false);
-    setPending(true);
+    setOverlay("pending");
+
     try {
-      await authenticate({ expectedPublicKey: token.secp256r1PublicKey });
-      // Set confirmed before clearing pending so the gate never flashes the
-      // Verify landing between authenticate()'s finally and this update.
+      await authenticate({
+        expectedPublicKey: token.secp256r1PublicKey,
+      });
       setHoldConfirmed(true);
-      if (wasAlreadyConfirmed) {
-        setRecheckSuccess(true);
+      setFailedRecheck(false);
+
+      if (isRecheckRef.current) {
+        setOverlay("recheck-success");
+        toast.success(copy.confirmedAgain, {
+          description: copy.confirmedAgainBody,
+        });
         if (recheckTimer.current) clearTimeout(recheckTimer.current);
         recheckTimer.current = setTimeout(() => {
-          setRecheckSuccess(false);
+          setOverlay(null);
         }, RECHECK_SUCCESS_MS);
+      } else {
+        setOverlay(null);
       }
     } catch (err) {
       setHoldError(
@@ -75,17 +93,17 @@ export function useHoldToCheck(
           "Hold it flat against the back of your phone and try again.",
         ),
       );
-    } finally {
-      setPending(false);
+      setFailedRecheck(isRecheckRef.current);
+      setOverlay("failed");
     }
   }
 
   return {
-    // Include parent seed so Collection wallet-match / cold WebAuthn stick
-    // when they arrive after the first render (wallet ready, etc.).
-    liveConfirmed: holdConfirmed || tapConfirmed || webauthnProvenInTree,
-    pending,
-    recheckSuccess,
+    liveConfirmed,
+    overlay,
+    failedRecheck,
+    pending: overlay === "pending",
+    recheckSuccess: overlay === "recheck-success",
     holdError,
     showInAppGate,
     holdToCheck,

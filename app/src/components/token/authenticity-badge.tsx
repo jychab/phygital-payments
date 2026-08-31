@@ -2,71 +2,58 @@
 
 import { CheckCircle2, RefreshCw } from "lucide-react";
 
+import { CollectibleMetadataRow } from "@/components/token/collectible-metadata-group";
 import { copy } from "@/lib/copy/phygital";
-import { galleryAnimate } from "@/lib/motion";
-import { cn } from "@/lib/utils";
 
-/**
- * Authenticity pill — Registered (on-chain) vs Confirmed (live / tap proof).
- * When confirmed + `onConfirmPresence`, the pill is the doorway to a fresh hold.
- */
-export function AuthenticityBadge({
-  confirmed = false,
-  onConfirmPresence,
-  className,
+/** Verification metadata row — Not verified or Verified (tappable). */
+export function VerificationMetadataRow({
+  liveConfirmed,
+  onVerifyAgain,
 }: {
-  confirmed?: boolean;
-  /** Fresh WebAuthn re-check — only used while already Confirmed. */
-  onConfirmPresence?: () => void;
-  className?: string;
+  liveConfirmed: boolean;
+  /** When liveConfirmed — runs a fresh hold-to-verify. */
+  onVerifyAgain?: () => void;
 }) {
-  const canRecheck = confirmed && Boolean(onConfirmPresence);
-
-  const classes = cn(
-    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-    confirmed
-      ? "border-success/25 bg-success/10 text-success"
-      : "border-border/60 bg-muted/40 text-muted-foreground",
-    confirmed && galleryAnimate.check,
-    canRecheck &&
-      "cursor-pointer border-dashed transition-colors hover:bg-success/15 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    className,
-  );
-
-  const content = (
-    <>
-      {canRecheck ? (
-        <RefreshCw className="size-3.5 shrink-0 opacity-90" aria-hidden />
-      ) : (
-        <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
-      )}
-      <span className="flex flex-col items-start leading-tight">
-        <span>{confirmed ? copy.confirmed : copy.registered}</span>
-        {canRecheck ? (
-          <span className="text-[10px] font-normal opacity-80">
-            {copy.confirmPresenceHint}
-          </span>
-        ) : null}
-      </span>
-    </>
-  );
-
-  if (canRecheck) {
+  if (liveConfirmed) {
+    const canRecheck = Boolean(onVerifyAgain);
     return (
-      <button
-        type="button"
-        className={classes}
-        onClick={onConfirmPresence}
-        aria-label={copy.confirmedRecheckAria}
+      <CollectibleMetadataRow
+        label={copy.verification}
+        onPress={canRecheck ? onVerifyAgain : undefined}
+        trailing={
+          canRecheck ? (
+            <RefreshCw className="size-3.5 text-muted-foreground" aria-hidden />
+          ) : undefined
+        }
+        subtitle={
+          canRecheck ? (
+            <>
+              <span className="font-medium text-foreground/80">{copy.verifyAgain}</span>
+              <span className="text-muted-foreground">
+                {" · "}
+                {copy.verifyAgainHint}
+              </span>
+            </>
+          ) : undefined
+        }
       >
-        {content}
-      </button>
+        <span
+          className="inline-flex items-center gap-1 font-medium text-success"
+          aria-label={canRecheck ? copy.confirmedRecheckAria : copy.verified}
+        >
+          <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
+          {copy.verified}
+        </span>
+      </CollectibleMetadataRow>
     );
   }
 
   return (
-    <span role="status" className={classes}>
-      {content}
-    </span>
+    <CollectibleMetadataRow label={copy.verification} subtitle={copy.notVerifiedHint}>
+      <span className="font-medium text-muted-foreground">{copy.notVerified}</span>
+    </CollectibleMetadataRow>
   );
 }
+
+/** @deprecated Use VerificationMetadataRow */
+export const AuthenticityBadge = VerificationMetadataRow;
