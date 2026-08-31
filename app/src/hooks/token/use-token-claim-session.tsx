@@ -50,7 +50,14 @@ export function useTokenClaimSession(
 
 export type TokenClaimSession = ReturnType<typeof useTokenClaimSession>;
 
-function PendingVerifyCeremony({ token }: { token: PhygitalToken }) {
+function PendingVerifyCeremony({
+  token,
+  recheck,
+}: {
+  token: PhygitalToken;
+  /** Already Confirmed — fresh presence check, not first Verify. */
+  recheck?: boolean;
+}) {
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const { collectible } = useResolvedDasCollectible(mint);
 
@@ -58,8 +65,8 @@ function PendingVerifyCeremony({ token }: { token: PhygitalToken }) {
     <NfcHoldStatus
       size="lg"
       busy
-      title={copy.holdStill}
-      body={copy.holdStillBody}
+      title={recheck ? copy.confirmPresence : copy.holdStill}
+      body={recheck ? copy.confirmPresenceBody : copy.holdStillBody}
       imageSrc={collectible?.image}
       imageAlt={collectible?.name ?? ""}
     />
@@ -118,7 +125,10 @@ export function TokenClaimSessionGate({
               onClaimed={session.onClaimed}
             />
           ) : (
-            <PendingVerifyCeremony token={session.token} />
+            <PendingVerifyCeremony
+              token={session.token}
+              recheck={session.liveConfirmed}
+            />
           )}
         </StageTransition>
       ) : null}

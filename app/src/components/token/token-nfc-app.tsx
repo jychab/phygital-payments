@@ -97,7 +97,9 @@ function HoldToCheckLanding({
     return <InAppBrowserGate body={copy.inAppCheck} />;
   }
 
-  if (tokenQuery.isFetchedAfterMount && tokenQuery.data) {
+  // Prefer cached/persisted token data — don't wait on isFetchedAfterMount or
+  // a volatile refetch, or a failed refetch will bounce back to Hold.
+  if (tokenQuery.data) {
     return renderHome({
       token: tokenQuery.data,
       liveConfirmed: webauthnProven,
@@ -107,9 +109,7 @@ function HoldToCheckLanding({
   const checking =
     busy ||
     (Boolean(passkey) &&
-      (tokenQuery.isPending ||
-        tokenQuery.isFetching ||
-        !tokenQuery.isFetchedAfterMount));
+      (tokenQuery.isPending || tokenQuery.isFetching || !tokenQuery.isFetched));
   if (checking) {
     return (
       <NfcHoldStatus
@@ -133,7 +133,7 @@ function HoldToCheckLanding({
     );
   }
 
-  if (passkey && tokenQuery.isFetchedAfterMount && tokenQuery.data === null) {
+  if (passkey && tokenQuery.isSuccess && tokenQuery.data === null) {
     return (
       <NfcHoldStatus
         size="lg"
@@ -184,25 +184,26 @@ function TapTokenFlow({
   const isRestoring = useIsRestoring();
   const tokenQuery = usePhygitalToken(pk);
 
+  if (tokenQuery.data) {
+    // Tap params already verified by /api/verify-tap — Confirmed is earned.
+    return renderHome({ token: tokenQuery.data, liveConfirmed: true });
+  }
+
   if (
     isRestoring ||
+    tokenQuery.isPending ||
     tokenQuery.isLoading ||
-    !tokenQuery.isFetchedAfterMount
+    tokenQuery.isFetching
   ) {
     return <LoadingStatus label={productCopy.verifyingChip} />;
   }
 
-  if (tokenQuery.isError || !tokenQuery.data) {
-    return (
-      <NfcHoldStatus
-        size="lg"
-        pulsing={false}
-        title="Not Set Up"
-        body={copy.notSetUp}
-      />
-    );
-  }
-
-  // Tap params already verified by /api/verify-tap — Confirmed is earned.
-  return renderHome({ token: tokenQuery.data, liveConfirmed: true });
+  return (
+    <NfcHoldStatus
+      size="lg"
+      pulsing={false}
+      title="Not Set Up"
+      body={copy.notSetUp}
+    />
+  );
 }

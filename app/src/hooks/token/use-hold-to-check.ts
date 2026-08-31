@@ -27,11 +27,12 @@ export function useHoldToCheck(
   webauthnProvenInTree = false,
 ) {
   const inApp = useIsInAppBrowser();
-  const { authenticate, pending } = useAuthenticateToken();
+  const { authenticate } = useAuthenticateToken();
   const { hasTapProof, verify } = useTapVerify();
   const tapConfirmed = hasTapProof && verify === "verified";
 
   const [holdConfirmed, setHoldConfirmed] = useState(false);
+  const [pending, setPending] = useState(false);
   const [showInAppGate, setShowInAppGate] = useState(false);
   const [holdError, setHoldError] = useState<string | null>(null);
 
@@ -41,8 +42,11 @@ export function useHoldToCheck(
       return;
     }
     setHoldError(null);
+    setPending(true);
     try {
       await authenticate({ expectedPublicKey: token.secp256r1PublicKey });
+      // Set confirmed before clearing pending so the gate never flashes the
+      // Verify landing between authenticate()'s finally and this update.
       setHoldConfirmed(true);
     } catch (err) {
       setHoldError(
@@ -51,6 +55,8 @@ export function useHoldToCheck(
           "Hold it flat against the back of your phone and try again.",
         ),
       );
+    } finally {
+      setPending(false);
     }
   }
 

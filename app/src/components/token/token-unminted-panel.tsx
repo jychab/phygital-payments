@@ -52,6 +52,8 @@ export function TokenUnmintedPanel({
 
   const hasSticky =
     showVerify || canClaim || showPay || collectAction != null;
+  const confirmPresence =
+    liveConfirmed && onHoldToCheck ? onHoldToCheck : undefined;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -61,6 +63,10 @@ export function TokenUnmintedPanel({
         pulsing={false}
         title={liveConfirmed ? copy.confirmed : copy.registered}
         body={statusLine}
+        onTitleClick={confirmPresence}
+        titleAriaLabel={
+          confirmPresence ? copy.confirmedRecheckAria : undefined
+        }
         action={
           <TokenUnmintedStatus
             token={token}

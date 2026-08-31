@@ -53,12 +53,17 @@ export const pageTitles = {
   collect: products.collect.title,
 } as const;
 
-/** Shared product copy — keep verbs and status labels consistent. */
+  /** Shared product copy — keep verbs and status labels consistent. */
 export const copy = {
-  /** Authenticity CTA — gesture taught by ceremony body, not this label. */
+  /** First-time authenticity CTA in the sticky dock. */
   holdToCheck: "Verify",
-  holdStill: "Hold Still…",
-  holdStillBody: "Keep holding.",
+  /** Live re-check after Confirmed (badge / title affordance). */
+  confirmPresence: "Confirm it’s with you",
+  confirmPresenceBody: "Hold your item to the back of this phone.",
+  /** Accessible name when Confirmed is tappable. */
+  confirmedRecheckAria: "Confirmed. Confirm it’s with you.",
+  holdStill: "Hold still…",
+  holdStillBody: "Keep your item against the phone.",
   connectWallet: "Connect wallet",
   addToWallet: "Add to Wallet",
   holdToCollect: "Hold to Collect",
@@ -66,9 +71,10 @@ export const copy = {
   registered: "Registered",
   confirmed: "Confirmed",
   registeredOnChain: "Registered on-chain.",
-  confirmedJustNow: "Confirmed just now.",
-  /** Collection → detail; Confirmed when owner session verified (not URL alone). */
-  verifiedFromCollection: "Verified from your Collection.",
+  /** Tap-URL proof — authentic open, not a fresh presence check. */
+  confirmedJustNow: "Confirmed from this tap.",
+  /** Collection → detail; owner session matched. */
+  verifiedFromCollection: "Verified in your Collection.",
   connectCollectionBody: "Connect to see your cards and accessories.",
   /** Claim ready primary — NFC hold is in the body, not the button. */
   holdToAdd: "Continue",
@@ -83,7 +89,7 @@ export const copy = {
     "Open this link in your phone’s browser to continue.",
   holdCardBody: "Hold your card to the back of this phone.",
   holdItemBody: "Hold your item to the back of this phone.",
-  verifyingChip: "Verifying chip signature…",
+  verifyingChip: "Verifying…",
   amountLocked: "Amount set by payment link",
   collect: products.collect.name,
   getPaid: "Get paid",

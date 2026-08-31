@@ -282,7 +282,12 @@ export const queryOptions = {
   /** Catalog / rarely changing metadata. */
   stable: { refetchOnWindowFocus: false, staleTime: 15 * MINUTE },
   /** One-shot proofs / immutable chain metadata — never refetch. */
-  immutable: { refetchOnWindowFocus: false, staleTime: Infinity },
+  immutable: {
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    staleTime: Infinity,
+  },
 } as const;
 
 /** Owner-scoped reads: poll only while the UI surface is active. */

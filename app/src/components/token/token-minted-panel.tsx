@@ -73,6 +73,7 @@ export function TokenMintedPanel({
               collectionName={collectible.collectionName}
               collectionImage={collectible.collectionImage}
               liveConfirmed={liveConfirmed}
+              onConfirmPresence={onHoldToCheck}
             />
           ) : loading ? (
             <div

@@ -73,16 +73,24 @@ export function useTapVerify() {
     queryKey: queryKeys.tapVerify.byParams(tapParamsString),
     queryFn: () => fetchTapVerification(new URLSearchParams(tapParamsString)),
     enabled: hasTapProof,
-    // Server allows same-counter reentry briefly; cache the successful result.
+    // One-shot proof — cache success; never refetch (reconnect would 409).
     ...queryOptions.immutable,
   });
 
-  const verify: TapVerifyStatus =
-    !hasTapProof || verifyQuery.isError
-      ? "failed"
-      : (verifyQuery.data?.status ?? "pending");
+  // Prefer a successful result over a later error status. A reconnect refetch
+  // that hits counter replay must not unmount the verified token home.
+  const verify: TapVerifyStatus = !hasTapProof
+    ? "failed"
+    : verifyQuery.data?.status === "verified"
+      ? "verified"
+      : verifyQuery.isPending
+        ? "pending"
+        : verifyQuery.isError
+          ? "failed"
+          : "pending";
 
-  const verifyPending = hasTapProof && verifyQuery.isPending;
+  const verifyPending =
+    hasTapProof && verify === "pending" && !verifyQuery.data;
 
   return {
     pk,

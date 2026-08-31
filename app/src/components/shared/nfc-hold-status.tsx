@@ -16,6 +16,8 @@ export function NfcHoldStatus({
   tone = "default",
   onRingClick,
   ringAriaLabel,
+  onTitleClick,
+  titleAriaLabel,
   action,
   header,
   imageSrc,
@@ -31,6 +33,9 @@ export function NfcHoldStatus({
   /** When set, the ring is the control (browser needs a gesture for WebAuthn). */
   onRingClick?: () => void;
   ringAriaLabel?: string;
+  /** When set, the title is the control (e.g. Confirmed → re-check). */
+  onTitleClick?: () => void;
+  titleAriaLabel?: string;
   action?: ReactNode;
   header?: ReactNode;
   /** DAS mint art for the circular hold target; NFC glyph if missing. */
@@ -38,6 +43,8 @@ export function NfcHoldStatus({
   imageAlt?: string;
 }) {
   const base = header ? 1 : 0;
+  const titleClassName =
+    "text-display-md tracking-tight md:text-2xl text-foreground";
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-5 py-14 text-center">
@@ -64,7 +71,22 @@ export function NfcHoldStatus({
         className={cn("w-full max-w-72 space-y-1", galleryAnimate.rise)}
         style={staggerStyle(base + 1)}
       >
-        <p className="text-display-md tracking-tight md:text-2xl">{title}</p>
+        {onTitleClick ? (
+          <button
+            type="button"
+            onClick={onTitleClick}
+            aria-label={titleAriaLabel ?? title}
+            className={cn(
+              titleClassName,
+              "mx-auto block rounded-lg px-2 py-0.5 transition-opacity hover:opacity-80",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            )}
+          >
+            {title}
+          </button>
+        ) : (
+          <p className={titleClassName}>{title}</p>
+        )}
         {body ? (
           <p className="text-sm text-muted-foreground">{body}</p>
         ) : null}

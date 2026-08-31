@@ -11,12 +11,15 @@ export function CollectibleHeader({
   collectionName,
   collectionImage,
   liveConfirmed = false,
+  onConfirmPresence,
   className,
 }: {
   name: string;
   collectionName?: string | null;
   collectionImage?: string | null;
   liveConfirmed?: boolean;
+  /** When Confirmed, tap the badge to run a fresh presence check. */
+  onConfirmPresence?: () => void;
   className?: string;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -47,7 +50,12 @@ export function CollectibleHeader({
             ) : null}
           </div>
         ) : null}
-        <AuthenticityBadge confirmed={liveConfirmed} />
+        <AuthenticityBadge
+          confirmed={liveConfirmed}
+          onConfirmPresence={
+            liveConfirmed ? onConfirmPresence : undefined
+          }
+        />
       </div>
     </div>
   );
