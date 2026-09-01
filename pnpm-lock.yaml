@@ -103,8 +103,8 @@ importers:
         specifier: workspace:*
         version: link:../clients/js/phygital-payments
       phygital-token-sdk:
-        specifier: ^1.0.1
-        version: 1.0.1(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))
+        specifier: file:phygital-token-sdk-1.0.2.tgz
+        version: file:app/phygital-token-sdk-1.0.2.tgz(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))
       radix-ui:
         specifier: ^1.6.7
         version: 1.6.7(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -7562,8 +7562,9 @@ packages:
     resolution: {integrity: sha512-//nshmD55c46FuFw26xV/xFAaB5HF9Xdap7HJBBnrKdAd6/GxDBaNA1870O79+9ueg61cZLSVc+OaFlfmObYVQ==}
     engines: {node: '>= 14.16'}
 
-  phygital-token-sdk@1.0.1:
-    resolution: {integrity: sha512-DOVHpySz3fe0ZKemTYxvdCZFvLfzfI7N42csfqTqZLT8tm8ShfauIqtw9aeBMIixWATFMsWXWEMDTdbzQk3c9g==}
+  phygital-token-sdk@file:app/phygital-token-sdk-1.0.2.tgz:
+    resolution: {integrity: sha512-J5/A6G+RJ7lB/fHSRT9YSURNxAvp53GSgwsqzOL15juRkH5SYL2EJ0m2n4QYqRmJI85XgRwOXtooT5c+nR6k7g==, tarball: file:app/phygital-token-sdk-1.0.2.tgz}
+    version: 1.0.2
     engines: {node: '>=20.18.0'}
     peerDependencies:
       '@solana/kit': ^8.0.0
@@ -19217,7 +19218,7 @@ snapshots:
 
   pathval@2.0.1: {}
 
-  phygital-token-sdk@1.0.1(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)):
+  phygital-token-sdk@file:app/phygital-token-sdk-1.0.2.tgz(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)):
     dependencies:
       '@noble/curves': 2.4.0
       '@noble/hashes': 2.4.0
