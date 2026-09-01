@@ -56,7 +56,6 @@ export async function finishClaim(args: {
   auth: TransferAuth;
   recipient: TransactionSigner;
 }): Promise<{ signature: string }> {
-  console.log(args.auth);
   const instructions = await completeTransfer(
     args.session,
     args.auth,
