@@ -1,6 +1,9 @@
 import { copy } from "@/lib/copy/phygital";
 import {
+  computeSpendableUi,
+  isBalanceLimited,
   isOwnerPayMintEnabled,
+  type MintDelegateStatus,
   type OwnerPayMintMatch,
   type OwnerPayDelegates,
 } from "@/lib/tokens/mint-delegate";
@@ -141,6 +144,18 @@ function sortAccessoryHoldings(
   });
 }
 
+function spendableRowSubtitle(
+  holding: PaymentTokenHolding,
+  status: MintDelegateStatus,
+): string {
+  const spendable = computeSpendableUi(status, holding.decimals);
+  const allowance = status.delegatedAmountUi;
+  const { symbol } = holding;
+  return isBalanceLimited(status)
+    ? copy.pay.availableNowAllowanceSubtitle(spendable, allowance, symbol)
+    : copy.pay.availableToPaySubtitle(spendable, symbol);
+}
+
 /** Sorted holdings with pay state resolved once per row. */
 export function buildAccessoryHoldingRows(
   holdings: readonly PaymentTokenHolding[],
@@ -151,11 +166,10 @@ export function buildAccessoryHoldingRows(
     (holding) => {
       const match = mintMatchForAccessory(delegates, tokenAddress, holding.mint);
       const enabled = Boolean(match && isOwnerPayMintEnabled(match));
-      const amount = match?.status?.delegatedAmountUi;
       const subtitle =
-        enabled && amount
-          ? copy.pay.allowanceRemainingSubtitle(amount, isDefaultMint(holding.mint))
-          : null;
+        enabled && match?.status
+          ? spendableRowSubtitle(holding, match.status)
+          : `${holding.balanceUi} ${holding.symbol}`;
       return { holding, enabled, subtitle };
     },
   );

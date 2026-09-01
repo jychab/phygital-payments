@@ -265,6 +265,33 @@ export function isDelegateEnabled(status: MintDelegateStatus | undefined): boole
   );
 }
 
+/** Amount this accessory can pay right now: min(wallet balance, remaining allowance). */
+export function computeSpendableRaw(
+  status: MintDelegateStatus | null | undefined,
+): bigint {
+  if (!status?.isProgramAuthorityDelegate) return BigInt(0);
+  return status.balanceRaw < status.delegatedAmountRaw
+    ? status.balanceRaw
+    : status.delegatedAmountRaw;
+}
+
+export function computeSpendableUi(
+  status: MintDelegateStatus | null | undefined,
+  decimals: number,
+): string {
+  return formatTokenAmount(computeSpendableRaw(status), decimals);
+}
+
+/** Wallet balance is lower than remaining allowance. */
+export function isBalanceLimited(
+  status: MintDelegateStatus | null | undefined,
+): boolean {
+  return (
+    !!status?.isProgramAuthorityDelegate &&
+    status.balanceRaw < status.delegatedAmountRaw
+  );
+}
+
 /** True when the owner must create a token account before approving a delegate. */
 export function needsAtaBeforeDelegate(
   status: MintDelegateStatus | null | undefined,

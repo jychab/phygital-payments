@@ -6,6 +6,9 @@ import {
   patchDelegateAllowance,
   patchRevokedDelegate,
   delegateStatusKey,
+  computeSpendableRaw,
+  computeSpendableUi,
+  isBalanceLimited,
   type MintDelegateStatus,
 } from "@/lib/tokens/mint-delegate";
 
@@ -82,5 +85,87 @@ describe("patchRevokedDelegate", () => {
     expect(patched.isProgramAuthorityDelegate).toBe(false);
     expect(patched.delegatedAmountRaw).toBe(0n);
     expect(patched.balanceRaw).toBe(5n);
+  });
+});
+
+describe("computeSpendableRaw", () => {
+  it("returns 0 without an active delegate", () => {
+    expect(computeSpendableRaw(baseStatus)).toBe(0n);
+    expect(computeSpendableRaw(undefined)).toBe(0n);
+  });
+
+  it("returns balance when wallet is the constraint", () => {
+    const status: MintDelegateStatus = {
+      ...baseStatus,
+      isProgramAuthorityDelegate: true,
+      delegatedAmountRaw: 50_000_000n,
+      balanceRaw: 10_000_000n,
+    };
+    expect(computeSpendableRaw(status)).toBe(10_000_000n);
+  });
+
+  it("returns allowance when wallet has plenty", () => {
+    const status: MintDelegateStatus = {
+      ...baseStatus,
+      isProgramAuthorityDelegate: true,
+      delegatedAmountRaw: 30_000_000n,
+      balanceRaw: 100_000_000n,
+    };
+    expect(computeSpendableRaw(status)).toBe(30_000_000n);
+  });
+
+  it("returns 0 when both balance and allowance are zero", () => {
+    const status: MintDelegateStatus = {
+      ...baseStatus,
+      isProgramAuthorityDelegate: true,
+      delegatedAmountRaw: 0n,
+      balanceRaw: 0n,
+    };
+    expect(computeSpendableRaw(status)).toBe(0n);
+  });
+});
+
+describe("computeSpendableUi", () => {
+  it("formats spendable with decimals", () => {
+    const status: MintDelegateStatus = {
+      ...baseStatus,
+      isProgramAuthorityDelegate: true,
+      delegatedAmountRaw: 1_500_000n,
+      balanceRaw: 2_000_000n,
+    };
+    expect(computeSpendableUi(status, 6)).toBe("1.5");
+  });
+});
+
+describe("isBalanceLimited", () => {
+  it("is false without delegate or when balance covers allowance", () => {
+    expect(isBalanceLimited(baseStatus)).toBe(false);
+    expect(
+      isBalanceLimited({
+        ...baseStatus,
+        isProgramAuthorityDelegate: true,
+        delegatedAmountRaw: 10n,
+        balanceRaw: 10n,
+      }),
+    ).toBe(false);
+    expect(
+      isBalanceLimited({
+        ...baseStatus,
+        isProgramAuthorityDelegate: true,
+        delegatedAmountRaw: 10n,
+        balanceRaw: 20n,
+      }),
+    ).toBe(false);
+  });
+
+  it("is true when balance is below remaining allowance", () => {
+    expect(
+      isBalanceLimited({
+        ...baseStatus,
+        isProgramAuthorityDelegate: true,
+        delegatedAmountRaw: 50n,
+        balanceRaw: 10n,
+      }),
+    ).toBe(true);
   });
 });

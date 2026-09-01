@@ -110,19 +110,14 @@ function AccessoryPayTokenRow({
       <SettingsListRow
         leading={<TokenIcon token={holding} size="md" />}
         title={holding.symbol}
-        subtitle={enabled ? (subtitle ?? undefined) : holding.balanceUi}
+        subtitle={subtitle ?? undefined}
         truncate={false}
         onSelect={onSelect}
         trailing={
           enabled ? (
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              <span className="inline-flex rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success">
-                {copy.pay.payEnabled}
-              </span>
-              <span className="text-sm tabular-nums text-foreground">
-                {holding.balanceUi}
-              </span>
-            </div>
+            <span className="inline-flex shrink-0 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success">
+              {copy.pay.payEnabled}
+            </span>
           ) : (
             <span className="text-sm font-medium text-primary">
               {copy.pay.enableToken}
