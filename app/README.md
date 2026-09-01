@@ -84,8 +84,8 @@ Shared Pay UI lives in `components/pay/`:
 
 Owner **Collection** hub — connect a wallet to see your collection:
 
-- **Cards** — minted phygital tokens in a two-column grid with DAS artwork. Tap opens `/token?address=…&from=collection` (minted home + Back to Collection + verified seed).
-- **Accessories** — unminted NFC accessories listed below; tap opens `/token?address=…&from=collection` (unminted home + Pay CTAs when eligible).
+- **Cards** — minted phygital tokens in a two-column grid with DAS artwork. Tap opens `/token?address=…`.
+- **Accessories** — unminted NFC accessories listed below; tap opens `/token?address=…` (Pay CTAs when owner wallet is connected).
 - No Activity or Collect on `/` — Collect is `/collect`; Pay lives on the `/token` journey for unminted tokens.
 
 ### Collect (`/collect`)
@@ -152,7 +152,7 @@ Cold entry shows **Hold to Check**. Signed NFC URLs verify silently, then show *
 2. **Unclaimed / unlocked** — **Add to Wallet** (WebAuthn tap, then connect and confirm on the same page)
 3. **Locked and payment-capable** (unminted) — **Pay** via primary CTA; Pay settings, Activity, lock/remove via header **⋯** menu
 
-Collection open (`/token?address=&from=collection`) uses the same home for that token’s mint state, with Back to Collection and a verified-owned Confirmed seed.
+Opening a token from Collection (`/token?address=…`) uses the same home for that token’s mint state. When the connected wallet matches the owner, **Confirmed** is seeded without Hold to Check.
 
 API keys live in browser localStorage, keyed by wallet, and are only needed when pre-confirmation is on. **This phone** issues or rotates a key. Setting a pay allowance requires a token account for that mint in the linked wallet (balance can be zero).
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { TokenMintedPanel } from "@/components/token/token-minted-panel";
-import { BackToCollection } from "@/components/shared/back-to-collection";
 import {
   TokenClaimSessionGate,
   useTokenClaimSession,
@@ -13,12 +12,9 @@ import type { PhygitalToken } from "@/lib/phygital/token";
 export function TokenMintedHome({
   token: tokenProp,
   liveConfirmed: liveConfirmedProp = false,
-  fromCollection = false,
 }: {
   token: PhygitalToken;
   liveConfirmed?: boolean;
-  /** Opened from Collection hub (`from=collection`) — Back + verified copy. */
-  fromCollection?: boolean;
 }) {
   const session = useTokenClaimSession(tokenProp, liveConfirmedProp);
 
@@ -28,17 +24,13 @@ export function TokenMintedHome({
       noun="card"
       inAppBody={copy.gate.openInBrowserBody}
     >
-      <div className="flex flex-1 flex-col">
-        {fromCollection ? <BackToCollection /> : null}
         <TokenMintedPanel
           token={session.token}
           liveConfirmed={session.liveConfirmed}
-          fromCollection={fromCollection}
           holdError={session.holdError}
           onHoldToCheck={() => void session.holdToCheck()}
           onClaim={session.openClaim}
         />
-      </div>
     </TokenClaimSessionGate>
   );
 }

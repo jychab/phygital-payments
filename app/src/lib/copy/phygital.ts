@@ -145,7 +145,6 @@ export const copy = {
     cardId: "Card ID",
     cardIdHint: "A unique ID for this physical card.",
     rarity: "Rarity",
-    signedInAsOwner: "You're signed in as the owner.",
     about: "About",
     attributes: "Attributes",
     details: "Details",
@@ -153,7 +152,6 @@ export const copy = {
     showMore: "Show more",
     showLess: "Show less",
     mintAddress: "Token ID",
-    backToCollection: "Back to collection",
   },
   collection: {
     loading: "Loading your collection…",

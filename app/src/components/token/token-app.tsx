@@ -11,7 +11,6 @@ import { TokenNfcApp } from "@/components/token/token-nfc-app";
 import { TokenUnmintedHome } from "@/components/token/token-unminted-home";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import { copy } from "@/lib/copy/phygital";
-import { isFromCollection } from "@/lib/journey";
 import {
   tokenHasLinkedMint,
   type PhygitalToken,
@@ -37,18 +36,15 @@ const TOKEN_NFC_COPY = {
 function TokenHome({
   token,
   liveConfirmed,
-  fromCollection = false,
 }: {
   token: PhygitalToken;
   liveConfirmed?: boolean;
-  fromCollection?: boolean;
 }): ReactNode {
   if (tokenHasLinkedMint(token)) {
     return (
       <TokenMintedHome
         token={token}
         liveConfirmed={liveConfirmed}
-        fromCollection={fromCollection}
       />
     );
   }
@@ -56,7 +52,6 @@ function TokenHome({
     <TokenUnmintedHome
       token={token}
       liveConfirmed={liveConfirmed}
-      fromCollection={fromCollection}
     />
   );
 }
@@ -69,7 +64,6 @@ export function TokenApp() {
   const embedded = useIsEmbedded();
   const searchParams = useSearchParams();
   const address = searchParams.get("address")?.trim() ?? "";
-  const fromCollection = isFromCollection(searchParams);
 
   if (embedded === null) {
     return <EmbedBoot />;
@@ -88,11 +82,9 @@ export function TokenApp() {
     return (
       <TokenAddressRoute
         tokenAddress={address}
-        fromCollection={fromCollection}
-        renderHome={({ token, fromCollection: fromHub, liveConfirmed }) => (
+        renderHome={({ token, liveConfirmed }) => (
           <TokenHome
             token={token}
-            fromCollection={fromHub}
             liveConfirmed={liveConfirmed}
           />
         )}

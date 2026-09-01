@@ -20,14 +20,11 @@ function layoutForToken(token: PhygitalToken): ShellLayout {
 /** Collection deep link — shell width follows minted vs accessory. */
 export function TokenAddressRoute({
   tokenAddress,
-  fromCollection,
   renderHome,
 }: {
   tokenAddress: string;
-  fromCollection: boolean;
   renderHome: (args: {
     token: PhygitalToken;
-    fromCollection: boolean;
     liveConfirmed?: boolean;
   }) => ReactNode;
 }) {
@@ -49,15 +46,11 @@ export function TokenAddressRoute({
           )}
         />
       ) : (
-        <CollectionVerifiedSeed
-          owner={String(tokenQuery.data.currentOwner)}
-          fromCollection={fromCollection}
-        >
-          {({ fromCollection: fromHub, collectionVerified }) =>
+        <CollectionVerifiedSeed owner={String(tokenQuery.data.currentOwner)}>
+          {({ ownerVerified }) =>
             renderHome({
               token: tokenQuery.data,
-              fromCollection: fromHub,
-              liveConfirmed: collectionVerified,
+              liveConfirmed: ownerVerified,
             })
           }
         </CollectionVerifiedSeed>

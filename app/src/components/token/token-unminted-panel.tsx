@@ -27,7 +27,6 @@ import {
 export function TokenUnmintedPanel({
   token,
   liveConfirmed,
-  fromCollection = false,
   holdError,
   onHoldToCheck,
   onClaim,
@@ -46,7 +45,6 @@ export function TokenUnmintedPanel({
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
-  fromCollection?: boolean;
   holdError?: string | null;
   onHoldToCheck?: () => void;
   onClaim?: () => void;
@@ -138,12 +136,6 @@ export function TokenUnmintedPanel({
           statusLine={statusLine}
           onEditLimit={onEditLimit}
         />
-      ) : null}
-
-      {fromCollection && liveConfirmed ? (
-        <p className="text-center text-xs text-muted-foreground">
-          {copy.token.signedInAsOwner}
-        </p>
       ) : null}
 
       {primary.kind !== "none" || receiveHref ? (

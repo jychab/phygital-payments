@@ -38,14 +38,11 @@ import {
 export function TokenMintedPanel({
   token,
   liveConfirmed,
-  fromCollection = false,
   onHoldToCheck,
   onClaim,
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
-  /** Collection open — verified-owned status copy. */
-  fromCollection?: boolean;
   holdError?: string | null;
   onHoldToCheck?: () => void;
   onClaim?: () => void;
@@ -81,9 +78,6 @@ export function TokenMintedPanel({
     showVerify || canClaim || Boolean(primaryShortcut);
   let stagger = 0;
 
-  const collectionFootnote =
-    fromCollection && liveConfirmed ? copy.token.signedInAsOwner : null;
-
   return (
     <div className="flex flex-1 flex-col">
       {iframeSheet}
@@ -118,11 +112,6 @@ export function TokenMintedPanel({
 
             <MotionSection staggerIndex={stagger++}>
               <div className="flex w-full flex-col gap-1.5 text-left">
-                {collectionFootnote ? (
-                  <p className="text-xs text-muted-foreground">
-                    {collectionFootnote}
-                  </p>
-                ) : null}
                 <div className="divide-y divide-border/40">
                   <VerificationMetadataRow
                     liveConfirmed={liveConfirmed}

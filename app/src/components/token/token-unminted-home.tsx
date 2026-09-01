@@ -6,7 +6,6 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { TokenUnmintedPanel } from "@/components/token/token-unminted-panel";
 import { WalletSyncGate } from "@/components/shared/wallet-sync-gate";
-import { BackToCollection } from "@/components/shared/back-to-collection";
 import { LoadingStatus } from "@/components/shared/loading-status";
 import {
   TokenClaimSessionGate,
@@ -30,7 +29,10 @@ import type { PaymentTokenHolding } from "@/lib/tokens/payment-token";
 const ManagePayPanelLazy = dynamic(
   () =>
     import("@/components/pay/manage-pay-panel").then((m) => m.ManagePayPanel),
-  { ssr: false, loading: () => <LoadingStatus label={copy.pay.loadingLabel} /> },
+  {
+    ssr: false,
+    loading: () => <LoadingStatus label={copy.pay.loadingLabel} />,
+  },
 );
 
 const HoldToPayPhaseView = dynamic(
@@ -38,7 +40,10 @@ const HoldToPayPhaseView = dynamic(
     import("@/components/pay/hold-to-pay-panel").then(
       (m) => m.HoldToPayPhaseView,
     ),
-  { ssr: false, loading: () => <LoadingStatus label={copy.pay.loadingLabel} /> },
+  {
+    ssr: false,
+    loading: () => <LoadingStatus label={copy.pay.loadingLabel} />,
+  },
 );
 
 const SpendingLimitPanel = dynamic(
@@ -46,12 +51,18 @@ const SpendingLimitPanel = dynamic(
     import("@/components/pay/spending-limit-panel").then(
       (m) => m.SpendingLimitPanel,
     ),
-  { ssr: false, loading: () => <LoadingStatus label={copy.pay.loadingLabel} /> },
+  {
+    ssr: false,
+    loading: () => <LoadingStatus label={copy.pay.loadingLabel} />,
+  },
 );
 
 const ApiKeyPanel = dynamic(
   () => import("@/components/pay/api-key-panel").then((m) => m.ApiKeyPanel),
-  { ssr: false, loading: () => <LoadingStatus label={copy.pay.loadingLabel} /> },
+  {
+    ssr: false,
+    loading: () => <LoadingStatus label={copy.pay.loadingLabel} />,
+  },
 );
 
 type AccessoryNav =
@@ -65,11 +76,9 @@ type AccessoryNav =
 export function TokenUnmintedHome({
   token: tokenProp,
   liveConfirmed: liveConfirmedProp = false,
-  fromCollection = false,
 }: {
   token: PhygitalToken;
   liveConfirmed?: boolean;
-  fromCollection?: boolean;
 }) {
   const session = useTokenClaimSession(tokenProp, liveConfirmedProp, {
     autoOpenClaim: isUnclaimedToken(tokenProp),
@@ -90,10 +99,7 @@ export function TokenUnmintedHome({
   const preConfirmationOn = preauth.data?.required === true;
   const keyReady = preauth.data?.keyOk === true;
 
-  const receiveHref =
-    linked && !fromCollection
-      ? collectHref({ recipient: owner })
-      : undefined;
+  const receiveHref = linked ? collectHref({ recipient: owner }) : undefined;
 
   function onLimitEnabled() {
     invalidateOwnerQueries(queryClient, owner);
@@ -169,7 +175,6 @@ export function TokenUnmintedHome({
       {hold.showPhase && canPay ? (
         <TokenHoldPhase
           owner={owner}
-          fromCollection={fromCollection}
           phase={hold.phase}
           paid={hold.paid}
           secondsLeft={hold.secondsLeft}
@@ -177,41 +182,32 @@ export function TokenUnmintedHome({
           onReset={hold.resetToIdle}
         />
       ) : (
-        <div className="flex flex-1 flex-col">
-          {fromCollection ? <BackToCollection /> : null}
-          <TokenUnmintedPanel
-            token={session.token}
-            liveConfirmed={session.liveConfirmed}
-            fromCollection={fromCollection}
-            holdError={session.holdError}
-            onHoldToCheck={() => void session.holdToCheck()}
-            onClaim={session.openClaim}
-            owner={owner}
-            tokenAddress={tokenAddress}
-            holdings={delegatesQuery.holdings}
-            delegates={delegatesQuery.data}
-            payLoading={
-              linked &&
-              (delegatesQuery.isLoading || preauth.isPending)
-            }
-            preConfirmationOn={preConfirmationOn}
-            keyReady={keyReady}
-            payBusy={hold.busy}
-            onEditLimit={(holding) =>
-              setNav({ screen: "limit", holding })
-            }
-            onOpenSettings={
-              canPay
-                ? () =>
-                    setShowPaySettings({
-                      tokenAddress,
-                    })
-                : undefined
-            }
-            receiveHref={receiveHref}
-            onPrimaryAction={onPrimaryAction}
-          />
-        </div>
+        <TokenUnmintedPanel
+          token={session.token}
+          liveConfirmed={session.liveConfirmed}
+          holdError={session.holdError}
+          onHoldToCheck={() => void session.holdToCheck()}
+          onClaim={session.openClaim}
+          owner={owner}
+          tokenAddress={tokenAddress}
+          holdings={delegatesQuery.holdings}
+          delegates={delegatesQuery.data}
+          payLoading={linked && (delegatesQuery.isLoading || preauth.isPending)}
+          preConfirmationOn={preConfirmationOn}
+          keyReady={keyReady}
+          payBusy={hold.busy}
+          onEditLimit={(holding) => setNav({ screen: "limit", holding })}
+          onOpenSettings={
+            canPay
+              ? () =>
+                  setShowPaySettings({
+                    tokenAddress,
+                  })
+              : undefined
+          }
+          receiveHref={receiveHref}
+          onPrimaryAction={onPrimaryAction}
+        />
       )}
     </TokenClaimSessionGate>
   );
@@ -219,7 +215,6 @@ export function TokenUnmintedHome({
 
 function TokenHoldPhase({
   owner,
-  fromCollection,
   phase,
   paid,
   secondsLeft,
@@ -227,7 +222,6 @@ function TokenHoldPhase({
   onReset,
 }: {
   owner: string;
-  fromCollection: boolean;
   phase: ReturnType<typeof useHoldToPay>["phase"];
   paid: ReturnType<typeof useHoldToPay>["paid"];
   secondsLeft: number;
@@ -237,16 +231,13 @@ function TokenHoldPhase({
   const delegates = useOwnerPayDelegates(owner, { live: false });
 
   return (
-    <div className="flex flex-1 flex-col">
-      {fromCollection && phase !== "window" ? <BackToCollection /> : null}
-      <HoldToPayPhaseView
-        phase={phase}
-        paid={paid}
-        secondsLeft={secondsLeft}
-        holdings={delegates.holdings}
-        onCancelWindow={onCancelWindow}
-        onReset={onReset}
-      />
-    </div>
+    <HoldToPayPhaseView
+      phase={phase}
+      paid={paid}
+      secondsLeft={secondsLeft}
+      holdings={delegates.holdings}
+      onCancelWindow={onCancelWindow}
+      onReset={onReset}
+    />
   );
 }
