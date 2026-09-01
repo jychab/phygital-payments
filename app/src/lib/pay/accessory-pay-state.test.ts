@@ -57,7 +57,7 @@ function delegatesForMint(args: {
 }
 
 describe("buildAccessoryHoldingRows spendable subtitles", () => {
-  it("shows now · allowance when wallet balance is limiting", () => {
+  it("shows available when wallet balance is limiting", () => {
     const rows = buildAccessoryHoldingRows(
       [
         holding({
@@ -77,7 +77,7 @@ describe("buildAccessoryHoldingRows spendable subtitles", () => {
       TOKEN,
     );
 
-    expect(rows[0]?.subtitle).toBe("10 USDC now · 50 USDC allowance");
+    expect(rows[0]?.subtitle).toBe("10 USDC available");
   });
 
   it("shows available when allowance is limiting", () => {

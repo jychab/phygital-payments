@@ -1,7 +1,6 @@
 import { copy } from "@/lib/copy/phygital";
 import {
   computeSpendableUi,
-  isBalanceLimited,
   isOwnerPayMintEnabled,
   type MintDelegateStatus,
   type OwnerPayMintMatch,
@@ -149,11 +148,7 @@ function spendableRowSubtitle(
   status: MintDelegateStatus,
 ): string {
   const spendable = computeSpendableUi(status, holding.decimals);
-  const allowance = status.delegatedAmountUi;
-  const { symbol } = holding;
-  return isBalanceLimited(status)
-    ? copy.pay.availableNowAllowanceSubtitle(spendable, allowance, symbol)
-    : copy.pay.availableToPaySubtitle(spendable, symbol);
+  return copy.pay.availableToPaySubtitle(spendable, holding.symbol);
 }
 
 /** Sorted holdings with pay state resolved once per row. */

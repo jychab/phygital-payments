@@ -242,11 +242,6 @@ export const copy = {
       `${enabled} of ${total} tokens enabled for Pay`,
     availableToPaySubtitle: (amount: string, symbol: string) =>
       `${amount} ${symbol} available`,
-    availableNowAllowanceSubtitle: (
-      spendable: string,
-      allowance: string,
-      symbol: string,
-    ) => `${spendable} ${symbol} now · ${allowance} ${symbol} allowance`,
     enableToken: "Enable",
     authorizePhone: "Authorize this phone",
     preConfirmation: "Pre-confirmation",
