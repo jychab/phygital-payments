@@ -109,7 +109,7 @@ export function ClaimPanel({
   const [error, setError] = useState<string | null>(null);
   const [tap, setTap] = useState<CapturedTap | null>(null);
 
-  const title = unclaimed ? copy.addToWallet : "Move to a New Wallet";
+  const title = unclaimed ? copy.claim.addToWallet : copy.claim.moveToNewWallet;
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const { collectible } = useResolvedDasCollectible(mint);
   const orbSrc = collectible?.image ?? null;
@@ -121,7 +121,7 @@ export function ClaimPanel({
       assertCaptureReady(token);
     } catch (err) {
       setError(
-        toUserErrorMessage(err, `Couldn’t add this ${noun}. Try again.`),
+        toUserErrorMessage(err, copy.claim.captureFailed(noun)),
       );
       return;
     }
@@ -145,7 +145,7 @@ export function ClaimPanel({
       setError(
         toUserErrorMessage(
           err,
-          `Couldn’t read the ${noun}. Turn on NFC and hold it to the back of your phone.`,
+          copy.claim.readFailed(noun),
         ),
       );
     }
@@ -159,7 +159,7 @@ export function ClaimPanel({
       assertClaimReady(token, signer.address);
     } catch (err) {
       setError(
-        toUserErrorMessage(err, `Couldn’t add this ${noun}. Try again.`),
+        toUserErrorMessage(err, copy.claim.captureFailed(noun)),
       );
       return;
     }
@@ -186,14 +186,14 @@ export function ClaimPanel({
       setError(
         toUserErrorMessage(
           err,
-          "That didn't go through. Approve in your wallet and try again.",
+          copy.claim.finishFailed,
         ),
       );
     }
   }
 
   if (inApp) {
-    return <InAppBrowserGate body={copy.openInBrowser} />;
+    return <InAppBrowserGate body={copy.gate.openInBrowserBody} />;
   }
 
   return (
@@ -204,7 +204,7 @@ export function ClaimPanel({
       <StepProgress
         step={stage === "confirm" || stage === "confirming" ? 2 : 1}
         total={2}
-        labels={[copy.claimStepHold, copy.claimStepConfirm]}
+        labels={[copy.claim.stepHold, copy.claim.stepConfirm]}
       />
       <StageTransition
         stageKey={stage}
@@ -212,8 +212,8 @@ export function ClaimPanel({
       >
         {stage === "reading" ? (
           <NfcHoldStatus
-            title={copy.holdStill}
-            body={copy.holdStillBody}
+            title={copy.verify.holdStill}
+            body={copy.verify.holdStillBody}
             pulsing
             imageSrc={orbSrc}
             imageAlt={orbAlt}
@@ -222,8 +222,8 @@ export function ClaimPanel({
 
         {stage === "confirming" ? (
           <NfcHoldStatus
-            title="Confirm in wallet…"
-            body="Approve in your wallet to continue."
+            title={copy.claim.confirmInWalletTitle}
+            body={copy.claim.confirmInWalletBody}
             busy
             imageSrc={orbSrc}
             imageAlt={orbAlt}
@@ -235,14 +235,14 @@ export function ClaimPanel({
             orbSrc={orbSrc}
             orbAlt={orbAlt}
             pulsing={false}
-            title={copy.claimConfirmTitle}
-            body={copy.claimConfirmBody(noun)}
+            title={copy.claim.confirmTitle}
+            body={copy.claim.confirmBody(noun)}
             dock={
               <StickyActions animate={false}>
                 {!address ? (
                   <ConnectGate
-                    title="Connect your wallet"
-                    body={`This wallet will own the ${noun}.`}
+                    title={copy.common.connectWalletTitle}
+                    body={copy.claim.connectOwnerBody(noun)}
                     onConnect={connect}
                   />
                 ) : (
@@ -255,7 +255,7 @@ export function ClaimPanel({
                       disabled={!signer}
                       onClick={() => void onFinish()}
                     >
-                      {error ? "Try again" : "Confirm in wallet"}
+                      {error ? copy.common.tryAgain : copy.claim.confirmInWalletButton}
                     </Button>
                   </div>
                 )}
@@ -270,7 +270,7 @@ export function ClaimPanel({
             orbAlt={orbAlt}
             pulsing
             title={title}
-            body={copy.claimReadyBody(noun)}
+            body={copy.claim.readyBody(noun)}
             extra={error ? <InlineError>{error}</InlineError> : null}
             dock={
               <StickyActions animate={false}>
@@ -280,7 +280,7 @@ export function ClaimPanel({
                   className="w-full"
                   onClick={() => void onCapture()}
                 >
-                  {error ? "Try again" : copy.holdToAdd}
+                  {error ? copy.common.tryAgain : copy.claim.holdToAdd}
                 </Button>
               </StickyActions>
             }

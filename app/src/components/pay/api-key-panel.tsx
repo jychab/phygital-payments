@@ -13,7 +13,7 @@ import { useProvisionApiKey } from "@/hooks/pay/use-provision-api-key";
 import { markApiKeyVerified } from "@/lib/pay/mark-api-key-verified";
 import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 import { maskApiKey, readApiKey } from "@/lib/pay/api-key-store";
-import { payCopy } from "@/lib/copy/phygital";
+import { copy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 type PanelStep = "home" | "confirm-reset";
@@ -60,14 +60,14 @@ export function ApiKeyPanel({
       refreshStoredKey();
       goHome();
       toast.success(
-        rotate ? "Other phones will stop working." : payCopy.onToast,
+        rotate ? copy.pay.rotateSuccessToast : copy.pay.onToast,
       );
       onStored?.();
     } catch (error) {
       toast.error(
         toUserErrorMessage(
           error,
-          rotate ? "Couldn’t rotate key" : "Couldn’t authorize this phone",
+          rotate ? copy.pay.rotateFailed : copy.pay.authorizeFailed,
         ),
       );
     } finally {
@@ -75,7 +75,7 @@ export function ApiKeyPanel({
     }
   }
 
-  const copy = copyForStep(step, hasStoredKey);
+  const stepCopy = copyForStep(step, hasStoredKey);
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -91,10 +91,10 @@ export function ApiKeyPanel({
 
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
-          {copy.title}
+          {stepCopy.title}
         </h1>
         <p className="mx-auto max-w-72 text-sm text-muted-foreground">
-          {copy.subtitle}
+          {stepCopy.subtitle}
         </p>
       </div>
 
@@ -114,9 +114,9 @@ export function ApiKeyPanel({
             matched={matched}
             busy={busy}
             provisionBusy={provisionBusy}
-            idleLabel={payCopy.issueKey}
-            busyLabel="Authorizing…"
-            connectHint={`Connect ${ownerShort} to authorize this phone.`}
+            idleLabel={stepCopy.issueKey}
+            busyLabel={copy.pay.authorizing}
+            connectHint={copy.wallet.connectToAuthorize(ownerShort)}
             onProvision={() => void onProvision(false)}
           />
         ) : null}
@@ -130,7 +130,7 @@ export function ApiKeyPanel({
             onClick={() => setStep("confirm-reset")}
             disabled={busy}
           >
-            {payCopy.rotateKey}
+            {stepCopy.rotateKey}
           </Button>
         ) : null}
 
@@ -140,9 +140,9 @@ export function ApiKeyPanel({
             matched={matched}
             busy={busy}
             provisionBusy={provisionBusy}
-            idleLabel={payCopy.rotateKey}
-            busyLabel="Rotating…"
-            connectHint={`Connect ${ownerShort} to rotate this phone’s key.`}
+            idleLabel={stepCopy.rotateKey}
+            busyLabel={copy.pay.rotating}
+            connectHint={copy.wallet.connectToRotate(ownerShort)}
             onProvision={() => void onProvision(true)}
           />
         ) : null}
@@ -154,22 +154,30 @@ export function ApiKeyPanel({
 function copyForStep(step: PanelStep, hasStoredKey: boolean): {
   title: string;
   subtitle: string;
+  issueKey: string;
+  rotateKey: string;
 } {
   if (step === "confirm-reset") {
     return {
-      title: payCopy.rotateTitle,
-      subtitle: payCopy.rotateSubtitle,
+      title: copy.pay.rotateTitle,
+      subtitle: copy.pay.rotateSubtitle,
+      issueKey: copy.pay.issueKey,
+      rotateKey: copy.pay.rotateKey,
     };
   }
   if (hasStoredKey) {
     return {
-      title: payCopy.thisPhone,
-      subtitle: "This phone can start Pay before you hold.",
+      title: copy.pay.thisPhone,
+      subtitle: copy.pay.phoneCanStartPay,
+      issueKey: copy.pay.issueKey,
+      rotateKey: copy.pay.rotateKey,
     };
   }
   return {
-    title: payCopy.authorizeTitle,
-    subtitle: payCopy.authorizeSubtitle,
+    title: copy.pay.authorizeTitle,
+    subtitle: copy.pay.authorizeSubtitle,
+    issueKey: copy.pay.issueKey,
+    rotateKey: copy.pay.rotateKey,
   };
 }
 
@@ -191,7 +199,7 @@ function StoredKeyCard({
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label={visible ? "Hide" : "Show"}
+          aria-label={visible ? copy.common.hide : copy.common.show}
           onClick={onToggleVisible}
           disabled={busy}
         >

@@ -13,6 +13,7 @@ import { WalletSyncGate } from "@/components/shared/wallet-sync-gate";
 import { Button } from "@/components/ui/button";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
+import { copy } from "@/lib/copy/phygital";
 import type { PaymentRequest } from "@/lib/collect/payment-request";
 import { tryParseAddress } from "@/lib/solana/address";
 
@@ -38,8 +39,8 @@ export function CollectApp({
   if (paymentRequest.hasRecipientParam && !paymentRequest.recipient) {
     return (
       <EmbedError
-        title="This payment link isn’t set up"
-        body="The link looks incomplete. Ask for a new one."
+        title={copy.collect.linkInvalidTitle}
+        body={copy.collect.linkInvalidBody}
       />
     );
   }
@@ -47,8 +48,8 @@ export function CollectApp({
   if (embedded && !paymentRequest.recipient) {
     return (
       <EmbedError
-        title="This payment link isn’t set up"
-        body="Open a payment link with a recipient address, or ask the seller for one."
+        title={copy.collect.linkInvalidTitle}
+        body={copy.collect.linkMissingRecipientBody}
       />
     );
   }
@@ -62,8 +63,8 @@ export function CollectApp({
       <AppShell layout="compact">
         <div className="flex flex-1 flex-col items-center justify-center">
           <ConnectGate
-            title="Connect your wallet"
-            body="Payments will be sent to the wallet you connect."
+            title={copy.common.connectWalletTitle}
+            body={copy.collect.connectBody}
             onConnect={connect}
           />
         </div>
@@ -85,7 +86,7 @@ export function CollectApp({
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="Activity"
+            aria-label={copy.common.activity}
             onClick={() => setView("activity")}
           >
             <History className="size-4 text-muted-foreground" />

@@ -19,6 +19,7 @@ import {
 } from "@/lib/tokens/payment-token";
 import type { PaymentRecord } from "@/lib/home/history-client";
 import { usePaymentHistory } from "@/hooks/home/use-payment-history";
+import { copy } from "@/lib/copy/phygital";
 import { cn, shortAddress } from "@/lib/utils";
 
 function relativeTime(unixSeconds: number | null): string {
@@ -74,11 +75,11 @@ export function HistoryPanel({ owner }: { owner: string }) {
   const loading = isRestoring || query.isLoading;
   const error = query.error as Error | null;
   const rows = query.data ? toRows(query.data, owner) : [];
-  const emptyCopy = "Payments you send and receive will appear here.";
+  const emptyCopy = copy.collection.activityEmpty;
 
   return (
     <div className="flex flex-1 flex-col gap-4">
-      <p className="text-sm font-medium text-foreground">Activity</p>
+      <p className="text-sm font-medium text-foreground">{copy.common.activity}</p>
 
       {loading ? (
         <div className="flex flex-1 items-center justify-center py-12 text-muted-foreground">
@@ -87,7 +88,7 @@ export function HistoryPanel({ owner }: { owner: string }) {
       ) : error ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            Couldn’t load activity
+            {copy.collection.activityLoadFailed}
           </p>
           <Button
             type="button"
@@ -95,7 +96,7 @@ export function HistoryPanel({ owner }: { owner: string }) {
             variant="outline"
             onClick={() => query.refetch()}
           >
-            Try again
+            {copy.common.tryAgain}
           </Button>
         </div>
       ) : rows.length === 0 ? (
@@ -154,14 +155,14 @@ export function HistoryPanel({ owner }: { owner: string }) {
                       />
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      {received ? "Received" : "Sent"}
+                      {received ? copy.collect.received : copy.collection.sent}
                       {relativeTime(row.blockTime)
                         ? ` · ${relativeTime(row.blockTime)}`
                         : ""}
                     </p>
                     {row.counterparty ? (
                       <p className="truncate font-mono text-[11px] text-muted-foreground/70">
-                        {received ? "from" : "to"}{" "}
+                        {received ? copy.collection.from : copy.collection.to}{" "}
                         {shortAddress(row.counterparty, 6)}
                       </p>
                     ) : null}

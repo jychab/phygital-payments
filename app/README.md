@@ -108,6 +108,44 @@ Single **task journey** for phygital tokens. After the token loads:
 - **Mint linked** — card gallery UI (DAS artwork, authenticity, optional claim). No Pay or Collect.
 - **No mint** — accessory UI (authenticity, claim, Pay, Collect launcher when eligible).
 
+#### Mint shortcuts & primary CTA
+
+Minted cards may surface [Phantom Shortcuts v2](https://github.com/phantom/shortcuts) from `{external_url}/shortcuts.json`. Revibase **never fetches that JSON from the client** — requests go through `/api/tokens/minted` or `/api/tokens/shortcuts` (server proxy; aligns with Phantom’s IP-leak safeguard).
+
+Creators host `shortcuts.json` beside their NFT `external_url`. Revibase supports:
+
+| Field | Source | Purpose |
+|-------|--------|---------|
+| `label`, `uri` | Phantom | Chip label and destination |
+| `prefersExternalTarget` | Phantom | `true` → external popup; `false`/omitted → in-app iframe sheet (same root domain as `external_url`) |
+| `primaryCta` | Revibase | `true` → sticky primary button when the token is **verified** |
+| `type`, `platform`, `limitToCollections`, … | Phantom | Existing filters |
+
+When `prefersExternalTarget` is false, shortcut URIs must share the same **root domain** as the token’s `external_url` (e.g. `app.project.com` is allowed when `external_url` is `https://project.com`). `solana:` URIs always open externally.
+
+Example:
+
+```json
+{
+  "version": 2,
+  "shortcuts": [
+    {
+      "label": "Play now",
+      "uri": "https://project.com/play/{{tokenId}}",
+      "primaryCta": true,
+      "prefersExternalTarget": false
+    },
+    {
+      "label": "View on X",
+      "uri": "https://x.com/project",
+      "prefersExternalTarget": true
+    }
+  ]
+}
+```
+
+Verified + unclaimed: shortcut CTA is primary; **Add to Wallet** stays as a secondary outline button when claim still applies.
+
 Cold entry shows **Hold to Check**. Signed NFC URLs verify silently, then show **Registered** (on-chain). Invalid or failed tap params fall back to Hold to Check. Optional **Hold to Check** upgrades to **Confirmed**. The wallet chip is always available; connect is only required for Pay manage and claim confirm.
 
 1. **Hold to Check** (no URL) or silent URL verify → **Registered**

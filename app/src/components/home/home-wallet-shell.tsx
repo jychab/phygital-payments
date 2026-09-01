@@ -6,6 +6,7 @@ import { CollectionHome } from "@/components/home/collection-home";
 import { ConnectGate } from "@/components/shared/connect-gate";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
+import { copy } from "@/lib/copy/phygital";
 
 /**
  * Home UI. Collection requires a connected wallet; the chip is always in the
@@ -22,8 +23,8 @@ export function HomeWalletShell() {
   if (embedded) {
     return (
       <EmbedError
-        title="Can’t open here"
-        body="Use a payment link instead."
+        title={copy.embed.cantOpenTitle}
+        body={copy.embed.homeBody}
       />
     );
   }

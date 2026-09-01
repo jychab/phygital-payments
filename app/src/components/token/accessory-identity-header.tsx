@@ -6,7 +6,7 @@ import { CopyableAddress } from "@/components/shared/copyable-address";
 import { CollectibleOrb } from "@/components/token/collectible-orb";
 import { InlineError } from "@/components/shared/inline-error";
 import { Button } from "@/components/ui/button";
-import { copy, payCopy } from "@/lib/copy/phygital";
+import { copy } from "@/lib/copy/phygital";
 import type { PhygitalToken } from "@/lib/phygital/token";
 import { cn, shortAddress } from "@/lib/utils";
 
@@ -39,21 +39,21 @@ export function AccessoryIdentityHeader({
         className="shrink-0"
       />
       <div className="min-w-0 flex-1">
-        <p className="text-eyebrow text-muted-foreground">{payCopy.accessory}</p>
+        <p className="text-eyebrow text-muted-foreground">{copy.pay.accessory}</p>
         <p className="truncate font-(family-name:--font-display) text-base tracking-tight text-foreground">
           {cardId}
         </p>
         {unclaimed ? (
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {copy.notLinked}
+            {copy.token.notLinked}
           </p>
         ) : (
           <p className="mt-0.5 inline-flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-            <span>{payCopy.linkedWallet}</span>
+            <span>{copy.pay.linkedWallet}</span>
             <CopyableAddress
               address={owner}
               length={4}
-              label="linked wallet"
+              label={copy.address.linkedWallet}
               className="text-xs text-muted-foreground"
             />
           </p>
@@ -70,14 +70,14 @@ export function AccessoryIdentityHeader({
               onVerifyAgain &&
                 "transition-colors hover:bg-success/15 active:scale-[0.98]",
             )}
-            aria-label={onVerifyAgain ? copy.verifyAgain : copy.verified}
+            aria-label={onVerifyAgain ? copy.verify.verifyAgain : copy.verify.verified}
           >
             <Check className="size-3" aria-hidden />
-            {copy.verified}
+            {copy.verify.verified}
           </button>
         ) : (
           <span className="inline-flex items-center rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-            {copy.notVerified}
+            {copy.verify.notVerified}
           </span>
         )}
         {onOpenSettings ? (
@@ -85,7 +85,7 @@ export function AccessoryIdentityHeader({
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label={payCopy.paySettings}
+            aria-label={copy.pay.paySettings}
             onClick={onOpenSettings}
           >
             <Settings2 className="size-4" />

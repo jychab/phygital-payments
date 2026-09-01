@@ -10,6 +10,7 @@ import { LoadingStatus } from "@/components/shared/loading-status";
 import { usePhygitalTokenByAddress } from "@/hooks/token/use-phygital-token";
 import { tokenHasLinkedMint, type PhygitalToken } from "@/lib/phygital/token";
 import type { ShellLayout } from "@/lib/layout";
+import { copy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 function layoutForToken(token: PhygitalToken): ShellLayout {
@@ -37,14 +38,14 @@ export function TokenAddressRoute({
   return (
     <TokenRouteShell layout={layout}>
       {tokenQuery.isLoading ? (
-        <LoadingStatus label="Loading…" />
+        <LoadingStatus label={copy.common.loading} />
       ) : tokenQuery.isError || !tokenQuery.data ? (
         <GateMessage
           icon={<Nfc className="size-5 text-muted-foreground" />}
-          title="Couldn’t load item"
+          title={copy.collection.itemLoadFailed}
           body={toUserErrorMessage(
             tokenQuery.error,
-            "This item may no longer exist on chain.",
+            copy.collection.itemNotOnChain,
           )}
         />
       ) : (

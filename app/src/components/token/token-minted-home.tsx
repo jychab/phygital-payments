@@ -26,7 +26,7 @@ export function TokenMintedHome({
     <TokenClaimSessionGate
       session={session}
       noun="card"
-      inAppBody={copy.openInBrowser}
+      inAppBody={copy.gate.openInBrowserBody}
     >
       <div className="flex flex-1 flex-col">
         {fromCollection ? <BackToCollection /> : null}

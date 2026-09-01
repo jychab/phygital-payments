@@ -28,6 +28,7 @@ import {
   resolvePaymentToken,
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
+import { copy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 
@@ -110,11 +111,11 @@ export function SpendingLimitPanel({
   async function runEnable() {
     if (!walletAddress || walletAddress !== owner) return;
     if (!mintQuery.data) {
-      toast.error("Still loading. Try again in a moment.");
+      toast.error(copy.pay.stillLoading);
       return;
     }
     if (limitRaw == null) {
-      toast.error("Enter a valid amount");
+      toast.error(copy.pay.enterValidAmount);
       return;
     }
     try {
@@ -128,10 +129,10 @@ export function SpendingLimitPanel({
           decimals: mintQuery.data.decimals,
         });
       }
-      toast.success("Spending limit saved");
+      toast.success(copy.pay.limitSaved);
       onEnabled?.();
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t save spending limit"));
+      toast.error(toUserErrorMessage(error, copy.pay.limitSaveFailed));
     }
   }
 
@@ -139,17 +140,17 @@ export function SpendingLimitPanel({
     if (!walletAddress || walletAddress !== owner) return;
     try {
       await revoke.mutateAsync();
-      toast.success("Spending limit removed");
+      toast.success(copy.pay.limitRemoved);
       onEnabled?.();
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t remove spending limit"));
+      toast.error(toUserErrorMessage(error, copy.pay.limitRemoveFailed));
     }
   }
 
   const cta = (() => {
     if (setAllowance.isPending) return null;
-    if (hasDelegate) return "Update Limit";
-    return "Set Limit";
+    if (hasDelegate) return copy.pay.updateLimit;
+    return copy.pay.setLimit;
   })();
 
   const saveDisabled =
@@ -165,18 +166,18 @@ export function SpendingLimitPanel({
         ) : null}
         <GateMessage
           icon={<Coins className="size-5 text-muted-foreground" />}
-          title={`Add ${token.symbol} first`}
+          title={copy.pay.addTokenFirstTitle(token.symbol)}
           body={
             isDefaultMint(mint)
-              ? "Add USDC to this wallet first."
-              : "Add some of this token to this wallet first."
+              ? copy.pay.addUsdcFirst
+              : copy.pay.addTokenFirst
           }
           action={
             <div className="flex w-full max-w-xs flex-col gap-2">
               {!matched ? (
                 <ExpectedWalletConnect
                   owner={owner}
-                  hint={`Connect ${ownerShort} to continue.`}
+                  hint={copy.wallet.connectHint(ownerShort)}
                   disabled={busy}
                 />
               ) : null}
@@ -188,7 +189,7 @@ export function SpendingLimitPanel({
                   className="w-full max-w-xs"
                   onClick={onBack}
                 >
-                  Back
+                  {copy.common.back}
                 </Button>
               ) : null}
             </div>
@@ -208,17 +209,17 @@ export function SpendingLimitPanel({
 
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
-          Spending limit
+          {copy.pay.spendingLimitTitle}
         </h1>
         <p className="mx-auto max-w-72 text-sm text-muted-foreground">
-          This accessory can spend up to this much{" "}
+          {copy.pay.spendingLimitIntro}{" "}
           <TokenSymbol
             token={token}
             size="xs"
             className="mx-0.5"
             symbolClassName="font-medium text-foreground"
           />
-          . You can change it anytime.
+          . {copy.pay.spendingLimitOutro}
         </p>
       </div>
 
@@ -230,12 +231,12 @@ export function SpendingLimitPanel({
         decimals={decimals}
         disabled={busy}
         autoFocus={matched}
-        caption="Spending limit"
+        caption={copy.pay.spendingLimitCaption}
         className="py-1"
       />
 
       <p className="flex items-center justify-center gap-1.5 text-center text-[11px] tabular-nums text-muted-foreground">
-        From this wallet
+        {copy.pay.fromThisWallet}
         {status ? (
           <>
             <span>·</span>
@@ -255,7 +256,7 @@ export function SpendingLimitPanel({
         {!matched ? (
           <ExpectedWalletConnect
             owner={owner}
-            hint={`Connect ${ownerShort} to change this limit.`}
+            hint={copy.wallet.connectToChangeLimit(ownerShort)}
             disabled={busy}
           />
         ) : (
@@ -269,7 +270,7 @@ export function SpendingLimitPanel({
             {setAllowance.isPending ? (
               <>
                 <LoaderCircle className="size-4 animate-spin" />
-                Confirm in wallet…
+                {copy.pay.confirmInWallet}
               </>
             ) : hasDelegate ? (
               <>
@@ -290,7 +291,7 @@ export function SpendingLimitPanel({
             onClick={() => void runRemove()}
             disabled={busy}
           >
-            {revoke.isPending ? "Removing…" : "Remove spending limit"}
+            {revoke.isPending ? copy.pay.removing : copy.pay.removeSpendingLimit}
           </Button>
         ) : null}
       </StickyActions>

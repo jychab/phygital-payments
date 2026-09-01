@@ -4,7 +4,7 @@ import { LoaderCircle } from "lucide-react";
 
 import { TokenIcon } from "@/components/shared/token-chip";
 import { SettingsListRow } from "@/components/shared/settings-list-row";
-import { payCopy } from "@/lib/copy/phygital";
+import { copy } from "@/lib/copy/phygital";
 import {
   accessoryEnabledMintCount,
   accessoryMintPayEnabled,
@@ -70,7 +70,7 @@ export function AccessoryWalletHome({
         </div>
       ) : list.length === 0 ? (
         <p className="rounded-xl border border-border/50 bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
-          {payCopy.noTokensSubtitle}
+          {copy.pay.noTokensSubtitle}
         </p>
       ) : (
         <ul className="flex flex-col gap-1.5">
@@ -125,18 +125,18 @@ function AccessoryPayTokenRow({
           enabled ? (
             <div className="flex shrink-0 flex-col items-end gap-1">
               <span className="inline-flex rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success">
-                {payCopy.payEnabled}
+                {copy.pay.payEnabled}
               </span>
               <span className="text-sm tabular-nums text-foreground">
                 {holding.balanceUi}
               </span>
               <span className="text-[11px] font-medium text-primary">
-                {payCopy.editLimit}
+                {copy.pay.editLimit}
               </span>
             </div>
           ) : (
             <span className="text-sm font-medium text-primary">
-              {payCopy.enableToken}
+              {copy.pay.enableToken}
             </span>
           )
         }

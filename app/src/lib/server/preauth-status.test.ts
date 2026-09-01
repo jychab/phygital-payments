@@ -115,13 +115,13 @@ describe("expiredPreauthStatus", () => {
 describe("openedPreauthCopy", () => {
   it("matches the Hold to Pay window for the default TTL", () => {
     expect(openedPreauthCopy(PREAUTH_TTL_SECONDS)).toEqual({
-      body: "Tap to Pay. 2 minutes remaining",
+      body: "Ready to pay · 2 minutes left",
     });
   });
 
   it("singularizes a one-minute window", () => {
     expect(openedPreauthCopy(60)).toEqual({
-      body: "Tap to Pay. 1 minute remaining",
+      body: "Ready to pay · 1 minute left",
     });
   });
 });

@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { RarityTierBadge } from "@/components/token/rarity-tier-badge";
-import { formatRarityRankWithTie } from "@/lib/copy/phygital";
+import { formatRarityRankWithTie } from "@/lib/tokens/rarity/format";
 import type { CollectibleRarity } from "@/lib/tokens/collectible";
 import { cn } from "@/lib/utils";
 

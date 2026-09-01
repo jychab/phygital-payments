@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { CollectibleAttributes } from "@/components/token/collectible-attributes";
 import { CollectibleDescription } from "@/components/token/collectible-description";
 import { CollectibleDetails } from "@/components/token/collectible-details";
@@ -14,8 +16,13 @@ import { StickyActions } from "@/components/shared/sticky-actions";
 import { MotionSection } from "@/components/shared/motion-section";
 import { Button } from "@/components/ui/button";
 import { useMintedCollectibleView } from "@/hooks/token/use-minted-collectible-view";
+import { useShortcutOpener } from "@/hooks/token/use-shortcut-opener";
 import { copy } from "@/lib/copy/phygital";
 import type { CollectibleAttributeWithRarity } from "@/lib/tokens/collectible";
+import {
+  filterShortcutChips,
+  pickPrimaryCtaShortcut,
+} from "@/lib/tokens/shortcuts";
 import { detailSplitClass } from "@/lib/layout";
 import { STICKY_ENTER_DELAY_MS } from "@/lib/motion";
 import {
@@ -49,20 +56,37 @@ export function TokenMintedPanel({
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const { collectible, rarity, shortcuts, loading, rarityLoading } =
     useMintedCollectibleView(mint);
+  const { openCollectibleShortcut, iframeSheet } = useShortcutOpener();
+
+  const primaryShortcut = liveConfirmed
+    ? pickPrimaryCtaShortcut(shortcuts)
+    : null;
+  const chipShortcuts = filterShortcutChips(shortcuts, primaryShortcut);
+
+  const shortcutCtx = useMemo(
+    () => ({
+      tokenId: mint,
+      ownerAddress: String(token.currentOwner),
+      collectionId: collectible?.collectionMint ?? null,
+    }),
+    [mint, token.currentOwner, collectible?.collectionMint],
+  );
 
   const attributesWithRarity: CollectibleAttributeWithRarity[] =
     rarity?.attributes ?? collectible?.attributes ?? [];
 
   const name = collectible?.name ?? "Card";
   const cardOwner = String(token.currentOwner);
-  const hasSticky = showVerify || canClaim;
+  const hasSticky =
+    showVerify || canClaim || Boolean(primaryShortcut);
   let stagger = 0;
 
   const collectionFootnote =
-    fromCollection && liveConfirmed ? copy.signedInAsOwner : null;
+    fromCollection && liveConfirmed ? copy.token.signedInAsOwner : null;
 
   return (
     <div className="flex flex-1 flex-col">
+      {iframeSheet}
       <div className={detailSplitClass}>
         <CollectibleHero
           src={collectible?.image ?? null}
@@ -104,16 +128,16 @@ export function TokenMintedPanel({
                     liveConfirmed={liveConfirmed}
                     onVerifyAgain={onHoldToCheck}
                   />
-                  <CollectibleMetadataRow label={copy.linked}>
+                  <CollectibleMetadataRow label={copy.token.linked}>
                     {unclaimed ? (
                       <span className="font-medium text-muted-foreground">
-                        {copy.notLinked}
+                        {copy.token.notLinked}
                       </span>
                     ) : (
                       <CopyableAddress
                         address={cardOwner}
                         length={4}
-                        label="linked wallet"
+                        label={copy.address.linkedWallet}
                       />
                     )}
                   </CollectibleMetadataRow>
@@ -121,9 +145,14 @@ export function TokenMintedPanel({
               </div>
             </MotionSection>
 
-            {shortcuts.length > 0 ? (
+            {chipShortcuts.length > 0 ? (
               <MotionSection staggerIndex={stagger++}>
-                <CollectibleShortcuts shortcuts={shortcuts} />
+                <CollectibleShortcuts
+                  shortcuts={chipShortcuts}
+                  onOpenShortcut={(shortcut) =>
+                    openCollectibleShortcut(shortcut, shortcutCtx)
+                  }
+                />
               </MotionSection>
             ) : null}
 
@@ -163,23 +192,38 @@ export function TokenMintedPanel({
               {showVerify ? (
                 <Button
                   type="button"
-                  variant={canClaim ? "outline" : "default"}
+                  variant={
+                    canClaim || primaryShortcut ? "outline" : "default"
+                  }
                   size="lg"
                   className="w-full"
                   onClick={onHoldToCheck}
                 >
-                  {copy.holdToCheck}
+                  {copy.verify.holdToCheck}
                 </Button>
               ) : null}
-              {canClaim ? (
+              {primaryShortcut ? (
                 <Button
                   type="button"
                   variant="default"
                   size="lg"
                   className="w-full"
+                  onClick={() =>
+                    openCollectibleShortcut(primaryShortcut, shortcutCtx)
+                  }
+                >
+                  {primaryShortcut.label}
+                </Button>
+              ) : null}
+              {canClaim ? (
+                <Button
+                  type="button"
+                  variant={primaryShortcut ? "outline" : "default"}
+                  size="lg"
+                  className="w-full"
                   onClick={onClaim}
                 >
-                  {copy.addToWallet}
+                  {copy.claim.addToWallet}
                 </Button>
               ) : null}
             </StickyActions>

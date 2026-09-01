@@ -10,6 +10,7 @@ import {
   type HoldToPayPhase,
   type HoldToPaySuccess,
 } from "@/hooks/pay/use-hold-to-pay";
+import { copy } from "@/lib/copy/phygital";
 import { galleryAnimate } from "@/lib/motion";
 import { formatTokenAmount } from "@/lib/tokens/mint-delegate";
 import {
@@ -64,7 +65,7 @@ export function HoldToPayPhaseView({
           </div>
         </div>
         <div className="space-y-1">
-          <p className="text-xl font-semibold tracking-tight">Paid</p>
+          <p className="text-xl font-semibold tracking-tight">{copy.pay.paid}</p>
           <p className="font-(family-name:--font-display) text-[2.5rem] leading-none tracking-tight tabular-nums md:text-5xl">
             {amountUi}
             <span className="ml-2 inline-flex align-middle text-lg font-medium text-muted-foreground md:text-xl">
@@ -85,7 +86,7 @@ export function HoldToPayPhaseView({
           className="w-full max-w-xs"
           onClick={onReset}
         >
-          Done
+          {copy.common.done}
         </Button>
       </div>
     );
@@ -94,16 +95,16 @@ export function HoldToPayPhaseView({
   if (phase === "expired" || phase === "cancelled" || phase === "replaced") {
     const heading =
       phase === "cancelled"
-        ? "Cancelled"
+        ? copy.pay.cancelled
         : phase === "replaced"
-          ? "New Payment Started"
-          : "Time Expired";
+          ? copy.pay.replacedTitle
+          : copy.pay.expiredTitle;
     const detail =
       phase === "cancelled"
-        ? "Nothing was charged."
+        ? copy.pay.cancelledBody
         : phase === "replaced"
-          ? "Continue with the new payment."
-          : "Press Pay again to continue.";
+          ? copy.pay.replacedBody
+          : copy.pay.expiredBody;
     return (
       <div className="flex flex-1 flex-col gap-5">
         {onBack ? <BackLink onClick={onBack} /> : null}
@@ -121,7 +122,7 @@ export function HoldToPayPhaseView({
             className="w-full max-w-xs"
             onClick={onReset}
           >
-            Pay Again
+            {copy.pay.payAgain}
           </Button>
         </div>
       </div>
@@ -132,11 +133,11 @@ export function HoldToPayPhaseView({
     return (
       <NfcHoldStatus
         size="lg"
-        title="Hold to Pay"
+        title={copy.pay.holdToPay}
         body={
           secondsLeft > 0
             ? `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")} remaining`
-            : "Confirming payment…"
+            : copy.pay.confirmingPayment
         }
         pulsing
         action={
@@ -146,7 +147,7 @@ export function HoldToPayPhaseView({
             size="sm"
             onClick={onCancelWindow}
           >
-            Cancel
+            {copy.common.cancel}
           </Button>
         }
       />

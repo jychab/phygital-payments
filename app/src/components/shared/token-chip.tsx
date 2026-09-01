@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 
 import { SettingsListRow } from "@/components/shared/settings-list-row";
 import { Button } from "@/components/ui/button";
+import { copy } from "@/lib/copy/phygital";
 import {
   isDefaultMint,
   USDC_ICON_URL,
@@ -150,7 +151,7 @@ export function TokenListRow({
         trailing != null ? (
           trailing
         ) : selected ? (
-          <span className="text-[11px] font-medium text-primary">Selected</span>
+          <span className="text-[11px] font-medium text-primary">{copy.common.selected}</span>
         ) : (
           <span className="font-mono text-[10px] text-muted-foreground/70">
             {shortAddress(token.mint, 4)}

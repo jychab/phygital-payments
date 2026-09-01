@@ -12,7 +12,7 @@ import {
   useSetPreauthRequired,
 } from "@/hooks/pay/use-preauth-required";
 import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
-import { payCopy } from "@/lib/copy/phygital";
+import { copy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { cn } from "@/lib/utils";
 
@@ -49,12 +49,12 @@ export function ManagePayPanel({
 
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
-          {payCopy.paySettings}
+          {copy.pay.paySettings}
         </h1>
         <p className="mx-auto max-w-64 text-sm text-muted-foreground">
           {preConfirmationOn
-            ? "Pre-confirmation and this phone."
-            : "How this accessory pays."}
+            ? copy.pay.settingsPreConfirmation
+            : copy.pay.settingsAccessoryPays}
         </p>
       </div>
 
@@ -67,22 +67,22 @@ export function ManagePayPanel({
       {preConfirmationOn ? (
         <div className="space-y-1">
           <p className="px-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            {payCopy.thisPhone}
+            {copy.pay.thisPhone}
           </p>
           <SettingsListRow
             title={
-              keyReady ? "Authorized on this phone" : payCopy.authorizePhone
+              keyReady ? copy.pay.authorizedOnPhone : copy.pay.authorizePhone
             }
             subtitle={
               keyReady
-                ? "Pre-confirmation works here."
-                : payCopy.authorizeSubtitle
+                ? copy.pay.preConfirmationWorks
+                : copy.pay.authorizeSubtitle
             }
             truncate={false}
             onSelect={() => setManageKeys(true)}
             trailing={
               <span className="text-[11px] font-medium text-primary">
-                {keyReady ? "Manage" : "Authorize"}
+                {keyReady ? copy.pay.manage : copy.pay.authorize}
               </span>
             }
           />
@@ -117,7 +117,7 @@ function PreConfirmationRow({
       await setRequired(owner, !on);
     } catch (error) {
       toast.error(
-        toUserErrorMessage(error, "Couldn’t update pre-confirmation."),
+        toUserErrorMessage(error, copy.pay.preauthUpdateFailed),
       );
     } finally {
       setBusy(false);
@@ -127,11 +127,11 @@ function PreConfirmationRow({
   return (
     <div className="space-y-2">
       <SettingsListRow
-        title={payCopy.preConfirmation}
+        title={copy.pay.preConfirmation}
         subtitle={
           on
-            ? payCopy.preConfirmationOnSubtitle
-            : payCopy.preConfirmationOffSubtitle
+            ? copy.pay.preConfirmationOnSubtitle
+            : copy.pay.preConfirmationOffSubtitle
         }
         truncate={false}
         onSelect={() => void onToggle()}

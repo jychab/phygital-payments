@@ -3,6 +3,8 @@
  * No Cloudflare / Next imports.
  */
 
+import { copy } from "@/lib/copy/phygital";
+
 export const GRANT_RING_CAP = 2;
 /** Extra wait after TTL only when the grant was claimed (submit in flight). */
 export const PREAUTH_WEBHOOK_GRACE_SECONDS = 15;
@@ -95,7 +97,7 @@ export function cancelledPreauthStatus(grantId: string): PreauthStatusResult {
   return {
     status: "cancelled",
     grantId,
-    body: "Cancelled. Nothing was charged.",
+    body: copy.pay.preauthCancelled,
   };
 }
 
@@ -103,7 +105,7 @@ export function replacedPreauthStatus(grantId: string): PreauthStatusResult {
   return {
     status: "replaced",
     grantId,
-    body: "A new payment started.",
+    body: copy.pay.preauthReplaced,
   };
 }
 
@@ -111,16 +113,14 @@ export function expiredPreauthStatus(grantId: string): PreauthStatusResult {
   return {
     status: "expired",
     grantId,
-    body: "Time expired. Press Pay again to continue.",
+    body: copy.pay.preauthExpired,
   };
 }
 
 /** Copy for a freshly opened spending window (Shortcuts notification). */
 export function openedPreauthCopy(ttlSeconds: number): PreauthStatusCopy {
   const minutes = Math.max(1, Math.round(ttlSeconds / 60));
-  const remaining =
-    minutes === 1 ? "1 minute remaining" : `${minutes} minutes remaining`;
-  return { body: `Tap to Pay. ${remaining}` };
+  return { body: copy.pay.preauthOpened(minutes) };
 }
 
 export function newStoredGrant(now: number, ttlSeconds: number): StoredGrant {

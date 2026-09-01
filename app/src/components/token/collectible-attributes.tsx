@@ -3,7 +3,8 @@
 import {
   rarityTierClasses,
 } from "@/components/token/rarity-tier-badge";
-import { copy, formatTraitRarityLine } from "@/lib/copy/phygital";
+import { formatTraitRarityLine } from "@/lib/tokens/rarity/format";
+import { copy } from "@/lib/copy/phygital";
 import type { CollectibleAttributeWithRarity } from "@/lib/tokens/collectible";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +20,7 @@ export function CollectibleAttributes({
 
   return (
     <section className={cn("w-full text-left", className)}>
-      <h2 className="text-eyebrow text-muted-foreground">{copy.attributes}</h2>
+      <h2 className="text-eyebrow text-muted-foreground">{copy.token.attributes}</h2>
       <ul className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-3">
         {attributes.map((attr) => {
           const tierStyles =

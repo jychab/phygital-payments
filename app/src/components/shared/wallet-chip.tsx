@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
+import { copy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { cn, shortAddress } from "@/lib/utils";
 
@@ -62,9 +63,9 @@ export function WalletChip({ className }: { className?: string }) {
     if (!address) return;
     try {
       await navigator.clipboard.writeText(address);
-      toast.success("Address copied");
+      toast.success(copy.wallet.addressCopied);
     } catch {
-      toast.error("Couldn’t copy address");
+      toast.error(copy.wallet.addressCopyFailed);
     }
   }
 
@@ -73,7 +74,7 @@ export function WalletChip({ className }: { className?: string }) {
     try {
       await exportWallet({ address });
     } catch (err) {
-      toast.error(toUserErrorMessage(err, "Couldn’t show private key"));
+      toast.error(toUserErrorMessage(err, copy.wallet.privateKeyFailed));
     }
   }
 
@@ -88,16 +89,16 @@ export function WalletChip({ className }: { className?: string }) {
         aria-busy={!connectReady}
         onClick={() => void connect()}
       >
-        {connectReady ? "Connect" : "Loading…"}
+        {connectReady ? copy.common.connectShort : copy.common.loading}
       </Button>
     );
   }
 
   const menuLabel = isEmbeddedWallet
-    ? "Google wallet menu"
+    ? copy.wallet.googleWalletMenu
     : walletName
-      ? `${walletName} menu`
-      : "Wallet menu";
+      ? copy.wallet.walletMenuNamed(walletName)
+      : copy.wallet.walletMenu;
 
   return (
     <DropdownMenu>
@@ -144,7 +145,7 @@ export function WalletChip({ className }: { className?: string }) {
           }}
         >
           <Copy className="size-3.5 opacity-70" />
-          Copy address
+          {copy.wallet.copyAddress}
         </DropdownMenuItem>
         {isEmbeddedWallet ? (
           <DropdownMenuItem
@@ -153,7 +154,7 @@ export function WalletChip({ className }: { className?: string }) {
             }}
           >
             <KeyRound className="size-3.5 opacity-70" />
-            Show private key
+            {copy.wallet.showPrivateKey}
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />
@@ -163,7 +164,7 @@ export function WalletChip({ className }: { className?: string }) {
           }}
         >
           <LogOut className="size-3.5 opacity-70" />
-          Disconnect
+          {copy.common.disconnect}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

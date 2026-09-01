@@ -18,6 +18,7 @@ import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 import type { PaymentToken } from "@/lib/tokens/payment-token";
+import { copy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 /**
@@ -40,7 +41,7 @@ export function CollectAtaSetup({
   const [error, setError] = useState<string | null>(null);
 
   const createAta = useCreateAtaMutation(mint, {
-    onSuccess: () => toast.success("Ready to receive"),
+    onSuccess: () => toast.success(copy.collect.readyToReceive),
   });
 
   async function onCreate() {
@@ -49,7 +50,7 @@ export function CollectAtaSetup({
     try {
       await createAta.mutateAsync({ recipient });
     } catch (err) {
-      setError(toUserErrorMessage(err, "Couldn’t set up to receive"));
+      setError(toUserErrorMessage(err, copy.collect.setupFailed));
     }
   }
 
@@ -60,17 +61,17 @@ export function CollectAtaSetup({
       </div>
       <div className="min-w-0 flex-1 space-y-2.5">
         <p className="text-sm font-medium text-foreground">
-          Create Associated Token Account
+          {copy.collect.ataTitle}
         </p>
         <p className="text-xs text-muted-foreground">
-          This wallet isn’t ready to receive{" "}
+          {copy.collect.ataNotReadyPrefix}{" "}
           <TokenSymbol
             token={token}
             size="xs"
             className="mx-0.5"
             symbolClassName="font-medium text-foreground"
           />{" "}
-          yet.
+          {copy.collect.ataNotReadySuffix}
         </p>
         {!isConnected ? (
           <Button
@@ -82,7 +83,7 @@ export function CollectAtaSetup({
             onClick={() => void connect()}
           >
             <Wallet className="size-4" />
-            {connectReady ? "Connect wallet" : "Loading…"}
+            {connectReady ? copy.common.connectWallet : copy.common.loading}
           </Button>
         ) : wrongWallet ? (
           <div className="space-y-2">
@@ -94,7 +95,7 @@ export function CollectAtaSetup({
               className="w-full"
               onClick={() => void disconnect()}
             >
-              Disconnect
+              {copy.common.disconnect}
             </Button>
           </div>
         ) : (
@@ -114,12 +115,12 @@ export function CollectAtaSetup({
               {createAta.isPending ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />
-                  Setting up…
+                  {copy.collect.settingUp}
                 </>
               ) : (
                 <>
                   <Plus className="size-4" />
-                  {error ? "Try again" : `Create ${token.symbol} ATA`}
+                  {error ? copy.common.tryAgain : copy.collect.createAta(token.symbol)}
                 </>
               )}
             </Button>

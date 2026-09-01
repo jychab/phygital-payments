@@ -2,6 +2,7 @@ import "server-only";
 
 import { resolvePaymentToken } from "@/lib/tokens/payment-token";
 import { fetchVerifiedTokens } from "@/lib/server/verified-tokens";
+import { errorCopy } from "@/lib/copy/phygital";
 import { toUserFacingBody } from "@/lib/user-errors";
 import {
   successPreauthCopy,
@@ -27,7 +28,7 @@ export async function withMintDisplayCopy(res: Response): Promise<Response> {
     const error =
       typeof payload.error === "string"
         ? payload.error
-        : "Something went wrong. Try again.";
+        : errorCopy.fallback.body;
     return jsonResponse(
       { ...payload, status:"error", body: toUserFacingBody(error) },
       res.status,

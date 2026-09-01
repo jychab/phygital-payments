@@ -26,12 +26,12 @@ const TokenRouteShell = dynamic(
 );
 
 const TOKEN_NFC_COPY = {
-  inAppCheck: copy.openInBrowser,
-  holdBody: copy.verifyIntroBody,
-  sessionExpiredTitle: copy.verifySessionExpiredTitle,
-  sessionExpiredBody: copy.verifySessionExpiredBody,
-  notSetUpTitle: copy.notSetUpTitle,
-  notSetUpBody: copy.notSetUpBody,
+  inAppCheck: copy.gate.openInBrowserBody,
+  holdBody: copy.verify.introBody,
+  sessionExpiredTitle: copy.verify.sessionExpiredTitle,
+  sessionExpiredBody: copy.verify.sessionExpiredBody,
+  notSetUpTitle: copy.verify.notSetUpTitle,
+  notSetUpBody: copy.verify.notSetUpBody,
 };
 
 function TokenHome({
@@ -78,8 +78,8 @@ export function TokenApp() {
   if (embedded) {
     return (
       <EmbedError
-        title="Can’t open here"
-        body="Open this on your phone, not in this window."
+        title={copy.embed.cantOpenTitle}
+        body={copy.embed.tokenBody}
       />
     );
   }
@@ -103,7 +103,7 @@ export function TokenApp() {
   return (
     <TokenRouteShell layout="compact">
       <TokenNfcApp
-        copy={TOKEN_NFC_COPY}
+        nfcCopy={TOKEN_NFC_COPY}
         renderHome={({ token: loaded, liveConfirmed }) => (
           <TokenHome token={loaded} liveConfirmed={liveConfirmed} />
         )}

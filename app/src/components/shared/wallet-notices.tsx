@@ -3,6 +3,7 @@
 import { Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { copy } from "@/lib/copy/phygital";
 import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 
 export function WrongWalletNotice({
@@ -19,7 +20,7 @@ export function WrongWalletNotice({
         "rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive"
       }
     >
-      Wrong wallet. Disconnect above, then connect {ownerShort}.
+      {copy.wallet.wrongWalletNotice(ownerShort)}
     </p>
   );
 }
@@ -28,7 +29,7 @@ export function WrongWalletNotice({
 export function ExpectedWalletConnect({
   owner,
   hint,
-  label = "Connect wallet",
+  label = copy.common.connectWallet,
   disabled,
 }: {
   owner: string;
@@ -65,7 +66,7 @@ export function ExpectedWalletConnect({
         aria-busy={!connectReady}
       >
         <Wallet className="size-4" />
-        {connectReady ? label : "Loading…"}
+        {connectReady ? label : copy.common.loading}
       </Button>
     </div>
   );

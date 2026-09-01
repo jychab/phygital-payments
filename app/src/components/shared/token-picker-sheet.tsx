@@ -13,6 +13,7 @@ import {
   filterPaymentTokens,
   type PaymentToken,
 } from "@/lib/tokens/payment-token";
+import { copy } from "@/lib/copy/phygital";
 import { cn } from "@/lib/utils";
 
 const ROW_HEIGHT = 56;
@@ -44,7 +45,7 @@ export function TokenPickerSheet({
   }, [open]);
 
   return (
-    <ModalSheet open={open} onClose={onClose} title="Choose a token">
+    <ModalSheet open={open} onClose={onClose} title={copy.collect.chooseToken}>
       <div
         className={cn(
           "flex h-[min(85dvh,40rem)] w-full flex-col",
@@ -52,13 +53,13 @@ export function TokenPickerSheet({
         )}
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/50 px-4 py-3">
-          <p className="text-sm font-medium text-foreground">Choose a token</p>
+          <p className="text-sm font-medium text-foreground">{copy.collect.chooseToken}</p>
           <Button
             type="button"
             size="icon-sm"
             variant="ghost"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={copy.common.close}
           >
             <X className="size-4" />
           </Button>
@@ -71,13 +72,13 @@ export function TokenPickerSheet({
               variant="muted"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search tokens"
+              placeholder={copy.collect.searchTokens}
               autoFocus
               className="pl-10"
             />
           </label>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Supported tokens only
+            {copy.collect.supportedTokensOnly}
             {!verified.isLoading && catalog.length > 0
               ? ` · ${tokens.length.toLocaleString()}${
                   query.trim() ? ` of ${catalog.length.toLocaleString()}` : ""
@@ -93,7 +94,7 @@ export function TokenPickerSheet({
             </div>
           ) : tokens.length === 0 ? (
             <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-              No tokens match.
+              {copy.collect.noTokensMatch}
             </p>
           ) : (
             <VirtualTokenList

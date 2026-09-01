@@ -15,7 +15,7 @@ export function BackToCollection({ className }: { className?: string }) {
       <Button type="button" variant="ghost" size="sm" className="gap-1.5" asChild>
         <Link href="/">
           <ArrowLeft className="size-4" aria-hidden />
-          {copy.backToCollection}
+          {copy.token.backToCollection}
         </Link>
       </Button>
     </div>

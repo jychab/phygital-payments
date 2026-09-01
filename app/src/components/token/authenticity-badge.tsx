@@ -18,7 +18,7 @@ export function VerificationMetadataRow({
     const canRecheck = Boolean(onVerifyAgain);
     return (
       <CollectibleMetadataRow
-        label={copy.verification}
+        label={copy.token.verification}
         onPress={canRecheck ? onVerifyAgain : undefined}
         trailing={
           canRecheck ? (
@@ -28,10 +28,10 @@ export function VerificationMetadataRow({
         subtitle={
           canRecheck ? (
             <>
-              <span className="font-medium text-foreground/80">{copy.verifyAgain}</span>
+              <span className="font-medium text-foreground/80">{copy.verify.verifyAgain}</span>
               <span className="text-muted-foreground">
                 {" · "}
-                {copy.verifyAgainHint}
+                {copy.verify.verifyAgainHint}
               </span>
             </>
           ) : undefined
@@ -39,18 +39,18 @@ export function VerificationMetadataRow({
       >
         <span
           className="inline-flex items-center gap-1 font-medium text-success"
-          aria-label={canRecheck ? copy.confirmedRecheckAria : copy.verified}
+          aria-label={canRecheck ? copy.verify.verifiedRecheckAria : copy.verify.verified}
         >
           <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
-          {copy.verified}
+          {copy.verify.verified}
         </span>
       </CollectibleMetadataRow>
     );
   }
 
   return (
-    <CollectibleMetadataRow label={copy.verification} subtitle={copy.notVerifiedHint}>
-      <span className="font-medium text-muted-foreground">{copy.notVerified}</span>
+    <CollectibleMetadataRow label={copy.token.verification} subtitle={copy.verify.notVerifiedHint}>
+      <span className="font-medium text-muted-foreground">{copy.verify.notVerified}</span>
     </CollectibleMetadataRow>
   );
 }

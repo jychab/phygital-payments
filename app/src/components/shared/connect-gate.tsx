@@ -9,8 +9,8 @@ import { copy } from "@/lib/copy/phygital";
 
 /** Full-width connect prompt — same pattern on Home, Collect, and claim. */
 export function ConnectGate({
-  title = "Connect your wallet",
-  body = copy.connectCollectionBody,
+  title = copy.common.connectWalletTitle,
+  body = copy.collection.connectBody,
   onConnect,
   connectReady = true,
   icon,
@@ -35,7 +35,7 @@ export function ConnectGate({
           aria-busy={!connectReady}
           onClick={() => void onConnect()}
         >
-          {connectReady ? copy.connectWallet : "Loading…"}
+          {connectReady ? copy.common.connectWallet : copy.common.loading}
         </Button>
       }
     />

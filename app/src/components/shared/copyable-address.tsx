@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 
+import { copy } from "@/lib/copy/phygital";
 import { cn, shortAddress } from "@/lib/utils";
 
 export function WalletAddressRow({
   address,
   length = 4,
-  label = "wallet",
+  label = copy.address.wallet,
 }: {
   address: string;
   length?: number;
@@ -16,7 +17,7 @@ export function WalletAddressRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-muted/25 px-4 py-3 text-xs">
-      <span className="text-muted-foreground">Wallet</span>
+      <span className="text-muted-foreground">{copy.common.wallet}</span>
       <CopyableAddress address={address} length={length} label={label} />
     </div>
   );
@@ -31,7 +32,7 @@ export function CopyableAddress({
   address,
   length = 4,
   className,
-  label = "address",
+  label = copy.address.default,
 }: {
   address: string;
   /** Characters shown on each side of the ellipsis. */
@@ -63,7 +64,9 @@ export function CopyableAddress({
       type="button"
       onClick={onCopy}
       title={address}
-      aria-label={copied ? `Copied ${label}` : `Copy ${label} ${address}`}
+      aria-label={
+        copied ? copy.address.copiedAria(label) : copy.address.copyAria(label, address)
+      }
       className={cn(
         "group/copy inline-flex items-center gap-1.5 rounded-md font-mono text-foreground",
         "transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
@@ -87,7 +90,7 @@ export function CopyableAddress({
         />
       </span>
       <span aria-live="polite" className="sr-only">
-        {copied ? "Copied to clipboard" : ""}
+        {copied ? copy.address.copiedToClipboard : ""}
       </span>
     </button>
   );

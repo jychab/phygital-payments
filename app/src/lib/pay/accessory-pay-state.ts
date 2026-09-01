@@ -1,4 +1,4 @@
-import { copy, payCopy } from "@/lib/copy/phygital";
+import { copy } from "@/lib/copy/phygital";
 import {
   isOwnerPayMintEnabled,
   type OwnerPayMintMatch,
@@ -93,7 +93,7 @@ export function accessoryMintPaySubtitle(
   }
   const amount = match.status?.delegatedAmountUi;
   if (!amount) return null;
-  return payCopy.spendingLimitSubtitle(amount, isDefaultMint(mint));
+  return copy.pay.spendingLimitSubtitle(amount, isDefaultMint(mint));
 }
 
 /** Task header above the token list on the accessory wallet home. */
@@ -107,7 +107,7 @@ export function deriveAccessoryWalletHomeHeader(args: {
 
   if (holdingsEmpty) {
     return {
-      subtitle: payCopy.noTokensSubtitle,
+      subtitle: copy.pay.noTokensSubtitle,
       enabledSummary: null,
     };
   }
@@ -117,18 +117,18 @@ export function deriveAccessoryWalletHomeHeader(args: {
     totalCount > 1 &&
     enabledCount > 0 &&
     enabledCount < totalCount
-      ? payCopy.enabledCountSummary(enabledCount, totalCount)
+      ? copy.pay.enabledCountSummary(enabledCount, totalCount)
       : null;
 
   if (!hasLimit) {
     return {
-      subtitle: payCopy.enablePaySubtitle,
+      subtitle: copy.pay.enablePaySubtitle,
       enabledSummary: null,
     };
   }
 
   return {
-    subtitle: payCopy.payTokensSubtitle,
+    subtitle: copy.pay.payTokensSubtitle,
     enabledSummary,
   };
 }
@@ -170,16 +170,16 @@ export function deriveAccessoryPrimaryAction(args: {
   } = args;
 
   if (isUnclaimedToken(token) || canClaim) {
-    return { kind: "claim", label: copy.addToWallet };
+    return { kind: "claim", label: copy.claim.addToWallet };
   }
   if (!liveConfirmed) {
-    return { kind: "verify", label: copy.holdToCheck };
+    return { kind: "verify", label: copy.verify.holdToCheck };
   }
   if (canPay && preConfirmationOn && !keyReady && hasLimit) {
-    return { kind: "authorize", label: payCopy.authorizePhone };
+    return { kind: "authorize", label: copy.pay.authorizePhone };
   }
   if (canPay && preConfirmationOn && keyReady && hasLimit) {
-    return { kind: "pay", label: payCopy.pay };
+    return { kind: "pay", label: copy.pay.pay };
   }
   return { kind: "none", label: "" };
 }
@@ -195,18 +195,18 @@ export function deriveAccessoryStatusLine(args: {
 
   if (preConfirmationOn && !keyReady) {
     return {
-      text: payCopy.holdNeedsKey,
+      text: copy.pay.holdNeedsKey,
       tone: "muted",
     };
   }
   if (preConfirmationOn && keyReady) {
     return {
-      text: payCopy.preConfirmationOnHint,
+      text: copy.pay.preConfirmationOnHint,
       tone: "primary",
     };
   }
   return {
-    text: payCopy.preConfirmationOffHint,
+    text: copy.pay.preConfirmationOffHint,
     tone: "muted",
   };
 }

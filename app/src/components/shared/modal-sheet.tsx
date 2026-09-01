@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { copy } from "@/lib/copy/phygital";
 import { galleryAnimate } from "@/lib/motion";
 import { shellLayoutClass } from "@/lib/layout";
 import { cn } from "@/lib/utils";
@@ -81,7 +82,7 @@ export function ModalSheet({
     >
       <button
         type="button"
-        aria-label="Close"
+        aria-label={copy.common.close}
         className={cn(
           "absolute inset-0 bg-background/80 backdrop-blur-sm",
           galleryAnimate.fade,

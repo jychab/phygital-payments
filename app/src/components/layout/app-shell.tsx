@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
 import { CopyableAddress } from "@/components/shared/copyable-address";
-import { brand } from "@/lib/copy/phygital";
+import { brand, copy } from "@/lib/copy/phygital";
 import {
   shellLayoutClass,
   shellPaddingClass,
@@ -82,7 +82,7 @@ export function AppShell({
                   className="size-1.5 rounded-full bg-muted-foreground/50"
                   aria-hidden
                 />
-                <CopyableAddress address={recipient} label="wallet address" />
+                <CopyableAddress address={recipient} label={copy.address.walletAddress} />
               </span>
             ) : (
               <span aria-hidden />

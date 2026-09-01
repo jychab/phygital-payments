@@ -11,6 +11,7 @@ import {
   type PreauthStatusResult,
 } from "@/lib/pay/preauth-client";
 import { invalidateOwnerQueries } from "@/lib/queries";
+import { copy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
 
 export type HoldToPayPhase =
@@ -77,7 +78,7 @@ export function useHoldToPay(owner: string) {
       })
       .catch((error) => {
         if (isAbortError(error) || ac.signal.aborted) return;
-        toast.error(toUserErrorMessage(error, "Couldn’t check this payment."));
+        toast.error(toUserErrorMessage(error, copy.pay.paymentCheckFailed));
         setPhase("expired");
       })
       .finally(() => {
@@ -96,7 +97,7 @@ export function useHoldToPay(owner: string) {
       setExpiresAt(grant.expiresAt);
       setPhase("window");
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t start this payment."));
+      toast.error(toUserErrorMessage(error, copy.pay.paymentStartFailed));
     } finally {
       setBusy(false);
     }
@@ -106,7 +107,7 @@ export function useHoldToPay(owner: string) {
     try {
       await cancelPreauthForWallet({ wallet: owner });
     } catch (error) {
-      toast.error(toUserErrorMessage(error, "Couldn’t cancel."));
+      toast.error(toUserErrorMessage(error, copy.pay.cancelFailed));
     }
   }
 

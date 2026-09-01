@@ -18,7 +18,7 @@ function CardIdLabel() {
 
   return (
     <span className="inline-flex items-center gap-1">
-      {copy.cardId}
+      {copy.token.cardId}
       <Tooltip open={open} onOpenChange={setOpen}>
         <TooltipTrigger asChild>
           <button
@@ -28,7 +28,7 @@ function CardIdLabel() {
               "transition-colors hover:text-foreground",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
             )}
-            aria-label={copy.cardIdHint}
+            aria-label={copy.token.cardIdHint}
             onClick={(e) => {
               e.stopPropagation();
               setOpen((prev) => !prev);
@@ -38,7 +38,7 @@ function CardIdLabel() {
           </button>
         </TooltipTrigger>
         <TooltipContent side="top" align="start" className="text-left">
-          {copy.cardIdHint}
+          {copy.token.cardIdHint}
         </TooltipContent>
       </Tooltip>
     </span>
@@ -63,27 +63,27 @@ export function TokenDetails({
 
   return (
     <section className={cn("w-full text-left", className)}>
-      <h2 className="text-eyebrow mb-3 text-muted-foreground">{copy.details}</h2>
+      <h2 className="text-eyebrow mb-3 text-muted-foreground">{copy.token.details}</h2>
       <div className="divide-y divide-border/40">
         {mint ? (
-          <CollectibleMetadataRow label={copy.mintAddress}>
-            <CopyableAddress address={mint} length={4} label="mint address" />
+          <CollectibleMetadataRow label={copy.token.mintAddress}>
+            <CopyableAddress address={mint} length={4} label={copy.address.mintAddress} />
           </CollectibleMetadataRow>
         ) : null}
 
         {mintOwner ? (
-          <CollectibleMetadataRow label={copy.mintOwner}>
+          <CollectibleMetadataRow label={copy.token.mintOwner}>
             <CopyableAddress
               address={mintOwner}
               length={4}
-              label="mint owner wallet"
+              label={copy.address.mintOwner}
             />
           </CollectibleMetadataRow>
         ) : null}
 
         {cardId ? (
           <CollectibleMetadataRow label={<CardIdLabel />}>
-            <CopyableAddress address={cardId} length={4} label="card ID" />
+            <CopyableAddress address={cardId} length={4} label={copy.address.cardId} />
           </CollectibleMetadataRow>
         ) : null}
       </div>

@@ -5,6 +5,7 @@ import { Wallet } from "lucide-react";
 
 import { GateMessage } from "@/components/layout/gate-message";
 import { Button } from "@/components/ui/button";
+import { copy } from "@/lib/copy/phygital";
 import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
 
@@ -27,8 +28,8 @@ export function WalletSyncGate({
   return (
     <GateMessage
       icon={<Wallet className="size-5 text-destructive" />}
-      title="Wrong wallet"
-      body={`This page is for ${wallet.ownerShort}. Disconnect above, then connect that wallet.`}
+      title={copy.wallet.wrongWalletTitle}
+      body={copy.wallet.wrongWalletPageBody(wallet.ownerShort)}
       destructive
       action={
         <Button
@@ -38,7 +39,7 @@ export function WalletSyncGate({
           className="w-full max-w-xs"
           onClick={() => void disconnect()}
         >
-          Disconnect
+          {copy.common.disconnect}
         </Button>
       }
     />

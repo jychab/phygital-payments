@@ -8,11 +8,9 @@ import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { LoadingStatus } from "@/components/shared/loading-status";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
-import { copy as productCopy } from "@/lib/copy/phygital";
+import { copy } from "@/lib/copy/phygital";
 import { useAuthenticateToken } from "@/hooks/token/use-authenticate-token";
-import {
-  usePhygitalToken,
-} from "@/hooks/token/use-phygital-token";
+import { usePhygitalToken } from "@/hooks/token/use-phygital-token";
 import { useTapVerify } from "@/hooks/token/use-tap-verify";
 import {
   initWebauthnSessionSnapshot,
@@ -32,13 +30,12 @@ export type TokenNfcCopy = {
 };
 
 export function TokenNfcApp({
-  copy,
+  nfcCopy,
   renderHome,
 }: {
-  copy: TokenNfcCopy;
+  nfcCopy: TokenNfcCopy;
   renderHome: (args: {
     token: PhygitalToken;
-    /** True only after WebAuthn or tap-verify in this tree. */
     liveConfirmed?: boolean;
   }) => ReactNode;
 }) {
@@ -54,14 +51,14 @@ export function TokenNfcApp({
   const resolvedPk = pk ?? webauthnSession?.secp256r1PublicKey ?? null;
 
   if (hasTapProof && (verifyPending || verify === "pending")) {
-    return <LoadingStatus label={productCopy.verifyingChip} />;
+    return <LoadingStatus label={copy.verify.verifyingChip} />;
   }
 
   if ((tapReady || webauthnReady) && resolvedPk) {
     return (
       <VerifiedTokenFlow
         pk={resolvedPk}
-        copy={copy}
+        nfcCopy={nfcCopy}
         renderHome={renderHome}
         liveConfirmed
       />
@@ -70,7 +67,7 @@ export function TokenNfcApp({
 
   return (
     <HoldToCheckLanding
-      copy={copy}
+      nfcCopy={nfcCopy}
       sessionExpired={hasTapProof && verify === "failed"}
       onWebauthnVerified={markVerified}
     />
@@ -92,11 +89,11 @@ function stripExpiredTapProofFromUrl(
 }
 
 function HoldToCheckLanding({
-  copy,
+  nfcCopy,
   sessionExpired,
   onWebauthnVerified,
 }: {
-  copy: TokenNfcCopy;
+  nfcCopy: TokenNfcCopy;
   sessionExpired: boolean;
   onWebauthnVerified: (secp256r1PublicKey: string) => void;
 }) {
@@ -121,16 +118,14 @@ function HoldToCheckLanding({
       onWebauthnVerified(secp256r1PublicKey);
       stripExpiredTapProofFromUrl(router, searchParams, secp256r1PublicKey);
     } catch (err) {
-      setError(
-        toUserErrorMessage(err, productCopy.verifyFailedBody),
-      );
+      setError(toUserErrorMessage(err, copy.verify.failedBody));
     } finally {
       setBusy(false);
     }
   }
 
   if (showInAppGate) {
-    return <InAppBrowserGate body={copy.inAppCheck} />;
+    return <InAppBrowserGate body={nfcCopy.inAppCheck} />;
   }
 
   if (busy) {
@@ -138,8 +133,8 @@ function HoldToCheckLanding({
       <NfcHoldStatus
         size="lg"
         busy
-        title={productCopy.holdStill}
-        body={productCopy.holdStillBody}
+        title={copy.verify.holdStill}
+        body={copy.verify.holdStillBody}
       />
     );
   }
@@ -149,8 +144,8 @@ function HoldToCheckLanding({
       <NfcHoldStatus
         size="lg"
         pulsing={false}
-        title={productCopy.verifyFailed}
-        body={error || productCopy.verifyFailedBody}
+        title={copy.verify.failed}
+        body={error || copy.verify.failedBody}
         action={
           <Button
             type="button"
@@ -158,7 +153,7 @@ function HoldToCheckLanding({
             className="w-full"
             onClick={() => void onCheck()}
           >
-            {productCopy.tryAgain}
+            {copy.common.tryAgain}
           </Button>
         }
       />
@@ -166,11 +161,11 @@ function HoldToCheckLanding({
   }
 
   const landingTitle = sessionExpired
-    ? copy.sessionExpiredTitle
-    : productCopy.holdToCheck;
+    ? nfcCopy.sessionExpiredTitle
+    : copy.verify.holdToCheck;
   const landingBody = sessionExpired
-    ? copy.sessionExpiredBody
-    : copy.holdBody;
+    ? nfcCopy.sessionExpiredBody
+    : nfcCopy.holdBody;
 
   return (
     <NfcHoldStatus
@@ -184,7 +179,7 @@ function HoldToCheckLanding({
           className="w-full"
           onClick={() => void onCheck()}
         >
-          {productCopy.holdToCheck}
+          {copy.verify.holdToCheck}
         </Button>
       }
     />
@@ -193,12 +188,12 @@ function HoldToCheckLanding({
 
 function VerifiedTokenFlow({
   pk,
-  copy,
+  nfcCopy,
   renderHome,
   liveConfirmed,
 }: {
   pk: string;
-  copy: TokenNfcCopy;
+  nfcCopy: TokenNfcCopy;
   renderHome: (args: {
     token: PhygitalToken;
     liveConfirmed?: boolean;
@@ -218,15 +213,15 @@ function VerifiedTokenFlow({
     tokenQuery.isLoading ||
     tokenQuery.isFetching
   ) {
-    return <LoadingStatus label={productCopy.verifyingChip} />;
+    return <LoadingStatus label={copy.verify.verifyingChip} />;
   }
 
   return (
     <NfcHoldStatus
       size="lg"
       pulsing={false}
-      title={copy.notSetUpTitle}
-      body={copy.notSetUpBody}
+      title={nfcCopy.notSetUpTitle}
+      body={nfcCopy.notSetUpBody}
     />
   );
 }

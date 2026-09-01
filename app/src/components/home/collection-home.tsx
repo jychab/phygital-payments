@@ -15,6 +15,7 @@ import { usePrefetchDasCollectibles } from "@/hooks/token/use-das-collectible";
 import { usePhygitalTokensByOwner } from "@/hooks/home/use-phygital-tokens-by-owner";
 import { collectionDetailHref } from "@/lib/journey";
 import { tokenHasLinkedMint, type PhygitalToken } from "@/lib/phygital/token";
+import { copy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { cn } from "@/lib/utils";
 import { accessoryListClass, collectionGridClass } from "@/lib/layout";
@@ -25,17 +26,17 @@ export function CollectionHome({ owner }: { owner: string }) {
   const tokensQuery = usePhygitalTokensByOwner(owner);
 
   if (isRestoring || tokensQuery.isLoading) {
-    return <LoadingStatus label="Loading your collection…" />;
+    return <LoadingStatus label={copy.collection.loading} />;
   }
 
   if (tokensQuery.isError) {
     return (
       <GateMessage
         icon={<Nfc className="size-5 text-destructive" />}
-        title="Couldn’t load collection"
+        title={copy.collection.loadFailedTitle}
         body={toUserErrorMessage(
           tokensQuery.error,
-          "Check your connection and try again.",
+          copy.collection.loadFailedBody,
         )}
         destructive
         action={
@@ -46,7 +47,7 @@ export function CollectionHome({ owner }: { owner: string }) {
             onClick={() => void tokensQuery.refetch()}
             disabled={tokensQuery.isFetching}
           >
-            Try again
+            {copy.common.tryAgain}
           </Button>
         }
       />
@@ -79,7 +80,7 @@ function CollectionBody({
       <MotionSection>
         <div className="min-w-0">
           <h1 className="text-display-xl tracking-tight md:text-[1.75rem] lg:text-3xl">
-            Your Collection
+            {copy.collection.heading}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {cards.length} {cards.length === 1 ? "card" : "cards"}
@@ -91,7 +92,7 @@ function CollectionBody({
       </MotionSection>
 
       {cards.length > 0 ? (
-        <section aria-label="Cards">
+        <section aria-label={copy.collection.cardsAria}>
           <div className={collectionGridClass}>
             {cards.map((token, index) => (
               <BinderCardTile
@@ -107,8 +108,8 @@ function CollectionBody({
         <MotionSection variant="fade">
           <GateMessage
             icon={<Nfc className="size-5 text-muted-foreground" />}
-            title="No cards yet"
-            body="Tap a card to the back of your phone to add it to your collection."
+            title={copy.collection.emptyTitle}
+            body={copy.collection.emptyBody}
           />
         </MotionSection>
       )}
@@ -130,7 +131,9 @@ function AccessoriesSection({
   return (
     <MotionSection staggerIndex={2} className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-medium text-foreground">Accessories</h2>
+        <h2 className="text-sm font-medium text-foreground">
+          {copy.collection.accessoriesHeading}
+        </h2>
         <span className="text-xs text-muted-foreground">{accessories.length}</span>
       </div>
       <ul className={accessoryListClass}>

@@ -59,17 +59,17 @@ describe("toUserFacingError", () => {
     ).toBe("That Didn’t Work");
   });
 
-  it("maps a passkey mismatch to Wrong item", () => {
+  it("maps a passkey mismatch to Different item", () => {
     expect(
       toUserErrorMessage(new Error("This is not the same NFC accessory.")),
-    ).toBe("Wrong item");
+    ).toBe("Different item");
   });
 
   it("maps an unverified live check", () => {
     const facing = toUserFacingError(
       new Error("Couldn't verify this NFC accessory."),
     );
-    expect(facing.title).toBe("Couldn't verify");
+    expect(facing.title).toBe("Couldn’t verify");
   });
 });
 
@@ -108,7 +108,7 @@ describe("toUserFacingBody", () => {
 
   it("folds a missing apiKey header into one Shortcuts line", () => {
     expect(toUserFacingBody("Missing x-api-key header")).toBe(
-      "Revibase Pay Isn’t Set Up. Authorize this phone in Pay settings first.",
+      "Pay isn’t set up on this phone. Authorize this phone in Pay settings first.",
     );
   });
 });

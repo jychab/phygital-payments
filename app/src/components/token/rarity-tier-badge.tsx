@@ -79,7 +79,7 @@ export function RarityMetadataRow({
 }) {
   const styles = TIER_CLASS[tier];
   return (
-    <CollectibleMetadataRow label={copy.rarity}>
+    <CollectibleMetadataRow label={copy.token.rarity}>
       <span className="inline-flex flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
         <span className={cn("font-medium", styles.text)}>{tierLabel(tier)}</span>
         {detail ? (

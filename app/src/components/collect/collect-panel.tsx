@@ -22,7 +22,7 @@ import { StickyActions } from "@/components/shared/sticky-actions";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
-import { copy } from "@/lib/copy/phygital";
+import { copy, errorCopy, products } from "@/lib/copy/phygital";
 import { galleryAnimate } from "@/lib/motion";
 import { uiAmountToRaw } from "@/lib/tokens/mint-delegate";
 import {
@@ -56,7 +56,7 @@ function AtaSetupLoading() {
       </div>
       <div className="min-w-0 flex-1 space-y-2.5">
         <p className="text-sm font-medium text-foreground">
-          Finish Setup
+          {errorCopy.finishSetup.title}
         </p>
         <div className="flex justify-center py-1">
           <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
@@ -160,23 +160,23 @@ export function CollectPanel({
 
   async function onReceive() {
     if (inApp) {
-      setFailTitle("Open in Safari or Chrome");
-      setFailMessage("To collect a payment, open this page in Safari or Chrome.");
+      setFailTitle(copy.collect.inAppTitle);
+      setFailMessage(copy.collect.inAppBody);
       return;
     }
     if (!sponsoredAvailable) {
-      setFailTitle("Payments Unavailable");
-      setFailMessage("Payments aren’t available right now. Try again later.");
+      setFailTitle(errorCopy.paymentsUnavailable.title);
+      setFailMessage(errorCopy.paymentsUnavailable.body);
       return;
     }
     if (!mintSupported || mintProgramError) {
-      setFailTitle("Token Not Supported");
-      setFailMessage("This token isn’t supported. Switch to USDC.");
+      setFailTitle(errorCopy.tokenNotSupported.title);
+      setFailMessage(errorCopy.tokenNotSupported.body);
       return;
     }
     if (!readyToReceive || !ataStatus || !mintQuery.data) {
-      setFailTitle("Finish Setup");
-      setFailMessage("This wallet isn’t ready to receive yet. Finish setup, then try again.");
+      setFailTitle(errorCopy.finishSetup.title);
+      setFailMessage(errorCopy.finishSetup.body);
       return;
     }
     const paidAmount = amount;
@@ -212,10 +212,7 @@ export function CollectPanel({
       if (!amountLocked) setAmount("");
     } catch (error) {
       logPaymentError("collect", error);
-      const facing = toUserFacingError(error, {
-        title: "Payment Not Completed",
-        body: "Try again.",
-      });
+      const facing = toUserFacingError(error, errorCopy.tryAgainBody);
       const raw = getRawPaymentError(error);
       setFailTitle(facing.title);
       setFailMessage(facing.body);
@@ -235,7 +232,7 @@ export function CollectPanel({
 
   if (phase === "idle" && inApp) {
     return (
-      <InAppBrowserGate body="To collect a payment, open this page in Safari or Chrome." />
+      <InAppBrowserGate body={copy.collect.inAppBody} />
     );
   }
 
@@ -263,7 +260,7 @@ export function CollectPanel({
           </div>
         </div>
         <div className="space-y-1">
-          <p className="text-xl font-semibold tracking-tight">Received</p>
+          <p className="text-xl font-semibold tracking-tight">{copy.collect.received}</p>
           <p className="font-(family-name:--font-display) text-[2.5rem] leading-none tracking-tight tabular-nums md:text-5xl">
             {settledAmount || amount || "0"}
             <span className="ml-2 inline-flex align-middle text-lg font-medium text-muted-foreground md:text-xl">
@@ -281,7 +278,7 @@ export function CollectPanel({
           className="w-full max-w-xs"
           onClick={() => setPhase("idle")}
         >
-          Done
+          {copy.common.done}
         </Button>
       </div>
     );
@@ -298,10 +295,10 @@ export function CollectPanel({
         </div>
         <div className="max-w-64 space-y-1.5">
           <p className="text-base font-medium text-foreground">
-            {failTitle ?? "Payment Not Completed"}
+            {failTitle ?? errorCopy.fallback.title}
           </p>
           <p className="text-sm text-muted-foreground">
-            {failMessage ?? "Try again."}
+            {failMessage ?? copy.common.tryAgain}
           </p>
         </div>
         {failDebug ? (
@@ -318,7 +315,7 @@ export function CollectPanel({
             setPhase("idle");
           }}
         >
-          Try Again
+          {copy.common.tryAgain}
         </Button>
       </div>
     );
@@ -341,11 +338,11 @@ export function CollectPanel({
         </div>
         <NfcHoldStatus
           size="lg"
-          title={phase === "confirming" ? "Processing" : "Hold Their Accessory Here"}
+          title={phase === "confirming" ? copy.collect.processing : copy.collect.holdTitle}
           body={
             phase === "confirming"
-              ? "Just a moment."
-              : "Keep holding until it reads."
+              ? copy.collect.confirmingBody
+              : copy.collect.holdBody
           }
           pulsing={phase === "awaiting-tap"}
           busy={phase === "confirming"}
@@ -362,10 +359,10 @@ export function CollectPanel({
         </div>
         <div className="max-w-64 space-y-1.5">
           <p className="text-base font-medium text-foreground">
-            Token Not Supported
+            {errorCopy.tokenNotSupported.title}
           </p>
           <p className="text-sm text-muted-foreground">
-            Only supported tokens can be collected. Switch to USDC to continue.
+            {copy.collect.tokenNotSupportedBody}
           </p>
         </div>
         <Button
@@ -378,7 +375,7 @@ export function CollectPanel({
             clearFail();
           }}
         >
-          Switch to USDC
+          {copy.collect.switchToUsdc}
         </Button>
       </div>
     );
@@ -387,9 +384,9 @@ export function CollectPanel({
   return (
     <div className="flex flex-1 flex-col gap-5">
       <div className="space-y-1 text-center">
-        <p className="text-sm font-medium text-foreground">Collect</p>
+        <p className="text-sm font-medium text-foreground">{products.collect.name}</p>
         <p className="text-xs text-muted-foreground">
-          Enter an amount, then hold their accessory to this phone.
+          {copy.collect.enterAmountBody}
         </p>
       </div>
 
@@ -418,13 +415,13 @@ export function CollectPanel({
 
       {amountLocked ? (
         <p className="text-center text-xs text-muted-foreground">
-          {copy.amountLocked}
+          {copy.collect.amountLocked}
         </p>
       ) : null}
 
       <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/35 px-4 py-2.5 text-xs">
-        <span className="text-muted-foreground">To</span>
-        <CopyableAddress address={recipient} length={6} label="recipient" />
+        <span className="text-muted-foreground">{copy.collect.toLabel}</span>
+        <CopyableAddress address={recipient} length={6} label={copy.address.recipient} />
       </div>
 
       {ataLoading ? (
@@ -432,7 +429,7 @@ export function CollectPanel({
           <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <LoaderCircle className="size-4 animate-spin" />
           </div>
-          <p className="text-sm font-medium text-foreground">Checking…</p>
+          <p className="text-sm font-medium text-foreground">{copy.collect.checking}</p>
         </div>
       ) : missingAta && allowWalletSetup ? (
         <CollectAtaSetup
@@ -447,17 +444,17 @@ export function CollectPanel({
           </div>
           <div className="min-w-0 flex-1 space-y-2">
             <p className="text-sm font-medium text-foreground">
-              Finish Setup
+              {errorCopy.finishSetup.title}
             </p>
             <p className="text-xs text-muted-foreground">
-              Open this page in Safari or Chrome to finish{" "}
+              {copy.collect.finishSetupInAppPrefix}{" "}
               <TokenSymbol
                 token={token}
                 size="xs"
                 className="mx-0.5"
                 symbolClassName="font-medium text-foreground"
               />{" "}
-              setup, then come back.
+              {copy.collect.finishSetupInAppSuffix}
             </p>
           </div>
         </div>
@@ -492,16 +489,16 @@ export function CollectPanel({
           }
         >
           <Nfc className="size-4" />
-          {copy.holdToCollect}
+          {copy.collect.holdToCollect}
         </Button>
         {sponsoredAvailable ? (
           <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
             <ShieldCheck className="size-3.5 text-primary/80" />
-            No fee
+            {copy.collect.noFee}
           </p>
         ) : (
           <p className="text-center text-xs text-muted-foreground">
-            Payments aren’t available right now.
+            {errorCopy.paymentsUnavailable.body}
           </p>
         )}
       </StickyActions>

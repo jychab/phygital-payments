@@ -7,7 +7,7 @@ import { AccessoryWalletHome } from "@/components/token/accessory-wallet-home";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { StickyActions } from "@/components/shared/sticky-actions";
 import { Button } from "@/components/ui/button";
-import { copy, payCopy } from "@/lib/copy/phygital";
+import { copy } from "@/lib/copy/phygital";
 import { STICKY_ENTER_DELAY_MS } from "@/lib/motion";
 import {
   deriveAccessoryPrimaryAction,
@@ -100,8 +100,8 @@ export function TokenUnmintedPanel({
           size="lg"
           tone="default"
           pulsing={false}
-          title={copy.addToWallet}
-          body={copy.claimReadyBody("accessory")}
+          title={copy.claim.addToWallet}
+          body={copy.claim.readyBody("accessory")}
         />
         <StickyActions enterDelayMs={STICKY_ENTER_DELAY_MS}>
           <Button
@@ -110,7 +110,7 @@ export function TokenUnmintedPanel({
             className="w-full"
             onClick={onClaim}
           >
-            {copy.addToWallet}
+            {copy.claim.addToWallet}
           </Button>
         </StickyActions>
       </div>
@@ -122,8 +122,8 @@ export function TokenUnmintedPanel({
       <div className="flex flex-1 flex-col">
         <NfcHoldStatus
           size="lg"
-          title={copy.holdToCheck}
-          body={copy.notVerifiedHint}
+          title={copy.verify.holdToCheck}
+          body={copy.verify.notVerifiedHint}
         />
         <StickyActions enterDelayMs={STICKY_ENTER_DELAY_MS}>
           <Button
@@ -132,7 +132,7 @@ export function TokenUnmintedPanel({
             className="w-full"
             onClick={onHoldToCheck}
           >
-            {copy.holdToCheck}
+            {copy.verify.holdToCheck}
           </Button>
         </StickyActions>
       </div>
@@ -166,7 +166,7 @@ export function TokenUnmintedPanel({
 
       {fromCollection && liveConfirmed ? (
         <p className="text-center text-xs text-muted-foreground">
-          {copy.signedInAsOwner}
+          {copy.token.signedInAsOwner}
         </p>
       ) : null}
 
@@ -195,7 +195,7 @@ export function TokenUnmintedPanel({
               }
               asChild
             >
-              <Link href={receiveHref}>{payCopy.receive}</Link>
+              <Link href={receiveHref}>{copy.pay.receive}</Link>
             </Button>
           ) : null}
         </StickyActions>

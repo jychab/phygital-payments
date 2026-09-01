@@ -76,8 +76,8 @@ export function useHoldToCheck(
 
       if (isRecheckRef.current) {
         setOverlay("recheck-success");
-        toast.success(copy.confirmedAgain, {
-          description: copy.confirmedAgainBody,
+        toast.success(copy.verify.verified, {
+          description: copy.verify.verifiedAgainBody,
         });
         if (recheckTimer.current) clearTimeout(recheckTimer.current);
         recheckTimer.current = setTimeout(() => {
@@ -88,7 +88,7 @@ export function useHoldToCheck(
       }
     } catch (err) {
       setHoldError(
-        toUserErrorMessage(err, copy.verifyFailedBody),
+        toUserErrorMessage(err, copy.verify.failedBody),
       );
       setFailedRecheck(isRecheckRef.current);
       setOverlay("failed");

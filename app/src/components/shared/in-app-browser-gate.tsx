@@ -9,7 +9,7 @@ import { copy } from "@/lib/copy/phygital";
 
 /** Block WebAuthn NFC steps inside wallet / social in-app browsers. */
 export function InAppBrowserGate({
-  body = copy.openInBrowser,
+  body = copy.gate.openInBrowserBody,
 }: {
   body?: string;
 }) {
@@ -18,7 +18,7 @@ export function InAppBrowserGate({
   return (
     <GateMessage
       icon={<Smartphone className="size-5 text-muted-foreground" />}
-      title="Open in your browser"
+      title={copy.gate.openInBrowserTitle}
       body={body}
       action={
         <div className="flex w-full max-w-64 flex-col gap-2.5">
@@ -29,12 +29,12 @@ export function InAppBrowserGate({
             className="w-full"
             onClick={() => {
               void navigator.clipboard.writeText(href).then(
-                () => toast.success("Link copied"),
-                () => toast.error("Couldn’t copy link"),
+                () => toast.success(copy.gate.linkCopied),
+                () => toast.error(copy.gate.linkCopyFailed),
               );
             }}
           >
-            Copy link
+            {copy.gate.copyLink}
           </Button>
         </div>
       }

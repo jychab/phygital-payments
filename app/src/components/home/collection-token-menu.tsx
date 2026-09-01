@@ -25,6 +25,7 @@ import {
   useSetLockStateMutation,
 } from "@/hooks/home/use-token-mutations";
 import type { PhygitalToken } from "@/lib/phygital/token";
+import { copy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { cn } from "@/lib/utils";
 
@@ -65,16 +66,16 @@ export function CollectionTokenMenu({
       });
       toast.success(
         token.isLocked
-          ? `${capitalize(noun)} unlocked`
-          : `${capitalize(noun)} locked`,
+          ? copy.collection.nounUnlocked(noun)
+          : copy.collection.nounLocked(noun),
       );
     } catch (error) {
       toast.error(
         toUserErrorMessage(
           error,
           token.isLocked
-            ? `Couldn’t unlock this ${noun}`
-            : `Couldn’t lock this ${noun}`,
+            ? copy.collection.unlockFailed(noun)
+            : copy.collection.lockFailed(noun),
         ),
       );
     }
@@ -83,10 +84,10 @@ export function CollectionTokenMenu({
   async function onRemove() {
     try {
       await removeOwnership.mutateAsync({ token: token.address });
-      toast.success(`${capitalize(noun)} removed`);
+      toast.success(copy.collection.nounRemoved(noun));
       setConfirmRemove(false);
     } catch (error) {
-      toast.error(toUserErrorMessage(error, `Couldn’t remove this ${noun}`));
+      toast.error(toUserErrorMessage(error, copy.collection.removeFailed(noun)));
     }
   }
 
@@ -99,7 +100,7 @@ export function CollectionTokenMenu({
             variant="ghost"
             size="icon-sm"
             className={cn("shrink-0 text-muted-foreground", className)}
-            aria-label={`Manage ${noun}`}
+            aria-label={copy.collection.manageNoun(noun)}
             onClick={(e) => e.preventDefault()}
           >
             <MoreVertical className="size-4" />
@@ -118,7 +119,7 @@ export function CollectionTokenMenu({
               ) : (
                 <Lock className="size-3.5 opacity-70" />
               )}
-              {token.isLocked ? "Unlock" : "Lock"}
+              {token.isLocked ? copy.collection.unlock : copy.collection.lock}
             </DropdownMenuItem>
           ) : null}
           {canToggleLock ? <DropdownMenuSeparator /> : null}
@@ -132,16 +133,16 @@ export function CollectionTokenMenu({
             ) : (
               <Trash2 className="size-3.5 opacity-70" />
             )}
-            Remove from wallet
+            {copy.collection.removeFromWallet}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <ConfirmDialog
         open={confirmRemove}
-        title={`Remove ${noun}?`}
-        body={`Remove this ${noun} from your wallet? Anyone will be able to add it.`}
-        confirmLabel="Remove"
+        title={copy.collection.removeConfirmTitle(noun)}
+        body={copy.collection.removeConfirmBody(noun)}
+        confirmLabel={copy.common.remove}
         destructive
         busy={removing}
         onConfirm={() => void onRemove()}
@@ -149,8 +150,4 @@ export function CollectionTokenMenu({
       />
     </>
   );
-}
-
-function capitalize(s: string) {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

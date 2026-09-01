@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { useActiveSolanaWallet } from "@/hooks/wallet/use-active-solana-wallet";
 import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
+import { copy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { clearAppClientStorage } from "@/lib/wallet/clear-client-session";
 
@@ -34,8 +35,8 @@ export function useSolanaAddress() {
   const connect = useCallback(async () => {
     if (inEmbed || address || loginInFlight.current) return;
     if (!connectReady) {
-      toast.message("Wallet is still loading", {
-        description: "Try Connect again in a moment.",
+      toast.message(copy.wallet.stillLoadingTitle, {
+        description: copy.wallet.stillLoadingBody,
       });
       return;
     }
@@ -43,7 +44,7 @@ export function useSolanaAddress() {
     try {
       login();
     } catch (err) {
-      toast.error(toUserErrorMessage(err, "Couldn’t open wallet login"));
+      toast.error(toUserErrorMessage(err, copy.wallet.loginFailed));
     } finally {
       loginInFlight.current = false;
     }

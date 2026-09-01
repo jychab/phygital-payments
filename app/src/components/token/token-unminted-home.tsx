@@ -25,13 +25,13 @@ import {
   isUnclaimedToken,
   type PhygitalToken,
 } from "@/lib/phygital/token";
-import { copy, payCopy } from "@/lib/copy/phygital";
+import { copy } from "@/lib/copy/phygital";
 import type { PaymentTokenHolding } from "@/lib/tokens/payment-token";
 
 const ManagePayPanelLazy = dynamic(
   () =>
     import("@/components/pay/manage-pay-panel").then((m) => m.ManagePayPanel),
-  { ssr: false, loading: () => <LoadingStatus label={payCopy.loading} /> },
+  { ssr: false, loading: () => <LoadingStatus label={copy.pay.loadingLabel} /> },
 );
 
 const HoldToPayPhaseView = dynamic(
@@ -39,7 +39,7 @@ const HoldToPayPhaseView = dynamic(
     import("@/components/pay/hold-to-pay-panel").then(
       (m) => m.HoldToPayPhaseView,
     ),
-  { ssr: false, loading: () => <LoadingStatus label={payCopy.loading} /> },
+  { ssr: false, loading: () => <LoadingStatus label={copy.pay.loadingLabel} /> },
 );
 
 const SpendingLimitPanel = dynamic(
@@ -47,12 +47,12 @@ const SpendingLimitPanel = dynamic(
     import("@/components/pay/spending-limit-panel").then(
       (m) => m.SpendingLimitPanel,
     ),
-  { ssr: false, loading: () => <LoadingStatus label={payCopy.loading} /> },
+  { ssr: false, loading: () => <LoadingStatus label={copy.pay.loadingLabel} /> },
 );
 
 const ApiKeyPanel = dynamic(
   () => import("@/components/pay/api-key-panel").then((m) => m.ApiKeyPanel),
-  { ssr: false, loading: () => <LoadingStatus label={payCopy.loading} /> },
+  { ssr: false, loading: () => <LoadingStatus label={copy.pay.loadingLabel} /> },
 );
 
 type AccessoryNav =
@@ -169,7 +169,7 @@ export function TokenUnmintedHome({
     <TokenClaimSessionGate
       session={session}
       noun="accessory"
-      inAppBody={copy.openInBrowser}
+      inAppBody={copy.gate.openInBrowserBody}
     >
       {hold.showPhase && canPay ? (
         <TokenHoldPhase

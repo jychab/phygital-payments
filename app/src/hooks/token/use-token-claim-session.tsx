@@ -72,7 +72,7 @@ function VerifyFailedCeremony({
     <NfcHoldStatus
       size="lg"
       pulsing={false}
-      title={recheck ? copy.confirmFailed : copy.verifyFailed}
+      title={recheck ? copy.verify.failed : copy.verify.failed}
       body={errorMessage}
       imageSrc={collectible?.image}
       imageAlt={collectible?.name ?? ""}
@@ -83,7 +83,7 @@ function VerifyFailedCeremony({
           className="w-full"
           onClick={onRetry}
         >
-          {copy.tryAgain}
+          {copy.common.tryAgain}
         </Button>
       }
     />
@@ -96,8 +96,8 @@ function RecheckSuccessCeremony() {
       size="lg"
       tone="success"
       pulsing={false}
-      title={copy.confirmedAgain}
-      body={copy.confirmedAgainBody}
+      title={copy.verify.verified}
+      body={copy.verify.verifiedAgainBody}
     />
   );
 }
@@ -117,8 +117,8 @@ function PendingVerifyCeremony({
     <NfcHoldStatus
       size="lg"
       busy
-      title={recheck ? copy.confirmPresence : copy.holdStill}
-      body={recheck ? copy.confirmPresenceBody : copy.holdStillBody}
+      title={recheck ? copy.verify.verifying : copy.verify.holdStill}
+      body={recheck ? copy.verify.introBody : copy.verify.holdStillBody}
       imageSrc={collectible?.image}
       imageAlt={collectible?.name ?? ""}
     />
@@ -187,7 +187,7 @@ export function TokenClaimSessionGate({
               token={session.token}
               recheck={session.failedRecheck}
               errorMessage={
-                session.holdError ?? copy.verifyFailedBody
+                session.holdError ?? copy.verify.failedBody
               }
               onRetry={() => void session.holdToCheck()}
             />
