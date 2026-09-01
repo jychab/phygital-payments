@@ -29,7 +29,7 @@ export function CollectApp({
   paymentRequest: PaymentRequest;
 }) {
   const embedded = useIsEmbedded();
-  const { address, connect } = useSolanaAddress();
+  const { address, connect, connectReady } = useSolanaAddress();
   const [view, setView] = useState<"collect" | "activity">("collect");
 
   if (embedded === null) {
@@ -66,6 +66,7 @@ export function CollectApp({
             title={copy.common.connectWalletTitle}
             body={copy.collect.connectBody}
             onConnect={connect}
+            connectReady={connectReady}
           />
         </div>
       </AppShell>

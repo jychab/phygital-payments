@@ -3,7 +3,6 @@
 import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { ConnectGate } from "@/components/shared/connect-gate";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { InlineError } from "@/components/shared/inline-error";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
@@ -102,7 +101,7 @@ export function ClaimPanel({
 }) {
   const queryClient = useQueryClient();
   const inApp = useIsInAppBrowser();
-  const { address, connect } = useSolanaAddress();
+  const { address, connect, connectReady } = useSolanaAddress();
   const signer = useWalletKitSigner();
 
   const [stage, setStage] = useState<Stage>("ready");
@@ -239,11 +238,18 @@ export function ClaimPanel({
             dock={
               <StickyActions animate={false}>
                 {!address ? (
-                  <ConnectGate
-                    title={copy.common.connectWalletTitle}
-                    body={copy.claim.connectOwnerBody(noun)}
-                    onConnect={connect}
-                  />
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="w-full"
+                    disabled={!connectReady}
+                    aria-busy={!connectReady}
+                    onClick={() => void connect()}
+                  >
+                    {connectReady
+                      ? copy.common.connectWallet
+                      : copy.common.loading}
+                  </Button>
                 ) : (
                   <div className="flex flex-col gap-3">
                     {error ? <InlineError>{error}</InlineError> : null}
