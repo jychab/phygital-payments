@@ -303,16 +303,6 @@ export function delegateStatusKey(
   return `${String(token)}|${String(mint)}`;
 }
 
-export function delegateStatusForAccessory(
-  delegates: OwnerPayDelegates | undefined,
-  tokenAddress: string,
-  mint: string,
-): MintDelegateStatus | undefined {
-  return delegates?.statusByTokenMint.get(
-    delegateStatusKey(tokenAddress, mint),
-  );
-}
-
 export function patchDelegateAllowance(
   status: MintDelegateStatus,
   rawAmount: bigint,

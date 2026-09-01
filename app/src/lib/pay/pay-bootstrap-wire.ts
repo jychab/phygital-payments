@@ -143,18 +143,14 @@ function serializeStatus(status: MintDelegateStatus): MintDelegateStatusWire {
 }
 
 function parseStatus(wire: MintDelegateStatusWire): MintDelegateStatus {
-  const balanceRaw = BigInt(wire.balanceRaw);
   return {
     programAuthority: address(wire.programAuthority),
     ata: address(wire.ata),
-    ataExists:
-      wire.ataExists !== undefined
-        ? wire.ataExists
-        : wire.isProgramAuthorityDelegate || balanceRaw > BigInt(0),
+    ataExists: wire.ataExists,
     isProgramAuthorityDelegate: wire.isProgramAuthorityDelegate,
     delegatedAmountRaw: BigInt(wire.delegatedAmountRaw),
     delegatedAmountUi: wire.delegatedAmountUi,
-    balanceRaw,
+    balanceRaw: BigInt(wire.balanceRaw),
     balanceUi: wire.balanceUi,
   };
 }

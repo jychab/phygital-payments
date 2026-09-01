@@ -3,8 +3,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Address } from "@solana/kit";
 
-import { queryKeys, type RecipientAtaStatus } from "@/lib/queries";
-import { buildCreateAtaInstructions } from "@/lib/tokens/ata";
+import { queryKeys } from "@/lib/queries";
+import {
+  buildCreateAtaInstructions,
+  type RecipientAtaStatus,
+} from "@/lib/tokens/ata";
 import { sendTransaction } from "@/lib/solana/tx";
 import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
 

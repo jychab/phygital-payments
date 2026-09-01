@@ -3,13 +3,12 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { address, type Address } from "@solana/kit";
 
+import { queryKeys, queryOptions } from "@/lib/queries";
 import {
-  fetchAtaStatus,
-  queryKeys,
-  queryOptions,
+  fetchRecipientAtaStatus,
   type RecipientAtaStatus,
-  type TokenProgram,
-} from "@/lib/queries";
+} from "@/lib/tokens/ata";
+import type { TokenProgram } from "@/lib/tokens/mint-delegate";
 
 /**
  * Whether a recipient already has a token account for `mint`. Pass the
@@ -24,7 +23,8 @@ export function useRecipientAtaStatus(
 ) {
   return useQuery<RecipientAtaStatus>({
     queryKey: queryKeys.ataStatus.byOwnerMint(owner, mint),
-    queryFn: () => fetchAtaStatus({ owner: address(owner!), mint, program }),
+    queryFn: () =>
+      fetchRecipientAtaStatus({ owner: address(owner!), mint, program }),
     enabled: Boolean(owner),
     placeholderData: keepPreviousData,
     ...queryOptions.default,

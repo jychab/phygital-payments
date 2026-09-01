@@ -71,6 +71,3 @@ export async function buildCreateAtaInstructions(args: {
     ata: status.ata,
   };
 }
-
-/** @deprecated Use `buildCreateAtaInstructions`. */
-export const buildCreateRecipientAtaInstructions = buildCreateAtaInstructions;

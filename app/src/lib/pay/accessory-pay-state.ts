@@ -125,7 +125,7 @@ export function deriveAccessoryWalletHomeHeader(args: {
 }
 
 /** Enabled first, then USDC, then symbol. */
-export function sortAccessoryHoldings(
+function sortAccessoryHoldings(
   holdings: readonly PaymentTokenHolding[],
   delegates: OwnerPayDelegates | undefined,
   tokenAddress: string,

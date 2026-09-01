@@ -24,7 +24,6 @@ import {
   isDelegateEnabled,
   needsAtaBeforeDelegate,
   uiAmountToRaw,
-  type OwnerPayMintMatch,
 } from "@/lib/tokens/mint-delegate";
 import {
   resolvePaymentToken,
@@ -58,7 +57,6 @@ export function SpendingLimitPanel({
   tokenAddress,
   mint,
   holding,
-  walletMatch,
   live = true,
   onEnabled,
   onBack,
@@ -67,8 +65,6 @@ export function SpendingLimitPanel({
   tokenAddress: string;
   mint: string;
   holding?: PaymentTokenHolding;
-  /** Home Pay already scanned this mint — skip a second delegateStatus RPC. */
-  walletMatch?: OwnerPayMintMatch;
   live?: boolean;
   onEnabled?: () => void;
   onBack?: () => void;
@@ -79,19 +75,12 @@ export function SpendingLimitPanel({
   const mintAddress = address(mint);
   const [amount, setAmount] = useState(DEFAULT_LIMIT_AMOUNT);
 
-  const seeded =
-    walletMatch?.status &&
-    walletMatch.token &&
-    String(walletMatch.token) === tokenAddress
-      ? walletMatch.status
-      : undefined;
   const statusQuery = useDelegateStatus(owner, tokenAddress, mintAddress, {
     live,
-    enabled: !seeded,
   });
   const mintQuery = useMintProgram(mintAddress);
-  const status = seeded ?? statusQuery.data;
-  const statusReady = Boolean(seeded || statusQuery.data !== undefined);
+  const status = statusQuery.data;
+  const statusReady = statusQuery.data !== undefined;
 
   const token = holding ?? resolvePaymentToken(mint);
   const setAllowance = useSetDelegateMutation(mutationOwner, {
@@ -111,7 +100,7 @@ export function SpendingLimitPanel({
   const busy =
     setAllowance.isPending ||
     revoke.isPending ||
-    (!seeded && statusQuery.isLoading);
+    statusQuery.isLoading;
   const decimals = mintQuery.data?.decimals ?? token.decimals;
 
   let limitRaw: bigint | null;

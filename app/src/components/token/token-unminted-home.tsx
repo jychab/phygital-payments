@@ -1,6 +1,5 @@
 "use client";
 
-import { address } from "@solana/kit";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,7 +25,6 @@ import {
   type PhygitalToken,
 } from "@/lib/phygital/token";
 import { copy } from "@/lib/copy/phygital";
-import { delegateStatusForAccessory } from "@/lib/tokens/mint-delegate";
 import type { PaymentTokenHolding } from "@/lib/tokens/payment-token";
 
 const ManagePayPanelLazy = dynamic(
@@ -135,11 +133,6 @@ export function TokenUnmintedHome({
   }
 
   if (nav.screen === "limit") {
-    const status = delegateStatusForAccessory(
-      delegatesQuery.data,
-      tokenAddress,
-      nav.holding.mint,
-    );
     return (
       <WalletSyncGate linkedOwner={owner}>
         <SpendingLimitPanel
@@ -147,11 +140,6 @@ export function TokenUnmintedHome({
           tokenAddress={tokenAddress}
           mint={nav.holding.mint}
           holding={nav.holding}
-          walletMatch={
-            status
-              ? { token: address(tokenAddress), status }
-              : undefined
-          }
           live
           onEnabled={onLimitEnabled}
           onBack={() => setNav({ screen: "home" })}

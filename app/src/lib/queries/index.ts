@@ -31,10 +31,6 @@ import {
 import { fetchPayBootstrapClient } from "@/lib/pay/pay-bootstrap-client";
 import type { PayBootstrap } from "@/lib/pay/pay-bootstrap-wire";
 import {
-  fetchRecipientAtaStatus,
-  type RecipientAtaStatus,
-} from "@/lib/tokens/ata";
-import {
   fetchPaymentHistory,
   type PaymentRecord,
 } from "@/lib/home/history-client";
@@ -328,14 +324,6 @@ export function fetchPayBootstrap(owner: string): Promise<PayBootstrap> {
   return fetchPayBootstrapClient(owner);
 }
 
-export function fetchAtaStatus(args: {
-  owner: Address;
-  mint: Address;
-  program?: TokenProgram;
-}): Promise<RecipientAtaStatus> {
-  return fetchRecipientAtaStatus(args);
-}
-
 export function fetchHistory(address: string): Promise<PaymentRecord[]> {
   return fetchPaymentHistory(address, { limit: 50 });
 }
@@ -383,7 +371,6 @@ export type {
   MintDelegateStatus,
   OwnerPayDelegates,
   PayBootstrap,
-  RecipientAtaStatus,
   TokenProgram,
   PaymentRecord,
   PaymentToken,
