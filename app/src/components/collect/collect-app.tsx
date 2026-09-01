@@ -60,7 +60,7 @@ export function CollectApp({
   if (!recipient) {
     return (
       <AppShell layout="compact">
-        <div className="flex flex-1 flex-col items-center justify-center py-14">
+        <div className="flex flex-1 flex-col items-center justify-center">
           <ConnectGate
             title="Connect your wallet"
             body="Payments will be sent to the wallet you connect."

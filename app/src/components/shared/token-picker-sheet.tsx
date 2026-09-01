@@ -47,8 +47,8 @@ export function TokenPickerSheet({
     <ModalSheet open={open} onClose={onClose} title="Choose a token">
       <div
         className={cn(
-          "flex h-[85dvh] w-full flex-col",
-          "rounded-t-2xl border border-border/60 bg-background shadow-xl sm:rounded-2xl",
+          "flex h-[min(85dvh,40rem)] w-full flex-col",
+          "rounded-t-2xl border border-border/60 bg-background shadow-xl sm:h-[min(80dvh,36rem)] sm:rounded-2xl",
         )}
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/50 px-4 py-3">

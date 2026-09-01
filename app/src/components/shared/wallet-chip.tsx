@@ -83,7 +83,7 @@ export function WalletChip({ className }: { className?: string }) {
         type="button"
         size="sm"
         variant="outline"
-        className={cn("h-8 rounded-full px-3 text-xs", className)}
+        className={cn("h-9 min-h-9 rounded-full px-3.5 text-xs", className)}
         disabled={!connectReady}
         aria-busy={!connectReady}
         onClick={() => void connect()}
@@ -105,7 +105,7 @@ export function WalletChip({ className }: { className?: string }) {
         <button
           type="button"
           className={cn(
-            "inline-flex h-8 items-center gap-2 rounded-full border border-border/60 bg-card/40 px-2.5 text-xs outline-none",
+            "inline-flex h-9 min-h-9 items-center gap-2 rounded-full border border-border/60 bg-card/40 px-2.5 text-xs outline-none",
             "transition-colors hover:bg-muted/40",
             "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40",
             "data-[state=open]:bg-muted/40",

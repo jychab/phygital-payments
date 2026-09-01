@@ -29,7 +29,7 @@ export function BinderCardTile({
 
   return (
     <div
-      className="relative motion-safe:animate-[gallery-rise_0.45s_cubic-bezier(0.22,1,0.36,1)_both]"
+      className="relative min-w-0 motion-safe:animate-[gallery-rise_0.45s_cubic-bezier(0.22,1,0.36,1)_both]"
       style={staggerStyle(index)}
     >
       <div className="absolute right-1 top-1 z-10">
@@ -55,7 +55,7 @@ export function BinderCardTile({
           className="motion-safe:transition-transform motion-safe:duration-200 motion-safe:ease-out motion-safe:group-hover:scale-[1.02] motion-safe:group-active:scale-[0.99]"
         />
         <div className="mt-2 flex flex-col items-center gap-0.5">
-          <p className="truncate text-center text-xs text-muted-foreground transition-colors group-hover:text-foreground">
+          <p className="truncate px-0.5 text-center text-xs text-muted-foreground transition-colors group-hover:text-foreground sm:text-sm">
             {loading ? "…" : name}
           </p>
           <p className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/80">

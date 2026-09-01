@@ -31,7 +31,9 @@ export function CollectibleHeader({
 
   return (
     <div className={cn("flex w-full flex-col gap-2 text-left", className)}>
-      <h1 className="text-display-xl tracking-tight text-foreground">{name}</h1>
+      <h1 className="wrap-break-word text-display-xl tracking-tight text-foreground md:text-[1.75rem] lg:text-3xl">
+        {name}
+      </h1>
       {collectionName || showCollectionImage ? (
         <div className="inline-flex min-w-0 items-center gap-1.5">
           {showCollectionImage ? (

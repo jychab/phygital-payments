@@ -41,26 +41,29 @@ export function AppShell({
   headerExtra?: ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-full flex-1 flex-col bg-background">
+    <div className="relative flex min-h-dvh flex-1 flex-col overflow-x-clip bg-background">
       <main
         className={cn(
-          "relative z-10 mx-auto flex w-full flex-1 flex-col",
+          "relative z-10 mx-auto flex w-full min-w-0 flex-1 flex-col",
           shellPaddingClass,
           shellLayoutClass[layout],
         )}
       >
         <div
           className={cn(
-            "mb-5 flex items-center justify-between gap-3",
+            "mb-5 flex items-center justify-between gap-2 sm:gap-3 md:mb-6",
             galleryAnimate.rise,
           )}
         >
           <div className="flex min-w-0 items-center gap-2">
-            <Link href="/" className="font-(family-name:--font-display) text-sm font-medium tracking-tight text-foreground">
+            <Link
+              href="/"
+              className="truncate font-(family-name:--font-display) text-sm font-medium tracking-tight text-foreground"
+            >
               {brand.company}
             </Link>
             {!isMainnet() ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/50 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground sm:px-2.5">
                 <span
                   className="size-1 rounded-full bg-muted-foreground/70"
                   aria-hidden
@@ -74,7 +77,7 @@ export function AppShell({
             {walletActions === "full" ? (
               <WalletChip />
             ) : walletActions === "display-only" && recipient ? (
-              <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-2.5 py-1.5 text-xs">
+              <span className="inline-flex h-9 min-h-9 items-center gap-2 rounded-full border border-border/60 bg-card/40 px-2.5 text-xs">
                 <span
                   className="size-1.5 rounded-full bg-muted-foreground/50"
                   aria-hidden
@@ -86,7 +89,7 @@ export function AppShell({
             )}
           </div>
         </div>
-        <div className="flex flex-1 flex-col">{children}</div>
+        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       </main>
     </div>
   );

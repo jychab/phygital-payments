@@ -19,9 +19,7 @@ const APP_URL = "https://app.revibase.com";
 const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? "";
 
 const solanaConnectors = toSolanaWalletConnectors({
-  // Avoid silently reconnecting a prior Phantom/etc. that then races the
-  // wallet the user just logged in with (Google embedded or SIWS).
-  shouldAutoConnect: false,
+  shouldAutoConnect: true,
 });
 
 /** Register MWA once so Android SMS wallets appear via Wallet Standard. */

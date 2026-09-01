@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useMintedCollectibleView } from "@/hooks/token/use-minted-collectible-view";
 import { copy } from "@/lib/copy/phygital";
 import type { CollectibleAttributeWithRarity } from "@/lib/tokens/collectible";
+import { detailSplitClass } from "@/lib/layout";
 import { STICKY_ENTER_DELAY_MS } from "@/lib/motion";
 import {
   isUnclaimedToken,
@@ -62,122 +63,129 @@ export function TokenMintedPanel({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex flex-1 flex-col gap-6 pb-4">
+      <div className={detailSplitClass}>
         <CollectibleHero
           src={collectible?.image ?? null}
           alt={name}
           fallbackLabel={name}
           loading={loading}
           reveal={!loading && Boolean(collectible?.image)}
+          className="mx-auto w-full max-w-sm sm:max-w-md lg:sticky lg:top-4 lg:mx-0 lg:max-w-none"
         />
 
-        <MotionSection staggerIndex={stagger++}>
-          {collectible ? (
-            <CollectibleHeader
-              name={collectible.name}
-              collectionName={collectible.collectionName}
-              collectionImage={collectible.collectionImage}
-              rarity={rarity}
-              rarityLoading={rarityLoading}
-            />
-          ) : loading ? (
-            <div
-              className="h-14 animate-pulse rounded-xl bg-muted/40"
-              aria-hidden
-            />
-          ) : null}
-        </MotionSection>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex flex-col gap-6 pb-4">
+            <MotionSection staggerIndex={stagger++}>
+              {collectible ? (
+                <CollectibleHeader
+                  name={collectible.name}
+                  collectionName={collectible.collectionName}
+                  collectionImage={collectible.collectionImage}
+                  rarity={rarity}
+                  rarityLoading={rarityLoading}
+                />
+              ) : loading ? (
+                <div
+                  className="h-14 animate-pulse rounded-xl bg-muted/40"
+                  aria-hidden
+                />
+              ) : null}
+            </MotionSection>
 
-        <MotionSection staggerIndex={stagger++}>
-          <div className="flex w-full flex-col gap-1.5 text-left">
-            {collectionFootnote ? (
-              <p className="text-xs text-muted-foreground">{collectionFootnote}</p>
-            ) : null}
-            <div className="divide-y divide-border/40">
-              <VerificationMetadataRow
-                liveConfirmed={liveConfirmed}
-                onVerifyAgain={onHoldToCheck}
-              />
-              <CollectibleMetadataRow label={copy.linked}>
-                {unclaimed ? (
-                  <span className="font-medium text-muted-foreground">
-                    {copy.notLinked}
-                  </span>
-                ) : (
-                  <CopyableAddress
-                    address={cardOwner}
-                    length={4}
-                    label="linked wallet"
+            <MotionSection staggerIndex={stagger++}>
+              <div className="flex w-full flex-col gap-1.5 text-left">
+                {collectionFootnote ? (
+                  <p className="text-xs text-muted-foreground">
+                    {collectionFootnote}
+                  </p>
+                ) : null}
+                <div className="divide-y divide-border/40">
+                  <VerificationMetadataRow
+                    liveConfirmed={liveConfirmed}
+                    onVerifyAgain={onHoldToCheck}
                   />
-                )}
-              </CollectibleMetadataRow>
-            </div>
+                  <CollectibleMetadataRow label={copy.linked}>
+                    {unclaimed ? (
+                      <span className="font-medium text-muted-foreground">
+                        {copy.notLinked}
+                      </span>
+                    ) : (
+                      <CopyableAddress
+                        address={cardOwner}
+                        length={4}
+                        label="linked wallet"
+                      />
+                    )}
+                  </CollectibleMetadataRow>
+                </div>
+              </div>
+            </MotionSection>
+
+            {shortcuts.length > 0 ? (
+              <MotionSection staggerIndex={stagger++}>
+                <CollectibleShortcuts shortcuts={shortcuts} />
+              </MotionSection>
+            ) : null}
+
+            {collectible && attributesWithRarity.length > 0 ? (
+              <MotionSection staggerIndex={stagger++}>
+                <CollectibleAttributes attributes={attributesWithRarity} />
+              </MotionSection>
+            ) : null}
+
+            {collectible?.description ? (
+              <MotionSection staggerIndex={stagger++}>
+                <CollectibleDescription description={collectible.description} />
+              </MotionSection>
+            ) : null}
+
+            {collectible ? (
+              <MotionSection staggerIndex={stagger++}>
+                <CollectibleDetails
+                  collectionName={collectible.collectionName}
+                  collectionImage={collectible.collectionImage}
+                  collectionDescription={collectible.collectionDescription}
+                />
+              </MotionSection>
+            ) : null}
+
+            <MotionSection staggerIndex={stagger++}>
+              <TokenDetails
+                cardId={token.secp256r1PublicKey}
+                mint={mint}
+                mintOwner={collectible?.mintOwner}
+              />
+            </MotionSection>
           </div>
-        </MotionSection>
 
-        {shortcuts.length > 0 ? (
-          <MotionSection staggerIndex={stagger++}>
-            <CollectibleShortcuts shortcuts={shortcuts} />
-          </MotionSection>
-        ) : null}
-
-        {collectible && attributesWithRarity.length > 0 ? (
-          <MotionSection staggerIndex={stagger++}>
-            <CollectibleAttributes attributes={attributesWithRarity} />
-          </MotionSection>
-        ) : null}
-
-        {collectible?.description ? (
-          <MotionSection staggerIndex={stagger++}>
-            <CollectibleDescription description={collectible.description} />
-          </MotionSection>
-        ) : null}
-
-        {collectible ? (
-          <MotionSection staggerIndex={stagger++}>
-            <CollectibleDetails
-              collectionName={collectible.collectionName}
-              collectionImage={collectible.collectionImage}
-              collectionDescription={collectible.collectionDescription}
-            />
-          </MotionSection>
-        ) : null}
-
-        <MotionSection staggerIndex={stagger++}>
-          <TokenDetails
-            cardId={token.secp256r1PublicKey}
-            mint={mint}
-            mintOwner={collectible?.mintOwner}
-          />
-        </MotionSection>
+          {hasSticky ? (
+            <StickyActions enterDelayMs={STICKY_ENTER_DELAY_MS}>
+              {showVerify ? (
+                <Button
+                  type="button"
+                  variant={canClaim ? "outline" : "default"}
+                  size="lg"
+                  className="w-full"
+                  onClick={onHoldToCheck}
+                >
+                  {copy.holdToCheck}
+                </Button>
+              ) : null}
+              {canClaim ? (
+                <Button
+                  type="button"
+                  variant="default"
+                  size="lg"
+                  className="w-full"
+                  onClick={onClaim}
+                >
+                  {copy.addToWallet}
+                </Button>
+              ) : null}
+            </StickyActions>
+          ) : null}
+        </div>
       </div>
-
-      {hasSticky ? (
-        <StickyActions enterDelayMs={STICKY_ENTER_DELAY_MS}>
-          {showVerify ? (
-            <Button
-              type="button"
-              variant={canClaim ? "outline" : "default"}
-              size="lg"
-              className="w-full"
-              onClick={onHoldToCheck}
-            >
-              {copy.holdToCheck}
-            </Button>
-          ) : null}
-          {canClaim ? (
-            <Button
-              type="button"
-              variant="default"
-              size="lg"
-              className="w-full"
-              onClick={onClaim}
-            >
-              {copy.addToWallet}
-            </Button>
-          ) : null}
-        </StickyActions>
-      ) : null}
     </div>
   );
 }

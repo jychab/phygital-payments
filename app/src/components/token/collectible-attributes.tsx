@@ -20,7 +20,7 @@ export function CollectibleAttributes({
   return (
     <section className={cn("w-full text-left", className)}>
       <h2 className="text-eyebrow text-muted-foreground">{copy.attributes}</h2>
-      <ul className="mt-3 grid grid-cols-2 gap-2">
+      <ul className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-3">
         {attributes.map((attr) => {
           const tierStyles =
             attr.tier != null ? rarityTierClasses(attr.tier) : null;

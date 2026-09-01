@@ -73,7 +73,9 @@ export function ModalSheet({
   return createPortal(
     <div
       className={cn(
-        "fixed inset-0 z-50 flex justify-center p-4",
+        "fixed inset-0 z-50 flex justify-center",
+        "p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]",
+        "pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]",
         align === "bottom" ? "items-end sm:items-center" : "items-center",
       )}
     >

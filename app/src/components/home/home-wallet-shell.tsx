@@ -31,7 +31,7 @@ export function HomeWalletShell() {
   return (
     <AppShell layout="gallery">
       {!address ? (
-        <div className="flex flex-1 flex-col items-center justify-center py-14">
+        <div className="flex flex-1 flex-col items-center justify-center">
           <ConnectGate onConnect={connect} connectReady={connectReady} />
         </div>
       ) : (

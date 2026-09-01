@@ -65,7 +65,7 @@ export const copy = {
   verifySessionExpiredBody:
     "Your last check timed out. Hold your item here again, then tap the ring to continue.",
   /** Live re-check after Verified (ceremony title). */
-  confirmPresence: "Verify again",
+  confirmPresence: "Verifying...",
   confirmPresenceBody:
     "Hold your item flat against the back of this phone.",
   /** Shown under Verified when tappable for re-verify. */
@@ -80,7 +80,7 @@ export const copy = {
     "Hold your item flat against the back of your phone and tap the ring to try again.",
   verifyFailedRetry: "Tap the ring to try again.",
   /** Accessible name for failed-screen ring retry. */
-  verifyFailedRetryAria: "Tap the ring to verify again.",
+  verifyFailedRetryAria: "Tap to verify again.",
   /** Accessible name when Verified row is tappable. */
   confirmedRecheckAria: "Verified. Tap to verify again.",
   holdStill: "Hold still…",

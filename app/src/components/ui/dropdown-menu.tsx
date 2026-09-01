@@ -30,7 +30,7 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-36 overflow-hidden rounded-xl border border-border/60 bg-card/95 p-1 text-foreground shadow-[0_16px_48px_-24px_oklch(0_0_0/0.55)] backdrop-blur-xl",
+          "z-50 min-w-36 max-w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border/60 bg-card/95 p-1 text-foreground shadow-[0_16px_48px_-24px_oklch(0_0_0/0.55)] backdrop-blur-xl",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           "origin-(--radix-dropdown-menu-content-transform-origin)",
           className,

@@ -58,7 +58,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
       <WalletRoot>
         <ResumeQueryRefresh />
         {children}
-        <Toaster richColors position="top-center" />
+        <Toaster
+          richColors
+          position="top-center"
+          offset="max(12px, env(safe-area-inset-top))"
+        />
       </WalletRoot>
     </PersistQueryClientProvider>
   );

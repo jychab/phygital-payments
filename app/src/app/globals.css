@@ -173,6 +173,9 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    touch-action: manipulation;
 
     /*
      * Privy modal — mirror the gallery-dark tokens in globals.

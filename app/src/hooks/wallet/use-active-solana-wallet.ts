@@ -37,7 +37,10 @@ export function preferredLinkedSolanaWallet(
 
 /**
  * Connected Solana wallet that matches the authenticated login identity.
- * Ignores silently auto-connected wallets that aren't the login account.
+ *
+ * Auto-connect may attach Phantom (or similar) first in `useWallets()`.
+ * We never use `wallets[0]` — we match the linked account with the latest
+ * login verification, and ignore any other silently connected wallet.
  */
 export function useActiveSolanaWallet(): {
   ready: boolean;

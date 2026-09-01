@@ -77,8 +77,8 @@ function CollectionBody({
   return (
     <div className="flex flex-1 flex-col gap-8 pb-4">
       <MotionSection className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-display-xl tracking-tight md:text-[1.75rem]">
+        <div className="min-w-0">
+          <h1 className="text-display-xl tracking-tight md:text-[1.75rem] lg:text-3xl">
             Your Collection
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -93,7 +93,7 @@ function CollectionBody({
 
       {cards.length > 0 ? (
         <section aria-label="Cards">
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
             {cards.map((token, index) => (
               <BinderCardTile
                 key={token.address}
@@ -134,7 +134,7 @@ function AccessoriesSection({
         <h2 className="text-sm font-medium text-foreground">Accessories</h2>
         <span className="text-xs text-muted-foreground">{accessories.length}</span>
       </div>
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-2 lg:grid lg:grid-cols-2">
         {accessories.map((token) => (
           <li key={token.address}>
             <AccessoryRow owner={owner} token={token} />

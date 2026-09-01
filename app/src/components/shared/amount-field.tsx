@@ -91,9 +91,9 @@ export function AmountField({
               caption ? `${caption} in ${label}` : `Amount in ${label}`
             }
             className={cn(
-              "h-auto min-w-[1ch] max-w-[12ch]",
+              "h-auto min-w-[1ch] max-w-[min(12ch,100%)]",
               "border-0 bg-transparent p-0",
-              "text-right text-5xl font-semibold",
+              "text-right text-[2.5rem] font-semibold sm:text-[2.75rem] md:text-5xl",
               "tracking-[-0.045em] tabular-nums",
               "shadow-none outline-none",
               "placeholder:text-muted-foreground/25",

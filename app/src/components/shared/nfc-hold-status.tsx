@@ -50,7 +50,7 @@ export function NfcHoldStatus({
     "text-display-md tracking-tight md:text-2xl text-foreground";
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-5 py-14 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center gap-5 py-8 text-center sm:py-14">
       {header ? (
         <div
           className={cn("w-full max-w-sm", galleryAnimate.rise)}

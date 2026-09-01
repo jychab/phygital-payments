@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import { AppProviders } from "./providers";
 import { brand, products } from "@/lib/copy/phygital";
@@ -12,14 +12,21 @@ export const metadata: Metadata = {
   description: products.collection.tagline,
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#1c1d20",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark h-full antialiased">
-      <body className="min-h-full flex flex-col font-sans">
+    <html lang="en" className="dark min-h-dvh antialiased">
+      <body className="flex min-h-dvh flex-col font-sans">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>
