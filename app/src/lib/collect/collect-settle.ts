@@ -32,6 +32,7 @@ import { fetchRecipientAtaStatus } from "@/lib/tokens/ata";
 import type { SubmitTransferRequest } from "./settle-types";
 import { submitAndWaitSettle } from "./settle-client";
 import { submitTransferViaOwnerVerifier } from "./verifier-submit";
+import {resolveMintProgram} from "@/lib/tokens/mint-delegate"
 
 export type BuiltReceiveTransfer = {
   payload: SubmitTransferRequest;
