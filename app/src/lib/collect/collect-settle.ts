@@ -3,10 +3,7 @@ import {
   getBase64Encoder,
   getU64Decoder,
   type Address,
-  type Instruction,
-  type TransactionSigner,
 } from "@solana/kit";
-import { getCreateAssociatedTokenIdempotentInstruction } from "@solana-program/token";
 import {
   PhygitalTokenType,
   authenticatePasskeyForSecp256r1Verify,
@@ -29,22 +26,21 @@ import {
 import { buildSettleInstructions } from "./build-settle-ix";
 import {
   fetchMintDelegateStatus,
-  findAta,
-  resolveMintProgram,
   type TokenProgram,
 } from "@/lib/tokens/mint-delegate";
+import {
+  buildCreateRecipientAtaInstructions,
+  fetchRecipientAtaStatus,
+} from "@/lib/tokens/ata";
 import type { SubmitTransferRequest } from "./settle-types";
 import { submitAndWaitSettle } from "./settle-client";
 import { submitTransferViaOwnerVerifier } from "./verifier-submit";
 
-/** `/collect` NFC receive: ATA check, verify, sponsored settle. */
-export type RecipientAtaStatus = {
-  mint: Address;
-  owner: Address;
-  ata: Address;
-  program: TokenProgram;
-  exists: boolean;
-};
+export {
+  buildCreateRecipientAtaInstructions,
+  fetchRecipientAtaStatus,
+  type RecipientAtaStatus,
+} from "@/lib/tokens/ata";
 
 export type BuiltReceiveTransfer = {
   payload: SubmitTransferRequest;
@@ -100,58 +96,6 @@ async function fetchSlotHash(): Promise<{
 /** True when sponsored fee-payer submit can be enabled in the UI. */
 export function isSponsoredSubmitAvailable(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_FEE_PAYER_PUBLIC_KEY?.trim());
-}
-
-/** Resolve recipient ATA and whether it already exists on-chain. */
-export async function fetchRecipientAtaStatus(args: {
-  mint: Address;
-  owner: Address;
-  program?: TokenProgram;
-}): Promise<RecipientAtaStatus> {
-  const { mint, owner } = args;
-  const program = args.program ?? (await resolveMintProgram(mint)).program;
-  const ata = await findAta(mint, owner, program);
-  const rpc = getSolanaRpc();
-  const { value } = await rpc
-    .getAccountInfo(ata, { encoding: "base64" })
-    .send();
-  return {
-    mint,
-    owner,
-    ata,
-    program,
-    exists: value !== null,
-  };
-}
-
-/**
- * Create the recipient's token account. The connected wallet pays rent;
- * `owner` must be the token account owner (defaults to signer).
- */
-export async function buildCreateRecipientAtaInstructions(args: {
-  signer: TransactionSigner;
-  mint: Address;
-  owner?: Address;
-}): Promise<{ instructions: Instruction[]; ata: Address }> {
-  const mint = args.mint;
-  const owner = args.owner ?? args.signer.address;
-  const status = await fetchRecipientAtaStatus({ mint, owner });
-  if (status.exists) {
-    return { instructions: [], ata: status.ata };
-  }
-
-  return {
-    instructions: [
-      getCreateAssociatedTokenIdempotentInstruction({
-        payer: args.signer,
-        ata: status.ata,
-        owner,
-        mint,
-        tokenProgram: status.program,
-      }),
-    ],
-    ata: status.ata,
-  };
 }
 
 /**

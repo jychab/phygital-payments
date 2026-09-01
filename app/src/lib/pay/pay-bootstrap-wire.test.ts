@@ -24,6 +24,7 @@ describe("serializePayBootstrap / parsePayBootstrap", () => {
     const status = {
       programAuthority: address(TOKEN),
       ata: address(ATA),
+      ataExists: true,
       isProgramAuthorityDelegate: true,
       delegatedAmountRaw: 1_000_000n,
       delegatedAmountUi: "1",
@@ -50,6 +51,7 @@ describe("serializePayBootstrap / parsePayBootstrap", () => {
           byMint: new Map([
             [MINT, { token: address(TOKEN), status }],
           ]),
+          statusByTokenMint: new Map([[`${TOKEN}|${MINT}`, status]]),
         },
       }),
     );
@@ -61,5 +63,74 @@ describe("serializePayBootstrap / parsePayBootstrap", () => {
     expect(match?.token).toBe(TOKEN);
     expect(match?.status?.delegatedAmountRaw).toBe(1_000_000n);
     expect(match?.status?.balanceRaw).toBe(5n);
+    expect(match?.status?.ataExists).toBe(true);
+    expect(restored.delegates.statusByTokenMint.get(`${TOKEN}|${MINT}`)).toEqual(
+      status,
+    );
+  });
+
+  it("defaults ataExists from legacy wire without the field", () => {
+    const wire = serializePayBootstrap({
+      holdings: [],
+      delegates: {
+        tokens: [],
+        tokenEnabled: false,
+        byMint: new Map([
+          [
+            MINT,
+            {
+              token: null,
+              status: {
+                programAuthority: TOKEN,
+                ata: ATA,
+                isProgramAuthorityDelegate: false,
+                delegatedAmountRaw: "0",
+                delegatedAmountUi: "0",
+                balanceRaw: "0",
+                balanceUi: "0",
+              },
+            },
+          ],
+        ]),
+        statusByTokenMint: new Map(),
+      },
+    });
+    delete (wire.byMint[0]![1].status as { ataExists?: boolean }).ataExists;
+
+    const restored = parsePayBootstrap(wire);
+    expect(restored.delegates.byMint.get(MINT)?.status?.ataExists).toBe(false);
+  });
+
+  it("defaults ataExists to true for legacy wire with balance", () => {
+    const wire = serializePayBootstrap({
+      holdings: [],
+      delegates: {
+        tokens: [],
+        tokenEnabled: true,
+        byMint: new Map([
+          [
+            MINT,
+            {
+              token: address(TOKEN),
+              status: {
+                programAuthority: TOKEN,
+                ata: ATA,
+                ataExists: true,
+                isProgramAuthorityDelegate: true,
+                delegatedAmountRaw: "1000000",
+                delegatedAmountUi: "1",
+                balanceRaw: "5",
+                balanceUi: "0.000005",
+              },
+            },
+          ],
+        ]),
+        statusByTokenMint: new Map(),
+      },
+    });
+    delete (wire.byMint[0]![1].status as { ataExists?: boolean }).ataExists;
+
+    const restored = parsePayBootstrap(wire);
+    expect(restored.delegates.byMint.get(MINT)?.status?.ataExists).toBe(true);
   });
 });

@@ -154,7 +154,7 @@ Cold entry shows **Hold to Check**. Signed NFC URLs verify silently, then show *
 
 Collection open (`/token?address=&from=collection`) uses the same home for that token’s mint state, with Back to Collection and a verified-owned Confirmed seed.
 
-API keys live in browser localStorage, keyed by wallet, and are only needed when pre-confirmation is on. **This phone** issues or rotates a key. Setting a spending limit requires a balance for that token in the linked wallet.
+API keys live in browser localStorage, keyed by wallet, and are only needed when pre-confirmation is on. **This phone** issues or rotates a key. Setting a pay allowance requires a token account for that mint in the linked wallet (balance can be zero).
 
 ### Open a spending window (API key)
 

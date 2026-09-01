@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { LoaderCircle } from "lucide-react";
 
 import { TokenIcon } from "@/components/shared/token-chip";
@@ -7,10 +8,8 @@ import { SettingsListRow } from "@/components/shared/settings-list-row";
 import { copy } from "@/lib/copy/phygital";
 import {
   accessoryEnabledMintCount,
-  accessoryMintPayEnabled,
-  accessoryMintPaySubtitle,
+  buildAccessoryHoldingRows,
   deriveAccessoryWalletHomeHeader,
-  sortAccessoryHoldings,
   type AccessoryStatusLine,
 } from "@/lib/pay/accessory-pay-state";
 import type { OwnerPayDelegates } from "@/lib/tokens/mint-delegate";
@@ -35,14 +34,15 @@ export function AccessoryWalletHome({
 }) {
   const list = holdings ?? [];
   const enabledCount = accessoryEnabledMintCount(list, delegates, tokenAddress);
-  const hasLimit = enabledCount > 0;
   const header = deriveAccessoryWalletHomeHeader({
-    hasLimit,
     holdingsEmpty: !loading && list.length === 0,
     enabledCount,
     totalCount: list.length,
   });
-  const sorted = sortAccessoryHoldings(list, delegates, tokenAddress);
+  const rows = useMemo(
+    () => buildAccessoryHoldingRows(list, delegates, tokenAddress),
+    [list, delegates, tokenAddress],
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -74,20 +74,12 @@ export function AccessoryWalletHome({
         </p>
       ) : (
         <ul className="flex flex-col gap-1.5">
-          {sorted.map((holding) => (
+          {rows.map(({ holding, enabled, subtitle }) => (
             <AccessoryPayTokenRow
               key={holding.mint}
               holding={holding}
-              enabled={accessoryMintPayEnabled(
-                delegates,
-                tokenAddress,
-                holding.mint,
-              )}
-              subtitle={accessoryMintPaySubtitle(
-                delegates,
-                tokenAddress,
-                holding.mint,
-              )}
+              enabled={enabled}
+              subtitle={subtitle}
               onSelect={() => onEditLimit(holding)}
             />
           ))}
@@ -129,9 +121,6 @@ function AccessoryPayTokenRow({
               </span>
               <span className="text-sm tabular-nums text-foreground">
                 {holding.balanceUi}
-              </span>
-              <span className="text-[11px] font-medium text-primary">
-                {copy.pay.editLimit}
               </span>
             </div>
           ) : (

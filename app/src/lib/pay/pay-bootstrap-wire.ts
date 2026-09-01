@@ -19,6 +19,7 @@ export type MintDelegateStatusWire = {
   programAuthority: string;
   ata: string;
   isProgramAuthorityDelegate: boolean;
+  ataExists: boolean;
   delegatedAmountRaw: string;
   delegatedAmountUi: string;
   balanceRaw: string;
@@ -46,6 +47,7 @@ export type PayBootstrapWire = {
   tokens: PhygitalTokenWire[];
   tokenEnabled: boolean;
   byMint: [string, OwnerPayMintMatchWire][];
+  statusByTokenMint: [string, string, MintDelegateStatusWire][];
 };
 
 export function serializePayBootstrap(data: PayBootstrap): PayBootstrapWire {
@@ -57,6 +59,12 @@ export function serializePayBootstrap(data: PayBootstrap): PayBootstrapWire {
       mint,
       serializeMatch(match),
     ]),
+    statusByTokenMint: [...data.delegates.statusByTokenMint.entries()].map(
+      ([key, status]) => {
+        const [token, mint] = key.split("|");
+        return [token!, mint!, serializeStatus(status)] as const;
+      },
+    ),
   };
 }
 
@@ -65,12 +73,18 @@ export function parsePayBootstrap(wire: PayBootstrapWire): PayBootstrap {
   for (const [mint, match] of wire.byMint ?? []) {
     byMint.set(mint, parseMatch(match));
   }
+  const statusByTokenMint = new Map<string, MintDelegateStatus>();
+  for (const [token, mint, status] of wire.statusByTokenMint ?? []) {
+    if (!token || !mint) continue;
+    statusByTokenMint.set(`${token}|${mint}`, parseStatus(status));
+  }
   return {
     holdings: wire.holdings ?? [],
     delegates: {
       tokens: (wire.tokens ?? []).map(parseToken),
       tokenEnabled: wire.tokenEnabled === true,
       byMint,
+      statusByTokenMint,
     },
   };
 }
@@ -120,6 +134,7 @@ function serializeStatus(status: MintDelegateStatus): MintDelegateStatusWire {
     programAuthority: String(status.programAuthority),
     ata: String(status.ata),
     isProgramAuthorityDelegate: status.isProgramAuthorityDelegate,
+    ataExists: status.ataExists,
     delegatedAmountRaw: status.delegatedAmountRaw.toString(),
     delegatedAmountUi: status.delegatedAmountUi,
     balanceRaw: status.balanceRaw.toString(),
@@ -128,13 +143,18 @@ function serializeStatus(status: MintDelegateStatus): MintDelegateStatusWire {
 }
 
 function parseStatus(wire: MintDelegateStatusWire): MintDelegateStatus {
+  const balanceRaw = BigInt(wire.balanceRaw);
   return {
     programAuthority: address(wire.programAuthority),
     ata: address(wire.ata),
+    ataExists:
+      wire.ataExists !== undefined
+        ? wire.ataExists
+        : wire.isProgramAuthorityDelegate || balanceRaw > BigInt(0),
     isProgramAuthorityDelegate: wire.isProgramAuthorityDelegate,
     delegatedAmountRaw: BigInt(wire.delegatedAmountRaw),
     delegatedAmountUi: wire.delegatedAmountUi,
-    balanceRaw: BigInt(wire.balanceRaw),
+    balanceRaw,
     balanceUi: wire.balanceUi,
   };
 }

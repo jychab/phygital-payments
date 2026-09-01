@@ -3,12 +3,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { address, type Address } from "@solana/kit";
 
-import { invalidateOwnerQueries, queryKeys, type MintDelegateStatus, type PayBootstrap } from "@/lib/queries";
+import {
+  invalidatePayDelegateQueries,
+  queryKeys,
+  type MintDelegateStatus,
+  type PayBootstrap,
+} from "@/lib/queries";
 import {
   buildDelegateInstructions,
   buildRevokeDelegateInstructions,
-  formatTokenAmount,
   isOwnerPayMintEnabled,
+  patchDelegateAllowance,
+  patchRevokedDelegate,
   type OwnerPayMintMatch,
 } from "@/lib/tokens/mint-delegate";
 import { sendTransaction } from "@/lib/solana/tx";
@@ -23,6 +29,7 @@ type AllowanceOptions = {
 async function applyDelegateAfterSend(args: {
   queryClient: ReturnType<typeof useQueryClient>;
   owner: string | null;
+  token: string;
   mint: string;
   key: ReturnType<typeof queryKeys.delegateStatus.byOwnerTokenMint>;
   confirmed: Promise<void>;
@@ -43,11 +50,17 @@ async function applyDelegateAfterSend(args: {
       if (!prev) return prev;
       const byMint = new Map(prev.delegates.byMint);
       byMint.set(args.mint, args.applyMatch(byMint.get(args.mint)));
+      const statusByTokenMint = new Map(prev.delegates.statusByTokenMint);
+      const status = args.queryClient.getQueryData<MintDelegateStatus>(args.key);
+      if (status) {
+        statusByTokenMint.set(`${args.token}|${args.mint}`, status);
+      }
       return {
         ...prev,
         delegates: {
           ...prev.delegates,
           byMint,
+          statusByTokenMint,
           tokenEnabled: [...byMint.values()].some(isOwnerPayMintEnabled),
         },
       };
@@ -66,7 +79,10 @@ async function applyDelegateAfterSend(args: {
     throw error;
   }
   if (args.owner) {
-    invalidateOwnerQueries(args.queryClient, args.owner);
+    invalidatePayDelegateQueries(args.queryClient, args.owner, {
+      token: args.token,
+      mint: args.mint,
+    });
   }
 }
 
@@ -104,18 +120,12 @@ export function useSetDelegateMutation(
       await applyDelegateAfterSend({
         queryClient,
         owner,
+        token: tokenStr,
         mint: mintStr,
         key,
         confirmed: sent.confirmed,
         apply: (prev) =>
-          prev
-            ? {
-                ...prev,
-                isProgramAuthorityDelegate: true,
-                delegatedAmountRaw: rawAmount,
-                delegatedAmountUi: formatTokenAmount(rawAmount, decimals),
-              }
-            : prev,
+          prev ? patchDelegateAllowance(prev, rawAmount, decimals) : prev,
         applyMatch: (prev) => {
           const token = address(tokenStr);
           if (!prev?.status) {
@@ -123,12 +133,7 @@ export function useSetDelegateMutation(
           }
           return {
             token,
-            status: {
-              ...prev.status,
-              isProgramAuthorityDelegate: true,
-              delegatedAmountRaw: rawAmount,
-              delegatedAmountUi: formatTokenAmount(rawAmount, decimals),
-            },
+            status: patchDelegateAllowance(prev.status, rawAmount, decimals),
           };
         },
       });
@@ -170,28 +175,14 @@ export function useRevokeDelegateMutation(
       await applyDelegateAfterSend({
         queryClient,
         owner,
+        token: tokenStr,
         mint: mintStr,
         key,
         confirmed: sent.confirmed,
-        apply: (prev) =>
-          prev
-            ? {
-                ...prev,
-                isProgramAuthorityDelegate: false,
-                delegatedAmountRaw: BigInt(0),
-                delegatedAmountUi: "0",
-              }
-            : prev,
+        apply: (prev) => (prev ? patchRevokedDelegate(prev) : prev),
         applyMatch: (prev) => ({
           token: null,
-          status: prev?.status
-            ? {
-                ...prev.status,
-                isProgramAuthorityDelegate: false,
-                delegatedAmountRaw: BigInt(0),
-                delegatedAmountUi: "0",
-              }
-            : null,
+          status: prev?.status ? patchRevokedDelegate(prev.status) : null,
         }),
       });
       return sent.signature;

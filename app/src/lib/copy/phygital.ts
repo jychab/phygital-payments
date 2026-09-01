@@ -236,15 +236,15 @@ export const copy = {
     linkedWallet: "Linked wallet",
     payEnabled: "Enabled",
     enablePaySubtitle:
-      "Choose a token from your linked wallet. Set how much this accessory can spend.",
-    payTokensSubtitle: "Balances in your linked wallet. Tap to change a limit.",
+      "Choose a token from your linked wallet. Set a pay allowance for this accessory.",
+    payTokensSubtitle:
+      "Tap a token to view or change its allowance. Not a per-payment cap.",
     noTokensSubtitle: "Fund this wallet to enable Pay on a token.",
     enabledCountSummary: (enabled: number, total: number) =>
       `${enabled} of ${total} tokens enabled for Pay`,
-    spendingLimitSubtitle: (amount: string, isUsdc: boolean) =>
-      isUsdc ? `$${amount} spending limit` : `${amount} spending limit`,
+    allowanceRemainingSubtitle: (amount: string, isUsdc: boolean) =>
+      isUsdc ? `$${amount} remaining` : `${amount} remaining`,
     enableToken: "Enable",
-    editLimit: "Edit",
     authorizePhone: "Authorize this phone",
     preConfirmation: "Pre-confirmation",
     preConfirmationOnHint: "Press Pay here first, then hold.",
@@ -287,25 +287,37 @@ export const copy = {
       minutes === 1
         ? "Ready to pay · 1 minute left"
         : `Ready to pay · ${minutes} minutes left`,
-    spendingLimitTitle: "Spending limit",
-    spendingLimitCaption: "Spending limit",
-    spendingLimitIntro: "Your accessory can spend up to this amount",
+    spendingLimitTitle: "Pay allowance",
+    spendingLimitCaption: "Allowance",
+    spendingLimitIntro:
+      "Total this accessory can spend before you raise it again. Each payment reduces what’s left.",
     spendingLimitOutro: "You can change it anytime.",
-    fromThisWallet: "From this wallet",
-    setLimit: "Set limit",
-    updateLimit: "Update limit",
+    spendingLimitNotPerPayment:
+      "Not a per-payment cap — any amount up to what’s left, until the allowance runs out.",
+    allowanceExceedsBalance:
+      "Payments still need enough balance in your wallet. This sets how much the accessory is allowed to spend in total.",
+    allowanceSavedAddFunds: (symbol: string) =>
+      `Allowance saved. Add ${symbol} before paying.`,
+    fromThisWallet: "Balance in wallet",
+    allowanceRemaining: "Remaining",
+    setLimit: "Set allowance",
+    updateLimit: "Update allowance",
     confirmInWallet: "Confirm in wallet…",
     removing: "Removing…",
-    removeSpendingLimit: "Turn off spending limit",
+    removeSpendingLimit: "Turn off pay allowance",
     stillLoading: "Still loading. Try again in a moment.",
     enterValidAmount: "Enter a valid amount",
-    limitSaved: "Spending limit saved",
-    limitSaveFailed: "Couldn’t save spending limit",
-    limitRemoved: "Spending limit removed",
-    limitRemoveFailed: "Couldn’t remove spending limit",
-    addTokenFirstTitle: (symbol: string) => `Add ${symbol} first`,
-    addUsdcFirst: "Add USDC to this wallet first.",
-    addTokenFirst: "Add some of this token to this wallet first.",
+    limitSaved: "Pay allowance saved",
+    limitSaveFailed: "Couldn’t save pay allowance",
+    limitRemoved: "Pay allowance removed",
+    limitRemoveFailed: "Couldn’t remove pay allowance",
+    setupTokenAccountTitle: (symbol: string) => `Set up ${symbol}`,
+    setupTokenAccountBody: (symbol: string) =>
+      `Create a ${symbol} account in this wallet before setting a pay allowance.`,
+    setupTokenAccount: (symbol: string) => `Set up ${symbol}`,
+    settingUpTokenAccount: "Setting up…",
+    setupTokenAccountFailed: "Couldn’t set up token account",
+    setupTokenAccountDone: "Ready to set allowance",
     preauthUpdateFailed: "Couldn’t update pre-confirmation.",
     rotateSuccessToast: "Other phones will stop working.",
     rotateFailed: "Couldn’t rotate key",

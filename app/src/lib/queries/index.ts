@@ -33,7 +33,7 @@ import type { PayBootstrap } from "@/lib/pay/pay-bootstrap-wire";
 import {
   fetchRecipientAtaStatus,
   type RecipientAtaStatus,
-} from "@/lib/collect/collect-settle";
+} from "@/lib/tokens/ata";
 import {
   fetchPaymentHistory,
   type PaymentRecord,
@@ -193,6 +193,30 @@ export function invalidateOwnerQueries(
   void queryClient.invalidateQueries({
     queryKey: queryKeys.phygitalToken.byOwner(owner),
   });
+}
+
+/** After a pay allowance change — refresh bootstrap + the affected delegate status. */
+export function invalidatePayDelegateQueries(
+  queryClient: QueryClient,
+  owner: string,
+  accessory?: { token: string; mint: string },
+): void {
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.ownerPayDelegates.byOwner(owner),
+  });
+  if (accessory) {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.delegateStatus.byOwnerTokenMint(
+        owner,
+        accessory.token,
+        accessory.mint,
+      ),
+    });
+  } else {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.delegateStatus.byOwner(owner),
+    });
+  }
 }
 
 /** Token account reads keyed by address / identifier / passkey / owner. */

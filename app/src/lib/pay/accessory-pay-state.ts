@@ -32,6 +32,12 @@ export type AccessoryWalletHomeHeader = {
   enabledSummary: string | null;
 };
 
+export type AccessoryHoldingRow = {
+  holding: PaymentTokenHolding;
+  enabled: boolean;
+  subtitle: string | null;
+};
+
 /** Whether this accessory has a spending limit on any verified token. */
 export function accessoryHasSpendingLimit(
   delegates: OwnerPayDelegates | undefined,
@@ -81,29 +87,14 @@ export function accessoryEnabledMintCount(
   ).length;
 }
 
-/** Subtitle for an enabled token row — spending limit amount only. */
-export function accessoryMintPaySubtitle(
-  delegates: OwnerPayDelegates | undefined,
-  tokenAddress: string,
-  mint: string,
-): string | null {
-  const match = mintMatchForAccessory(delegates, tokenAddress, mint);
-  if (!match || !isOwnerPayMintEnabled(match)) {
-    return null;
-  }
-  const amount = match.status?.delegatedAmountUi;
-  if (!amount) return null;
-  return copy.pay.spendingLimitSubtitle(amount, isDefaultMint(mint));
-}
-
 /** Task header above the token list on the accessory wallet home. */
 export function deriveAccessoryWalletHomeHeader(args: {
-  hasLimit: boolean;
   holdingsEmpty: boolean;
   enabledCount: number;
   totalCount: number;
 }): AccessoryWalletHomeHeader {
-  const { hasLimit, holdingsEmpty, enabledCount, totalCount } = args;
+  const { holdingsEmpty, enabledCount, totalCount } = args;
+  const hasLimit = enabledCount > 0;
 
   if (holdingsEmpty) {
     return {
@@ -148,6 +139,26 @@ export function sortAccessoryHoldings(
     if (aUsdc !== bUsdc) return aUsdc ? -1 : 1;
     return a.symbol.localeCompare(b.symbol);
   });
+}
+
+/** Sorted holdings with pay state resolved once per row. */
+export function buildAccessoryHoldingRows(
+  holdings: readonly PaymentTokenHolding[],
+  delegates: OwnerPayDelegates | undefined,
+  tokenAddress: string,
+): AccessoryHoldingRow[] {
+  return sortAccessoryHoldings(holdings, delegates, tokenAddress).map(
+    (holding) => {
+      const match = mintMatchForAccessory(delegates, tokenAddress, holding.mint);
+      const enabled = Boolean(match && isOwnerPayMintEnabled(match));
+      const amount = match?.status?.delegatedAmountUi;
+      const subtitle =
+        enabled && amount
+          ? copy.pay.allowanceRemainingSubtitle(amount, isDefaultMint(holding.mint))
+          : null;
+      return { holding, enabled, subtitle };
+    },
+  );
 }
 
 export function deriveAccessoryPrimaryAction(args: {

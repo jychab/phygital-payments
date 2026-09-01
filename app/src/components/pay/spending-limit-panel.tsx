@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { Check, Coins, LoaderCircle } from "lucide-react";
 import { address } from "@solana/kit";
@@ -19,12 +20,13 @@ import {
   useRevokeDelegateMutation,
 } from "@/hooks/pay/use-delegate-mutations";
 import {
+  formatTokenAmount,
   isDelegateEnabled,
+  needsAtaBeforeDelegate,
   uiAmountToRaw,
   type OwnerPayMintMatch,
 } from "@/lib/tokens/mint-delegate";
 import {
-  isDefaultMint,
   resolvePaymentToken,
   type PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
@@ -34,23 +36,28 @@ import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
 
 const DEFAULT_LIMIT_AMOUNT = "50";
 
-function tryUiAmountToRaw(amount: string, decimals: number): bigint | null {
-  try {
-    return uiAmountToRaw(amount, decimals);
-  } catch {
-    return null;
-  }
-}
+const PayAtaSetup = dynamic(
+  () =>
+    import("@/components/pay/pay-ata-setup").then((m) => m.PayAtaSetup),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex w-full max-w-xs justify-center py-2">
+        <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
+      </div>
+    ),
+  },
+);
 
 /**
- * Set or update the spending limit for one mint on one NFC accessory
+ * Set or update the pay allowance for one mint on one NFC accessory
  * (program-authority SPL delegate).
  */
 export function SpendingLimitPanel({
   owner,
   tokenAddress,
   mint,
-  holding: holdingProp,
+  holding,
   walletMatch,
   live = true,
   onEnabled,
@@ -68,6 +75,7 @@ export function SpendingLimitPanel({
 }) {
   const { address: walletAddress, matched, ownerShort } =
     useExpectedWallet(owner);
+  const mutationOwner = matched ? walletAddress : null;
   const mintAddress = address(mint);
   const [amount, setAmount] = useState(DEFAULT_LIMIT_AMOUNT);
 
@@ -83,30 +91,40 @@ export function SpendingLimitPanel({
   });
   const mintQuery = useMintProgram(mintAddress);
   const status = seeded ?? statusQuery.data;
+  const statusReady = Boolean(seeded || statusQuery.data !== undefined);
 
-  const holding = holdingProp;
   const token = holding ?? resolvePaymentToken(mint);
-  const setAllowance = useSetDelegateMutation(
-    walletAddress === owner ? walletAddress : null,
-    { mint: mintAddress, token: tokenAddress },
-  );
-  const revoke = useRevokeDelegateMutation(
-    walletAddress === owner ? walletAddress : null,
-    { mint: mintAddress, token: tokenAddress },
-  );
+  const setAllowance = useSetDelegateMutation(mutationOwner, {
+    mint: mintAddress,
+    token: tokenAddress,
+  });
+  const revoke = useRevokeDelegateMutation(mutationOwner, {
+    mint: mintAddress,
+    token: tokenAddress,
+  });
 
   const hasDelegate = isDelegateEnabled(status);
   const balanceRaw =
     status?.balanceRaw ??
     (holding ? BigInt(holding.balanceRaw) : BigInt(0));
-  const needsBalance = !hasDelegate && balanceRaw <= BigInt(0);
+  const needsAta = needsAtaBeforeDelegate(status, statusReady);
   const busy =
     setAllowance.isPending ||
     revoke.isPending ||
     (!seeded && statusQuery.isLoading);
   const decimals = mintQuery.data?.decimals ?? token.decimals;
 
-  const limitRaw = tryUiAmountToRaw(amount, decimals);
+  let limitRaw: bigint | null;
+  try {
+    limitRaw = uiAmountToRaw(amount, decimals);
+  } catch {
+    limitRaw = null;
+  }
+  const allowanceExceedsBalance =
+    limitRaw != null && limitRaw > balanceRaw && matched;
+  const saveDisabled =
+    busy || !amount || limitRaw == null || !matched || needsAta;
+  const cta = hasDelegate ? copy.pay.updateLimit : copy.pay.setLimit;
 
   async function runEnable() {
     if (!walletAddress || walletAddress !== owner) return;
@@ -129,7 +147,11 @@ export function SpendingLimitPanel({
           decimals: mintQuery.data.decimals,
         });
       }
-      toast.success(copy.pay.limitSaved);
+      toast.success(
+        balanceRaw <= BigInt(0)
+          ? copy.pay.allowanceSavedAddFunds(token.symbol)
+          : copy.pay.limitSaved,
+      );
       onEnabled?.();
     } catch (error) {
       toast.error(toUserErrorMessage(error, copy.pay.limitSaveFailed));
@@ -147,31 +169,31 @@ export function SpendingLimitPanel({
     }
   }
 
-  const cta = (() => {
-    if (setAllowance.isPending) return null;
-    if (hasDelegate) return copy.pay.updateLimit;
-    return copy.pay.setLimit;
-  })();
+  const backLink = onBack ? (
+    <div className="flex items-center gap-2">
+      <BackLink onClick={onBack} />
+    </div>
+  ) : null;
 
-  const saveDisabled =
-    busy || !amount || limitRaw == null || !matched || needsBalance;
-
-  if (needsBalance) {
+  if (!statusReady && statusQuery.isLoading) {
     return (
       <div className="flex flex-1 flex-col gap-6">
-        {onBack ? (
-          <div className="flex items-center gap-2">
-            <BackLink onClick={onBack} />
-          </div>
-        ) : null}
+        {backLink}
+        <div className="flex flex-1 items-center justify-center py-10 text-muted-foreground">
+          <LoaderCircle className="size-5 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (needsAta) {
+    return (
+      <div className="flex flex-1 flex-col gap-6">
+        {backLink}
         <GateMessage
           icon={<Coins className="size-5 text-muted-foreground" />}
-          title={copy.pay.addTokenFirstTitle(token.symbol)}
-          body={
-            isDefaultMint(mint)
-              ? copy.pay.addUsdcFirst
-              : copy.pay.addTokenFirst
-          }
+          title={copy.pay.setupTokenAccountTitle(token.symbol)}
+          body={copy.pay.setupTokenAccountBody(token.symbol)}
           action={
             <div className="flex w-full max-w-xs flex-col gap-2">
               {!matched ? (
@@ -180,7 +202,14 @@ export function SpendingLimitPanel({
                   hint={copy.wallet.connectHint(ownerShort)}
                   disabled={busy}
                 />
-              ) : null}
+              ) : (
+                <PayAtaSetup
+                  owner={owner}
+                  tokenAddress={tokenAddress}
+                  mint={mintAddress}
+                  token={token}
+                />
+              )}
               {onBack ? (
                 <Button
                   type="button"
@@ -199,27 +228,25 @@ export function SpendingLimitPanel({
     );
   }
 
+  const balanceUi =
+    status?.balanceUi ??
+    holding?.balanceUi ??
+    formatTokenAmount(balanceRaw, decimals);
+  const remainingUi = hasDelegate ? status?.delegatedAmountUi : null;
+
   return (
     <div className="flex flex-1 flex-col gap-6">
-      {onBack ? (
-        <div className="flex items-center gap-2">
-          <BackLink onClick={onBack} />
-        </div>
-      ) : null}
+      {backLink}
 
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
           {copy.pay.spendingLimitTitle}
         </h1>
         <p className="mx-auto max-w-72 text-sm text-muted-foreground">
-          {copy.pay.spendingLimitIntro}{" "}
-          <TokenSymbol
-            token={token}
-            size="xs"
-            className="mx-0.5"
-            symbolClassName="font-medium text-foreground"
-          />
-          . {copy.pay.spendingLimitOutro}
+          {copy.pay.spendingLimitIntro} {copy.pay.spendingLimitOutro}
+        </p>
+        <p className="mx-auto max-w-80 text-xs text-muted-foreground">
+          {copy.pay.spendingLimitNotPerPayment}
         </p>
       </div>
 
@@ -235,19 +262,24 @@ export function SpendingLimitPanel({
         className="py-1"
       />
 
-      <p className="flex items-center justify-center gap-1.5 text-center text-[11px] tabular-nums text-muted-foreground">
-        {copy.pay.fromThisWallet}
-        {status ? (
+      {allowanceExceedsBalance ? (
+        <p className="mx-auto max-w-80 text-center text-xs text-muted-foreground">
+          {copy.pay.allowanceExceedsBalance}
+        </p>
+      ) : null}
+
+      <p className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-center text-[11px] tabular-nums text-muted-foreground">
+        <span>
+          {copy.pay.fromThisWallet}: {balanceUi}{" "}
+          <TokenSymbol token={token} size="xs" />
+        </span>
+        {remainingUi ? (
           <>
             <span>·</span>
-            <span>{status.balanceUi}</span>
-            <TokenSymbol token={token} size="xs" />
-          </>
-        ) : holding ? (
-          <>
-            <span>·</span>
-            <span>{holding.balanceUi}</span>
-            <TokenSymbol token={token} size="xs" />
+            <span>
+              {copy.pay.allowanceRemaining}: {remainingUi}{" "}
+              <TokenSymbol token={token} size="xs" />
+            </span>
           </>
         ) : null}
       </p>

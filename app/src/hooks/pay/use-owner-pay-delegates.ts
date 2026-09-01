@@ -21,15 +21,12 @@ function seedPayBootstrap(
     queryKeys.phygitalToken.byOwner(owner),
     data.tokens,
   );
-  for (const [mint, match] of data.byMint) {
-    if (!match.token || !match.status) continue;
+  for (const [key, status] of data.statusByTokenMint) {
+    const [token, mint] = key.split("|");
+    if (!token || !mint) continue;
     queryClient.setQueryData(
-      queryKeys.delegateStatus.byOwnerTokenMint(
-        owner,
-        String(match.token),
-        mint,
-      ),
-      match.status,
+      queryKeys.delegateStatus.byOwnerTokenMint(owner, token, mint),
+      status,
     );
   }
 }

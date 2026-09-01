@@ -1,25 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { toast } from "sonner";
-import {
-  AlertCircle,
-  LoaderCircle,
-  Plus,
-  Wallet,
-} from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import type { Address } from "@solana/kit";
 
 import { TokenSymbol } from "@/components/shared/token-chip";
-import { WrongWalletNotice } from "@/components/shared/wallet-notices";
-import { Button } from "@/components/ui/button";
-import { useCreateAtaMutation } from "@/hooks/collect/use-create-ata-mutation";
-import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
-import { useWalletKitSigner } from "@/hooks/wallet/use-wallet-kit-signer";
-import { useSolanaAddress } from "@/hooks/wallet/use-solana-address";
+import { AtaSetupActions } from "@/components/shared/ata-setup-actions";
 import type { PaymentToken } from "@/lib/tokens/payment-token";
 import { copy } from "@/lib/copy/phygital";
-import { toUserErrorMessage } from "@/lib/user-errors";
 
 /**
  * In-place receive-account setup on `/collect`.
@@ -34,26 +22,6 @@ export function CollectAtaSetup({
   mint: Address;
   token: PaymentToken;
 }) {
-  const { isConnected, matched, wrongWallet, ownerShort, connect, connectReady } =
-    useExpectedWallet(String(recipient));
-  const { disconnect } = useSolanaAddress();
-  const signer = useWalletKitSigner();
-  const [error, setError] = useState<string | null>(null);
-
-  const createAta = useCreateAtaMutation(mint, {
-    onSuccess: () => toast.success(copy.collect.readyToReceive),
-  });
-
-  async function onCreate() {
-    if (!matched || !signer) return;
-    setError(null);
-    try {
-      await createAta.mutateAsync({ recipient });
-    } catch (err) {
-      setError(toUserErrorMessage(err, copy.collect.setupFailed));
-    }
-  }
-
   return (
     <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3">
       <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-destructive/15 text-destructive">
@@ -73,59 +41,16 @@ export function CollectAtaSetup({
           />{" "}
           {copy.collect.ataNotReadySuffix}
         </p>
-        {!isConnected ? (
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            disabled={!connectReady}
-            aria-busy={!connectReady}
-            onClick={() => void connect()}
-          >
-            <Wallet className="size-4" />
-            {connectReady ? copy.common.connectWallet : copy.common.loading}
-          </Button>
-        ) : wrongWallet ? (
-          <div className="space-y-2">
-            <WrongWalletNotice ownerShort={ownerShort} />
-            <Button
-              type="button"
-              size="lg"
-              variant="outline"
-              className="w-full"
-              onClick={() => void disconnect()}
-            >
-              {copy.common.disconnect}
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {error ? (
-              <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-xs text-destructive">
-                {error}
-              </p>
-            ) : null}
-            <Button
-              type="button"
-              size="lg"
-              className="w-full"
-              disabled={createAta.isPending || !signer}
-              onClick={() => void onCreate()}
-            >
-              {createAta.isPending ? (
-                <>
-                  <LoaderCircle className="size-4 animate-spin" />
-                  {copy.collect.settingUp}
-                </>
-              ) : (
-                <>
-                  <Plus className="size-4" />
-                  {error ? copy.common.tryAgain : copy.collect.createAta(token.symbol)}
-                </>
-              )}
-            </Button>
-          </div>
-        )}
+        <AtaSetupActions
+          expectedOwner={String(recipient)}
+          recipient={recipient}
+          mint={mint}
+          token={token}
+          createLabel={copy.collect.createAta(token.symbol)}
+          pendingLabel={copy.collect.settingUp}
+          setupFailed={copy.collect.setupFailed}
+          onSuccess={() => toast.success(copy.collect.readyToReceive)}
+        />
       </div>
     </div>
   );

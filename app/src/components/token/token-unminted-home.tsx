@@ -26,6 +26,7 @@ import {
   type PhygitalToken,
 } from "@/lib/phygital/token";
 import { copy } from "@/lib/copy/phygital";
+import { delegateStatusForAccessory } from "@/lib/tokens/mint-delegate";
 import type { PaymentTokenHolding } from "@/lib/tokens/payment-token";
 
 const ManagePayPanelLazy = dynamic(
@@ -134,7 +135,11 @@ export function TokenUnmintedHome({
   }
 
   if (nav.screen === "limit") {
-    const match = delegatesQuery.data?.byMint.get(nav.holding.mint);
+    const status = delegateStatusForAccessory(
+      delegatesQuery.data,
+      tokenAddress,
+      nav.holding.mint,
+    );
     return (
       <WalletSyncGate linkedOwner={owner}>
         <SpendingLimitPanel
@@ -143,9 +148,9 @@ export function TokenUnmintedHome({
           mint={nav.holding.mint}
           holding={nav.holding}
           walletMatch={
-            match?.token && String(match.token) === tokenAddress
-              ? match
-              : { token: address(tokenAddress), status: match?.status ?? null }
+            status
+              ? { token: address(tokenAddress), status }
+              : undefined
           }
           live
           onEnabled={onLimitEnabled}
