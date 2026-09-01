@@ -155,12 +155,6 @@ export const queryKeys = {
       [...queryKeys.tapVerify.all(), params] as const,
   },
 
-  apiKey: {
-    all: () => ["apiKey"] as const,
-    byWallet: (wallet: string | null) =>
-      [...queryKeys.apiKey.all(), wallet] as const,
-  },
-
   preauthRequired: {
     all: () => ["preauthRequired"] as const,
     byWallet: (wallet: string | null) =>
@@ -179,27 +173,6 @@ export const queryKeys = {
       [...queryKeys.phygitalToken.all(), "owner", owner] as const,
   },
 };
-
-/** Owner-scoped reads the user can force-refresh while staleTime hasn't elapsed. */
-export function isOwnerDataQuery(
-  queryKey: readonly unknown[],
-  owner: string,
-): boolean {
-  const root = queryKey[0];
-  if (
-    root === "holdings" ||
-    root === "delegateStatus" ||
-    root === "ownerPayDelegates" ||
-    root === "history" ||
-    root === "preauthRequired"
-  ) {
-    return queryKey[1] === owner;
-  }
-  if (root === "phygitalTokens") {
-    return queryKey[1] === "owner" && queryKey[2] === owner;
-  }
-  return false;
-}
 
 export function invalidateOwnerQueries(
   queryClient: QueryClient,

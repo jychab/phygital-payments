@@ -23,7 +23,7 @@ export function hasStoredApiKey(wallet: string): boolean {
 export function storeApiKey(wallet: string, apiKey: string): void {
   const trimmed = apiKey.trim();
   if (!trimmed) {
-    throw new Error("Paste it here first.");
+    throw new Error("Enter an API key first.");
   }
   if (typeof window === "undefined") {
     throw new Error(API_KEY_NOT_SET_UP);

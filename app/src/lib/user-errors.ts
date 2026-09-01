@@ -94,12 +94,12 @@ const RULES: Rule[] = [
   {
     test: /invalid or revoked API key/i,
     title: "That Didn’t Work",
-    body: "Check what you pasted and try again.",
+    body: "Authorize this phone in Pay settings, then try again.",
   },
   {
     test: /missing x-api-key header|missing preauth api key|Pay isn't set up on this phone|Pay isn't set up in this browser|Pay isn't turned on here/i,
     title: "Revibase Pay Isn’t Set Up",
-    body: "Generate or import an API key in this browser first.",
+    body: "Authorize this phone in Pay settings first.",
   },
   {
     test: /query param grantid is required|preauth grant not found/i,
@@ -124,7 +124,7 @@ const RULES: Rule[] = [
   {
     test: /tap proof expired|slot hash no longer valid/i,
     title: "Session ended",
-    body: "Hold your item here again, then tap the ring to verify.",
+    body: "Hold your item here again to verify.",
   },
   {
     test: /slot hashes|slot hash/i,
@@ -159,7 +159,7 @@ const RULES: Rule[] = [
   {
     test: /this tap timed out|this tap was already used/i,
     title: "Session ended",
-    body: "Hold your item here again, then tap the ring to verify.",
+    body: "Hold your item here again to verify.",
   },
   {
     test: /this is not the same NFC accessory/i,
@@ -169,7 +169,7 @@ const RULES: Rule[] = [
   {
     test: /couldn't verify this NFC accessory|message mismatch/i,
     title: "Couldn't verify",
-    body: "Hold your item flat against the back of your phone and tap the ring to try again.",
+    body: "Hold your item flat against the back of your phone and try again.",
   },
   {
     test: /isn't set up|not registered/i,
@@ -179,7 +179,7 @@ const RULES: Rule[] = [
   {
     test: /missing tap parameters|verification failed|invalid signature/i,
     title: "Couldn't verify",
-    body: "Hold your item flat against the back of your phone and tap the ring to try again.",
+    body: "Hold your item flat against the back of your phone and try again.",
   },
   {
     test: /connect your wallet|connect a wallet|sign in to continue/i,
@@ -189,7 +189,7 @@ const RULES: Rule[] = [
   {
     test: /NFC accessory not found|accessory not found|missing passkey/i,
     title: "Item not found",
-    body: "Hold your item here again, then tap the ring to verify.",
+    body: "Hold your item here again to verify.",
   },
   {
     test: /only classic spl|token-2022/i,

@@ -2,18 +2,11 @@
 
 import { Check, X } from "lucide-react";
 
-import {
-  HoldToPayHint,
-  HoldToPayIdleActions,
-} from "@/components/pay/hold-to-pay-actions";
 import { BackLink } from "@/components/shared/back-link";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
-import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
-import { StickyActions } from "@/components/shared/sticky-actions";
 import { TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import {
-  useHoldToPay,
   type HoldToPayPhase,
   type HoldToPaySuccess,
 } from "@/hooks/pay/use-hold-to-pay";
@@ -25,74 +18,7 @@ import {
 } from "@/lib/tokens/payment-token";
 import { shortAddress, cn } from "@/lib/utils";
 
-/**
- * Pay home: ready to tap, or Press Pay when Confirm Payments is on.
- * Mint and amount are chosen by Collect and capped on-chain by the token's
- * spending limit.
- */
-export function HoldToPayPanel({
-  owner,
-  confirmationRequired,
-  keyReady,
-  holdings,
-  onSetupPhone,
-  onManage,
-  onBack,
-}: {
-  owner: string;
-  confirmationRequired: boolean;
-  keyReady: boolean;
-  holdings?: PaymentTokenHolding[];
-  onSetupPhone?: () => void;
-  onManage?: () => void;
-  onBack?: () => void;
-}) {
-  const hold = useHoldToPay(owner);
-
-  if (hold.showPhase) {
-    return (
-      <HoldToPayPhaseView
-        phase={hold.phase}
-        paid={hold.paid}
-        secondsLeft={hold.secondsLeft}
-        holdings={holdings}
-        onCancelWindow={() => void hold.onCancelWindow()}
-        onReset={hold.resetToIdle}
-        onBack={onBack}
-      />
-    );
-  }
-
-  return (
-    <div className="flex flex-1 flex-col gap-6">
-      <div className="flex items-center gap-2">
-        {onBack ? <BackLink onClick={onBack} /> : null}
-        <QueryRefreshButton owner={owner} className="ml-auto" />
-      </div>
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
-        <p className="max-w-64 text-sm text-muted-foreground">
-          <HoldToPayHint
-            confirmationRequired={confirmationRequired}
-            keyReady={keyReady}
-          />
-        </p>
-      </div>
-
-      <StickyActions>
-        <HoldToPayIdleActions
-          confirmationRequired={confirmationRequired}
-          keyReady={keyReady}
-          busy={hold.busy}
-          onPay={() => void hold.onPay()}
-          onSetupPhone={onSetupPhone}
-          onManage={onManage}
-        />
-      </StickyActions>
-    </div>
-  );
-}
-
-/** Window / success / expired — authenticity yields the screen to this. */
+/** Active Pay window, success, and expiry states during hold-to-pay. */
 export function HoldToPayPhaseView({
   phase,
   paid,

@@ -96,7 +96,7 @@ describe("toUserFacingBody", () => {
 
   it("folds an invalid API key into one Shortcuts line", () => {
     expect(toUserFacingBody("Invalid or revoked API key")).toBe(
-      "That Didn’t Work. Check what you pasted and try again.",
+      "That Didn’t Work. Authorize this phone in Pay settings, then try again.",
     );
   });
 
@@ -108,7 +108,7 @@ describe("toUserFacingBody", () => {
 
   it("folds a missing apiKey header into one Shortcuts line", () => {
     expect(toUserFacingBody("Missing x-api-key header")).toBe(
-      "Revibase Pay Isn’t Set Up. Generate or import an API key in this browser first.",
+      "Revibase Pay Isn’t Set Up. Authorize this phone in Pay settings first.",
     );
   });
 });

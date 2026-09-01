@@ -6,23 +6,17 @@ const PAY_PARAM = "pay";
 
 const listeners = new Set<() => void>();
 
-export type TokenPayMode = "manage" | "setup";
-
 export type TokenPayState = {
   open: boolean;
-  mode: TokenPayMode | null;
 };
 
 /** Stable refs — `useSyncExternalStore` compares snapshots with Object.is. */
-const PAY_CLOSED: TokenPayState = { open: false, mode: null };
-const PAY_MANAGE: TokenPayState = { open: true, mode: "manage" };
-const PAY_SETUP: TokenPayState = { open: true, mode: "setup" };
+const PAY_CLOSED: TokenPayState = { open: false };
+const PAY_OPEN: TokenPayState = { open: true };
 
 function payStateFromLocation(): TokenPayState {
   const pay = new URLSearchParams(window.location.search).get(PAY_PARAM);
-  if (pay === "manage") return PAY_MANAGE;
-  if (pay === "setup") return PAY_SETUP;
-  // Unknown / legacy `pay=hold` → closed
+  if (pay === "manage") return PAY_OPEN;
   return PAY_CLOSED;
 }
 
@@ -42,13 +36,11 @@ function emitPayOpen() {
 export type OpenTokenPayArgs = {
   /** Token PDA — written to the URL so refresh can resume. */
   tokenAddress: string;
-  /** Setup = paste key (no Connect); Manage = Connect + settings. */
-  mode: TokenPayMode;
 };
 
 /**
- * Pay screens on `/token` after authenticity. URL keeps tap params when present
- * so Confirmed stays tied to cryptographic proof; adds `address` + `pay=manage|setup`
+ * Pay settings on `/token` after authenticity. URL keeps tap params when present
+ * so Confirmed stays tied to cryptographic proof; adds `address` + `pay=manage`
  * for resume.
  */
 export function useTokenPayOpen(): [
@@ -68,8 +60,7 @@ export function useTokenPayOpen(): [
       url.searchParams.delete(PAY_PARAM);
     } else {
       url.searchParams.set("address", next.tokenAddress);
-      url.searchParams.set(PAY_PARAM, next.mode);
-      // Keep pk/s/c/n when present — Confirmed requires live tap verify.
+      url.searchParams.set(PAY_PARAM, "manage");
     }
 
     const href = `${url.pathname}${url.search}${url.hash}`;

@@ -9,7 +9,6 @@ import {
 } from "./persist";
 import {
   invalidatePhygitalTokenQueries,
-  isOwnerDataQuery,
   queryKeys,
 } from "./index";
 
@@ -61,34 +60,6 @@ describe("isPersistedQueryKey", () => {
     expect(isPersistedQueryKey(["ataStatus", "owner", "mint"])).toBe(false);
     expect(isPersistedQueryKey(["mintProgram", "mint"])).toBe(false);
     expect(isPersistedQueryKey(["preauthRequired", "owner"])).toBe(false);
-  });
-});
-
-describe("isOwnerDataQuery", () => {
-  it("matches owner-scoped live and default reads", () => {
-    expect(isOwnerDataQuery(["holdings", "owner"], "owner")).toBe(true);
-    expect(
-      isOwnerDataQuery(["delegateStatus", "owner", "token", "mint"], "owner"),
-    ).toBe(true);
-    expect(isOwnerDataQuery(["history", "owner"], "owner")).toBe(true);
-    expect(isOwnerDataQuery(["ownerPayDelegates", "owner"], "owner")).toBe(
-      true,
-    );
-    expect(isOwnerDataQuery(["phygitalTokens", "owner", "owner"], "owner")).toBe(
-      true,
-    );
-    expect(isOwnerDataQuery(["preauthRequired", "owner"], "owner")).toBe(true);
-  });
-
-  it("skips other wallets and one-shot queries", () => {
-    expect(isOwnerDataQuery(["holdings", "other"], "owner")).toBe(false);
-    expect(
-      isOwnerDataQuery(["phygitalTokens", "identifier", "pk"], "owner"),
-    ).toBe(false);
-    expect(isOwnerDataQuery(["tapVerify", "pk=1"], "owner")).toBe(false);
-    expect(isOwnerDataQuery(["payContext", "owner"], "owner")).toBe(false);
-    expect(isOwnerDataQuery(["verifiedTokens"], "owner")).toBe(false);
-    expect(isOwnerDataQuery(["dasCollectible", "mint"], "owner")).toBe(false);
   });
 });
 

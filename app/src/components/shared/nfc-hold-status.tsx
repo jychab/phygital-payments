@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { CollectibleOrb } from "@/components/token/collectible-orb";
+import { copyBlockClass, ctaBlockClass } from "@/lib/layout";
 import { galleryAnimate, staggerStyle } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -14,11 +15,6 @@ export function NfcHoldStatus({
   busy = false,
   size = "md",
   tone = "default",
-  onRingClick,
-  ringAriaLabel,
-  onTitleClick,
-  titleAriaLabel,
-  titleHint,
   action,
   header,
   imageSrc,
@@ -31,14 +27,6 @@ export function NfcHoldStatus({
   size?: "md" | "lg";
   /** Success morphs the ring into the green check (same stage as Hold). */
   tone?: "default" | "success";
-  /** When set, the ring is the control (browser needs a gesture for WebAuthn). */
-  onRingClick?: () => void;
-  ringAriaLabel?: string;
-  /** When set, the title is the control (e.g. Confirmed → re-check). */
-  onTitleClick?: () => void;
-  titleAriaLabel?: string;
-  /** Hint below a tappable title (e.g. "Tap to verify again"). */
-  titleHint?: string;
   action?: ReactNode;
   header?: ReactNode;
   /** DAS mint art for the circular hold target; NFC glyph if missing. */
@@ -66,40 +54,20 @@ export function NfcHoldStatus({
         pulsing={pulsing}
         busy={busy}
         tone={tone}
-        onClick={onRingClick}
-        ariaLabel={ringAriaLabel ?? title}
         style={staggerStyle(base)}
       />
       <div
-        className={cn("w-full max-w-72 space-y-1", galleryAnimate.rise)}
+        className={cn(copyBlockClass, "space-y-1", galleryAnimate.rise)}
         style={staggerStyle(base + 1)}
       >
-        {onTitleClick ? (
-          <button
-            type="button"
-            onClick={onTitleClick}
-            aria-label={titleAriaLabel ?? title}
-            className={cn(
-              titleClassName,
-              "mx-auto block rounded-lg border border-dashed border-success/30 px-3 py-1 transition-colors hover:bg-success/10 active:scale-[0.98]",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-            )}
-          >
-            {title}
-          </button>
-        ) : (
-          <p className={titleClassName}>{title}</p>
-        )}
-        {titleHint ? (
-          <p className="text-xs text-success/80">{titleHint}</p>
-        ) : null}
+        <p className={titleClassName}>{title}</p>
         {body ? (
           <p className="text-sm text-muted-foreground">{body}</p>
         ) : null}
       </div>
       {action ? (
         <div
-          className={cn("w-full max-w-xs", galleryAnimate.rise)}
+          className={cn(ctaBlockClass, galleryAnimate.rise)}
           style={staggerStyle(base + 2)}
         >
           {action}

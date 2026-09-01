@@ -9,7 +9,6 @@ import { AmountField } from "@/components/shared/amount-field";
 import { BackLink } from "@/components/shared/back-link";
 import { StickyActions } from "@/components/shared/sticky-actions";
 import { ExpectedWalletConnect } from "@/components/shared/wallet-notices";
-import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { TokenSymbol } from "@/components/shared/token-chip";
 import { Button } from "@/components/ui/button";
 import { GateMessage } from "@/components/layout/gate-message";
@@ -31,7 +30,6 @@ import {
 } from "@/lib/tokens/payment-token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { useExpectedWallet } from "@/hooks/wallet/use-expected-wallet";
-import { shortAddress } from "@/lib/utils";
 
 const DEFAULT_LIMIT_AMOUNT = "50";
 
@@ -56,7 +54,6 @@ export function SpendingLimitPanel({
   live = true,
   onEnabled,
   onBack,
-  onSkip,
 }: {
   owner: string;
   tokenAddress: string;
@@ -67,7 +64,6 @@ export function SpendingLimitPanel({
   live?: boolean;
   onEnabled?: () => void;
   onBack?: () => void;
-  onSkip?: () => void;
 }) {
   const { address: walletAddress, matched, ownerShort } =
     useExpectedWallet(owner);
@@ -160,41 +156,20 @@ export function SpendingLimitPanel({
     busy || !amount || limitRaw == null || !matched || needsBalance;
 
   if (needsBalance) {
-    const skipOrBack = onSkip ? (
-      <Button
-        type="button"
-        variant="ghost"
-        size="lg"
-        className="w-full max-w-xs"
-        onClick={onSkip}
-      >
-        Not Now
-      </Button>
-    ) : onBack ? (
-      <Button
-        type="button"
-        variant="ghost"
-        size="lg"
-        className="w-full max-w-xs"
-        onClick={onBack}
-      >
-        Back
-      </Button>
-    ) : null;
-
     return (
       <div className="flex flex-1 flex-col gap-6">
-        <div className="flex items-center gap-2">
-          {onBack ? <BackLink onClick={onBack} /> : null}
-          <QueryRefreshButton owner={owner} className="ml-auto" />
-        </div>
+        {onBack ? (
+          <div className="flex items-center gap-2">
+            <BackLink onClick={onBack} />
+          </div>
+        ) : null}
         <GateMessage
           icon={<Coins className="size-5 text-muted-foreground" />}
           title={`Add ${token.symbol} first`}
           body={
             isDefaultMint(mint)
-              ? "Add USDC to this wallet, then tap refresh."
-              : "Add some of this token to this wallet, then tap refresh."
+              ? "Add USDC to this wallet first."
+              : "Add some of this token to this wallet first."
           }
           action={
             <div className="flex w-full max-w-xs flex-col gap-2">
@@ -205,7 +180,17 @@ export function SpendingLimitPanel({
                   disabled={busy}
                 />
               ) : null}
-              {skipOrBack}
+              {onBack ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="lg"
+                  className="w-full max-w-xs"
+                  onClick={onBack}
+                >
+                  Back
+                </Button>
+              ) : null}
             </div>
           }
         />
@@ -215,17 +200,18 @@ export function SpendingLimitPanel({
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <div className="flex items-center gap-2">
-        {onBack ? <BackLink onClick={onBack} /> : null}
-        <QueryRefreshButton owner={owner} className="ml-auto" />
-      </div>
+      {onBack ? (
+        <div className="flex items-center gap-2">
+          <BackLink onClick={onBack} />
+        </div>
+      ) : null}
 
       <div className="space-y-1.5 text-center">
         <h1 className="font-(family-name:--font-display) text-2xl tracking-tight">
-          Set Spending Limit
+          Spending limit
         </h1>
-        <p className="mx-auto max-w-64 text-sm text-muted-foreground">
-          Payments from this accessory can use up to this much{" "}
+        <p className="mx-auto max-w-72 text-sm text-muted-foreground">
+          This accessory can spend up to this much{" "}
           <TokenSymbol
             token={token}
             size="xs"
@@ -249,11 +235,17 @@ export function SpendingLimitPanel({
       />
 
       <p className="flex items-center justify-center gap-1.5 text-center text-[11px] tabular-nums text-muted-foreground">
-        From {shortAddress(owner, 4)}
+        From this wallet
         {status ? (
           <>
             <span>·</span>
             <span>{status.balanceUi}</span>
+            <TokenSymbol token={token} size="xs" />
+          </>
+        ) : holding ? (
+          <>
+            <span>·</span>
+            <span>{holding.balanceUi}</span>
             <TokenSymbol token={token} size="xs" />
           </>
         ) : null}
@@ -299,17 +291,6 @@ export function SpendingLimitPanel({
             disabled={busy}
           >
             {revoke.isPending ? "Removing…" : "Remove spending limit"}
-          </Button>
-        ) : null}
-        {onSkip ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            className="w-full"
-            onClick={onSkip}
-          >
-            Not Now
           </Button>
         ) : null}
       </StickyActions>

@@ -45,8 +45,6 @@ function ClaimHoldChrome({
   orbSrc,
   orbAlt,
   pulsing,
-  onOrbClick,
-  orbAriaLabel,
   title,
   body,
   extra,
@@ -55,8 +53,6 @@ function ClaimHoldChrome({
   orbSrc: string | null;
   orbAlt: string;
   pulsing: boolean;
-  onOrbClick?: () => void;
-  orbAriaLabel?: string;
   title: string;
   body: string;
   extra?: ReactNode;
@@ -70,8 +66,6 @@ function ClaimHoldChrome({
           alt={orbAlt}
           size="lg"
           pulsing={pulsing}
-          onClick={onOrbClick}
-          ariaLabel={orbAriaLabel}
           style={staggerStyle(0)}
         />
         <MotionSection
@@ -275,8 +269,6 @@ export function ClaimPanel({
             orbSrc={orbSrc}
             orbAlt={orbAlt}
             pulsing
-            onOrbClick={() => void onCapture()}
-            orbAriaLabel={copy.holdToAdd}
             title={title}
             body={copy.claimReadyBody(noun)}
             extra={error ? <InlineError>{error}</InlineError> : null}

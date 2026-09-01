@@ -49,7 +49,7 @@ export async function GET(req: Request) {
       return json(
         {
           isVerified: false,
-          error: "This tap timed out. Hold your item here again, then tap the ring to verify.",
+          error: "This tap timed out. Hold your item here again to verify.",
         },
         409,
       );

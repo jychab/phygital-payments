@@ -1,17 +1,16 @@
 import {
   clearApiKey,
   readApiKey,
-  storeApiKey,
 } from "@/lib/pay/api-key-store";
 import { QueryHttpError, queryFetch } from "@/lib/queries/http";
 
-export async function verifyApiKey(
+async function verifyApiKey(
   wallet: string,
   apiKey: string,
 ): Promise<void> {
   const trimmed = apiKey.trim();
   if (!trimmed) {
-    throw new Error("Paste it here first.");
+    throw new Error("Missing API key.");
   }
   const res = await queryFetch("/api/preauth/verify", {
     method: "POST",
@@ -29,15 +28,6 @@ export async function verifyApiKey(
     }
     throw error;
   }
-}
-
-export async function verifyAndStoreApiKey(
-  wallet: string,
-  apiKey: string,
-): Promise<void> {
-  const trimmed = apiKey.trim();
-  await verifyApiKey(wallet, trimmed);
-  storeApiKey(wallet, trimmed);
 }
 
 export async function verifyStoredApiKey(wallet: string): Promise<boolean> {

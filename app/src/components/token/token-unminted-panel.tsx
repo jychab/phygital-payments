@@ -1,22 +1,29 @@
 "use client";
 
-import type { ReactNode } from "react";
+import Link from "next/link";
 
+import { AccessoryIdentityHeader } from "@/components/token/accessory-identity-header";
+import { AccessoryWalletHome } from "@/components/token/accessory-wallet-home";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
-import { CopyableAddress } from "@/components/shared/copyable-address";
-import { PhygitalTokenRefreshButton } from "@/components/shared/query-refresh-button";
-import { InlineError } from "@/components/shared/inline-error";
 import { StickyActions } from "@/components/shared/sticky-actions";
 import { Button } from "@/components/ui/button";
-import { copy } from "@/lib/copy/phygital";
+import { copy, payCopy } from "@/lib/copy/phygital";
 import { STICKY_ENTER_DELAY_MS } from "@/lib/motion";
+import {
+  deriveAccessoryPrimaryAction,
+  deriveAccessoryStatusLine,
+  accessoryHasSpendingLimit,
+  type AccessoryPrimaryKind,
+} from "@/lib/pay/accessory-pay-state";
+import type { OwnerPayDelegates } from "@/lib/tokens/mint-delegate";
+import type { PaymentTokenHolding } from "@/lib/tokens/payment-token";
 import {
   tokenAllowsPay,
   isUnclaimedToken,
   type PhygitalToken,
 } from "@/lib/phygital/token";
 
-/** Unminted-token panel — NFC ring + sticky claim / Verify / Pay CTAs. */
+/** Unminted accessory — wallet identity home or claim / verify surfaces. */
 export function TokenUnmintedPanel({
   token,
   liveConfirmed,
@@ -24,127 +31,175 @@ export function TokenUnmintedPanel({
   holdError,
   onHoldToCheck,
   onClaim,
-  payAction,
-  collectAction,
+  onEditLimit,
+  onOpenSettings,
+  receiveHref,
+  onPrimaryAction,
+  owner,
+  tokenAddress,
+  holdings,
+  delegates,
+  payLoading = false,
+  preConfirmationOn = false,
+  keyReady = false,
+  payBusy = false,
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
-  /** Collection open — Confirmed body is verified-owned, not live NFC. */
   fromCollection?: boolean;
   holdError?: string | null;
   onHoldToCheck?: () => void;
   onClaim?: () => void;
-  /** Integrated Hold-to-Pay actions (arm Pay / Set up / Manage). */
-  payAction?: ReactNode;
-  /** Merchant launcher (owned detail from Collection only). */
-  collectAction?: ReactNode;
+  onEditLimit: (holding: PaymentTokenHolding) => void;
+  onOpenSettings?: () => void;
+  receiveHref?: string;
+  onPrimaryAction: (kind: AccessoryPrimaryKind) => void;
+  owner: string;
+  tokenAddress: string;
+  holdings?: readonly PaymentTokenHolding[];
+  delegates?: OwnerPayDelegates;
+  payLoading?: boolean;
+  preConfirmationOn?: boolean;
+  keyReady?: boolean;
+  payBusy?: boolean;
 }) {
   const unclaimed = isUnclaimedToken(token);
   const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
-  const showPay =
-    token.isLocked && tokenAllowsPay(token) && payAction != null;
-  const showVerify = !liveConfirmed && Boolean(onHoldToCheck);
-  const confirmPresence =
-    liveConfirmed && onHoldToCheck ? onHoldToCheck : undefined;
-  const statusLine = liveConfirmed
-    ? fromCollection
-      ? copy.signedInAsOwner
-      : confirmPresence
-        ? copy.verifyAgainHint
-        : copy.confirmedJustNow
-    : showVerify
-      ? copy.notVerifiedHint
-      : copy.notVerifiedYet;
+  const canPay = token.isLocked && tokenAllowsPay(token);
+  const hasLimit = accessoryHasSpendingLimit(delegates, tokenAddress);
 
-  const hasSticky =
-    showVerify || canClaim || showPay || collectAction != null;
+  const primary = deriveAccessoryPrimaryAction({
+    token,
+    liveConfirmed,
+    canClaim,
+    preConfirmationOn,
+    keyReady,
+    hasLimit,
+    canPay,
+  });
 
+  const statusLine =
+    !unclaimed && liveConfirmed
+      ? deriveAccessoryStatusLine({
+          preConfirmationOn,
+          keyReady,
+          hasLimit,
+          canPay,
+        })
+      : null;
+
+  const showWalletHome = !unclaimed && !canClaim;
+  const verifyAgain = liveConfirmed && onHoldToCheck ? onHoldToCheck : undefined;
+  const receiveAsPrimary =
+    Boolean(receiveHref) && primary.kind === "none";
+
+  if (canClaim) {
+    return (
+      <div className="flex flex-1 flex-col gap-8">
+        <NfcHoldStatus
+          size="lg"
+          tone="default"
+          pulsing={false}
+          title={copy.addToWallet}
+          body={copy.claimReadyBody("accessory")}
+        />
+        <StickyActions enterDelayMs={STICKY_ENTER_DELAY_MS}>
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={onClaim}
+          >
+            {copy.addToWallet}
+          </Button>
+        </StickyActions>
+      </div>
+    );
+  }
+
+  if (!liveConfirmed && onHoldToCheck) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <NfcHoldStatus
+          size="lg"
+          title={copy.holdToCheck}
+          body={copy.notVerifiedHint}
+        />
+        <StickyActions enterDelayMs={STICKY_ENTER_DELAY_MS}>
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={onHoldToCheck}
+          >
+            {copy.holdToCheck}
+          </Button>
+        </StickyActions>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-1 flex-col">
-      <NfcHoldStatus
-        size="lg"
-        tone="success"
-        pulsing={false}
-        title={liveConfirmed ? copy.verified : copy.notVerified}
-        body={statusLine}
-        onTitleClick={confirmPresence}
-        titleAriaLabel={
-          confirmPresence ? copy.confirmedRecheckAria : undefined
-        }
-        titleHint={confirmPresence ? copy.verifyAgain : undefined}
-        action={
-          <TokenUnmintedStatus
-            token={token}
-            unclaimed={unclaimed}
-            owner={String(token.currentOwner)}
-            holdError={holdError}
-          />
-        }
-      />
+    <div className="flex flex-1 flex-col gap-6 pb-2">
+      <div className="relative">
+        <AccessoryIdentityHeader
+          token={token}
+          owner={owner}
+          unclaimed={unclaimed}
+          liveConfirmed={liveConfirmed}
+          holdError={holdError}
+          onVerifyAgain={verifyAgain}
+          onOpenSettings={onOpenSettings}
+        />
+      </div>
 
-      {hasSticky ? (
+      {showWalletHome ? (
+        <AccessoryWalletHome
+          tokenAddress={tokenAddress}
+          holdings={holdings}
+          delegates={delegates}
+          loading={payLoading}
+          statusLine={statusLine}
+          onEditLimit={onEditLimit}
+        />
+      ) : null}
+
+      {fromCollection && liveConfirmed ? (
+        <p className="text-center text-xs text-muted-foreground">
+          {copy.signedInAsOwner}
+        </p>
+      ) : null}
+
+      {primary.kind !== "none" || receiveHref ? (
         <StickyActions enterDelayMs={STICKY_ENTER_DELAY_MS}>
-          {showVerify ? (
-            <Button
-              type="button"
-              variant={canClaim || showPay ? "outline" : "default"}
-              size="lg"
-              className="w-full"
-              onClick={onHoldToCheck}
-            >
-              {copy.holdToCheck}
-            </Button>
-          ) : null}
-          {canClaim ? (
+          {primary.kind !== "none" ? (
             <Button
               type="button"
               size="lg"
               className="w-full"
-              onClick={onClaim}
+              disabled={payBusy && primary.kind === "pay"}
+              onClick={() => onPrimaryAction(primary.kind)}
             >
-              {copy.addToWallet}
+              {payBusy && primary.kind === "pay" ? "…" : primary.label}
             </Button>
           ) : null}
-          {showPay ? payAction : null}
-          {collectAction}
+          {receiveHref ? (
+            <Button
+              type="button"
+              variant={receiveAsPrimary ? "default" : "ghost"}
+              size="lg"
+              className={
+                receiveAsPrimary
+                  ? "w-full"
+                  : "w-full text-muted-foreground"
+              }
+              asChild
+            >
+              <Link href={receiveHref}>{payCopy.receive}</Link>
+            </Button>
+          ) : null}
         </StickyActions>
       ) : null}
-    </div>
-  );
-}
-
-function TokenUnmintedStatus({
-  token,
-  unclaimed,
-  owner,
-  holdError,
-}: {
-  token: PhygitalToken;
-  unclaimed: boolean;
-  owner: string;
-  holdError?: string | null;
-}) {
-  return (
-    <div className="flex w-full max-w-xs flex-col items-center gap-2">
-      <div className="flex w-full items-center justify-center gap-0.5">
-        <span className="size-9 shrink-0" aria-hidden />
-        {unclaimed ? (
-          <p className="text-xs text-muted-foreground">{copy.notLinked}</p>
-        ) : (
-          <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <span>{copy.owner}</span>
-            <CopyableAddress
-              address={owner}
-              length={4}
-              label="owner wallet"
-              className="text-xs text-muted-foreground"
-            />
-          </p>
-        )}
-        <PhygitalTokenRefreshButton token={token} className="shrink-0" />
-      </div>
-      {holdError ? <InlineError>{holdError}</InlineError> : null}
     </div>
   );
 }

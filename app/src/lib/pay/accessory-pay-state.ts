@@ -1,0 +1,212 @@
+import { copy, payCopy } from "@/lib/copy/phygital";
+import {
+  isOwnerPayMintEnabled,
+  type OwnerPayMintMatch,
+  type OwnerPayDelegates,
+} from "@/lib/tokens/mint-delegate";
+import {
+  isDefaultMint,
+  type PaymentTokenHolding,
+} from "@/lib/tokens/payment-token";
+import { isUnclaimedToken, type PhygitalToken } from "@/lib/phygital/token";
+
+export type AccessoryPrimaryKind =
+  | "claim"
+  | "verify"
+  | "authorize"
+  | "pay"
+  | "none";
+
+export type AccessoryPrimaryAction = {
+  kind: AccessoryPrimaryKind;
+  label: string;
+};
+
+export type AccessoryStatusLine = {
+  text: string;
+  tone: "muted" | "primary";
+};
+
+export type AccessoryWalletHomeHeader = {
+  subtitle: string;
+  enabledSummary: string | null;
+};
+
+/** Whether this accessory has a spending limit on any verified token. */
+export function accessoryHasSpendingLimit(
+  delegates: OwnerPayDelegates | undefined,
+  tokenAddress: string,
+): boolean {
+  if (!delegates) return false;
+  for (const match of delegates.byMint.values()) {
+    if (
+      String(match.token) === tokenAddress &&
+      isOwnerPayMintEnabled(match)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function mintMatchForAccessory(
+  delegates: OwnerPayDelegates | undefined,
+  tokenAddress: string,
+  mint: string,
+): OwnerPayMintMatch | undefined {
+  const match = delegates?.byMint.get(mint);
+  if (!match || String(match.token) !== tokenAddress) return undefined;
+  return match;
+}
+
+/** Whether Pay is enabled for this mint on this accessory. */
+export function accessoryMintPayEnabled(
+  delegates: OwnerPayDelegates | undefined,
+  tokenAddress: string,
+  mint: string,
+): boolean {
+  const match = mintMatchForAccessory(delegates, tokenAddress, mint);
+  return Boolean(match && isOwnerPayMintEnabled(match));
+}
+
+/** Count of holdings with an active spending limit on this accessory. */
+export function accessoryEnabledMintCount(
+  holdings: readonly PaymentTokenHolding[] | undefined,
+  delegates: OwnerPayDelegates | undefined,
+  tokenAddress: string,
+): number {
+  if (!holdings?.length) return 0;
+  return holdings.filter((h) =>
+    accessoryMintPayEnabled(delegates, tokenAddress, h.mint),
+  ).length;
+}
+
+/** Subtitle for an enabled token row — spending limit amount only. */
+export function accessoryMintPaySubtitle(
+  delegates: OwnerPayDelegates | undefined,
+  tokenAddress: string,
+  mint: string,
+): string | null {
+  const match = mintMatchForAccessory(delegates, tokenAddress, mint);
+  if (!match || !isOwnerPayMintEnabled(match)) {
+    return null;
+  }
+  const amount = match.status?.delegatedAmountUi;
+  if (!amount) return null;
+  return payCopy.spendingLimitSubtitle(amount, isDefaultMint(mint));
+}
+
+/** Task header above the token list on the accessory wallet home. */
+export function deriveAccessoryWalletHomeHeader(args: {
+  hasLimit: boolean;
+  holdingsEmpty: boolean;
+  enabledCount: number;
+  totalCount: number;
+}): AccessoryWalletHomeHeader {
+  const { hasLimit, holdingsEmpty, enabledCount, totalCount } = args;
+
+  if (holdingsEmpty) {
+    return {
+      subtitle: payCopy.noTokensSubtitle,
+      enabledSummary: null,
+    };
+  }
+
+  const enabledSummary =
+    hasLimit &&
+    totalCount > 1 &&
+    enabledCount > 0 &&
+    enabledCount < totalCount
+      ? payCopy.enabledCountSummary(enabledCount, totalCount)
+      : null;
+
+  if (!hasLimit) {
+    return {
+      subtitle: payCopy.enablePaySubtitle,
+      enabledSummary: null,
+    };
+  }
+
+  return {
+    subtitle: payCopy.payTokensSubtitle,
+    enabledSummary,
+  };
+}
+
+/** Enabled first, then USDC, then symbol. */
+export function sortAccessoryHoldings(
+  holdings: readonly PaymentTokenHolding[],
+  delegates: OwnerPayDelegates | undefined,
+  tokenAddress: string,
+): PaymentTokenHolding[] {
+  return [...holdings].sort((a, b) => {
+    const aEnabled = accessoryMintPayEnabled(delegates, tokenAddress, a.mint);
+    const bEnabled = accessoryMintPayEnabled(delegates, tokenAddress, b.mint);
+    if (aEnabled !== bEnabled) return aEnabled ? -1 : 1;
+    const aUsdc = isDefaultMint(a.mint);
+    const bUsdc = isDefaultMint(b.mint);
+    if (aUsdc !== bUsdc) return aUsdc ? -1 : 1;
+    return a.symbol.localeCompare(b.symbol);
+  });
+}
+
+export function deriveAccessoryPrimaryAction(args: {
+  token: PhygitalToken;
+  liveConfirmed: boolean;
+  canClaim: boolean;
+  preConfirmationOn: boolean;
+  keyReady: boolean;
+  hasLimit: boolean;
+  canPay: boolean;
+}): AccessoryPrimaryAction {
+  const {
+    token,
+    liveConfirmed,
+    canClaim,
+    preConfirmationOn,
+    keyReady,
+    hasLimit,
+    canPay,
+  } = args;
+
+  if (isUnclaimedToken(token) || canClaim) {
+    return { kind: "claim", label: copy.addToWallet };
+  }
+  if (!liveConfirmed) {
+    return { kind: "verify", label: copy.holdToCheck };
+  }
+  if (canPay && preConfirmationOn && !keyReady && hasLimit) {
+    return { kind: "authorize", label: payCopy.authorizePhone };
+  }
+  if (canPay && preConfirmationOn && keyReady && hasLimit) {
+    return { kind: "pay", label: payCopy.pay };
+  }
+  return { kind: "none", label: "" };
+}
+
+export function deriveAccessoryStatusLine(args: {
+  preConfirmationOn: boolean;
+  keyReady: boolean;
+  hasLimit: boolean;
+  canPay: boolean;
+}): AccessoryStatusLine | null {
+  const { preConfirmationOn, keyReady, hasLimit, canPay } = args;
+  if (!canPay || !hasLimit) return null;
+
+  if (preConfirmationOn && !keyReady) {
+    return {
+      text: payCopy.holdNeedsKey,
+      tone: "muted",
+    };
+  }
+  if (preConfirmationOn && keyReady) {
+    return {
+      text: payCopy.preConfirmationOnHint,
+      tone: "primary",
+    };
+  }
+  return {
+    text: payCopy.preConfirmationOffHint,
+    tone: "muted",
+  };
+}

@@ -7,6 +7,7 @@ import { ClaimPanel } from "@/components/claim/claim-panel";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { StageTransition } from "@/components/shared/stage-transition";
+import { Button } from "@/components/ui/button";
 import { useHoldToCheck } from "@/hooks/token/use-hold-to-check";
 import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
 import { copy } from "@/lib/copy/phygital";
@@ -70,17 +71,20 @@ function VerifyFailedCeremony({
   return (
     <NfcHoldStatus
       size="lg"
-      pulsing
+      pulsing={false}
       title={recheck ? copy.confirmFailed : copy.verifyFailed}
       body={errorMessage}
       imageSrc={collectible?.image}
       imageAlt={collectible?.name ?? ""}
-      onRingClick={onRetry}
-      ringAriaLabel={copy.verifyFailedRetryAria}
       action={
-        <p className="text-center text-xs text-muted-foreground">
-          {copy.verifyFailedRetry}
-        </p>
+        <Button
+          type="button"
+          size="lg"
+          className="w-full"
+          onClick={onRetry}
+        >
+          {copy.tryAgain}
+        </Button>
       }
     />
   );

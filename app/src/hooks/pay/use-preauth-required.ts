@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
-import { markApiKeyVerified } from "@/hooks/pay/use-verified-api-key";
+import { markApiKeyVerified } from "@/lib/pay/mark-api-key-verified";
 import { useWalletSignMessage } from "@/hooks/wallet/use-wallet-sign-message";
 import { bytesToBase64 } from "@/lib/crypto/base64";
 import { readApiKey, storeApiKey } from "@/lib/pay/api-key-store";

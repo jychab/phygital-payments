@@ -7,7 +7,7 @@ import type { PhygitalToken } from "@/lib/phygital/token";
 import { tokenAllowsPay } from "@/lib/phygital/token";
 import { cn, shortAddress } from "@/lib/utils";
 
-/** NFC icon + passkey label + lock state — Accessories list and Pay accessory picker. */
+/** NFC icon + passkey label + lock state — Accessories list rows. */
 export function AccessoryIdentity({
   token,
   className,

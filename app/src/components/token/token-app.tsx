@@ -5,8 +5,7 @@ import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
-import { CollectionVerifiedSeed } from "@/components/token/collection-verified-seed";
-import { TokenByAddressHome } from "@/components/token/token-by-address-home";
+import { TokenAddressRoute } from "@/components/token/token-address-route";
 import { TokenMintedHome } from "@/components/token/token-minted-home";
 import { TokenNfcApp } from "@/components/token/token-nfc-app";
 import { TokenUnmintedHome } from "@/components/token/token-unminted-home";
@@ -87,30 +86,22 @@ export function TokenApp() {
 
   if (address) {
     return (
-      <TokenRouteShell layout="gallery">
-        <TokenByAddressHome
-          tokenAddress={address}
-          renderHome={({ token: loaded }) => (
-            <CollectionVerifiedSeed
-              owner={String(loaded.currentOwner)}
-              fromCollection={fromCollection}
-            >
-              {({ fromCollection: fromHub, collectionVerified }) => (
-                <TokenHome
-                  token={loaded}
-                  fromCollection={fromHub}
-                  liveConfirmed={collectionVerified}
-                />
-              )}
-            </CollectionVerifiedSeed>
-          )}
-        />
-      </TokenRouteShell>
+      <TokenAddressRoute
+        tokenAddress={address}
+        fromCollection={fromCollection}
+        renderHome={({ token, fromCollection: fromHub, liveConfirmed }) => (
+          <TokenHome
+            token={token}
+            fromCollection={fromHub}
+            liveConfirmed={liveConfirmed}
+          />
+        )}
+      />
     );
   }
 
   return (
-    <TokenRouteShell layout="gallery">
+    <TokenRouteShell layout="compact">
       <TokenNfcApp
         copy={TOKEN_NFC_COPY}
         renderHome={({ token: loaded, liveConfirmed }) => (

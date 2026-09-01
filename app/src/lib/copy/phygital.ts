@@ -44,32 +44,23 @@ export const products = {
   },
 } as const;
 
-export type ProductId = keyof typeof products;
-
-/** Document titles for object / task surfaces. */
-export const pageTitles = {
-  home: products.collection.title,
-  token: "Token — Revibase",
-  collect: products.collect.title,
-} as const;
-
-  /** Shared product copy — keep verbs and status labels consistent. */
+/** Shared product copy — keep verbs and status labels consistent. */
 export const copy = {
   /** First-time authenticity CTA in the sticky dock. */
   holdToCheck: "Verify",
-  /** Cold NFC / Hold-to-Check landing (tap the ring). */
+  /** Cold NFC / Hold-to-Check landing — hold instruction; Verify is the button. */
   verifyIntroBody:
-    "Hold your item flat against the back of this phone, then tap the ring.",
+    "Hold your item flat against the back of this phone.",
   /** Tap URL or verification session timed out — user must hold again. */
   verifySessionExpiredTitle: "Session ended",
   verifySessionExpiredBody:
-    "Your last check timed out. Hold your item here again, then tap the ring to continue.",
+    "Your last check timed out. Hold your item here again.",
   /** Live re-check after Verified (ceremony title). */
   confirmPresence: "Verifying...",
   confirmPresenceBody:
     "Hold your item flat against the back of this phone.",
   /** Shown under Verified when tappable for re-verify. */
-  confirmPresenceHint: "Tap to verify again",
+  verifyAgain: "Verify again",
   /** After a successful re-verify from Verified. */
   confirmedAgain: "Verified",
   confirmedAgainBody: "This item is authentic.",
@@ -77,12 +68,10 @@ export const copy = {
   verifyFailed: "Couldn't verify",
   confirmFailed: "Couldn't verify",
   verifyFailedBody:
-    "Hold your item flat against the back of your phone and tap the ring to try again.",
-  verifyFailedRetry: "Tap the ring to try again.",
-  /** Accessible name for failed-screen ring retry. */
-  verifyFailedRetryAria: "Tap to verify again.",
+    "Hold your item flat against the back of your phone and try again.",
+  tryAgain: "Try again",
   /** Accessible name when Verified row is tappable. */
-  confirmedRecheckAria: "Verified. Tap to verify again.",
+  confirmedRecheckAria: "Verified. Verify again.",
   holdStill: "Hold still…",
   holdStillBody: "Keep your item against the phone until this finishes.",
   connectWallet: "Connect wallet",
@@ -91,25 +80,18 @@ export const copy = {
   backToCollection: "Back to Collection",
   /** Metadata row labels. */
   verification: "Verification",
-  cardOwner: "Card Owner",
   linked: "Linked",
   mintOwner: "Mint Owner",
   cardId: "Card ID",
   cardIdHint:
     "The card’s secp256r1 public key (credential ID) — the unique identity of this physical card.",
-  owner: "Owner",
   rarity: "Rarity",
   notVerified: "Not verified",
   verified: "Verified",
   notVerifiedHint:
-    "Tap Verify and hold your item here to confirm it's authentic.",
-  verifyAgain: "Verify again",
+    "Hold your item here, then press Verify to confirm it's authentic.",
   verifyAgainHint: "Hold here to re-check",
   signedInAsOwner: "You're signed in as the owner.",
-  /** Unminted status when not yet verified this visit. */
-  notVerifiedYet: "Not verified yet.",
-  /** Tap-URL proof — authentic open, not a fresh presence check. */
-  confirmedJustNow: "Verified from your tap",
   connectCollectionBody: "Connect to see your cards and accessories.",
   /** Claim ready primary — NFC hold is in the body, not the button. */
   holdToAdd: "Continue",
@@ -122,26 +104,19 @@ export const copy = {
   claimConfirmTitle: "Link your wallet",
   openInBrowser:
     "Open this link in your phone’s browser to continue.",
-  holdCardBody: "Hold your card flat against the back of this phone, then tap the ring.",
-  holdItemBody:
-    "Hold your item flat against the back of this phone, then tap the ring.",
   verifyingChip: "Checking your item…",
   notSetUpTitle: "Not set up",
   notSetUpBody: "This item isn't registered on Revibase yet.",
   amountLocked: "Amount set by payment link",
   collect: products.collect.name,
-  getPaid: "Get paid",
   about: "About",
   attributes: "Attributes",
   shortcuts: "Shortcuts",
   details: "Details",
-  mintDetails: "Mint details",
-  cardDetails: "Card details",
   collection: "Collection",
   showMore: "Show more",
   showLess: "Show less",
   mintAddress: "Mint",
-  collectionAddress: "Collection",
   notLinked: "Not linked",
 } as const;
 
@@ -157,31 +132,42 @@ export {
  * Product name on setup/settings; short **Pay** only for the arm-payment action.
  */
 export const payCopy = {
-  product: "Revibase Pay",
   /** Primary action — arm a payment window. */
   pay: "Pay",
-  setUp: "Set up Revibase Pay",
-  manage: "Manage Revibase Pay",
-  settings: "Manage Revibase Pay",
-  connectLinked: "Connect linked wallet",
-  manageConnectBody: (ownerShort: string) =>
-    `Connect ${ownerShort} to manage Revibase Pay on this accessory.`,
-  enableTitle: "Enable Revibase Pay",
-  enableSubtitle:
-    "Generate a key for this browser, or import one you already have.",
-  setUpSubtitle: "Import a key from another browser, or generate a new one.",
-  finishSetupTitle: "Finish Revibase Pay setup",
-  finishSetupKeyBody:
-    "Confirmation is on. Set up Revibase Pay in this browser to continue.",
-  finishSetupLimitBody: "Connect the linked wallet to set a spending limit.",
+  paySettings: "Pay settings",
+  receive: "Receive",
+  accessory: "Accessory",
+  linkedWallet: "Linked wallet",
+  payEnabled: "Enabled",
+  enablePaySubtitle:
+    "Choose a token from your linked wallet. Set how much this accessory can spend.",
+  payTokensSubtitle:
+    "Balances in your linked wallet. Tap to change a limit.",
+  noTokensSubtitle: "Fund this wallet to enable Pay on a token.",
+  enabledCountSummary: (enabled: number, total: number) =>
+    `${enabled} of ${total} tokens enabled for Pay`,
+  spendingLimitSubtitle: (amount: string, isUsdc: boolean) =>
+    isUsdc ? `$${amount} spending limit` : `${amount} spending limit`,
+  enableToken: "Enable",
+  editLimit: "Edit",
+  authorizePhone: "Authorize this phone",
+  preConfirmation: "Pre-confirmation",
+  preConfirmationOnHint: "Press Pay here first, then hold.",
+  preConfirmationOffHint: "Hold your accessory at their phone.",
+  preConfirmationOnSubtitle:
+    "Press Pay here first, then hold. The window is armed before money moves.",
+  preConfirmationOffSubtitle:
+    "Hold the accessory at their phone. No step on this phone.",
+  thisPhone: "This phone",
+  authorizeTitle: "Authorize this phone",
+  authorizeSubtitle:
+    "Sign with your linked wallet to enable pre-confirmation on this phone.",
+  rotateTitle: "Replace this phone’s key?",
+  rotateSubtitle: "Other phones will stop working. This phone stays on.",
   holdNeedsKey:
-    "Confirmation is on. Generate or import an API key to enable Revibase Pay.",
-  holdReady: "Press Pay, then hold your accessory to their phone.",
-  holdConfirmOff: "Hold your accessory to their phone to pay.",
-  onToast: "Revibase Pay is on",
-  importKey: "Import API key",
-  generateKey: "Generate API key",
-  rotateKey: "Rotate API key",
-  manageKey: "Manage API key",
+    "Pre-confirmation is on. Authorize this phone to enable Pay.",
+  onToast: "Pay is ready on this phone",
+  issueKey: "Authorize this phone",
+  rotateKey: "Rotate key",
   loading: "Loading Pay…",
 } as const;

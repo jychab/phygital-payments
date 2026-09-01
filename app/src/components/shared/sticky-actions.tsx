@@ -2,6 +2,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 
+import { stickyDockClass } from "@/lib/layout";
 import { galleryAnimate } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +30,8 @@ export function StickyActions({
   return (
     <div
       className={cn(
-        "sticky bottom-0 z-20 mt-auto flex w-full max-w-lg flex-col gap-2.5 self-center",
+        "sticky bottom-0 z-20 mt-auto flex flex-col gap-2.5",
+        stickyDockClass,
         "border-t border-border/40 bg-background/95 pt-3 backdrop-blur-sm",
         "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
         animate && galleryAnimate.slideUp,

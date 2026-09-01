@@ -33,8 +33,8 @@ function isAbortError(error: unknown): boolean {
 }
 
 /**
- * Arm / cancel / wait for a Confirm-Payments preauth window.
- * Shared by HoldToPayPanel and authenticity-integrated Pay CTAs.
+ * Arm / cancel / wait for a pre-confirmation window.
+ * Used by the unminted accessory Pay flow.
  */
 export function useHoldToPay(owner: string) {
   const queryClient = useQueryClient();

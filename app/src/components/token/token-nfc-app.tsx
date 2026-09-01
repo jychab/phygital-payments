@@ -7,6 +7,7 @@ import { useIsRestoring } from "@tanstack/react-query";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { LoadingStatus } from "@/components/shared/loading-status";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
+import { Button } from "@/components/ui/button";
 import { copy as productCopy } from "@/lib/copy/phygital";
 import { useAuthenticateToken } from "@/hooks/token/use-authenticate-token";
 import {
@@ -147,14 +148,18 @@ function HoldToCheckLanding({
     return (
       <NfcHoldStatus
         size="lg"
+        pulsing={false}
         title={productCopy.verifyFailed}
         body={error || productCopy.verifyFailedBody}
-        onRingClick={() => void onCheck()}
-        ringAriaLabel={productCopy.holdToCheck}
         action={
-          <p className="text-center text-xs text-muted-foreground">
-            {productCopy.verifyFailedRetry}
-          </p>
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={() => void onCheck()}
+          >
+            {productCopy.tryAgain}
+          </Button>
         }
       />
     );
@@ -172,8 +177,16 @@ function HoldToCheckLanding({
       size="lg"
       title={landingTitle}
       body={landingBody}
-      onRingClick={() => void onCheck()}
-      ringAriaLabel={productCopy.holdToCheck}
+      action={
+        <Button
+          type="button"
+          size="lg"
+          className="w-full"
+          onClick={() => void onCheck()}
+        >
+          {productCopy.holdToCheck}
+        </Button>
+      }
     />
   );
 }

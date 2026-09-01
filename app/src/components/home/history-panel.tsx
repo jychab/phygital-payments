@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 
 import { TokenSymbol } from "@/components/shared/token-chip";
-import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import { useVerifiedTokens } from "@/hooks/tokens/use-payment-tokens";
 import { explorerTxUrl } from "@/lib/solana/cluster";
@@ -79,10 +78,7 @@ export function HistoryPanel({ owner }: { owner: string }) {
 
   return (
     <div className="flex flex-1 flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-foreground">Activity</p>
-        <QueryRefreshButton owner={owner} />
-      </div>
+      <p className="text-sm font-medium text-foreground">Activity</p>
 
       {loading ? (
         <div className="flex flex-1 items-center justify-center py-12 text-muted-foreground">

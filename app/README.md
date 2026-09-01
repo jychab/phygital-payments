@@ -71,13 +71,12 @@ Pay manage, and Collect ATA create. When a linked/recipient address is present,
 the connected wallet must match (`useExpectedWallet` / `WalletSyncGate`).
 The connected wallet is always passed as `owner` (not `recipient` / `expectedOwner`). Collect settles to `?recipient=` when present, otherwise the connected wallet.
 
-Shared Pay UI is `PayScreen` in `components/pay/`:
+Shared Pay UI lives in `components/pay/`:
 
-- `pay-screen.tsx` — orchestrator (spending limit → Pay home)
-- `hold-to-pay-panel.tsx` — ready to tap, or Press Pay when Confirm Payments is on
+- `manage-pay-panel.tsx` — pre-confirmation + this-phone authorization
+- `hold-to-pay-panel.tsx` — active Pay window, success, and expiry states
 - `spending-limit-panel.tsx` — per-accessory token allowance
-- `manage-pay-panel.tsx` — spending limits + Confirm Payments
-- `api-key-panel.tsx` — paste / issue / rotate (only after confirmation is on)
+- `api-key-panel.tsx` — issue or rotate this phone’s key (only after pre-confirmation is on)
 
 ## Modes
 
@@ -117,11 +116,11 @@ Cold entry shows **Hold to Check**. Signed NFC URLs verify silently, then show *
 
 Collection open (`/token?address=&from=collection`) uses the same home for that token’s mint state, with Back to Collection and a verified-owned Confirmed seed.
 
-API keys live in browser localStorage, keyed by wallet, and are only needed when Confirm Payments is on. **Manage API key** imports, generates, or rotates a key. Setting a spending limit requires a balance for that token in the linked wallet.
+API keys live in browser localStorage, keyed by wallet, and are only needed when pre-confirmation is on. **This phone** issues or rotates a key. Setting a spending limit requires a balance for that token in the linked wallet.
 
 ### Open a spending window (API key)
 
-In-app Pay calls `GET /api/preauth/open` with the stored API key **when Confirm Payments is on**. Integrators can do the same. Settlement does **not** require an open window unless that setting is on for the payer wallet.
+In-app Pay calls `GET /api/preauth/open` with the stored API key **when pre-confirmation is on**. Integrators can do the same. Settlement does **not** require an open window unless that setting is on for the payer wallet.
 
 ```
 GET /api/preauth/open

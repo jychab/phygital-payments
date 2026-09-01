@@ -10,7 +10,6 @@ import { GateMessage } from "@/components/layout/gate-message";
 import { AccessoryIdentity } from "@/components/shared/accessory-identity";
 import { LoadingStatus } from "@/components/shared/loading-status";
 import { MotionSection } from "@/components/shared/motion-section";
-import { QueryRefreshButton } from "@/components/shared/query-refresh-button";
 import { Button } from "@/components/ui/button";
 import { usePrefetchDasCollectibles } from "@/hooks/token/use-das-collectible";
 import { usePhygitalTokensByOwner } from "@/hooks/home/use-phygital-tokens-by-owner";
@@ -18,6 +17,7 @@ import { collectionDetailHref } from "@/lib/journey";
 import { tokenHasLinkedMint, type PhygitalToken } from "@/lib/phygital/token";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { cn } from "@/lib/utils";
+import { accessoryListClass, collectionGridClass } from "@/lib/layout";
 
 /** Collection hub — cards grid + accessories. */
 export function CollectionHome({ owner }: { owner: string }) {
@@ -76,7 +76,7 @@ function CollectionBody({
 
   return (
     <div className="flex flex-1 flex-col gap-8 pb-4">
-      <MotionSection className="flex items-start justify-between gap-3">
+      <MotionSection>
         <div className="min-w-0">
           <h1 className="text-display-xl tracking-tight md:text-[1.75rem] lg:text-3xl">
             Your Collection
@@ -88,12 +88,11 @@ function CollectionBody({
               : ""}
           </p>
         </div>
-        <QueryRefreshButton owner={owner} />
       </MotionSection>
 
       {cards.length > 0 ? (
         <section aria-label="Cards">
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-5">
+          <div className={collectionGridClass}>
             {cards.map((token, index) => (
               <BinderCardTile
                 key={token.address}
@@ -134,7 +133,7 @@ function AccessoriesSection({
         <h2 className="text-sm font-medium text-foreground">Accessories</h2>
         <span className="text-xs text-muted-foreground">{accessories.length}</span>
       </div>
-      <ul className="flex flex-col gap-2 lg:grid lg:grid-cols-2">
+      <ul className={accessoryListClass}>
         {accessories.map((token) => (
           <li key={token.address}>
             <AccessoryRow owner={owner} token={token} />
