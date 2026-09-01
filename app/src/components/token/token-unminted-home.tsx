@@ -72,7 +72,9 @@ export function TokenUnmintedHome({
   liveConfirmed?: boolean;
   fromCollection?: boolean;
 }) {
-  const session = useTokenClaimSession(tokenProp, liveConfirmedProp);
+  const session = useTokenClaimSession(tokenProp, liveConfirmedProp, {
+    autoOpenClaim: isUnclaimedToken(tokenProp),
+  });
   const queryClient = useQueryClient();
   const [{ open: showPaySettings }, setShowPaySettings] = useTokenPayOpen();
   const [nav, setNav] = useState<AccessoryNav>({ screen: "home" });

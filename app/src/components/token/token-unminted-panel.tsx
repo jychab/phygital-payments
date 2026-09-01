@@ -93,30 +93,6 @@ export function TokenUnmintedPanel({
   const receiveAsPrimary =
     Boolean(receiveHref) && primary.kind === "none";
 
-  if (canClaim) {
-    return (
-      <div className="flex flex-1 flex-col gap-8">
-        <NfcHoldStatus
-          size="lg"
-          tone="default"
-          pulsing={false}
-          title={copy.claim.addToWallet}
-          body={copy.claim.readyBody("accessory")}
-        />
-        <StickyActions enterDelayMs={STICKY_ENTER_DELAY_MS}>
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            onClick={onClaim}
-          >
-            {copy.claim.addToWallet}
-          </Button>
-        </StickyActions>
-      </div>
-    );
-  }
-
   if (!liveConfirmed && onHoldToCheck) {
     return (
       <div className="flex flex-1 flex-col">

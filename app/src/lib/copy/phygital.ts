@@ -119,7 +119,9 @@ export const copy = {
     stepConfirm: "Confirm",
     confirmTitle: "Choose owner wallet",
     readyBody: (noun: "card" | "accessory") =>
-      `Hold your ${noun} flat against the back of this phone, then connect a wallet.`,
+      `Hold your ${noun} flat against the back of this phone.`,
+    holdStepTitle: (noun: "card" | "accessory") => `Hold your ${noun}`,
+    holdStepBody: "Keep it flat against the back of this phone until it connects.",
     confirmBody: (noun: "card" | "accessory") =>
       `Connect the wallet that will own this ${noun}.`,
     moveToNewWallet: "Transfer to another wallet",

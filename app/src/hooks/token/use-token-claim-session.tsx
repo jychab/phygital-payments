@@ -24,13 +24,16 @@ import { cn } from "@/lib/utils";
 export function useTokenClaimSession(
   tokenProp: PhygitalToken,
   liveConfirmedProp = false,
+  options?: { autoOpenClaim?: boolean },
 ) {
   const [claimedOwner, setClaimedOwner] = useState<string | null>(null);
   const token: PhygitalToken = claimedOwner
     ? { ...tokenProp, currentOwner: toAddress(claimedOwner) }
     : tokenProp;
   const hold = useHoldToCheck(token, liveConfirmedProp);
-  const [showClaim, setShowClaim] = useState(false);
+  const [showClaim, setShowClaim] = useState(
+    () => options?.autoOpenClaim ?? false,
+  );
 
   return {
     token,

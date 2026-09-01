@@ -109,7 +109,6 @@ export function ClaimPanel({
   const [error, setError] = useState<string | null>(null);
   const [tap, setTap] = useState<CapturedTap | null>(null);
 
-  const title = unclaimed ? copy.claim.addToWallet : copy.claim.moveToNewWallet;
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const { collectible } = useResolvedDasCollectible(mint);
   const orbSrc = collectible?.image ?? null;
@@ -269,8 +268,8 @@ export function ClaimPanel({
             orbSrc={orbSrc}
             orbAlt={orbAlt}
             pulsing
-            title={title}
-            body={copy.claim.readyBody(noun)}
+            title={copy.claim.holdStepTitle(noun)}
+            body={copy.claim.holdStepBody}
             extra={error ? <InlineError>{error}</InlineError> : null}
             dock={
               <StickyActions animate={false}>
