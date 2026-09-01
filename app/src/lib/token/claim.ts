@@ -9,9 +9,7 @@ import type { PhygitalToken } from "@/lib/phygital/token";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { sendTransaction } from "@/lib/solana/tx";
 
-type TransferAuth = Awaited<
-  ReturnType<typeof authenticatePasskeyForTransfer>
->;
+type TransferAuth = Awaited<ReturnType<typeof authenticatePasskeyForTransfer>>;
 
 /** Pre-NFC checks from cached token view — run before showing NFC hold UI. */
 export function assertCaptureReady(
@@ -58,6 +56,7 @@ export async function finishClaim(args: {
   auth: TransferAuth;
   recipient: TransactionSigner;
 }): Promise<{ signature: string }> {
+  console.log(args.auth);
   const instructions = await completeTransfer(
     args.session,
     args.auth,
