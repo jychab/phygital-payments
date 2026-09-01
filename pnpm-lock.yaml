@@ -49,8 +49,8 @@ importers:
   app:
     dependencies:
       '@noble/curves':
-        specifier: ^2.2.0
-        version: 2.2.0
+        specifier: ^2.3.0
+        version: 2.4.0
       '@opennextjs/cloudflare':
         specifier: ^1.3.0
         version: 1.20.2(next@16.2.12(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(wrangler@4.114.0(@cloudflare/workers-types@4.20260702.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
@@ -103,8 +103,8 @@ importers:
         specifier: workspace:*
         version: link:../clients/js/phygital-payments
       phygital-token-sdk:
-        specifier: file:phygital-token-sdk-1.0.2.tgz
-        version: file:app/phygital-token-sdk-1.0.2.tgz(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))
+        specifier: ^1.0.2
+        version: 1.0.2(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10))
       radix-ui:
         specifier: ^1.6.7
         version: 1.6.7(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -1720,10 +1720,6 @@ packages:
   '@noble/curves@1.9.7':
     resolution: {integrity: sha512-gbKGcRUYIjA3/zCCNaWDciTMFI0dCkvou3TL8Zmy5Nc7sJ47a0jtOeZoTaMxkuqRo9cRhjOdZJXegxYE5FN/xw==}
     engines: {node: ^14.21.3 || >=16}
-
-  '@noble/curves@2.2.0':
-    resolution: {integrity: sha512-T/BoHgFXirb0ENSPBquzX0rcjXeM6Lo892a2jlYJkqk83LqZx0l1Of7DzlKJ6jkpvMrkHSnAcgb5JegL8SeIkQ==}
-    engines: {node: '>= 20.19.0'}
 
   '@noble/curves@2.4.0':
     resolution: {integrity: sha512-P4/62zrgfH33CneE3Dn4WhJVA22YUU0eR51wKIan4NVRvwsA0YnPTwWGpNbpuacSujmSFLvyzpyuR30+fbq2Ew==}
@@ -7562,9 +7558,8 @@ packages:
     resolution: {integrity: sha512-//nshmD55c46FuFw26xV/xFAaB5HF9Xdap7HJBBnrKdAd6/GxDBaNA1870O79+9ueg61cZLSVc+OaFlfmObYVQ==}
     engines: {node: '>= 14.16'}
 
-  phygital-token-sdk@file:app/phygital-token-sdk-1.0.2.tgz:
-    resolution: {integrity: sha512-J5/A6G+RJ7lB/fHSRT9YSURNxAvp53GSgwsqzOL15juRkH5SYL2EJ0m2n4QYqRmJI85XgRwOXtooT5c+nR6k7g==, tarball: file:app/phygital-token-sdk-1.0.2.tgz}
-    version: 1.0.2
+  phygital-token-sdk@1.0.2:
+    resolution: {integrity: sha512-sNSZ84RuvR1WFf6PDB+aaD0NY8XwOApavqPKWFXzS11m5DM+BUxqrzn1DvaOq20aEQwmFXGCF2n+yQmsORTcDg==}
     engines: {node: '>=20.18.0'}
     peerDependencies:
       '@solana/kit': ^8.0.0
@@ -11143,10 +11138,6 @@ snapshots:
   '@noble/curves@1.9.7':
     dependencies:
       '@noble/hashes': 1.8.0
-
-  '@noble/curves@2.2.0':
-    dependencies:
-      '@noble/hashes': 2.2.0
 
   '@noble/curves@2.4.0':
     dependencies:
@@ -19218,7 +19209,7 @@ snapshots:
 
   pathval@2.0.1: {}
 
-  phygital-token-sdk@file:app/phygital-token-sdk-1.0.2.tgz(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)):
+  phygital-token-sdk@1.0.2(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)):
     dependencies:
       '@noble/curves': 2.4.0
       '@noble/hashes': 2.4.0

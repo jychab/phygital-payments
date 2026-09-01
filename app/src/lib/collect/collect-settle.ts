@@ -123,7 +123,10 @@ async function buildReceiveTransfer(args: {
 
   const { slotHash, slotNumber } = await fetchSlotHash();
   const messageHash = buildTransferChallenge(mint, recipient, rawAmount, slotHash);
-  const response = await authenticatePasskeyForSecp256r1Verify({ messageHash });
+  const response = await authenticatePasskeyForSecp256r1Verify({
+    rpc,
+    messageHash,
+  });
   // Card UX: leave "Hold NFC accessory" the moment the tap returns; RPC/submit = Confirming.
   args.onPasskeyComplete?.();
 

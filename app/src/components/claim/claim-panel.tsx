@@ -127,7 +127,7 @@ export function ClaimPanel({
     setStage("reading");
     try {
       const captured = await captureClaimTap({
-        token: token.address,
+        secp256r1PublicKey: token.secp256r1PublicKey,
         onPasskeyComplete: () => {
           try {
             navigator.vibrate?.(30);

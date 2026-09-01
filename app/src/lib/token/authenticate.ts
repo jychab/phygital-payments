@@ -1,5 +1,6 @@
 import { startAuthentication, verifyResponse } from "phygital-token-sdk";
 
+import { getSolanaRpc } from "@/lib/solana/rpc";
 import { bindVerifiedPasskey } from "@/lib/token/bind-passkey";
 
 /**
@@ -12,7 +13,7 @@ export async function authenticateToken(args?: {
   onPasskeyComplete?: () => void;
 }): Promise<{ secp256r1PublicKey: string }> {
   const message = crypto.randomUUID();
-  const response = await startAuthentication(message);
+  const response = await startAuthentication(message, getSolanaRpc());
 
   const secp256r1PublicKey = bindVerifiedPasskey(
     verifyResponse({ expectedMessage: message, response }),

@@ -35,7 +35,7 @@ export function assertClaimReady(
 
 /** NFC tap only — no wallet connect or submit. */
 export async function captureClaimTap(args: {
-  token: Address;
+  secp256r1PublicKey: string;
   onPasskeyComplete?: () => void;
 }): Promise<{
   session: TransferSession;
@@ -43,7 +43,7 @@ export async function captureClaimTap(args: {
 }> {
   const session = await beginTransfer({
     rpc: getSolanaRpc(),
-    phygitalToken: args.token,
+    secp256r1Pubkey: args.secp256r1PublicKey,
   });
   const auth = await authenticatePasskeyForTransfer(session);
   args.onPasskeyComplete?.();
@@ -56,7 +56,6 @@ export async function finishClaim(args: {
   auth: TransferAuth;
   recipient: TransactionSigner;
 }): Promise<{ signature: string }> {
-  console.log(args.auth);
   const instructions = await completeTransfer(
     args.session,
     args.auth,
