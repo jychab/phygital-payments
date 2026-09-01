@@ -31,9 +31,10 @@ export function useTokenClaimSession(
     ? { ...tokenProp, currentOwner: toAddress(claimedOwner) }
     : tokenProp;
   const hold = useHoldToCheck(token, liveConfirmedProp);
-  const [showClaim, setShowClaim] = useState(
-    () => options?.autoOpenClaim ?? false,
-  );
+  const autoOpened = options?.autoOpenClaim ?? false;
+  const [showClaim, setShowClaim] = useState(() => autoOpened);
+  const [claimOpenedManually, setClaimOpenedManually] = useState(false);
+  const canExitClaim = !autoOpened || claimOpenedManually;
 
   return {
     token,
@@ -46,7 +47,11 @@ export function useTokenClaimSession(
     showInAppGate: hold.showInAppGate,
     holdToCheck: hold.holdToCheck,
     showClaim,
-    openClaim: () => setShowClaim(true),
+    canExitClaim,
+    openClaim: () => {
+      setClaimOpenedManually(true);
+      setShowClaim(true);
+    },
     closeClaim: () => setShowClaim(false),
     onClaimed: (owner: string) => {
       setClaimedOwner(owner);
@@ -180,7 +185,9 @@ export function TokenClaimSessionGate({
               token={session.token}
               noun={noun}
               unclaimed={isUnclaimedToken(session.token)}
-              onBack={session.closeClaim}
+              onBack={
+                session.canExitClaim ? session.closeClaim : undefined
+              }
               onClaimed={session.onClaimed}
             />
           ) : mode === "recheckSuccess" ? (
