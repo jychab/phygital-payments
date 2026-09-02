@@ -39,7 +39,7 @@ const RULES: Rule[] = [
     facing: errorCopy.alreadyAdded,
   },
   {
-    test: /accessory is locked|unlock it before moving|unlock it before claiming/i,
+    test: /accessory is locked|unlock it before moving|unlock it before claiming|TokenIsCurrentlyLocked|currently locked|unlock the phygital token/i,
     facing: errorCopy.accessoryLocked,
   },
   {
@@ -115,7 +115,7 @@ const RULES: Rule[] = [
     facing: errorCopy.tryAgainBody,
   },
   {
-    test: /no locked NFC accessory|lock the accessory/i,
+    test: /no locked NFC accessory|lock the accessory|add it to a wallet first/i,
     facing: errorCopy.accessoryNotReady,
   },
   {

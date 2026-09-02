@@ -17,7 +17,7 @@ export function assertCaptureReady(
 ): void {
   if (token.isLocked) {
     throw new Error(
-      "This NFC accessory is locked. Unlock it before claiming it to a wallet.",
+      "This NFC accessory is locked. Remove it from the current wallet before adding it to another.",
     );
   }
 }

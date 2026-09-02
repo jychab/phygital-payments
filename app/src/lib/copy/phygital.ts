@@ -169,19 +169,10 @@ export const copy = {
     itemLoadFailed: "Couldn’t load item",
     itemNotOnChain: "This item may no longer be available.",
     manageNoun: (noun: "card" | "accessory") => `Manage ${noun}`,
-    lock: "Lock",
-    unlock: "Unlock",
     removeFromWallet: "Remove from wallet",
     removeConfirmTitle: (noun: "card" | "accessory") => `Remove ${noun}?`,
     removeConfirmBody: (noun: "card" | "accessory") =>
       `Remove this ${noun} from your collection? Someone else can add it afterward.`,
-    nounLocked: (noun: "card" | "accessory") =>
-      noun === "card" ? "Card locked" : "Accessory locked",
-    nounUnlocked: (noun: "card" | "accessory") =>
-      noun === "card" ? "Card unlocked" : "Accessory unlocked",
-    lockFailed: (noun: "card" | "accessory") => `Couldn’t lock this ${noun}`,
-    unlockFailed: (noun: "card" | "accessory") =>
-      `Couldn’t unlock this ${noun}`,
     nounRemoved: (noun: "card" | "accessory") =>
       noun === "card" ? "Card removed" : "Accessory removed",
     removeFailed: (noun: "card" | "accessory") => `Couldn’t remove this ${noun}`,
@@ -358,7 +349,7 @@ export const errorCopy = {
   },
   accessoryLocked: {
     title: "Accessory Locked",
-    body: "Unlock this accessory, then try again.",
+    body: "Remove it from the current wallet, then try again.",
   },
   finishSetup: {
     title: "Finish setup",
@@ -422,7 +413,7 @@ export const errorCopy = {
   },
   accessoryNotReady: {
     title: "Accessory Isn’t Ready",
-    body: "Ask them to lock this accessory, then try again.",
+    body: "Ask them to add this accessory to their wallet, then try again.",
   },
   cantLock: {
     title: "Can’t Lock",

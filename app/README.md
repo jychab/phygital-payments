@@ -150,7 +150,7 @@ Cold entry shows **Hold to Check**. Signed NFC URLs verify silently, then show *
 
 1. **Hold to Check** (no URL) or silent URL verify → **Registered**
 2. **Unclaimed / unlocked** — **Add to Wallet** (WebAuthn tap, then connect and confirm on the same page)
-3. **Locked and payment-capable** (unminted) — **Pay** via primary CTA; Pay settings, Activity, lock/remove via header **⋯** menu
+3. **Locked and payment-capable** (unminted) — **Pay** via primary CTA; Pay settings and Activity via header; remove from Collection **⋯** menu
 
 Opening a token from Collection (`/token?address=…`) uses the same home for that token’s mint state. When the connected wallet matches the owner, **Confirmed** is seeded without Hold to Check.
 
