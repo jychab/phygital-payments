@@ -8,15 +8,18 @@ Cloudflare Worker (Hono) behind `https://api.revibase.com`.
 api/src/
   index.ts          Worker entry — CORS, request store, mounts domains
   shared/           Cross-cutting: HTTP helpers, D1, Solana cluster, crypto
-  tokens/           Collectibles, portfolio, DAS, rarity, shortcuts
-  tap/              NFC /verify-tap (counter + session cookie side-effect)
+  tokens/           Collectibles, portfolio, DAS, rarity, shortcuts, fee-balance
+  tap/              NFC /verify-tap (session cookie, else counter + new cookie)
   auth/             Owner session mint + standing policy / grant routes
   verifier/         ★ Template: POST /preview + POST /sign (forkable)
+  fees/             Paymaster fee-balance ledger + Helius accounting
+  webhooks/         POST /webhooks/helius
 ```
 
 | If you care about… | Open |
 |--------------------|------|
 | Wallet co-signing / custom verifier | [`src/verifier/README.md`](./src/verifier/README.md) |
+| Fee balance / top-up / webhook | this README § Fee balance |
 | How HTTP routes are mounted | [`src/index.ts`](./src/index.ts) |
 | Collectible / portfolio APIs | [`src/tokens/README.md`](./src/tokens/README.md) |
 | NFC tap verify | [`src/tap/README.md`](./src/tap/README.md) |
@@ -24,14 +27,14 @@ api/src/
 
 **Auditor tip:** `verifier/` is intentionally isolated. Revibase-specific spend
 limits / “Approve once” grants live only under `verifier/approval/` — replace
-that folder when forking; leave `preview.ts` / `sign.ts` alone.
+that folder when forking; leave `preview.ts` / `sign.ts` alone (fee gate stays).
 
 ## Setup
 
 ```bash
 pnpm install
 cp api/.dev.vars.example api/.dev.vars
-# Set VERIFIER_SECRET_KEY + POLICY_SESSION_SECRET
+# Set VERIFIER_SECRET_KEY + POLICY_SESSION_SECRET (+ TOP_UP_ACCUMULATOR / HELIUS_WEBHOOK_AUTH)
 pnpm --filter api dev
 ```
 
@@ -42,16 +45,37 @@ pnpm --filter api dev
 | GET | `/health` | entry |
 | GET | `/verify-tap` | `tap/` |
 | POST | `/auth/token-session` | `auth/` |
-| POST | `/preview` | `verifier/` |
-| POST | `/sign` | `verifier/` |
+| POST | `/preview` | `verifier/` (+ fee balance gate) |
+| POST | `/sign` | `verifier/` (+ fee balance gate) |
 | GET/PUT | `/policies/:phygitalToken` | `auth/` → uses `verifier/approval` |
 | POST | `/policies/:phygitalToken/grants` | `auth/` → uses `verifier/approval` |
 | GET | `/tokens/portfolio` | `tokens/` |
+| GET | `/tokens/fee-balance` | `tokens/` / `fees/` |
 | GET | `/tokens/collectible` | `tokens/` |
 | POST | `/tokens/collectible/batch` | `tokens/` |
 | GET | `/tokens/minted` | `tokens/` |
 | GET | `/tokens/rarity` | `tokens/` |
 | GET | `/tokens/shortcuts` | `tokens/` |
+| POST | `/webhooks/helius` | `webhooks/` |
+
+## Fee balance (default-verifier paymaster)
+
+When execute uses a **Config default verifier** as fee payer, network fees are
+sponsored from that keypair. Per-`phygital_token` prepaid balance lives in D1:
+
+1. **Top-up:** wallet sends SOL → `TOP_UP_ACCUMULATOR` with SPL Memo =
+   `phygitalToken` address. Helius webhook credits `token_fee_balances`.
+2. **Gate:** `/preview` and `/sign` both require
+   `FEE_BASE + FEE_LAMPORTS_PER_IX * ixCount` (see `src/fees/constants.ts`).
+   Top-up intents themselves are exempt. Custom (non-default) verifiers skip the gate.
+3. **Debit:** webhook on confirmed `phygital-wallet` execute with
+   `nativeBalanceChange < 0` on a default verifier → debit that token.
+
+**Helius webhook setup:** auth header = `HELIUS_WEBHOOK_AUTH`; include
+`TOP_UP_ACCUMULATOR` and program `Fjbi9JrRAmSBdxQxbkcxYDp6JUwnLbFhU2GsieWQBLSg`
+(enhanced txs with `accountData` + instructions).
+
+Apply migration: `wrangler d1 migrations apply phygital-token --remote`
 
 ## Env / bindings
 
@@ -59,10 +83,12 @@ pnpm --filter api dev
 |------|-------|---------|
 | `VERIFIER_SECRET_KEY` | secret | ed25519 co-signer for `/sign` |
 | `POLICY_SESSION_SECRET` | secret | HMAC for owner session cookie |
+| `TOP_UP_ACCUMULATOR` | secret/var | SOL address that receives top-ups |
+| `HELIUS_WEBHOOK_AUTH` | secret | Shared auth for `/webhooks/helius` |
 | `SOLANA_RPC_URL` / `SOLANA_CLUSTER` | vars | DAS / chain reads |
 | `JUPITER_API_KEY` | optional | verified token catalog |
-| `phygital_token` | D1 | rarity + policies/grants |
-| `revibase_counter` | KV | NFC counter sessions |
+| `phygital_token` | D1 | rarity + policies/grants + fee balances |
+| `revibase_counter` | KV | NFC counter high-water mark (anti-replay) |
 
 See [`.dev.vars.example`](./.dev.vars.example).
 

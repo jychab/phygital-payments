@@ -3,11 +3,12 @@
 /**
  * Column widths:
  * - gallery: minted card detail (room for art + dossier)
- * - compact: NFC ceremony / accessory task focus
+ * - compact: NFC ceremony / wallet / accessory — phone-width on all breakpoints
  */
 export const shellLayoutClass = {
   gallery: "max-w-lg md:max-w-3xl lg:max-w-5xl",
-  compact: "max-w-md md:max-w-lg",
+  /** Focused device column — never stretches on desktop. */
+  compact: "max-w-md w-full",
 } as const;
 
 export type ShellLayout = keyof typeof shellLayoutClass;
@@ -29,7 +30,7 @@ export const shellPaddingClass = [
   "lg:pr-[max(2.5rem,env(safe-area-inset-right))]",
 ].join(" ");
 
-/** Sticky dock — spans the full shell column width. */
+/** Sticky dock — spans the shell column only (not full viewport on desktop). */
 export const stickyDockClass = "w-full max-w-full self-stretch";
 
 /** Centered ceremony / gate copy blocks. */
@@ -48,3 +49,6 @@ export const centeredBlockClass =
  */
 export const detailSplitClass =
   "flex flex-1 flex-col gap-6 lg:grid lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)]";
+
+/** Minimum touch / click target (Apple HIG 44pt). */
+export const touchTargetClass = "min-h-11 min-w-11";

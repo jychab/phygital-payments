@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 import { CollectibleAttributes } from "@/components/token/collectible-attributes";
 import { CollectibleDescription } from "@/components/token/collectible-description";
@@ -29,8 +30,7 @@ import {
 } from "@/lib/phygital/token";
 
 /**
- * Minted landing — Tensor/ME-inspired priority:
- * identity → actions → traits → story → reference details.
+ * Minted landing — art first, then verify / primary CTA; details collapsed.
  */
 export function TokenMintedPanel({
   token,
@@ -47,6 +47,7 @@ export function TokenMintedPanel({
   const { collectible, rarity, shortcuts, loading, rarityLoading } =
     useMintedCollectibleView(mint);
   const { openCollectibleShortcut, iframeSheet } = useShortcutOpener();
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const primaryShortcut = liveConfirmed
     ? pickPrimaryCtaShortcut(shortcuts)
@@ -67,6 +68,11 @@ export function TokenMintedPanel({
 
   const name = collectible?.name ?? "Card";
   const hasSticky = showVerify || Boolean(primaryShortcut);
+  const hasBelowFold =
+    attributesWithRarity.length > 0 ||
+    Boolean(collectible?.description) ||
+    Boolean(collectible) ||
+    true;
   let stagger = 0;
 
   return (
@@ -83,7 +89,7 @@ export function TokenMintedPanel({
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex flex-col gap-6 pb-4">
+          <div className="flex flex-col gap-5 pb-4">
             <MotionSection staggerIndex={stagger++}>
               {collectible ? (
                 <CollectibleHeader
@@ -102,15 +108,21 @@ export function TokenMintedPanel({
             </MotionSection>
 
             <MotionSection staggerIndex={stagger++}>
-              <div className="flex w-full flex-col gap-1.5 text-left">
-                <div className="divide-y divide-border/40">
-                  <VerificationMetadataRow
-                    liveConfirmed={liveConfirmed}
-                    onVerifyAgain={onHoldToCheck}
-                  />
-                </div>
+              <div className="divide-y divide-border/40">
+                <VerificationMetadataRow
+                  liveConfirmed={liveConfirmed}
+                  onVerifyAgain={onHoldToCheck}
+                />
               </div>
             </MotionSection>
+
+            {!liveConfirmed && chipShortcuts.length > 0 ? (
+              <MotionSection staggerIndex={stagger++}>
+                <p className="px-0.5 text-xs text-muted-foreground">
+                  {copy.verify.verifyToUnlockShortcut}
+                </p>
+              </MotionSection>
+            ) : null}
 
             {chipShortcuts.length > 0 ? (
               <MotionSection staggerIndex={stagger++}>
@@ -123,35 +135,60 @@ export function TokenMintedPanel({
               </MotionSection>
             ) : null}
 
-            {collectible && attributesWithRarity.length > 0 ? (
+            {hasBelowFold ? (
               <MotionSection staggerIndex={stagger++}>
-                <CollectibleAttributes attributes={attributesWithRarity} />
+                <button
+                  type="button"
+                  onClick={() => setDetailsOpen((o) => !o)}
+                  className="flex w-full min-h-11 items-center justify-between rounded-2xl bg-grouped px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/50"
+                >
+                  {detailsOpen
+                    ? copy.token.hideDetails
+                    : copy.token.showDetails}
+                  {detailsOpen ? (
+                    <ChevronUp className="size-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="size-4 text-muted-foreground" />
+                  )}
+                </button>
               </MotionSection>
             ) : null}
 
-            {collectible?.description ? (
-              <MotionSection staggerIndex={stagger++}>
-                <CollectibleDescription description={collectible.description} />
-              </MotionSection>
-            ) : null}
+            {detailsOpen ? (
+              <div className="flex flex-col gap-5">
+                {collectible && attributesWithRarity.length > 0 ? (
+                  <MotionSection staggerIndex={stagger++}>
+                    <CollectibleAttributes attributes={attributesWithRarity} />
+                  </MotionSection>
+                ) : null}
 
-            {collectible ? (
-              <MotionSection staggerIndex={stagger++}>
-                <CollectibleDetails
-                  collectionName={collectible.collectionName}
-                  collectionImage={collectible.collectionImage}
-                  collectionDescription={collectible.collectionDescription}
-                />
-              </MotionSection>
-            ) : null}
+                {collectible?.description ? (
+                  <MotionSection staggerIndex={stagger++}>
+                    <CollectibleDescription
+                      description={collectible.description}
+                    />
+                  </MotionSection>
+                ) : null}
 
-            <MotionSection staggerIndex={stagger++}>
-              <TokenDetails
-                cardId={token.secp256r1PublicKey}
-                mint={mint}
-                mintOwner={collectible?.mintOwner}
-              />
-            </MotionSection>
+                {collectible ? (
+                  <MotionSection staggerIndex={stagger++}>
+                    <CollectibleDetails
+                      collectionName={collectible.collectionName}
+                      collectionImage={collectible.collectionImage}
+                      collectionDescription={collectible.collectionDescription}
+                    />
+                  </MotionSection>
+                ) : null}
+
+                <MotionSection staggerIndex={stagger++}>
+                  <TokenDetails
+                    cardId={token.secp256r1PublicKey}
+                    mint={mint}
+                    mintOwner={collectible?.mintOwner}
+                  />
+                </MotionSection>
+              </div>
+            ) : null}
           </div>
 
           {hasSticky ? (

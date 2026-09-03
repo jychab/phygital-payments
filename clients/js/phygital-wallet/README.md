@@ -74,6 +74,7 @@ import {
 
 const { slotNumber, messageHash } = await buildSetTokenVerifierChallenge(
   rpc,
+  phygitalTokenPda,
   overrideVerifier,
   "https://verifier.example.com", // API base; /sign and /preview are appended
 );
@@ -94,7 +95,7 @@ const instructions = await getSetTokenVerifierInstructions({
 });
 ```
 
-Clear uses `buildClearTokenVerifierChallenge(rpc)` and `getClearTokenVerifierInstructions({ rpc, passkeyAuth })`. Rent is refunded to the original token verifier payer automatically.
+Clear uses `buildClearTokenVerifierChallenge(rpc, phygitalTokenPda)` and `getClearTokenVerifierInstructions({ rpc, passkeyAuth })`. Rent is refunded to the original token verifier payer automatically.
 
 ## Regenerate
 

@@ -1,7 +1,6 @@
 import { address, type Address } from "@solana/kit";
 
 import { isMainnet } from "@/shared/solana/cluster";
-import { getEnv } from "@/shared/request-context";
 
 /** Circle USDC (SPL Token), 6 decimals. */
 const USDC_MINT_MAINNET = address(
@@ -17,7 +16,5 @@ export const USDC_DECIMALS = 6;
 
 /** Cluster USDC mint, or `USDC_MINT` override. */
 export function getUsdcMint(): Address {
-  const override = getEnv().USDC_MINT?.trim();
-  if (override) return address(override);
   return isMainnet() ? USDC_MINT_MAINNET : USDC_MINT_DEVNET;
 }

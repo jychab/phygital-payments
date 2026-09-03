@@ -73,12 +73,12 @@ export function useTapVerify() {
     queryKey: queryKeys.tapVerify.byParams(tapParamsString),
     queryFn: () => fetchTapVerification(new URLSearchParams(tapParamsString)),
     enabled: hasTapProof,
-    // One-shot proof — cache success; never refetch (reconnect would 409).
+    // One-shot proof — cache success; never refetch.
     ...queryOptions.immutable,
   });
 
-  // Prefer a successful result over a later error status. A reconnect refetch
-  // that hits counter replay must not unmount the verified token home.
+  // Prefer a successful result over a later error status. An expired session
+  // plus the same tap URL must not unmount the verified token home.
   const verify: TapVerifyStatus = !hasTapProof
     ? "failed"
     : verifyQuery.data?.status === "verified"

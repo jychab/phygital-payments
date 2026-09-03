@@ -2,12 +2,14 @@
  * POST /sign — authorize + ed25519 co-sign of wallet `execute` message bytes.
  *
  * 1. Decode base64 wire tx → execute metas + body instructions
- * 2. `authorizeIntent` (swap in `authorize.ts` / `approval/`)
- * 3. Assert execute.verifier matches this worker's key
- * 4. Sign message bytes → `{ signatures }`
+ * 2. Fee balance gate (re-check, same as /preview)
+ * 3. `authorizeIntent` (swap in `authorize.ts` / `approval/`)
+ * 4. Assert execute.verifier matches this worker's key
+ * 5. Sign message bytes → `{ signatures }`
  */
 import { Hono } from "hono";
 
+import { assertFeeBalance } from "@/fees/fee-balance-gate";
 import { json } from "@/shared/http";
 import { authorizeIntent } from "@/verifier/authorize";
 import {
@@ -33,6 +35,25 @@ signRoutes.post("/sign", async (c) => {
 
     for (const wire of body.transactions) {
       const decoded = decodeWireTransaction(wire);
+
+      const fee = await assertFeeBalance({
+        phygitalToken: decoded.phygitalToken,
+        instructions: decoded.instructions,
+      });
+      if (!fee.ok) {
+        return json(
+          {
+            error: fee.error,
+            code: fee.code,
+            soft: fee.soft,
+            details: {
+              ...fee.details,
+              phygitalToken: decoded.phygitalToken,
+            },
+          },
+          { status: 403 },
+        );
+      }
 
       const result = await authorizeIntent({
         phygitalToken: decoded.phygitalToken,

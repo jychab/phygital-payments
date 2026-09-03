@@ -52,6 +52,7 @@ export function SigningSettingsSheet({
       const feePayer = await createAppVerifierSigner(rpc, tokenPda);
       const { slotNumber, messageHash } = await buildSetTokenVerifierChallenge(
         rpc,
+        tokenPda,
         verifierAddr,
         endpoint.trim(),
       );
@@ -78,7 +79,7 @@ export function SigningSettingsSheet({
       });
       await confirmed;
       setView("success");
-      toast.success("Signing service updated");
+      toast.success(copy.wallet.signingCustomSaved);
     } catch (e) {
       setView("custom");
       toast.error(toUserErrorMessage(e));
@@ -92,7 +93,7 @@ export function SigningSettingsSheet({
       const tokenPda = address(phygitalTokenPda);
       const feePayer = await createAppVerifierSigner(rpc, tokenPda);
       const { slotNumber, messageHash } =
-        await buildClearTokenVerifierChallenge(rpc);
+        await buildClearTokenVerifierChallenge(rpc, tokenPda);
       const tap = await authenticatePasskeyForSecp256r1Verify({
         rpc,
         messageHash,
@@ -155,6 +156,9 @@ export function SigningSettingsSheet({
           <p className="text-sm font-medium">{copy.wallet.signing}</p>
           <span className="w-16" aria-hidden />
         </div>
+        <p className="rounded-2xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          {copy.wallet.signingCustomPolicyWarn}
+        </p>
         <label className="text-xs text-muted-foreground">{copy.wallet.customVerifier}</label>
         <Input
           value={verifier}
@@ -199,7 +203,7 @@ export function SigningSettingsSheet({
         <ChevronRight className="size-4 text-muted-foreground" />
       </button>
       <Button type="button" variant="outline" onClick={() => void restoreDefault()}>
-        Restore Revibase
+        {copy.wallet.restoreDefault}
       </Button>
     </div>
   );

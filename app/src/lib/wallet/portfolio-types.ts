@@ -5,10 +5,12 @@ export type WalletCollectible = {
   name: string;
   image: string | null;
   collectionName: string | null;
+  interface: string;
+  compressed: boolean;
+  tokenProgram: string | null;
 };
 
 export type WalletPortfolio = {
   holdings: PaymentTokenHolding[];
   collectibles: WalletCollectible[];
-  totalUsd: number;
 };

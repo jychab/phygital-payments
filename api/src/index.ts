@@ -13,6 +13,7 @@ import { runWithRequestStore } from "@/shared/request-context";
 import { verifyTapRoutes } from "@/tap/routes";
 import { tokenRoutes } from "@/tokens/routes";
 import { verifierRoutes } from "@/verifier";
+import { heliusWebhookRoutes } from "@/webhooks/helius";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -35,6 +36,7 @@ app.route("/", verifyTapRoutes);
 app.route("/", verifierRoutes);
 app.route("/", policyRoutes);
 app.route("/", authSessionRoutes);
+app.route("/", heliusWebhookRoutes);
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 

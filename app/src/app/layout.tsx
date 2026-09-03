@@ -16,7 +16,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#1c1d20",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f2f2f4" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c1d20" },
+  ],
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
@@ -25,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark min-h-dvh antialiased">
+    <html lang="en" className="min-h-dvh antialiased">
       <body className="flex min-h-dvh flex-col font-sans">
         <AppProviders>{children}</AppProviders>
       </body>

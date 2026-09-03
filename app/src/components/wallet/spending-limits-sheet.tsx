@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
+import { NavBar } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy/phygital";
@@ -63,13 +64,14 @@ export function SpendingLimitsSheet({
 
   return (
     <div className="flex flex-1 flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-          {copy.common.back}
-        </Button>
-        <p className="text-sm font-medium">{copy.wallet.spendingLimits}</p>
-        <span className="w-16" aria-hidden />
-      </div>
+      <NavBar
+        leading={
+          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
+            {copy.common.back}
+          </Button>
+        }
+        title={copy.wallet.spendingLimits}
+      />
       {loading ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {copy.common.loading}
@@ -79,16 +81,23 @@ export function SpendingLimitsSheet({
           <p className="text-sm text-muted-foreground">
             {copy.wallet.spendingLimitsHint}
           </p>
+          <p className="text-xs text-muted-foreground">
+            {copy.wallet.policyDefaultSigningOnly}
+          </p>
           <label className="text-xs text-muted-foreground">
             {copy.wallet.maxPerSend}
           </label>
           <Input
             inputMode="decimal"
             value={maxPerSend}
-            onChange={(e) => setMaxPerSend(e.target.value.replace(/[^0-9.]/g, ""))}
+            onChange={(e) =>
+              setMaxPerSend(e.target.value.replace(/[^0-9.]/g, ""))
+            }
             placeholder="50"
           />
-          <label className="text-xs text-muted-foreground">Max SOL per send</label>
+          <label className="text-xs text-muted-foreground">
+            {copy.wallet.maxSolPerSend}
+          </label>
           <Input
             inputMode="decimal"
             value={maxSol}
@@ -105,7 +114,7 @@ export function SpendingLimitsSheet({
             {saving ? (
               <LoaderCircle className="size-4 animate-spin" />
             ) : (
-              copy.wallet.save
+              copy.wallet.holdToSave
             )}
           </Button>
         </>

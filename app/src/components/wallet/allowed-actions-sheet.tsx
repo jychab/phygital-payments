@@ -89,6 +89,9 @@ export function AllowedActionsSheet({
         </p>
       ) : (
         <>
+          <p className="text-xs text-muted-foreground">
+            {copy.wallet.policyDefaultSigningOnly}
+          </p>
           <Button
             type="button"
             variant={preset === "payments" ? "default" : "outline"}
@@ -146,7 +149,7 @@ export function AllowedActionsSheet({
             {saving ? (
               <LoaderCircle className="size-4 animate-spin" />
             ) : (
-              copy.wallet.save
+              copy.wallet.holdToSave
             )}
           </Button>
         </>

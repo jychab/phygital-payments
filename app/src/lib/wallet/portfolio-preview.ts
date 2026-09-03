@@ -1,0 +1,49 @@
+import {
+  isNativeSolHolding,
+  type PaymentTokenHolding,
+} from "@/lib/tokens/payment-token";
+import type { WalletCollectible } from "@/lib/wallet/portfolio-types";
+
+export const HOME_TOKEN_PREVIEW = 5;
+export const HOME_COLLECTIBLE_PREVIEW = 4;
+export const ALL_LIST_SEARCH_THRESHOLD = 8;
+
+export function sortHoldings(
+  holdings: PaymentTokenHolding[],
+): PaymentTokenHolding[] {
+  return [...holdings].sort((a, b) => {
+    const aSol = isNativeSolHolding(a);
+    const bSol = isNativeSolHolding(b);
+    if (aSol !== bSol) return aSol ? -1 : 1;
+    return Number(b.balanceUi) - Number(a.balanceUi);
+  });
+}
+
+export function sortCollectibles(
+  collectibles: WalletCollectible[],
+  linkedMint?: string | null,
+): WalletCollectible[] {
+  return [...collectibles].sort((a, b) => {
+    if (linkedMint) {
+      if (a.mint === linkedMint && b.mint !== linkedMint) return -1;
+      if (b.mint === linkedMint && a.mint !== linkedMint) return 1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+}
+
+export function previewHoldings(
+  holdings: PaymentTokenHolding[],
+): PaymentTokenHolding[] {
+  return sortHoldings(holdings).slice(0, HOME_TOKEN_PREVIEW);
+}
+
+export function previewCollectibles(
+  collectibles: WalletCollectible[],
+  linkedMint?: string | null,
+): WalletCollectible[] {
+  return sortCollectibles(collectibles, linkedMint).slice(
+    0,
+    HOME_COLLECTIBLE_PREVIEW,
+  );
+}

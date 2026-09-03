@@ -277,7 +277,7 @@ impl TestContext {
         let (slot_number, slot_hash) = current_slot_entry(&self.svm);
         let challenge =
             phygital_wallet::instructions::token_verifier::build_set_token_verifier_challenge(
-                slot_hash, &new_verifier, endpoint,
+                slot_hash, &phygital_token, &new_verifier, endpoint,
             );
         let (secp_ix, verify_args) =
             passkey.verify_asset_secp256r1_instruction_with_rp_id(challenge, TEST_RP_ID);
@@ -336,6 +336,7 @@ impl TestContext {
         let challenge =
             phygital_wallet::instructions::token_verifier::build_clear_token_verifier_challenge(
                 slot_hash,
+                &phygital_token
             );
         let (secp_ix, verify_args) =
             passkey.verify_asset_secp256r1_instruction_with_rp_id(challenge, TEST_RP_ID);

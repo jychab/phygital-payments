@@ -9,3 +9,6 @@ NEXTJS_ENV=development
 
 # Backend Worker (pnpm --filter api dev → :8787)
 # NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8787
+
+# Fee balance top-up accumulator (must match API TOP_UP_ACCUMULATOR)
+# NEXT_PUBLIC_TOP_UP_ACCUMULATOR=

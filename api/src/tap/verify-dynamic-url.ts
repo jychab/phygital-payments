@@ -44,8 +44,9 @@ function normalizeSignatureToLowS(signature: Uint8Array): Uint8Array {
  * Verify an NFC dynamic-URL tap (`pk` / `s` / `c` / `n`) without consuming a
  * counter. Same crypto as revibase vault / phygital-token-sdk ≤0.13.
  *
- * Counter anti-replay is enforced by `/verify-tap` against the shared
- * `revibase_counter` KV (monotonic: next `c` must be greater than stored).
+ * Counter anti-replay is enforced by `/verify-tap`: a valid session cookie
+ * short-circuits remounts; otherwise next `c` must be greater than the
+ * high-water mark in `revibase_counter` KV.
  */
 export function verifyDynamicUrlWithoutCounterCheck(
   params: URLSearchParams,

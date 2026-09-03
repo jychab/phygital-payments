@@ -27,16 +27,20 @@ Also: `assert-preview-wallet.ts`, `intent-hash.ts`, `errors.ts`, `constants.ts`.
 Client
   │  POST /preview  { phygitalToken, instructions }
   │    → wallet PDA must be a signer
+  │    → assertFeeBalance (default verifier paymaster; see `../fees/`)
   │    → authorizeIntent({ mode: "preview" })
   │
   │  NFC / passkey → wrap execute
   │  POST /sign  { transactions: [base64…] }
   │    → decodeWireTransaction
+  │    → assertFeeBalance (re-check)
   │    → authorizeIntent({ mode: "sign" })
   │    → assert verifier key + sign message bytes
   └─► { signatures: [base64…] }
 ```
 
+Fee balance is debited asynchronously via `POST /webhooks/helius` after
+confirmed execute — not on `/sign`.
 ## Replace approval (important)
 
 [`approval/`](./approval/) is **Revibase-specific**: standing policies in D1 and

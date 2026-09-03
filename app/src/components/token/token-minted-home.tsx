@@ -1,17 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { TokenMintedPanel } from "@/components/token/token-minted-panel";
 import { WalletWorkspace } from "@/components/wallet/wallet-workspace";
-import { IdentityChip } from "@/components/shared/identity-chip";
+import { useTokenWalletChip } from "@/hooks/wallet/use-token-wallet-chip";
 import {
   TokenVerifySessionGate,
   useTokenVerifySession,
 } from "@/hooks/token/use-token-verify-session";
-import { useWalletPda } from "@/hooks/wallet/use-wallet-pda";
+import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
 import { copy } from "@/lib/copy/phygital";
-import type { PhygitalToken } from "@/lib/phygital/token";
+import {
+  tokenHasLinkedMint,
+  type PhygitalToken,
+} from "@/lib/phygital/token";
 
 /** Minted-token home — card gallery; Wallet via identity chip. */
 export function TokenMintedHome({
@@ -22,8 +25,20 @@ export function TokenMintedHome({
   liveConfirmed?: boolean;
 }) {
   const session = useTokenVerifySession(tokenProp, liveConfirmedProp);
-  const { walletAddress } = useWalletPda(String(session.token.address));
+  const mint = tokenHasLinkedMint(session.token)
+    ? String(session.token.mint)
+    : null;
+  const { collectible } = useResolvedDasCollectible(mint);
   const [showWallet, setShowWallet] = useState(false);
+
+  const openWallet = useCallback(() => setShowWallet(true), []);
+
+  useTokenWalletChip({
+    token: session.token,
+    mode: "open-wallet",
+    onOpenWallet: openWallet,
+    enabled: !showWallet,
+  });
 
   return (
     <TokenVerifySessionGate
@@ -35,16 +50,11 @@ export function TokenMintedHome({
           token={session.token}
           showBackToCard
           onBackToCard={() => setShowWallet(false)}
+          cardLabel={collectible?.name ?? copy.wallet.backToCard}
+          cardImage={collectible?.image ?? null}
         />
       ) : (
         <div className="flex flex-1 flex-col">
-          <div className="mb-2 flex justify-end">
-            <IdentityChip
-              walletAddress={walletAddress}
-              mode="open-wallet"
-              onOpenWallet={() => setShowWallet(true)}
-            />
-          </div>
           <TokenMintedPanel
             token={session.token}
             liveConfirmed={session.liveConfirmed}

@@ -120,6 +120,16 @@ function cookieAttrsForRequest(c: Context): {
   return { secure: true, sameSite: "None" };
 }
 
+/** Read the owner session cookie if present and still valid. */
+export async function readSessionCookie(
+  c: Context,
+  now = Date.now(),
+): Promise<TokenSession | null> {
+  const raw = getCookie(c, SESSION_COOKIE);
+  if (!raw) return null;
+  return parseSessionToken(raw, now);
+}
+
 /** Require cookie session matching `:phygitalToken` path param. */
 export async function requireTokenSession(
   c: Context,

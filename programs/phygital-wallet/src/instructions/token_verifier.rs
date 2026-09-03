@@ -1,36 +1,46 @@
-use anchor_lang::prelude::*;
-use solana_sdk_ids::sysvar::instructions::ID as INSTRUCTIONS_SYSVAR_ID;
-use solana_sdk_ids::sysvar::slot_hashes::ID as SLOT_HASHES_SYSVAR_ID;
-use solana_sha256_hasher::hashv;
-use phygital_token_client::VerifyCpiBuilder;
 use crate::constants::{
     CLEAR_TOKEN_VERIFIER_CHALLENGE_PREFIX, CONFIG_SEED, MAX_ENDPOINT_LEN,
     SET_TOKEN_VERIFIER_CHALLENGE_PREFIX, TOKEN_VERIFIER_SEED,
 };
 use crate::error::PhygitalError;
+use crate::state::{Config, Secp256r1VerifyArgs, TokenVerifier};
 use crate::utils::phygital_token::locked_controlled;
 use crate::utils::slot_hash::fetch_slot_hash;
 use crate::utils::verifier::resolve_verifier;
-use crate::state::{Config, Secp256r1VerifyArgs, TokenVerifier};
+use anchor_lang::prelude::*;
+use phygital_token_client::VerifyCpiBuilder;
+use solana_sdk_ids::sysvar::instructions::ID as INSTRUCTIONS_SYSVAR_ID;
+use solana_sdk_ids::sysvar::slot_hashes::ID as SLOT_HASHES_SYSVAR_ID;
+use solana_sha256_hasher::hashv;
 
-/// `SHA256("phygital_wallet:set_tv:v1" || slot_hash || verifier || endpoint)`.
+/// `SHA256("phygital_wallet:set_tv:v1" || slot_hash || phygital_token || verifier || endpoint)`.
 pub fn build_set_token_verifier_challenge(
     slot_hash: [u8; 32],
-    verifier: &Pubkey,
+    phygital_token: &Pubkey,
+    new_verifier: &Pubkey,
     endpoint: &str,
 ) -> [u8; 32] {
     hashv(&[
         SET_TOKEN_VERIFIER_CHALLENGE_PREFIX,
         &slot_hash,
-        verifier.as_ref(),
+        phygital_token.as_ref(),
+        new_verifier.as_ref(),
         endpoint.as_bytes(),
     ])
     .to_bytes()
 }
 
-/// `SHA256("phygital_wallet:clear_tv:v1" || slot_hash)`.
-pub fn build_clear_token_verifier_challenge(slot_hash: [u8; 32]) -> [u8; 32] {
-    hashv(&[CLEAR_TOKEN_VERIFIER_CHALLENGE_PREFIX, &slot_hash]).to_bytes()
+/// `SHA256("phygital_wallet:clear_tv:v1" || slot_hash || phygital_token)`.
+pub fn build_clear_token_verifier_challenge(
+    slot_hash: [u8; 32],
+    phygital_token: &Pubkey,
+) -> [u8; 32] {
+    hashv(&[
+        CLEAR_TOKEN_VERIFIER_CHALLENGE_PREFIX,
+        &slot_hash,
+        phygital_token.as_ref(),
+    ])
+    .to_bytes()
 }
 
 #[derive(Accounts)]
@@ -112,7 +122,8 @@ pub fn set_token_verifier_handler(
     );
 
     let slot_hash = fetch_slot_hash(&ctx.accounts.slot_hashes, slot_number)?;
-    let message_hash = build_set_token_verifier_challenge(slot_hash, &new_verifier, &endpoint);
+    let message_hash =
+        build_set_token_verifier_challenge(slot_hash, &token_key, &new_verifier, &endpoint);
 
     VerifyCpiBuilder::new(&ctx.accounts.phygital_token_program.to_account_info())
         .phygital_token(&ctx.accounts.phygital_token.to_account_info())
@@ -197,7 +208,7 @@ pub fn clear_token_verifier_handler(
     );
 
     let slot_hash = fetch_slot_hash(&ctx.accounts.slot_hashes, slot_number)?;
-    let message_hash = build_clear_token_verifier_challenge(slot_hash);
+    let message_hash = build_clear_token_verifier_challenge(slot_hash, &token_key);
 
     VerifyCpiBuilder::new(&ctx.accounts.phygital_token_program.to_account_info())
         .phygital_token(&ctx.accounts.phygital_token.to_account_info())

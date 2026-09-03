@@ -1,13 +1,17 @@
 import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 
 import { getUsdcMint, USDC_DECIMALS } from "@/tokens/usdc-mint";
+import { TOKEN_2022_PROGRAM } from "@/verifier/constants";
 
-/** Classic SPL Token program — Token-2022 is out of scope for v1. */
 export const CLASSIC_TOKEN_PROGRAM = TOKEN_PROGRAM_ADDRESS;
 
-/**
- * USDC mark path — relative to the Next app origin (not this API host).
- */
+/** Sentinel mint for native SOL holdings / sends. */
+export const NATIVE_SOL_MINT =
+  "So11111111111111111111111111111111111111112" as const;
+
+/** Marks a holding as native SOL (not wrapped SPL). */
+export const NATIVE_SOL_TOKEN_PROGRAM = "native" as const;
+
 const USDC_ICON_URL = "/tokens/usdc.png";
 
 export type PaymentToken = {
@@ -28,11 +32,23 @@ export function isClassicTokenProgram(
   program: string | null | undefined,
 ): boolean {
   return (
-    program === CLASSIC_TOKEN_PROGRAM || program === String(CLASSIC_TOKEN_PROGRAM)
+    program === CLASSIC_TOKEN_PROGRAM ||
+    program === String(CLASSIC_TOKEN_PROGRAM)
   );
 }
 
-/** Built-in USDC metadata when Jupiter is unavailable (devnet / no API key). */
+export function isToken2022Program(
+  program: string | null | undefined,
+): boolean {
+  return program === TOKEN_2022_PROGRAM || program === String(TOKEN_2022_PROGRAM);
+}
+
+export function isSupportedTokenProgram(
+  program: string | null | undefined,
+): boolean {
+  return isClassicTokenProgram(program) || isToken2022Program(program);
+}
+
 export function defaultUsdcToken(): PaymentToken {
   return {
     mint: String(getUsdcMint()),
@@ -44,6 +60,18 @@ export function defaultUsdcToken(): PaymentToken {
   };
 }
 
-export function zeroUsdcHolding(): PaymentTokenHolding {
-  return { ...defaultUsdcToken(), balanceRaw: "0", balanceUi: "0" };
+export function nativeSolHolding(
+  balanceRaw: bigint,
+  balanceUi: string,
+): PaymentTokenHolding {
+  return {
+    mint: NATIVE_SOL_MINT,
+    symbol: "SOL",
+    name: "Solana",
+    icon: null,
+    decimals: 9,
+    tokenProgram: NATIVE_SOL_TOKEN_PROGRAM,
+    balanceRaw: balanceRaw.toString(),
+    balanceUi,
+  };
 }

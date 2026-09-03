@@ -4,7 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { copy } from "@/lib/copy/phygital";
+import { brand, copy } from "@/lib/copy/phygital";
 import { cn } from "@/lib/utils";
 
 /** Receive hub — QR + Receive nearby. */
@@ -17,7 +17,8 @@ export function ReceiveHub({
   onClose: () => void;
   onReceiveNearby: () => void;
 }) {
-  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(walletAddress)}`;
+  const payUrl = `solana:${walletAddress.trim()}?label=${encodeURIComponent(brand.company)}`;
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(payUrl)}`;
 
   async function copyAddress() {
     try {

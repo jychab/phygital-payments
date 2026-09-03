@@ -31,6 +31,10 @@
       "zone_name": "revibase.com"
     },
     {
+      "pattern": "api.revibase.com/webhooks/*",
+      "zone_name": "revibase.com"
+    },
+    {
       "pattern": "api.revibase.com/health",
       "zone_name": "revibase.com"
     }

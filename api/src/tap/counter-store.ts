@@ -5,8 +5,9 @@ import {
 } from "@/tap/counter-session";
 
 /**
- * KV-backed counter session for tap anti-replay.
- * Uses the shared `revibase_counter` namespace (same as vault / developer mint).
+ * KV-backed high-water mark for tap anti-replay (counter only, no TTL).
+ * Remounts are authorized by the session cookie. Uses the shared
+ * `revibase_counter` namespace (same as vault / developer mint).
  */
 
 function getCounterKv(): KVNamespace {
@@ -23,10 +24,10 @@ export async function readCounterSession(
   return parseCounterState(await getCounterKv().get(publicKey));
 }
 
-/** Persist a newly consumed counter (first verification only, not reentry). */
+/** Persist a newly consumed counter. */
 export async function writeCounterSession(
   publicKey: string,
   state: CounterState,
 ): Promise<void> {
-  await getCounterKv().put(publicKey, JSON.stringify(state));
+  await getCounterKv().put(publicKey, JSON.stringify({ c: state.c }));
 }

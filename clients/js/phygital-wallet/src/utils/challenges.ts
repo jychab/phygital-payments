@@ -179,14 +179,17 @@ export function hashExecuteChallenge(
 
 function hashSetTokenVerifierChallenge(
   slotHash: Uint8Array,
+  phygitalToken: Address,
   verifier: Address,
   endpoint: string,
 ): Uint8Array {
+  const tokenBytes = new Uint8Array(addressEncoder.encode(phygitalToken));
   const verifierBytes = new Uint8Array(addressEncoder.encode(verifier));
   const endpointBytes = new TextEncoder().encode(endpoint);
   const preimage = new Uint8Array(
     SET_TOKEN_VERIFIER_CHALLENGE_PREFIX.length +
       32 +
+      tokenBytes.length +
       verifierBytes.length +
       endpointBytes.length,
   );
@@ -195,18 +198,28 @@ function hashSetTokenVerifierChallenge(
   offset += SET_TOKEN_VERIFIER_CHALLENGE_PREFIX.length;
   preimage.set(slotHash, offset);
   offset += 32;
+  preimage.set(tokenBytes, offset);
+  offset += tokenBytes.length;
   preimage.set(verifierBytes, offset);
   offset += verifierBytes.length;
   preimage.set(endpointBytes, offset);
   return sha256(preimage);
 }
 
-function hashClearTokenVerifierChallenge(slotHash: Uint8Array): Uint8Array {
+function hashClearTokenVerifierChallenge(
+  slotHash: Uint8Array,
+  phygitalToken: Address,
+): Uint8Array {
+  const tokenBytes = new Uint8Array(addressEncoder.encode(phygitalToken));
   const preimage = new Uint8Array(
-    CLEAR_TOKEN_VERIFIER_CHALLENGE_PREFIX.length + 32,
+    CLEAR_TOKEN_VERIFIER_CHALLENGE_PREFIX.length + 32 + tokenBytes.length,
   );
-  preimage.set(CLEAR_TOKEN_VERIFIER_CHALLENGE_PREFIX, 0);
-  preimage.set(slotHash, CLEAR_TOKEN_VERIFIER_CHALLENGE_PREFIX.length);
+  let offset = 0;
+  preimage.set(CLEAR_TOKEN_VERIFIER_CHALLENGE_PREFIX, offset);
+  offset += CLEAR_TOKEN_VERIFIER_CHALLENGE_PREFIX.length;
+  preimage.set(slotHash, offset);
+  offset += 32;
+  preimage.set(tokenBytes, offset);
   return sha256(preimage);
 }
 
@@ -228,16 +241,20 @@ export function buildExecuteChallengeFromSlot(
 
 export async function buildSetTokenVerifierChallenge(
   rpc: Rpc<GetAccountInfoApi>,
+  phygitalToken: Address,
   verifier: Address,
   endpoint: string,
 ): Promise<SlotChallenge> {
   return withSlotChallenge(rpc, (slotHash) =>
-    hashSetTokenVerifierChallenge(slotHash, verifier, endpoint),
+    hashSetTokenVerifierChallenge(slotHash, phygitalToken, verifier, endpoint),
   );
 }
 
 export async function buildClearTokenVerifierChallenge(
   rpc: Rpc<GetAccountInfoApi>,
+  phygitalToken: Address,
 ): Promise<SlotChallenge> {
-  return withSlotChallenge(rpc, hashClearTokenVerifierChallenge);
+  return withSlotChallenge(rpc, (slotHash) =>
+    hashClearTokenVerifierChallenge(slotHash, phygitalToken),
+  );
 }

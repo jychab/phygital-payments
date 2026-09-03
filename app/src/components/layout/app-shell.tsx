@@ -36,7 +36,7 @@ export function AppShell({
       >
         <div
           className={cn(
-            "mb-5 flex items-center justify-between gap-2 sm:gap-3 md:mb-6",
+            "mb-4 flex min-h-11 items-center justify-between gap-2 sm:gap-3 md:mb-5",
             galleryAnimate.rise,
           )}
         >
@@ -44,7 +44,7 @@ export function AppShell({
             {showWordmark ? (
               <Link
                 href="/"
-                className="truncate font-(family-name:--font-display) text-sm font-medium tracking-tight text-foreground"
+                className="truncate font-(family-name:--font-display) text-sm font-semibold tracking-tight text-foreground hover:opacity-80"
               >
                 {brand.company}
               </Link>

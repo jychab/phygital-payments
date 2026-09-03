@@ -3,10 +3,12 @@
  *
  * 1. Parse instructions
  * 2. Require wallet PDA as a signer on the intent
- * 3. `authorizeIntent` (swap in `authorize.ts` / `approval/`)
+ * 3. Fee balance gate (default verifier paymaster)
+ * 4. `authorizeIntent` (swap in `authorize.ts` / `approval/`)
  */
 import { Hono } from "hono";
 
+import { assertFeeBalance } from "@/fees/fee-balance-gate";
 import { json } from "@/shared/http";
 import { assertPreviewWalletSigner } from "@/verifier/assert-preview-wallet";
 import { authorizeIntent } from "@/verifier/authorize";
@@ -44,6 +46,17 @@ previewRoutes.post("/preview", async (c) => {
       instructionFromJson,
     );
     await assertPreviewWalletSigner(phygitalToken, instructions);
+
+    const fee = await assertFeeBalance({ phygitalToken, instructions });
+    if (!fee.ok) {
+      return json({
+        ok: false,
+        code: fee.code,
+        error: fee.error,
+        soft: fee.soft,
+        details: fee.details,
+      });
+    }
 
     const result = await authorizeIntent({
       phygitalToken,

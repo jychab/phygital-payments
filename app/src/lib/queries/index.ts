@@ -35,6 +35,12 @@ export const queryKeys = {
       [...queryKeys.walletPortfolio.all(), owner] as const,
   },
 
+  feeBalance: {
+    all: () => ["feeBalance"] as const,
+    byToken: (token: string | null) =>
+      [...queryKeys.feeBalance.all(), token] as const,
+  },
+
   phygitalToken: {
     all: () => ["phygitalTokens"] as const,
     byIdentifier: (identifier: string | null) =>

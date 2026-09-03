@@ -1,5 +1,6 @@
 mod common;
 
+use anchor_lang::prelude::Pubkey;
 use common::{
     build_execute_challenge, hash_compact_instructions, hash_execute_challenge,
     hash_referenced_accounts, pack_compact_instructions,
@@ -11,7 +12,6 @@ use phygital_wallet::CompactInstruction;
 use sha2::{Digest, Sha256};
 use solana_keypair::Keypair;
 use solana_signer::Signer;
-use anchor_lang::prelude::Pubkey;
 
 #[test]
 fn execute_challenge_changes_with_slot_hash() {
@@ -103,39 +103,48 @@ fn pack_compact_matches_expected_layout() {
     }];
     let packed = pack_compact_instructions(&compact);
     // [num=1][prog=0][nacc=2][1][2][len=2 LE][DE][AD]
-    assert_eq!(
-        packed,
-        vec![1, 0, 2, 1, 2, 2, 0, 0xDE, 0xAD]
-    );
+    assert_eq!(packed, vec![1, 0, 2, 1, 2, 2, 0, 0xDE, 0xAD]);
 }
 
 #[test]
 fn set_token_verifier_challenge_binds_verifier_and_endpoint() {
     let slot_hash = [4u8; 32];
+    let phygital_token = Pubkey::default();
     let verifier = Keypair::new().pubkey();
     let endpoint = "https://verifier.example.com/submit";
     let mut preimage = Vec::new();
     preimage.extend_from_slice(b"phygital_wallet:set_tv:v1");
     preimage.extend_from_slice(&slot_hash);
+    preimage.extend_from_slice(phygital_token.as_ref());
     preimage.extend_from_slice(verifier.as_ref());
     preimage.extend_from_slice(endpoint.as_bytes());
     let expected: [u8; 32] = Sha256::digest(&preimage).into();
     assert_eq!(
-        build_set_token_verifier_challenge(slot_hash, &verifier, endpoint),
+        build_set_token_verifier_challenge(slot_hash, &phygital_token, &verifier, endpoint),
         expected
     );
     assert_ne!(
-        build_set_token_verifier_challenge(slot_hash, &verifier, endpoint),
-        build_set_token_verifier_challenge(slot_hash, &Keypair::new().pubkey(), endpoint)
+        build_set_token_verifier_challenge(slot_hash, &phygital_token, &verifier, endpoint),
+        build_set_token_verifier_challenge(
+            slot_hash,
+            &phygital_token,
+            &Keypair::new().pubkey(),
+            endpoint
+        )
     );
 }
 
 #[test]
 fn clear_token_verifier_challenge_golden_vector() {
     let slot_hash = [6u8; 32];
+    let phygital_token = Pubkey::default();
     let mut preimage = Vec::new();
     preimage.extend_from_slice(b"phygital_wallet:clear_tv:v1");
     preimage.extend_from_slice(&slot_hash);
+    preimage.extend_from_slice(&phygital_token.as_ref());
     let expected: [u8; 32] = Sha256::digest(&preimage).into();
-    assert_eq!(build_clear_token_verifier_challenge(slot_hash), expected);
+    assert_eq!(
+        build_clear_token_verifier_challenge(slot_hash, &phygital_token),
+        expected
+    );
 }

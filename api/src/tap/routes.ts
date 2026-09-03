@@ -1,10 +1,7 @@
 import { Hono } from "hono";
 
 import { json } from "@/shared/http";
-import {
-  evaluateCounter,
-  TAP_SESSION_TTL_MS,
-} from "@/tap/counter-session";
+import { evaluateCounter } from "@/tap/counter-session";
 import {
   readCounterSession,
   writeCounterSession,
@@ -13,6 +10,7 @@ import { verifyDynamicUrlWithoutCounterCheck } from "@/tap/verify-dynamic-url";
 import { resolveTokenFromPasskeyPubkey } from "@/auth/passkey-verify";
 import {
   mintSessionToken,
+  readSessionCookie,
   setSessionCookie,
 } from "@/auth/token-session";
 
@@ -34,6 +32,18 @@ export const verifyTapRoutes = new Hono();
 verifyTapRoutes.get("/verify-tap", async (c) => {
   try {
     const params = new URL(c.req.url).searchParams;
+    const session = await readSessionCookie(c);
+    const pk = params.get("pk");
+
+    if (session && (!pk || pk === session.secp256r1PublicKey)) {
+      return json({
+        isVerified: true,
+        secp256r1PublicKey: session.secp256r1PublicKey,
+        reentry: true,
+        expiresAt: session.exp,
+      });
+    }
+
     if (!["pk", "s", "c", "n"].every((k) => params.get(k))) {
       return json(
         { isVerified: false, error: "Missing tap parameters" },
@@ -48,9 +58,8 @@ verifyTapRoutes.get("/verify-tap", async (c) => {
       return json({ isVerified: false, error: "Invalid signature" }, { status: 400 });
     }
 
-    const now = Date.now();
     const state = await readCounterSession(secp256r1PublicKey);
-    const verdict = evaluateCounter(state, counter, now, TAP_SESSION_TTL_MS);
+    const verdict = evaluateCounter(state, counter);
 
     if (verdict === "replay") {
       return json(
@@ -62,9 +71,7 @@ verifyTapRoutes.get("/verify-tap", async (c) => {
       );
     }
 
-    if (verdict === "new") {
-      await writeCounterSession(secp256r1PublicKey, { c: counter, t: now });
-    }
+    await writeCounterSession(secp256r1PublicKey, { c: counter });
 
     let expiresAt: number | undefined;
     try {
@@ -86,7 +93,7 @@ verifyTapRoutes.get("/verify-tap", async (c) => {
       isVerified: true,
       secp256r1PublicKey,
       counter,
-      reentry: verdict === "reentry",
+      reentry: false,
       ...(expiresAt != null ? { expiresAt } : {}),
     });
   } catch (err) {

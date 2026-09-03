@@ -94,7 +94,7 @@ export function ShortcutIframeSheet({
           {!loaded && !blocked ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
               <LoaderCircle className="size-6 animate-spin" aria-hidden />
-              <p className="text-xs">{copy.verify.holdStill}</p>
+              <p className="text-xs">{copy.shortcut.loading}</p>
             </div>
           ) : null}
 

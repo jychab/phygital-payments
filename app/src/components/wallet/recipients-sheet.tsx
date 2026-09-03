@@ -111,6 +111,9 @@ export function RecipientsSheet({
         </p>
       ) : (
         <>
+          <p className="text-xs text-muted-foreground">
+            {copy.wallet.policyDefaultSigningOnly}
+          </p>
           <div className="flex gap-2">
             <Button
               type="button"
@@ -153,7 +156,7 @@ export function RecipientsSheet({
                 variant="secondary"
                 onClick={() => addAddress(draft, "allow")}
               >
-                Add
+                {copy.wallet.add}
               </Button>
               <ul className="flex flex-col gap-1">
                 {allowlist.map((addr) => (
@@ -202,7 +205,7 @@ export function RecipientsSheet({
               variant="secondary"
               onClick={() => addAddress(denyDraft, "deny")}
             >
-              Block
+              {copy.wallet.block}
             </Button>
             <ul className="flex flex-col gap-1">
               {denylist.map((addr) => (
@@ -234,7 +237,7 @@ export function RecipientsSheet({
             {saving ? (
               <LoaderCircle className="size-4 animate-spin" />
             ) : (
-              copy.wallet.save
+              copy.wallet.holdToSave
             )}
           </Button>
         </>

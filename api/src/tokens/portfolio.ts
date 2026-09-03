@@ -1,10 +1,9 @@
-
 import { formatTokenAmount } from "@/tokens/amount";
 import {
   CLASSIC_TOKEN_PROGRAM,
-  defaultUsdcToken,
-  isClassicTokenProgram,
-  zeroUsdcHolding,
+  isSupportedTokenProgram,
+  NATIVE_SOL_MINT,
+  nativeSolHolding,
   type PaymentToken,
   type PaymentTokenHolding,
 } from "@/tokens/payment-token";
@@ -19,7 +18,12 @@ type DasAsset = {
     metadata?: { name?: string; symbol?: string };
     links?: { image?: string };
   };
-  grouping?: { group_key?: string; group_value?: string }[];
+  grouping?: {
+    group_key?: string;
+    group_value?: string;
+    collection_metadata?: { name?: string };
+  }[];
+  compression?: { compressed?: boolean };
   token_info?: {
     balance?: number | string;
     decimals?: number;
@@ -43,6 +47,7 @@ async function fetchAssetsByOwner(owner: string): Promise<DasAsset[]> {
       displayOptions: {
         showFungible: true,
         showZeroBalance: false,
+        showCollectionMetadata: true,
       },
     },
   });
@@ -50,12 +55,33 @@ async function fetchAssetsByOwner(owner: string): Promise<DasAsset[]> {
   return Array.isArray(items) ? items : [];
 }
 
-function buildVerifiedHoldings(
+async function fetchNativeSolLamports(owner: string): Promise<bigint> {
+  try {
+    const result = await postDasRpc<{ value?: number | string }>({
+      method: "getBalance",
+      params: [owner],
+      id: "balance",
+    });
+    const value = result?.value;
+    if (value == null) return 0n;
+    return BigInt(value);
+  } catch (error) {
+    console.error("getBalance failed", error);
+    return 0n;
+  }
+}
+
+function resolveTokenProgram(program: string | null | undefined): string {
+  if (program && isSupportedTokenProgram(program)) return String(program);
+  return String(CLASSIC_TOKEN_PROGRAM);
+}
+
+/** All fungible DAS assets with balance; enrich from verified registry when known. */
+function buildFungibleHoldings(
   verified: PaymentToken[],
   assets: DasAsset[],
 ): PaymentTokenHolding[] {
   const verifiedByMint = new Map(verified.map((t) => [t.mint, t]));
-  const usdc = defaultUsdcToken();
   const holdings: PaymentTokenHolding[] = [];
   const seen = new Set<string>();
 
@@ -66,47 +92,47 @@ function buildVerifiedHoldings(
     }
     const mint = asset.id?.trim();
     if (!mint || seen.has(mint)) continue;
+    // Native SOL is added separately from getBalance.
+    if (mint === NATIVE_SOL_MINT) continue;
 
     const tokenInfo = asset.token_info;
     const program = tokenInfo?.token_program;
-    if (program && !isClassicTokenProgram(program)) continue;
+    if (program && !isSupportedTokenProgram(program)) continue;
 
     const meta = verifiedByMint.get(mint);
-    if (!meta) continue;
-
     const decimals =
-      typeof tokenInfo?.decimals === "number" ? tokenInfo.decimals : meta.decimals;
+      typeof tokenInfo?.decimals === "number"
+        ? tokenInfo.decimals
+        : (meta?.decimals ?? 0);
     const balanceRaw = BigInt(
       tokenInfo?.balance != null ? String(tokenInfo.balance) : "0",
     );
-    if (balanceRaw <= BigInt(0) && mint !== usdc.mint) continue;
+    if (balanceRaw <= 0n) continue;
 
     seen.add(mint);
     holdings.push({
       mint,
       symbol:
-        meta.symbol ||
+        meta?.symbol ||
         tokenInfo?.symbol ||
         asset.content?.metadata?.symbol ||
         "TOKEN",
-      name: meta.name || asset.content?.metadata?.name || meta.symbol,
-      icon: meta.icon || asset.content?.links?.image || null,
+      name:
+        meta?.name ||
+        asset.content?.metadata?.name ||
+        meta?.symbol ||
+        "Token",
+      icon: meta?.icon || asset.content?.links?.image || null,
       decimals,
-      tokenProgram: String(CLASSIC_TOKEN_PROGRAM),
+      tokenProgram: resolveTokenProgram(program ?? meta?.tokenProgram),
       balanceRaw: balanceRaw.toString(),
       balanceUi: formatTokenAmount(balanceRaw, decimals),
     });
   }
 
-  if (!seen.has(usdc.mint)) {
-    holdings.unshift(zeroUsdcHolding());
-  } else {
-    holdings.sort((a, b) => {
-      if (a.mint === usdc.mint) return -1;
-      if (b.mint === usdc.mint) return 1;
-      return Number(b.balanceRaw) - Number(a.balanceRaw);
-    });
-  }
+  holdings.sort(
+    (a, b) => Number(b.balanceRaw) - Number(a.balanceRaw),
+  );
 
   return holdings;
 }
@@ -115,14 +141,9 @@ function buildCollectibles(assets: DasAsset[]): WalletCollectible[] {
   const out: WalletCollectible[] = [];
   for (const asset of assets) {
     const iface = asset.interface ?? "";
-    if (
-      iface === "FungibleToken" ||
-      iface === "FungibleAsset" ||
-      !asset.id
-    ) {
+    if (iface === "FungibleToken" || iface === "FungibleAsset" || !asset.id) {
       continue;
     }
-    // V1/ProgrammableNFT / MplCoreAsset etc.
     if (
       iface &&
       !iface.includes("NFT") &&
@@ -131,19 +152,28 @@ function buildCollectibles(assets: DasAsset[]): WalletCollectible[] {
       iface !== "MplCoreAsset" &&
       iface !== "Legacy"
     ) {
-      // Keep unknown non-fungibles that look like art
       if (!asset.content?.links?.image && !asset.content?.metadata?.name) {
         continue;
       }
     }
-    const collection =
-      asset.grouping?.find((g) => g.group_key === "collection")?.group_value ??
+
+    const group = asset.grouping?.find((g) => g.group_key === "collection");
+    const collectionName =
+      group?.collection_metadata?.name?.trim() ||
       null;
+
     out.push({
       mint: asset.id,
       name: asset.content?.metadata?.name?.trim() || "Collectible",
       image: asset.content?.links?.image ?? null,
-      collectionName: collection,
+      collectionName,
+      interface: iface || "Unknown",
+      compressed: Boolean(asset.compression?.compressed),
+      tokenProgram: asset.token_info?.token_program
+        ? String(asset.token_info.token_program)
+        : iface === "ProgrammableNFT" || iface.includes("NFT")
+          ? String(CLASSIC_TOKEN_PROGRAM)
+          : null,
     });
     if (out.length >= 40) break;
   }
@@ -154,7 +184,7 @@ export async function fetchWalletPortfolioServer(owner: string): Promise<{
   holdings: PaymentTokenHolding[];
   collectibles: WalletCollectible[];
 }> {
-  const [verified, assetsResult] = await Promise.all([
+  const [verified, assetsResult, solLamports] = await Promise.all([
     fetchVerifiedTokens(),
     fetchAssetsByOwner(owner).then(
       (assets) => ({ ok: true as const, assets }),
@@ -163,14 +193,28 @@ export async function fetchWalletPortfolioServer(owner: string): Promise<{
         return { ok: false as const, assets: [] as DasAsset[] };
       },
     ),
+    fetchNativeSolLamports(owner),
   ]);
 
   if (!assetsResult.ok) {
-    return { holdings: [zeroUsdcHolding()], collectibles: [] };
+    const holdings: PaymentTokenHolding[] = [];
+    if (solLamports > 0n) {
+      holdings.push(
+        nativeSolHolding(solLamports, formatTokenAmount(solLamports, 9)),
+      );
+    }
+    return { holdings, collectibles: [] };
+  }
+
+  const holdings = buildFungibleHoldings(verified, assetsResult.assets);
+  if (solLamports > 0n) {
+    holdings.unshift(
+      nativeSolHolding(solLamports, formatTokenAmount(solLamports, 9)),
+    );
   }
 
   return {
-    holdings: buildVerifiedHoldings(verified, assetsResult.assets),
+    holdings,
     collectibles: buildCollectibles(assetsResult.assets),
   };
 }

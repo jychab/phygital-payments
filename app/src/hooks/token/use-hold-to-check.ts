@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { useAuthenticateToken } from "@/hooks/token/use-authenticate-token";
 import { useTapVerify } from "@/hooks/token/use-tap-verify";
@@ -67,18 +66,12 @@ export function useHoldToCheck(
       setHoldConfirmed(true);
       setFailedRecheck(false);
 
-      if (isRecheckRef.current) {
-        setOverlay("recheck-success");
-        toast.success(copy.verify.verified, {
-          description: copy.verify.verifiedAgainBody,
-        });
-        if (recheckTimer.current) clearTimeout(recheckTimer.current);
-        recheckTimer.current = setTimeout(() => {
-          setOverlay(null);
-        }, RECHECK_SUCCESS_MS);
-      } else {
+      // First verify and recheck both get the success ceremony (no redundant toast).
+      setOverlay("recheck-success");
+      if (recheckTimer.current) clearTimeout(recheckTimer.current);
+      recheckTimer.current = setTimeout(() => {
         setOverlay(null);
-      }
+      }, RECHECK_SUCCESS_MS);
     } catch (err) {
       setHoldError(
         toUserErrorMessage(err, copy.verify.failedBody),

@@ -1,53 +1,74 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
-
+import { NavBar } from "@/components/shared/nav-bar";
+import { GroupedList, GroupedRow } from "@/components/shared/grouped-list";
 import { Button } from "@/components/ui/button";
+import { useFeeBalance } from "@/hooks/wallet/use-fee-balance";
 import { copy } from "@/lib/copy/phygital";
 
 export type SettingsTarget =
   | "spendingLimits"
   | "recipients"
   | "allowedActions"
-  | "signing";
+  | "signing"
+  | "feeBalance";
 
-/** Wallet settings hub — policy rows + signing. */
+/** Wallet settings hub — primary policies + Advanced group. */
 export function SettingsHub({
   onBack,
   onOpen,
+  phygitalTokenPda,
 }: {
   onBack: () => void;
   onOpen: (target: SettingsTarget) => void;
+  phygitalTokenPda?: string;
 }) {
-  const rows: { id: SettingsTarget; label: string }[] = [
-    { id: "spendingLimits", label: copy.wallet.spendingLimits },
-    { id: "recipients", label: copy.wallet.recipients },
-    { id: "allowedActions", label: copy.wallet.allowedActions },
-    { id: "signing", label: copy.wallet.signing },
-  ];
+  const fee = useFeeBalance(phygitalTokenPda ?? null);
+  const feeLabel = fee.data
+    ? `${copy.wallet.feeBalance} · ${fee.data.balanceUi} SOL`
+    : copy.wallet.feeBalance;
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-          {copy.common.back}
-        </Button>
-        <p className="text-sm font-medium">{copy.wallet.settings}</p>
-        <span className="w-16" aria-hidden />
-      </div>
-      <div className="flex flex-col gap-2">
-        {rows.map((row) => (
-          <button
-            key={row.id}
-            type="button"
-            onClick={() => onOpen(row.id)}
-            className="flex items-center justify-between rounded-2xl bg-muted/25 px-4 py-4 text-left"
-          >
-            <span className="text-sm">{row.label}</span>
-            <ChevronRight className="size-4 text-muted-foreground" />
-          </button>
-        ))}
-      </div>
+    <div className="flex flex-1 flex-col gap-6">
+      <NavBar
+        leading={
+          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
+            {copy.common.back}
+          </Button>
+        }
+        title={copy.wallet.settings}
+      />
+
+      <GroupedList>
+        <GroupedRow onClick={() => onOpen("feeBalance")}>
+          <span className="flex w-full items-center justify-between gap-2">
+            <span>{feeLabel}</span>
+            {fee.data?.low ? (
+              <span className="text-xs text-muted-foreground">
+                {copy.wallet.topUpFees}
+              </span>
+            ) : null}
+          </span>
+        </GroupedRow>
+      </GroupedList>
+
+      <GroupedList footer={copy.wallet.policyDefaultSigningOnly}>
+        <GroupedRow onClick={() => onOpen("spendingLimits")}>
+          {copy.wallet.spendingLimits}
+        </GroupedRow>
+        <GroupedRow onClick={() => onOpen("recipients")}>
+          {copy.wallet.recipients}
+        </GroupedRow>
+        <GroupedRow onClick={() => onOpen("allowedActions")}>
+          {copy.wallet.allowedActions}
+        </GroupedRow>
+      </GroupedList>
+
+      <GroupedList label={copy.wallet.advanced}>
+        <GroupedRow onClick={() => onOpen("signing")}>
+          {copy.wallet.signing}
+        </GroupedRow>
+      </GroupedList>
     </div>
   );
 }

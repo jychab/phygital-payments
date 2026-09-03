@@ -6,11 +6,12 @@
 # Token catalog (optional — without this, portfolio falls back to USDC-only)
 # JUPITER_API_KEY=
 
-# Optional USDC mint override
-# USDC_MINT=
-
 # Default verifier co-signer (base58 64-byte keypair or 32-byte seed)
 # VERIFIER_SECRET_KEY=
 
 # HttpOnly session cookie HMAC secret
 # POLICY_SESSION_SECRET=dev-session-secret-change-me
+
+# Fee balance paymaster (SOL top-up accumulator + Helius webhook auth)
+# TOP_UP_ACCUMULATOR=
+# HELIUS_WEBHOOK_AUTH=

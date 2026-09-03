@@ -24,6 +24,7 @@ import {
   type IntentInstruction,
 } from "@/verifier/constants";
 import {
+  COLLECTIBLE_SEND_PROGRAMS,
   DEFAULT_ALLOWED_PROGRAMS,
   DEFAULT_MAX_TRANSFER_SOL_LAMPORTS,
   type PolicyCondition,
@@ -32,6 +33,7 @@ import {
   type PolicyVerdict,
   type SolanaPolicyDocument,
 } from "@/verifier/approval/types";
+import { NON_USDC_TRANSFER_RULE } from "@/verifier/approval/policy-defaults";
 import { getUsdcMint, USDC_DECIMALS } from "@/tokens/usdc-mint";
 
 const transferCheckedDecoder = getTransferCheckedInstructionDataDecoder();
@@ -611,6 +613,10 @@ const LEGACY_ALLOW_DEST = "Recipient allowlist (token destination)";
 const LEGACY_DENY = "Recipient denylist";
 const LEGACY_PROGRAMS = "Allowlisted programs";
 
+function isCollectibleProgramRule(name: string): boolean {
+  return name.startsWith("Allow collectible program ");
+}
+
 export function compileSummaryToPolicy(
   summary: Partial<PolicySummary>,
   base: SolanaPolicyDocument,
@@ -622,6 +628,7 @@ export function compileSummaryToPolicy(
   let rules = base.rules.filter(
     (r) =>
       r.name !== TRANSFER_RULE &&
+      r.name !== NON_USDC_TRANSFER_RULE &&
       r.name !== ATA_RULE &&
       r.name !== ATA_ALLOWLIST_RULE &&
       r.name !== LEGACY_CAP &&
@@ -633,7 +640,9 @@ export function compileSummaryToPolicy(
       r.name !== "Allow System Transfer" &&
       r.name !== "Allow System Transfer under cap" &&
       r.name !== "Allow System account setup" &&
-      r.name !== "Allow Token CloseAccount",
+      r.name !== "Allow Token CloseAccount" &&
+      r.name !== "Allow Token Transfer (NFT amount)" &&
+      !isCollectibleProgramRule(r.name),
   );
 
   const programs = summary.allowedPrograms ?? derived.allowedPrograms;
@@ -750,6 +759,28 @@ export function compileSummaryToPolicy(
       ],
     });
     rules.push({
+      name: NON_USDC_TRANSFER_RULE,
+      method: "signTransaction",
+      action: "ALLOW",
+      conditions: [
+        {
+          field: "programId",
+          operator: "in",
+          value: tokenPrograms,
+        },
+        {
+          field: "instructionName",
+          operator: "eq",
+          value: "TransferChecked",
+        },
+        {
+          field: "TransferChecked.mint",
+          operator: "neq",
+          value: usdc,
+        },
+      ],
+    });
+    rules.push({
       name: "Allow Token CloseAccount",
       method: "signTransaction",
       action: "ALLOW",
@@ -763,6 +794,23 @@ export function compileSummaryToPolicy(
           field: "instructionName",
           operator: "eq",
           value: "CloseAccount",
+        },
+      ],
+    });
+    rules.push({
+      name: "Allow Token Transfer (NFT amount)",
+      method: "signTransaction",
+      action: "ALLOW",
+      conditions: [
+        {
+          field: "programId",
+          operator: "in",
+          value: tokenPrograms,
+        },
+        {
+          field: "instructionName",
+          operator: "eq",
+          value: "Transfer",
         },
       ],
     });
@@ -818,13 +866,44 @@ export function compileSummaryToPolicy(
   }
 
   // Custom extra programs (beyond payments defaults) — programId-only ALLOW.
-  if (!useDefaults) {
+  // Collectible stacks (TM / Bubblegum / Core) are part of DEFAULT_ALLOWED_PROGRAMS.
+  if (useDefaults) {
+    for (const programId of COLLECTIBLE_SEND_PROGRAMS) {
+      rules.push({
+        name: `Allow collectible program ${programId.slice(0, 8)}`,
+        method: "signTransaction",
+        action: "ALLOW",
+        conditions: [
+          {
+            field: "programId",
+            operator: "eq",
+            value: programId,
+          },
+        ],
+      });
+    }
+  } else {
     const extras = programs.filter(
       (p) => !(DEFAULT_ALLOWED_PROGRAMS as readonly string[]).includes(p),
     );
     for (const programId of extras) {
       rules.push({
         name: `Allow program ${programId.slice(0, 8)}`,
+        method: "signTransaction",
+        action: "ALLOW",
+        conditions: [
+          {
+            field: "programId",
+            operator: "eq",
+            value: programId,
+          },
+        ],
+      });
+    }
+    for (const programId of COLLECTIBLE_SEND_PROGRAMS) {
+      if (!programs.includes(programId)) continue;
+      rules.push({
+        name: `Allow collectible program ${programId.slice(0, 8)}`,
         method: "signTransaction",
         action: "ALLOW",
         conditions: [

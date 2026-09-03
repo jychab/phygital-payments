@@ -25,7 +25,6 @@ const OWNER_B = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
 const mockEnv = {
   SOLANA_CLUSTER: "mainnet",
   SOLANA_RPC_URL: "https://example.invalid",
-  USDC_MINT: USDC,
 } as unknown as Env;
 
 function withEnv<T>(fn: () => T): T {
@@ -174,6 +173,35 @@ describe("evaluatePolicy", () => {
         transferChecked(1_000_000n, String(ownerAAta)),
       ]);
       expect(allow).toEqual({ ok: true });
+    });
+  });
+
+  it("allows non-USDC SPL TransferChecked", async () => {
+    await withEnv(async () => {
+      const policy = buildDefaultPolicy();
+      const otherMint = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
+      const verdict = await evaluatePolicy(policy, [
+        transferChecked(
+          1_000_000_000n,
+          "Dst111111111111111111111111111111111111111",
+          otherMint,
+        ),
+      ]);
+      expect(verdict).toEqual({ ok: true });
+    });
+  });
+
+  it("allows Token Metadata program id", async () => {
+    await withEnv(async () => {
+      const policy = buildDefaultPolicy();
+      const verdict = await evaluatePolicy(policy, [
+        {
+          programAddress: "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
+          accounts: [],
+          data: new Uint8Array(),
+        },
+      ]);
+      expect(verdict).toEqual({ ok: true });
     });
   });
 });

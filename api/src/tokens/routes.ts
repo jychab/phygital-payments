@@ -11,10 +11,61 @@ import { fetchWalletPortfolioServer } from "@/tokens/portfolio";
 import { loadMintedCollectibleView } from "@/tokens/minted-view";
 import { getCollectibleRarityForMint } from "@/tokens/collection-rarity";
 import { fetchCollectibleShortcuts } from "@/tokens/shortcuts";
+import { fetchVerifiedTokens } from "@/tokens/verified-tokens";
+import {
+  FEE_BALANCE_LOW_LAMPORTS,
+  lamportsToSolUi,
+} from "@/fees/constants";
+import { getFeeBalanceLamports } from "@/fees/fee-balance-db";
 
 const MAX_BATCH = 50;
 
 export const tokenRoutes = new Hono();
+
+tokenRoutes.get("/tokens/fee-balance", async (c) => {
+  const tokenRaw = c.req.query("phygitalToken")?.trim() ?? "";
+  const phygitalToken = tryParseAddress(tokenRaw);
+  if (!phygitalToken) {
+    return json(
+      { error: "Query param phygitalToken must be a valid Solana address" },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const balanceLamports = await getFeeBalanceLamports(String(phygitalToken));
+    return json({
+      balanceLamports: String(balanceLamports),
+      balanceUi: lamportsToSolUi(balanceLamports),
+      low: balanceLamports < FEE_BALANCE_LOW_LAMPORTS,
+    });
+  } catch (error) {
+    return json(
+      {
+        error:
+          error instanceof Error ? error.message : "Failed to load fee balance",
+      },
+      { status: 502 },
+    );
+  }
+});
+
+tokenRoutes.get("/tokens/verified", async (c) => {
+  try {
+    const tokens = await fetchVerifiedTokens();
+    return json({ tokens });
+  } catch (error) {
+    return json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to load verified tokens",
+      },
+      { status: 502 },
+    );
+  }
+});
 
 tokenRoutes.get("/tokens/portfolio", async (c) => {
   const ownerRaw = c.req.query("owner")?.trim() ?? "";
