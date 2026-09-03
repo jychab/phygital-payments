@@ -8,10 +8,7 @@ import { fallbackCollectible } from "@/lib/tokens/collectible";
 import type { CollectibleRarity } from "@/lib/tokens/collectible";
 import type { CollectibleShortcut } from "@/lib/tokens/shortcuts";
 
-/**
- * Single round-trip for minted landing: DAS collectible + rarity + shortcuts.
- * Seeds per-key caches so binder / claim hooks stay warm if the user navigates.
- */
+/** Single round-trip for minted landing: DAS collectible + rarity + shortcuts. */
 export function useMintedCollectibleView(mint: string | null) {
   const queryClient = useQueryClient();
 
@@ -19,26 +16,17 @@ export function useMintedCollectibleView(mint: string | null) {
     queryKey: queryKeys.mintedCollectibleView.byMint(mint),
     queryFn: async () => {
       if (!mint) {
-        return { collectible: null, rarity: null, shortcuts: [] as CollectibleShortcut[] };
+        return {
+          collectible: null,
+          rarity: null,
+          shortcuts: [] as CollectibleShortcut[],
+        };
       }
       const view = await fetchMintedCollectibleViewClient(mint);
       queryClient.setQueryData(
         queryKeys.dasCollectible.byMint(mint),
         view.collectible,
       );
-      queryClient.setQueryData(
-        queryKeys.collectibleRarity.byMint(mint),
-        view.rarity,
-      );
-      if (view.collectible?.externalUrl) {
-        queryClient.setQueryData(
-          queryKeys.collectibleShortcuts.byExternalUrl(
-            view.collectible.externalUrl,
-            view.collectible.collectionMint,
-          ),
-          view.shortcuts,
-        );
-      }
       return view;
     },
     enabled: Boolean(mint),

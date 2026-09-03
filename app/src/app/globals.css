@@ -176,31 +176,6 @@
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     touch-action: manipulation;
-
-    /*
-     * Privy modal — mirror the gallery-dark tokens in globals.
-     * Hex approximates :root oklch values (Privy requires hex / CSS colors).
-     */
-    --privy-border-radius-sm: 0.3rem;
-    --privy-border-radius-md: 0.4rem;
-    --privy-border-radius-lg: 0.5rem;
-    --privy-border-radius-full: 9999px;
-    --privy-color-background: #050607;
-    --privy-color-background-2: #0b0c0e;
-    --privy-color-background-3: #111213;
-    --privy-color-foreground: #f0f2f4;
-    --privy-color-foreground-2: #e9ebee;
-    --privy-color-foreground-3: #83868b;
-    --privy-color-foreground-4: #1e1f22;
-    --privy-color-foreground-accent: #101214;
-    --privy-color-accent: #e9ebee;
-    --privy-color-accent-light: #f0f2f4;
-    --privy-color-accent-lightest: #f7f8f9;
-    --privy-color-accent-dark: #c5c8cc;
-    --privy-color-accent-darkest: #9a9da2;
-    --privy-color-success: #56bd78;
-    --privy-color-error: #e24947;
-    --privy-color-error-light: #f0716f;
   }
   html {
     @apply font-sans;

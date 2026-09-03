@@ -2083,13 +2083,32 @@ dependencies = [
 ]
 
 [[package]]
-name = "phygital-payments"
+name = "phygital-token-client"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b03901afea9072ed25c3d32772c28dfcfbc4fdbee8af440ecd60e0ab579e5aa"
+dependencies = [
+ "anchor-lang",
+ "borsh",
+ "num-derive",
+ "num-traits",
+ "solana-account-info",
+ "solana-address 2.7.0",
+ "solana-cpi",
+ "solana-instruction",
+ "solana-program-error",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "phygital-wallet"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
  "base64 0.22.1",
  "borsh",
+ "bytemuck",
  "litesvm",
  "p256",
  "phygital-token-client",
@@ -2104,24 +2123,6 @@ dependencies = [
  "solana-signer",
  "solana-slot-hashes",
  "solana-transaction",
-]
-
-[[package]]
-name = "phygital-token-client"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2933c79ae21636c85d459db34867b97abed4d77ec1d3fef5491fb6aa8d4fda6"
-dependencies = [
- "anchor-lang",
- "borsh",
- "num-derive",
- "num-traits",
- "solana-account-info",
- "solana-address 2.7.0",
- "solana-cpi",
- "solana-instruction",
- "solana-program-error",
- "thiserror 1.0.69",
 ]
 
 [[package]]

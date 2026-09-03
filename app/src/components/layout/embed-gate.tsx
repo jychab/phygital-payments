@@ -18,7 +18,7 @@ export function EmbedError({
   body: string;
 }) {
   return (
-    <AppShell walletActions="hidden" layout="compact">
+    <AppShell layout="compact">
       <GateMessage
         icon={<AlertCircle className="size-5 text-destructive" />}
         title={title}
@@ -31,7 +31,7 @@ export function EmbedError({
 
 export function EmbedBoot({ children }: { children?: ReactNode }) {
   return (
-    <AppShell walletActions="hidden" layout="compact">
+    <AppShell layout="compact">
       <div className="flex flex-1 flex-col items-center justify-center gap-4 py-14">
         <div
           className={cn(

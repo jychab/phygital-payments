@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { address } from "@solana/kit";
 
 import {
-  fetchMaybePhygitalTokenByPasskey,
   fetchPhygitalToken,
   fetchPhygitalTokenByIdentifier,
   type PhygitalToken,
@@ -34,22 +33,6 @@ export function usePhygitalTokenByAddress(tokenAddress: string | null) {
       return fetchPhygitalToken(getSolanaRpc(), address(tokenAddress));
     },
     enabled: Boolean(tokenAddress),
-    ...queryOptions.volatile,
-  });
-}
-
-/** Load on-chain token by passkey, or `null` when the PDA has no account yet. */
-export function usePhygitalTokenByPasskey(secp256r1PublicKey: string | null) {
-  return useQuery<PhygitalToken | null, Error>({
-    queryKey: queryKeys.phygitalToken.byPasskey(secp256r1PublicKey),
-    queryFn: () => {
-      if (!secp256r1PublicKey) throw new Error("Missing passkey");
-      return fetchMaybePhygitalTokenByPasskey(
-        getSolanaRpc(),
-        secp256r1PublicKey,
-      );
-    },
-    enabled: Boolean(secp256r1PublicKey),
     ...queryOptions.volatile,
   });
 }

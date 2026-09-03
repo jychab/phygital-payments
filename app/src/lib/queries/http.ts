@@ -1,17 +1,25 @@
-/** Default Cache-Control for API routes consumed by React Query. */
-export const QUERY_NO_STORE = {
-  "Cache-Control": "private, no-store",
-} as const;
+import { apiUrl } from "@/lib/api-base";
 
 /**
  * Browser fetch for React Query (and other app API calls).
  * HTTP cache is off — React Query owns freshness.
+ * Relative API paths go to `NEXT_PUBLIC_API_BASE_URL`.
  */
 export function queryFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<Response> {
-  return fetch(input, { ...init, cache: "no-store" });
+  const resolved =
+    typeof input === "string"
+      ? apiUrl(input)
+      : input instanceof URL
+        ? apiUrl(input.toString())
+        : input;
+  return fetch(resolved, {
+    credentials: "include",
+    ...init,
+    cache: "no-store",
+  });
 }
 
 /** HTTP failure from `readJson` / API clients — carries status for retry policy. */

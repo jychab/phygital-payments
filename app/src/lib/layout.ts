@@ -2,11 +2,8 @@
 
 /**
  * Column widths:
- * - gallery: Collection hub + card detail (binder needs room)
- * - compact: NFC ceremony, claim, Pay, Collect, accessory task (task focus)
- *
- * Gallery steps up at `md` / `lg` so desktop is a real grid, not a stretched
- * phone. Compact stays task-narrow on every breakpoint.
+ * - gallery: minted card detail (room for art + dossier)
+ * - compact: NFC ceremony / accessory task focus
  */
 export const shellLayoutClass = {
   gallery: "max-w-lg md:max-w-3xl lg:max-w-5xl",
@@ -51,10 +48,3 @@ export const centeredBlockClass =
  */
 export const detailSplitClass =
   "flex flex-1 flex-col gap-6 lg:grid lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)]";
-
-/** Collection card grid — scales with the gallery shell. */
-export const collectionGridClass =
-  "grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-5 xl:grid-cols-5";
-
-/** Accessory list — single column on phone, two-up on desktop. */
-export const accessoryListClass = "flex flex-col gap-2 lg:grid lg:grid-cols-2";

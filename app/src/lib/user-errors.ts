@@ -1,12 +1,11 @@
 /**
- * Map technical payment / preauth / submit errors to human-facing copy.
+ * Map technical send / verify errors to human-facing copy.
  * Keep raw Error.message in logs; never show engineer jargon in toasts.
- *
- * Voice: Apple Pay — short title, one calm next step. Everyday words only.
- * No window, grant, delegate, ATA, mint, or program IDs.
  */
 
-import { errorCopy } from "@/lib/copy/phygital";
+import { PolicyDeniedError } from "phygital-wallet-sdk";
+
+import { copy, errorCopy } from "@/lib/copy/phygital";
 
 const DEFAULT_ERROR_BODY: string = errorCopy.fallback.body;
 const DEFAULT_ERROR: UserFacingError = errorCopy.fallback;
@@ -35,72 +34,8 @@ const RULES: Rule[] = [
     facing: errorCopy.paymentFailed,
   },
   {
-    test: /already on that wallet/i,
-    facing: errorCopy.alreadyAdded,
-  },
-  {
-    test: /accessory is locked|unlock it before moving|unlock it before claiming|TokenIsCurrentlyLocked|currently locked|unlock the phygital token/i,
+    test: /accessory is locked|TokenIsCurrentlyLocked|currently locked|unlock the phygital token/i,
     facing: errorCopy.accessoryLocked,
-  },
-  {
-    test: /recipient token account is missing|token account is missing\. create it/i,
-    facing: errorCopy.finishSetup,
-  },
-  {
-    test: /preauth grant already used/i,
-    facing: errorCopy.alreadyUsed,
-  },
-  {
-    test: /no active preauth grant|missing preauth/i,
-    facing: errorCopy.payNotReady,
-  },
-  {
-    test: /not the SPL delegate|haven't enabled this token for Pay|enable this token for Pay/i,
-    facing: errorCopy.tokenNotOn,
-  },
-  {
-    test: /more than their spending limit|Delegated amount is insufficient/i,
-    facing: errorCopy.overLimit,
-  },
-  {
-    test: /delegated amount|delegate mismatch/i,
-    facing: errorCopy.overLimit,
-  },
-  {
-    test: /preauth rate limited/i,
-    facing: errorCopy.tryAgainShortly,
-  },
-  {
-    test: /this API key is for a different wallet/i,
-    facing: errorCopy.wrongWallet,
-  },
-  {
-    test: /key has been revoked|re-provision to get a new key/i,
-    facing: errorCopy.payReset,
-  },
-  {
-    test: /invalid or revoked API key/i,
-    facing: errorCopy.didntWork,
-  },
-  {
-    test: /missing x-api-key header|missing preauth api key|Pay isn't set up on this phone|Pay isn't set up in this browser|Pay isn't turned on here/i,
-    facing: errorCopy.payNotSetUp,
-  },
-  {
-    test: /query param grantid is required|preauth grant not found/i,
-    facing: errorCopy.paymentNotFound,
-  },
-  {
-    test: /user rejected|rejected the request|transaction cancelled|signing was cancelled|user closed|closed the flow|user_exited/i,
-    facing: errorCopy.cancelled,
-  },
-  {
-    test: /sponsored submit is not configured|fee-free|fee_payer|fee payer|PAY_HMAC_SECRET|PREAUTH_GRANTS Durable Object/i,
-    facing: errorCopy.paymentsUnavailable,
-  },
-  {
-    test: /timed out waiting for sponsored/i,
-    facing: errorCopy.takingTooLong,
   },
   {
     test: /tap proof expired|slot hash no longer valid/i,
@@ -109,26 +44,6 @@ const RULES: Rule[] = [
   {
     test: /slot hashes|slot hash/i,
     facing: errorCopy.tryAgainBody,
-  },
-  {
-    test: /owner verifier/i,
-    facing: errorCopy.tryAgainBody,
-  },
-  {
-    test: /no locked NFC accessory|lock the accessory|add it to a wallet first/i,
-    facing: errorCopy.accessoryNotReady,
-  },
-  {
-    test: /token is not lockable|TokenIsNotLockable/i,
-    facing: errorCopy.cantLock,
-  },
-  {
-    test: /owner mismatch|OwnerMismatch/i,
-    facing: errorCopy.wrongOwnerWallet,
-  },
-  {
-    test: /belongs to the receiving wallet|collect a payment from yourself/i,
-    facing: errorCopy.ownAccessory,
   },
   {
     test: /this tap timed out|this tap was already used/i,
@@ -151,20 +66,12 @@ const RULES: Rule[] = [
     facing: errorCopy.nfcVerifyFailed,
   },
   {
-    test: /connect your wallet|connect a wallet|sign in to continue/i,
-    facing: errorCopy.connectToContinue,
-  },
-  {
     test: /NFC accessory not found|accessory not found|missing passkey/i,
     facing: errorCopy.itemNotFound,
   },
   {
-    test: /only classic spl|token-2022/i,
-    facing: errorCopy.tokenNotSupported,
-  },
-  {
-    test: /mint account not found/i,
-    facing: errorCopy.tokenUnavailable,
+    test: /no locked NFC accessory|add it to a wallet first/i,
+    facing: errorCopy.accessoryNotReady,
   },
   {
     test: /enter a valid amount/i,
@@ -206,15 +113,15 @@ export function getRawPaymentError(error: unknown): string {
   return rawMessage(error).trim();
 }
 
-/** Write full payment error detail to the console (raw message is stripped in UI). */
+/** Write full error detail to the console (raw message is stripped in UI). */
 export function logPaymentError(scope: string, error: unknown): void {
   const raw = getRawPaymentError(error);
   if (raw) {
-    console.error(`[payment:${scope}]`, raw, error);
+    console.error(`[app:${scope}]`, raw, error);
     return;
   }
   if (error != null) {
-    console.error(`[payment:${scope}]`, error);
+    console.error(`[app:${scope}]`, error);
   }
 }
 
@@ -255,6 +162,18 @@ export function toUserErrorMessage(
   error: unknown,
   fallback: string = DEFAULT_ERROR_BODY,
 ): string {
+  if (error instanceof PolicyDeniedError) {
+    if (error.code === "spend_limit") return error.message;
+    if (error.code === "recipient_not_allowed") {
+      return copy.wallet.approveSendBodyRecipient;
+    }
+    if (error.code === "outside_time_window") {
+      return copy.wallet.approveSendBodyTime;
+    }
+    if (!error.soft) return copy.wallet.sendBlockedHard;
+    return error.message || copy.wallet.sendBlockedHard;
+  }
+
   const raw = rawMessage(error).trim();
   if (!raw) return fallback;
 
@@ -267,20 +186,4 @@ export function toUserErrorMessage(
 
   if (raw !== fallback) logPaymentError("sanitized", error);
   return fallback;
-}
-
-/** Single Shortcuts / notification line: title folded into body. */
-export function toUserFacingBody(
-  error: unknown,
-  fallback: UserFacingError | string = DEFAULT_ERROR_BODY,
-): string {
-  const facing = toUserFacingError(error, fallback);
-  if (
-    facing.body === facing.title ||
-    facing.body.startsWith(`${facing.title}.`) ||
-    facing.body.startsWith(`${facing.title} `)
-  ) {
-    return facing.body;
-  }
-  return `${facing.title}. ${facing.body}`;
 }

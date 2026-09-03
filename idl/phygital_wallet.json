@@ -1,0 +1,835 @@
+{
+  "address": "Fjbi9JrRAmSBdxQxbkcxYDp6JUwnLbFhU2GsieWQBLSg",
+  "metadata": {
+    "name": "phygital_wallet",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Passkey-gated smart wallet for phygital tokens"
+  },
+  "instructions": [
+    {
+      "name": "add_verifier",
+      "discriminator": [
+        165,
+        72,
+        135,
+        225,
+        67,
+        181,
+        255,
+        135
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "address": "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF"
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "verifier",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "clear_token_verifier",
+      "discriminator": [
+        83,
+        237,
+        126,
+        93,
+        140,
+        254,
+        231,
+        156
+      ],
+      "accounts": [
+        {
+          "name": "verifier",
+          "docs": [
+            "Verifier co-signer. Token override (exclusive) or config default set."
+          ],
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "phygital_token",
+          "writable": true,
+          "relations": [
+            "token_verifier"
+          ]
+        },
+        {
+          "name": "rent_receiver",
+          "writable": true
+        },
+        {
+          "name": "token_verifier",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "phygital_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slot_hashes",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "instructions_sysvar",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "phygital_token_program",
+          "address": "DuPpckdjjgVAnYok2aTMAt264ZPBXqq3JSazJjCUzTJQ"
+        }
+      ],
+      "args": [
+        {
+          "name": "secp256r1_verify_args",
+          "type": {
+            "defined": {
+              "name": "Secp256r1VerifyArgs"
+            }
+          }
+        },
+        {
+          "name": "slot_number",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "execute",
+      "docs": [
+        "Passkey-gated execute of compact inner instructions."
+      ],
+      "discriminator": [
+        130,
+        221,
+        242,
+        154,
+        13,
+        193,
+        189,
+        29
+      ],
+      "accounts": [
+        {
+          "name": "verifier",
+          "docs": [
+            "Verifier co-signer. Must match token override or config set."
+          ],
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "phygital_token",
+          "writable": true
+        },
+        {
+          "name": "token_verifier",
+          "docs": [
+            "Optional per-token verifier override PDA.",
+            "Uninitialized (system-owned / empty) → use `config.verifiers`.",
+            "Initialized → ONLY `token_verifier.verifier` is accepted (exclusive)."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "phygital_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "wallet",
+          "docs": [
+            "`seeds`/`bump` lands in `ctx.bumps.wallet`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  103,
+                  114,
+                  97,
+                  109,
+                  95,
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "phygital_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slot_hashes",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "instructions_sysvar",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "phygital_token_program",
+          "address": "DuPpckdjjgVAnYok2aTMAt264ZPBXqq3JSazJjCUzTJQ"
+        }
+      ],
+      "args": [
+        {
+          "name": "compact_instructions",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "CompactInstruction"
+              }
+            }
+          }
+        },
+        {
+          "name": "secp256r1_verify_args",
+          "type": {
+            "defined": {
+              "name": "Secp256r1VerifyArgs"
+            }
+          }
+        },
+        {
+          "name": "slot_number",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_config",
+      "discriminator": [
+        208,
+        127,
+        21,
+        1,
+        194,
+        190,
+        196,
+        70
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "address": "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF"
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "initial_verifiers",
+          "type": {
+            "vec": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "remove_verifier",
+      "discriminator": [
+        179,
+        9,
+        132,
+        183,
+        233,
+        23,
+        172,
+        111
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true,
+          "address": "G6kBnedts6uAivtY72ToaFHBs1UVbT9udiXmQZgMEjoF"
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "verifier",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_token_verifier",
+      "discriminator": [
+        119,
+        217,
+        120,
+        253,
+        242,
+        171,
+        137,
+        184
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Fee payer for rent; not an authorization authority."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "verifier",
+          "docs": [
+            "Verifier co-signer. Token override (exclusive) or config default set."
+          ],
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "phygital_token",
+          "writable": true
+        },
+        {
+          "name": "token_verifier",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "phygital_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slot_hashes",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "instructions_sysvar",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "phygital_token_program",
+          "address": "DuPpckdjjgVAnYok2aTMAt264ZPBXqq3JSazJjCUzTJQ"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_verifier",
+          "type": "pubkey"
+        },
+        {
+          "name": "endpoint",
+          "type": "string"
+        },
+        {
+          "name": "secp256r1_verify_args",
+          "type": {
+            "defined": {
+              "name": "Secp256r1VerifyArgs"
+            }
+          }
+        },
+        {
+          "name": "slot_number",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Config",
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    },
+    {
+      "name": "TokenVerifier",
+      "discriminator": [
+        52,
+        84,
+        111,
+        160,
+        81,
+        247,
+        144,
+        43
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "TokenIsCurrentlyUnLocked",
+      "msg": "Token must be lockable and currently locked"
+    },
+    {
+      "code": 6001,
+      "name": "UnauthorizedVerifier",
+      "msg": "Verifier is not authorized for this execute"
+    },
+    {
+      "code": 6002,
+      "name": "TokenVerifierRequired",
+      "msg": "Token has a custom verifier configured; that key must sign"
+    },
+    {
+      "code": 6003,
+      "name": "VerifierAlreadyExists",
+      "msg": "Verifier is already in the config set"
+    },
+    {
+      "code": 6004,
+      "name": "VerifierNotFound",
+      "msg": "Verifier was not found in the config set"
+    },
+    {
+      "code": 6005,
+      "name": "TooManyVerifiers",
+      "msg": "Config verifier set is full"
+    },
+    {
+      "code": 6006,
+      "name": "UnauthorizedAdmin",
+      "msg": "Only the config admin may perform this action"
+    },
+    {
+      "code": 6007,
+      "name": "TokenVerifierMismatch",
+      "msg": "Token verifier account does not match the phygital token"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidEndpoint",
+      "msg": "Verifier endpoint URL is empty or invalid"
+    },
+    {
+      "code": 6009,
+      "name": "EndpointTooLong",
+      "msg": "Verifier endpoint URL exceeds max length"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidSlotHash",
+      "msg": "Slot not found in SlotHashes sysvar — signature has expired or is being replayed"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidSysvarDataFormat",
+      "msg": "Invalid SlotHashes sysvar data format"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidAccountData",
+      "msg": "Account data is missing or malformed"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidAccountIndex",
+      "msg": "Compact instruction account index out of bounds"
+    },
+    {
+      "code": 6014,
+      "name": "SelfReentrancyNotAllowed",
+      "msg": "Self-reentrancy via CPI into this program is not allowed"
+    },
+    {
+      "code": 6015,
+      "name": "PhygitalTokenCpiNotAllowed",
+      "msg": "CPI into the phygital-token program is not allowed"
+    },
+    {
+      "code": 6016,
+      "name": "TokenVerifierPayerMismatch",
+      "msg": "Rent receiver must match the token verifier account creator"
+    },
+    {
+      "code": 6017,
+      "name": "WalletOwnerMismatch",
+      "msg": "Wallet PDA must equal phygital_token.owner"
+    },
+    {
+      "code": 6018,
+      "name": "ExecuteViaCpiNotAllowed",
+      "msg": "Execute must be a top-level instruction (CPI into execute is not allowed)"
+    },
+    {
+      "code": 6019,
+      "name": "WalletInvariantViolated",
+      "msg": "Wallet PDA owner or data length changed during inner CPI"
+    },
+    {
+      "code": 6020,
+      "name": "ProtectedAccountPrivilege",
+      "msg": "Protected account may not be a signer or writable in inner instructions"
+    },
+    {
+      "code": 6021,
+      "name": "InvalidTokenVerifier",
+      "msg": "Token verifier pubkey must be a non-default key"
+    }
+  ],
+  "types": [
+    {
+      "name": "CompactInstruction",
+      "docs": [
+        "Index-based inner instruction for execute."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "program_id_index",
+            "docs": [
+              "Index into `remaining_accounts` for the target program id."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "account_indexes",
+            "docs": [
+              "Indexes into `remaining_accounts` for the instruction's accounts."
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "data",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Config",
+      "docs": [
+        "Global program config: admin + default verifier set (fee-payer/verifiers).",
+        "",
+        "Fixed-size so execute can `AccountLoader` (zero-copy) instead of",
+        "Borsh-decoding a `Vec`."
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "verifiers",
+            "type": {
+              "array": [
+                "pubkey",
+                8
+              ]
+            }
+          },
+          {
+            "name": "verifier_count",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "_padding",
+            "type": {
+              "array": [
+                "u8",
+                6
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Secp256r1VerifyArgs",
+      "docs": [
+        "Instruction-arg mirror of `phygital_token_client::Secp256r1VerifyArgs`.",
+        "",
+        "The crates.io client only derives Borsh for this type, which breaks Anchor's",
+        "`idl-build` (`IdlBuild` methods). Keep a same-layout Anchor type here for the",
+        "program interface and convert at the CPI boundary."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "verify_args_relative_index",
+            "type": "i64"
+          },
+          {
+            "name": "signed_message_index",
+            "type": "u8"
+          },
+          {
+            "name": "client_data_json",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenVerifier",
+      "docs": [
+        "Optional per-phygital-token verifier override. When present, ONLY this",
+        "verifier may authorize executes for that token (config set is not accepted).",
+        "`endpoint` is the HTTPS URL of that verifier's build/sign/send service.",
+        "",
+        "Not on the execute hot path (read by offset in `resolve_verifier`); keep",
+        "Borsh so the endpoint stays a human-readable `String` in the IDL."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "phygital_token",
+            "type": "pubkey"
+          },
+          {
+            "name": "verifier",
+            "type": "pubkey"
+          },
+          {
+            "name": "endpoint",
+            "type": "string"
+          },
+          {
+            "name": "payer",
+            "docs": [
+              "Account that paid init rent; close refunds this pubkey."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "CONFIG_SEED",
+      "type": "bytes",
+      "value": "[99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "PROGRAM_WALLET_SEED",
+      "type": "bytes",
+      "value": "[112, 114, 111, 103, 114, 97, 109, 95, 119, 97, 108, 108, 101, 116]"
+    },
+    {
+      "name": "TOKEN_VERIFIER_SEED",
+      "type": "bytes",
+      "value": "[116, 111, 107, 101, 110, 95, 118, 101, 114, 105, 102, 105, 101, 114]"
+    }
+  ]
+}

@@ -1,11 +1,11 @@
 {
-  "idl": "idl/phygital_payments.json",
+  "idl": "idl/phygital_wallet.json",
   "before": [],
   "scripts": {
     "js": {
       "from": "@codama/renderers-js",
       "args": [
-        "clients/js/phygital-payments",
+        "clients/js/phygital-wallet",
         {
           "formatCode": true,
           "syncPackageJson": true,

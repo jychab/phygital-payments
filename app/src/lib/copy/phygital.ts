@@ -2,7 +2,7 @@
  * Revibase brand stack — company first, products second.
  *
  * All user-facing UX strings live here. Import nested groups:
- * `copy.verify.holdToCheck`, `copy.pay.paySettings`, `copy.wallet.*`, etc.
+ * `copy.verify.holdToCheck`, `copy.wallet.*`, etc.
  */
 
 export const brand = {
@@ -11,23 +11,11 @@ export const brand = {
 } as const;
 
 export const products = {
-  collection: {
-    id: "collection",
-    name: "Collection",
-    title: "Collection — Revibase",
-    tagline: "Your cards and accessories",
-  },
-  pay: {
-    id: "pay",
-    name: "Pay",
-    title: "Pay — Revibase",
-    tagline: "Tap to pay with your accessory",
-  },
-  collect: {
-    id: "collect",
-    name: "Collect",
-    title: "Collect — Revibase",
-    tagline: "Collect a payment with a tap",
+  recents: {
+    id: "recents",
+    name: "Recents",
+    title: "Recents — Revibase",
+    tagline: "Cards and accessories you’ve tapped",
   },
 } as const;
 
@@ -37,44 +25,78 @@ export const copy = {
     done: "Done",
     cancel: "Cancel",
     loading: "Loading…",
-    connectWallet: "Connect wallet",
-    connectWalletTitle: "Connect your wallet",
-    connectShort: "Connect",
-    activity: "Activity",
     back: "Back",
     close: "Close",
-    show: "Show",
-    hide: "Hide",
-    disconnect: "Disconnect",
-    remove: "Remove",
     wallet: "Wallet",
-    selected: "Selected",
   },
   wallet: {
-    wrongWalletTitle: "Wrong wallet",
-    wrongWalletNotice: (ownerShort: string) =>
-      `Wrong wallet. Disconnect above, then connect ${ownerShort}.`,
-    wrongWalletPageBody: (ownerShort: string) =>
-      `This page is for ${ownerShort}. Disconnect above, then connect that wallet.`,
-    connectHint: (ownerShort: string) =>
-      `Connect ${ownerShort} to continue.`,
-    connectToAuthorize: (ownerShort: string) =>
-      `Connect ${ownerShort} to authorize this phone.`,
-    connectToRotate: (ownerShort: string) =>
-      `Connect ${ownerShort} to rotate this phone’s key.`,
-    connectToChangeLimit: (ownerShort: string) =>
-      `Connect ${ownerShort} to change this limit.`,
     copyAddress: "Copy address",
-    showPrivateKey: "Show private key",
     addressCopied: "Address copied",
     addressCopyFailed: "Couldn’t copy address",
-    privateKeyFailed: "Couldn’t show private key",
-    loginFailed: "Couldn’t open wallet login",
-    googleWalletMenu: "Google wallet menu",
-    walletMenu: "Wallet menu",
-    walletMenuNamed: (name: string) => `${name} menu`,
-    stillLoadingTitle: "Wallet is still loading",
-    stillLoadingBody: "Try Connect again in a moment.",
+    openWalletAria: (label: string) => `Open wallet ${label}`,
+    copyAddressAria: (label: string) => `Copy address ${label}`,
+    availableBalance: "Available balance",
+    addMoney: "Add money to get started",
+    send: "Send",
+    receive: "Receive",
+    tokens: "Tokens",
+    collectibles: "Collectibles",
+    settings: "Settings",
+    signing: "Signing",
+    backToCard: "Card",
+    holdToSend: "Hold to send",
+    holdToReceive: "Hold to receive",
+    holdToSave: "Hold to save",
+    sent: "Sent",
+    received: "Received",
+    ofAvailable: (available: string) => `of $${available} available`,
+    to: "To",
+    from: "From",
+    pasteAddress: "Paste address",
+    tapAccessory: "Tap accessory",
+    tapTheirAccessory: "Tap their accessory",
+    accessoryLinked: "Accessory linked",
+    clear: "Clear",
+    shareAddress: "Share this address",
+    receiveNearby: "Receive nearby",
+    receiveNearbyHint: "They hold their accessory here",
+    signingBody:
+      "Revibase signs with you when you tap. Change only if you trust another service.",
+    signingCurrent: "Current",
+    signingDefault: "Revibase",
+    useCustomSigning: "Use custom service…",
+    customEndpoint: "Endpoint URL",
+    customVerifier: "Verifier address",
+    approveSendTitle: "Approve this send?",
+    approveSendBodyLimit: (limit: string) =>
+      `This is over your $${limit} limit.`,
+    approveSendBodyRecipient: "This address isn’t on your allowed list.",
+    approveSendBodyTime: "Sending isn’t allowed right now.",
+    approveOnce: "Approve once",
+    changeLimits: "Change limits",
+    holdToUnlock: "Hold to unlock",
+    sessionExpiredBody: "Hold your item to continue.",
+    sendBlockedHard:
+      "This payment isn’t allowed by your settings. Change limits in Settings.",
+    spendingLimits: "Spending limits",
+    spendingLimitsHint: "You can still approve a larger send once.",
+    maxPerSend: "Max per send",
+    recipients: "Recipients",
+    recipientsAnyone: "Anyone",
+    recipientsAllowlist: "Allow list only",
+    recipientsBlocked: "Blocked addresses",
+    allowedActions: "Allowed actions",
+    paymentsOnly: "Payments only",
+    advancedPrograms: "Custom programs",
+    save: "Save",
+    settingsSaved: "Settings saved",
+  },
+  recents: {
+    heading: "Recents",
+    emptyTitle: "Nothing here yet",
+    emptyBody: "Hold a card or accessory to this phone.",
+    card: "Card",
+    accessory: "Accessory",
   },
   address: {
     default: "address",
@@ -112,31 +134,6 @@ export const copy = {
     notSetUpTitle: "Not set up",
     notSetUpBody: "This item isn't registered on Revibase yet.",
   },
-  claim: {
-    addToWallet: "Add to Wallet",
-    holdToAdd: "Hold to continue",
-    stepHold: "Hold",
-    stepConfirm: "Confirm",
-    confirmTitle: "Choose owner wallet",
-    readyBody: (noun: "card" | "accessory") =>
-      `Hold your ${noun} flat against the back of this phone.`,
-    holdStepTitle: (noun: "card" | "accessory") => `Hold your ${noun}`,
-    holdStepBody: "Keep it flat against the back of this phone until it connects.",
-    confirmBody: (noun: "card" | "accessory") =>
-      `Connect the wallet that will own this ${noun}.`,
-    moveToNewWallet: "Transfer to another wallet",
-    confirmInWalletTitle: "Confirm in wallet…",
-    confirmInWalletBody: "Approve in your wallet to continue.",
-    confirmInWalletButton: "Confirm in wallet",
-    connectOwnerBody: (noun: "card" | "accessory") =>
-      `This wallet will own the ${noun}.`,
-    captureFailed: (noun: "card" | "accessory") =>
-      `Couldn’t add this ${noun}. Try again.`,
-    readFailed: (noun: "card" | "accessory") =>
-      `Couldn’t read the ${noun}. Turn on NFC and hold it to the back of your phone.`,
-    finishFailed:
-      "Transaction wasn’t approved. Try again in your wallet.",
-  },
   token: {
     verification: "Verification",
     linked: "Linked",
@@ -152,159 +149,8 @@ export const copy = {
     showMore: "Show more",
     showLess: "Show less",
     mintAddress: "Token ID",
-  },
-  collection: {
-    loading: "Loading your collection…",
-    loadFailedTitle: "Couldn’t load collection",
-    loadFailedBody: "Check your connection and try again.",
-    heading: "Your Collection",
-    cardsAria: "Cards",
-    emptyTitle: "No cards yet",
-    emptyBody:
-      "Hold a card flat against the back of your phone to add it to your collection.",
-    accessoriesHeading: "Accessories",
-    connectBody: "Connect to see your cards and accessories.",
-    activityEmpty: "When you send or receive payments, they’ll show up here.",
-    activityLoadFailed: "Couldn’t load activity",
     itemLoadFailed: "Couldn’t load item",
     itemNotOnChain: "This item may no longer be available.",
-    manageNoun: (noun: "card" | "accessory") => `Manage ${noun}`,
-    removeFromWallet: "Remove from wallet",
-    removeConfirmTitle: (noun: "card" | "accessory") => `Remove ${noun}?`,
-    removeConfirmBody: (noun: "card" | "accessory") =>
-      `Remove this ${noun} from your collection? Someone else can add it afterward.`,
-    nounRemoved: (noun: "card" | "accessory") =>
-      noun === "card" ? "Card removed" : "Accessory removed",
-    removeFailed: (noun: "card" | "accessory") => `Couldn’t remove this ${noun}`,
-    sent: "Sent",
-    from: "from",
-    to: "to",
-  },
-  collect: {
-    amountLocked: "Amount set by payment link",
-    holdToCollect: "Hold to collect",
-    received: "Received",
-    processing: "Processing",
-    holdTitle: "Hold their accessory here",
-    holdBody: "Keep holding until you feel it connect.",
-    confirmingBody: "Just a moment.",
-    inAppBody: "To collect a payment, open this page in Safari or Chrome.",
-    inAppTitle: "Open in Safari or Chrome",
-    linkInvalidTitle: "This payment link isn’t set up",
-    linkInvalidBody: "This link is incomplete. Ask the seller to send a new one.",
-    linkMissingRecipientBody:
-      "Open a payment link with a recipient address, or ask the seller for one.",
-    connectBody: "Payments will be sent to the wallet you connect.",
-    ataTitle: "Set up to receive payments",
-    ataNotReadyPrefix: "This wallet isn’t ready to receive",
-    ataNotReadySuffix: "yet.",
-    readyToReceive: "Ready to receive",
-    setupFailed: "Couldn’t set up to receive",
-    settingUp: "Setting up…",
-    createAta: (symbol: string) => `Set up ${symbol}`,
-    chooseToken: "Choose a token",
-    searchTokens: "Search tokens",
-    supportedTokensOnly: "Supported tokens only",
-    noTokensMatch: "No tokens match.",
-    enterAmountBody:
-      "Enter an amount, then hold their accessory to your phone.",
-    toLabel: "To",
-    checking: "Checking…",
-    finishSetupInAppPrefix: "Open this page in Safari or Chrome to finish",
-    finishSetupInAppSuffix: "setup, then come back.",
-    noFee: "No network fee",
-    switchToUsdc: "Switch to USDC",
-    tokenNotSupportedBody:
-      "Only supported tokens can be collected. Switch to USDC to continue.",
-  },
-  pay: {
-    pay: "Pay",
-    paySettings: "Pay settings",
-    receive: "Receive",
-    accessory: "Accessory",
-    linkedWallet: "Linked wallet",
-    payEnabled: "Enabled",
-    enablePaySubtitle: "Pick a token and set an allowance.",
-    payTokensSubtitle: "Tap a token to change its allowance.",
-    noTokensSubtitle: "Fund this wallet to enable Pay on a token.",
-    enabledCountSummary: (enabled: number, total: number) =>
-      `${enabled} of ${total} tokens enabled for Pay`,
-    availableToPaySubtitle: (amount: string, symbol: string) =>
-      `${amount} ${symbol} available`,
-    enableToken: "Enable",
-    authorizePhone: "Authorize this phone",
-    preConfirmation: "Pre-confirmation",
-    preConfirmationOnHint: "Press Pay here first, then hold.",
-    preConfirmationOffHint: "Hold your accessory at their phone.",
-    preConfirmationOnSubtitle:
-      "Press Pay here first, then hold. The window is armed before money moves.",
-    preConfirmationOffSubtitle:
-      "Hold the accessory at their phone. No step on this phone.",
-    thisPhone: "This phone",
-    authorizeTitle: "Allow this phone to pay",
-    authorizeSubtitle:
-      "Sign with your linked wallet to enable pre-confirmation on this phone.",
-    rotateTitle: "Replace this phone’s key?",
-    rotateSubtitle: "Other phones will stop working. This phone stays on.",
-    holdNeedsKey: "Pre-confirmation is on. Authorize this phone to enable Pay.",
-    onToast: "This phone is ready to pay",
-    issueKey: "Authorize this phone",
-    rotateKey: "Rotate key",
-    loadingLabel: "Loading Pay…",
-    settingsPreConfirmation: "Pre-confirmation and this phone.",
-    settingsAccessoryPays: "How this accessory pays.",
-    authorizedOnPhone: "Authorized on this phone",
-    preConfirmationWorks: "Pre-confirmation works here.",
-    manage: "Manage",
-    authorize: "Authorize",
-    paid: "Paid",
-    holdToPay: "Hold to pay",
-    confirmingPayment: "Confirming payment…",
-    cancelled: "Cancelled",
-    cancelledBody: "Nothing was charged.",
-    replacedTitle: "New payment started",
-    replacedBody: "Continue with the new payment.",
-    expiredTitle: "Time expired",
-    expiredBody: "Press Pay again to continue.",
-    payAgain: "Pay again",
-    preauthCancelled: "Cancelled. Nothing was charged.",
-    preauthReplaced: "A new payment started.",
-    preauthExpired: "Time expired. Press Pay again to continue.",
-    preauthOpened: (minutes: number) =>
-      minutes === 1
-        ? "Ready to pay · 1 minute left"
-        : `Ready to pay · ${minutes} minutes left`,
-    spendingLimitTitle: "Pay allowance",
-    spendingLimitSubtitleNew: "Set how much this accessory can spend.",
-    spendingLimitSubtitleEdit: "Change the remaining allowance.",
-    setLimit: "Set allowance",
-    updateLimit: "Save",
-    confirmInWallet: "Confirm in wallet…",
-    removing: "Removing…",
-    removeSpendingLimit: "Turn off",
-    stillLoading: "Still loading. Try again in a moment.",
-    enterValidAmount: "Enter a valid amount",
-    limitSaved: "Pay allowance saved",
-    limitSaveFailed: "Couldn’t save pay allowance",
-    limitRemoved: "Pay allowance removed",
-    limitRemoveFailed: "Couldn’t remove pay allowance",
-    setupTokenAccountTitle: (symbol: string) => `Set up ${symbol}`,
-    setupTokenAccountBody: (symbol: string) =>
-      `Add ${symbol} to this wallet first.`,
-    setupTokenAccount: (symbol: string) => `Set up ${symbol}`,
-    settingUpTokenAccount: "Setting up…",
-    setupTokenAccountFailed: "Couldn’t set up token account",
-    setupTokenAccountDone: "Ready to set allowance",
-    preauthUpdateFailed: "Couldn’t update pre-confirmation.",
-    rotateSuccessToast: "Other phones will stop working.",
-    rotateFailed: "Couldn’t rotate key",
-    authorizeFailed: "Couldn’t authorize this phone",
-    authorizing: "Authorizing…",
-    rotating: "Rotating…",
-    phoneCanStartPay: "This phone can start Pay before you hold.",
-    paymentCheckFailed: "Couldn’t check this payment.",
-    paymentStartFailed: "Couldn’t start this payment.",
-    cancelFailed: "Couldn’t cancel.",
   },
   shortcut: {
     heading: "Shortcuts",
@@ -321,91 +167,30 @@ export const copy = {
   embed: {
     cantOpenTitle: "Can’t open here",
     tokenBody: "Open this on your phone, not in this window.",
-    homeBody: "Use a payment link instead.",
   },
 } as const;
 
-/** User-facing payment / verify error titles and bodies (see user-errors.ts). */
+/** User-facing send / verify error titles and bodies (see user-errors.ts). */
 export const errorCopy = {
   fallback: {
-    title: "Payment Not Completed",
+    title: "Not Completed",
     body: "Something went wrong. Try again.",
   },
   couldntVerify: {
     title: "Couldn't Verify",
-    body: "Disconnect, reconnect, and try again.",
+    body: "Hold your item here again and try once more.",
   },
   notEnoughMoney: {
     title: "Not Enough Money",
     body: "There isn’t enough in this wallet for this amount.",
   },
   paymentFailed: {
-    title: "Payment Not Completed",
-    body: "This payment couldn’t go through. Check the amount and try again.",
-  },
-  alreadyAdded: {
-    title: "Already Added",
-    body: "This accessory is already on that wallet.",
+    title: "Not Completed",
+    body: "This couldn’t go through. Check the amount and try again.",
   },
   accessoryLocked: {
     title: "Accessory Locked",
-    body: "Remove it from the current wallet, then try again.",
-  },
-  finishSetup: {
-    title: "Finish setup",
-    body: "This wallet isn’t ready to receive yet. Finish setup, then try again.",
-  },
-  alreadyUsed: {
-    title: "Already Used",
-    body: "Ask them to press Pay again, then hold their accessory here.",
-  },
-  payNotReady: {
-    title: "Pay Isn’t Ready",
-    body: "Ask them to press Pay on their phone, then hold their accessory here.",
-  },
-  tokenNotOn: {
-    title: "This Token Isn’t On",
-    body: "Ask them to set a spending limit for this token, then try again.",
-  },
-  overLimit: {
-    title: "Over the Limit",
-    body: "This is more than their spending limit. Ask them to raise it, or collect less.",
-  },
-  tryAgainShortly: {
-    title: "Try Again Shortly",
-    body: "Too many attempts. Wait a moment and try again.",
-  },
-  wrongWallet: {
-    title: "Wrong Wallet",
-    body: "That belongs to a different wallet.",
-  },
-  payReset: {
-    title: "Pay Was Reset",
-    body: "Turn on Pay again.",
-  },
-  didntWork: {
-    title: "That Didn’t Work",
-    body: "Authorize this phone in Pay settings, then try again.",
-  },
-  payNotSetUp: {
-    title: "Pay isn’t set up on this phone",
-    body: "Authorize this phone in Pay settings first.",
-  },
-  paymentNotFound: {
-    title: "Payment Not Found",
-    body: "Press Pay again to continue.",
-  },
-  cancelled: {
-    title: "Cancelled",
-    body: "Nothing was charged.",
-  },
-  paymentsUnavailable: {
-    title: "Payments Unavailable",
-    body: "Payments aren’t available right now. Try again later.",
-  },
-  takingTooLong: {
-    title: "Taking Too Long",
-    body: "Try again.",
+    body: "This accessory can’t send right now.",
   },
   sessionEnded: {
     title: "Verification timed out",
@@ -413,19 +198,7 @@ export const errorCopy = {
   },
   accessoryNotReady: {
     title: "Accessory Isn’t Ready",
-    body: "Ask them to add this accessory to their wallet, then try again.",
-  },
-  cantLock: {
-    title: "Can’t Lock",
-    body: "This accessory can’t be locked.",
-  },
-  wrongOwnerWallet: {
-    title: "Wrong Wallet",
-    body: "Connect the wallet that owns this accessory.",
-  },
-  ownAccessory: {
-    title: "That’s Your Accessory",
-    body: "You can’t collect a payment from your own accessory.",
+    body: "This accessory isn’t ready to send yet.",
   },
   wrongItem: {
     title: "Different item",
@@ -439,21 +212,9 @@ export const errorCopy = {
     title: copy.verify.notSetUpTitle,
     body: copy.verify.notSetUpBody,
   },
-  connectToContinue: {
-    title: copy.common.connectWalletTitle,
-    body: "Connect your wallet to continue.",
-  },
   itemNotFound: {
     title: "Item not found",
     body: "Hold your item here again to verify.",
-  },
-  tokenNotSupported: {
-    title: "Token Not Supported",
-    body: "This token isn’t supported. Switch to USDC.",
-  },
-  tokenUnavailable: {
-    title: "Token Unavailable",
-    body: "Switch to USDC and try again.",
   },
   enterAmount: {
     title: "Enter an amount",
@@ -464,7 +225,7 @@ export const errorCopy = {
     body: "Use fewer decimal places.",
   },
   tryAgainBody: {
-    title: "Payment not completed",
+    title: "Not completed",
     body: "Something went wrong. Try again.",
   },
 } as const;

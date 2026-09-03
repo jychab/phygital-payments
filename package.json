@@ -1,21 +1,23 @@
 {
-  "name": "phygital-payments",
+  "name": "phygital-wallet",
   "private": true,
   "license": "ISC",
   "packageManager": "pnpm@10.14.0",
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "idl:sync": "cp target/idl/phygital_payments.json idl/phygital_payments.json",
-    "generate:client": "codama run js && node clients/js/phygital-payments/scripts/add-import-extensions.mjs",
-    "build:client": "pnpm --filter phygital-payments-sdk build",
+    "idl:sync": "cp target/idl/phygital_wallet.json idl/phygital_wallet.json",
+    "generate:client": "codama run js && node clients/js/phygital-wallet/scripts/add-import-extensions.mjs",
+    "build:client": "pnpm --filter phygital-wallet-sdk build",
     "build:program": "anchor build && pnpm idl:sync && pnpm generate:client && pnpm build:client",
     "dev": "pnpm --filter app dev",
+    "dev:api": "pnpm --filter api dev",
     "build:app": "pnpm build:client && pnpm --filter app build",
     "preview:app": "pnpm build:client && pnpm --filter app preview",
     "cf:build": "pnpm build:client && pnpm --filter app exec opennextjs-cloudflare build",
     "cf:deploy": "pnpm --filter app exec opennextjs-cloudflare deploy",
-    "deploy:app": "pnpm cf:build && pnpm cf:deploy"
+    "deploy:app": "pnpm cf:build && pnpm cf:deploy",
+    "deploy:api": "pnpm --filter api run deploy"
   },
   "dependencies": {
     "@anchor-lang/core": "^1.0.2"

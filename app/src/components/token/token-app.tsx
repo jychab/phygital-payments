@@ -58,7 +58,7 @@ function TokenHome({
 
 /**
  * Route `/token` — Hold to Check, signed NFC URL, or Collection deep link.
- * Minted → card gallery UI; unminted → Pay / Collect UI.
+ * Minted → card gallery UI; unminted → Wallet home.
  */
 export function TokenApp() {
   const embedded = useIsEmbedded();

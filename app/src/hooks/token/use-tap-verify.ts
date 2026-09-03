@@ -23,7 +23,7 @@ async function fetchTapVerification(
     throw new Error("Missing tap parameters");
   }
 
-  const res = await queryFetch(`/api/verify-tap?${params.toString()}`);
+  const res = await queryFetch(`/verify-tap?${params.toString()}`);
   const body = await readJson<{
     isVerified?: boolean;
     secp256r1PublicKey?: string;

@@ -1,5 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-import { QueryClient } from "@tanstack/react-query";
+import { describe, expect, it } from "vitest";
 import { type PersistedClient } from "@tanstack/react-query-persist-client";
 
 import {
@@ -7,15 +6,14 @@ import {
   isPersistedQueryKey,
   serializeQueryCache,
 } from "./persist";
-import {
-  invalidatePhygitalTokenQueries,
-  queryKeys,
-} from "./index";
 
 function roundTrip(value: unknown): unknown {
   const client = { payload: value } as unknown as PersistedClient;
-  return (deserializeQueryCache(serializeQueryCache(client)) as { payload: unknown })
-    .payload;
+  return (
+    deserializeQueryCache(serializeQueryCache(client)) as unknown as {
+      payload: unknown;
+    }
+  ).payload;
 }
 
 describe("serializeQueryCache / deserializeQueryCache", () => {
@@ -43,44 +41,15 @@ describe("serializeQueryCache / deserializeQueryCache", () => {
 
 describe("isPersistedQueryKey", () => {
   it("allows instant-paint roots", () => {
-    expect(isPersistedQueryKey(["holdings", "owner"])).toBe(true);
-    expect(isPersistedQueryKey(["delegateStatus", "owner", "token", "mint"])).toBe(
+    expect(isPersistedQueryKey(["phygitalTokens", "address", "token"])).toBe(
       true,
     );
-    expect(isPersistedQueryKey(["phygitalTokens", "owner", "owner"])).toBe(true);
-    expect(isPersistedQueryKey(["ownerPayDelegates", "owner"])).toBe(true);
     expect(isPersistedQueryKey(["dasCollectible", "mint"])).toBe(true);
   });
 
   it("skips growing or one-shot caches", () => {
-    expect(isPersistedQueryKey(["payContext", "owner"])).toBe(false);
-    expect(isPersistedQueryKey(["verifiedTokens"])).toBe(false);
-    expect(isPersistedQueryKey(["history", "owner"])).toBe(false);
+    expect(isPersistedQueryKey(["walletPortfolio", "owner"])).toBe(false);
     expect(isPersistedQueryKey(["tapVerify", "pk=1"])).toBe(false);
-    expect(isPersistedQueryKey(["ataStatus", "owner", "mint"])).toBe(false);
-    expect(isPersistedQueryKey(["mintProgram", "mint"])).toBe(false);
-    expect(isPersistedQueryKey(["preauthRequired", "owner"])).toBe(false);
-  });
-});
-
-describe("invalidatePhygitalTokenQueries", () => {
-  it("invalidates address, identifier, passkey, and owner keys", async () => {
-    const queryClient = new QueryClient();
-    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
-
-    await invalidatePhygitalTokenQueries(queryClient, {
-      address: "token",
-      identifier: "pk",
-      secp256r1PublicKey: "passkey",
-      currentOwner: "owner",
-    });
-
-    const keys = invalidate.mock.calls.map((call) => call[0]?.queryKey);
-    expect(keys).toEqual([
-      queryKeys.phygitalToken.byAddress("token"),
-      queryKeys.phygitalToken.byIdentifier("pk"),
-      queryKeys.phygitalToken.byPasskey("passkey"),
-      queryKeys.phygitalToken.byOwner("owner"),
-    ]);
+    expect(isPersistedQueryKey(["mintedCollectibleView", "mint"])).toBe(false);
   });
 });

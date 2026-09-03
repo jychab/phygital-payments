@@ -1,8 +1,15 @@
-/** Re-export shared base64 helpers for the Next app (`@/lib/crypto/base64`). */
+/** Bytes → URL-safe base64. WebCrypto-safe (btoa, no Buffer). */
 
-export {
-  base64ToBytes,
-  bytesToBase64,
-  bytesToBase64Url,
-  base64UrlToBytes,
-} from "../../../shared/base64";
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+/** Standard base64 → URL-safe (`-`/`_`, no padding). */
+export function bytesToBase64Url(bytes: Uint8Array): string {
+  return bytesToBase64(bytes)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}

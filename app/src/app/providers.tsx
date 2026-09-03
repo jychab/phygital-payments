@@ -4,7 +4,6 @@ import { useState, type ReactNode } from "react";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 
-import { WalletRoot } from "./wallet-root";
 import { Toaster } from "@/components/ui/sonner";
 import { useResumeQueryRefresh } from "@/hooks/layout/use-resume-query-refresh";
 import {
@@ -15,10 +14,8 @@ import {
 } from "@/lib/queries/persist";
 import { queryKeys, queryOptions, shouldRetryQuery } from "@/lib/queries";
 
-
 /**
- * Shared by all routes: React Query (localStorage-persisted, only browser cache) + toasts.
- * One wallet tree (`WalletRoot`) — Privy always available for the wallet chip.
+ * Shared by all routes: React Query + toasts.
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -27,7 +24,6 @@ export function AppProviders({ children }: { children: ReactNode }) {
         defaultOptions: {
           queries: {
             ...queryOptions.default,
-            // Must be ≥ persist maxAge or restored queries are GC'd immediately.
             gcTime: QUERY_CACHE_MAX_AGE_MS,
             retry: shouldRetryQuery,
           },
@@ -49,21 +45,18 @@ export function AppProviders({ children }: { children: ReactNode }) {
         dehydrateOptions: { shouldDehydrateQuery },
       }}
       onSuccess={() => {
-        // Restored snapshots can predate a claim in a wallet in-app browser.
         void queryClient.invalidateQueries({
           queryKey: queryKeys.phygitalToken.all(),
         });
       }}
     >
-      <WalletRoot>
-        <ResumeQueryRefresh />
-        {children}
-        <Toaster
-          richColors
-          position="top-center"
-          offset="max(12px, env(safe-area-inset-top))"
-        />
-      </WalletRoot>
+      <ResumeQueryRefresh />
+      {children}
+      <Toaster
+        richColors
+        position="top-center"
+        offset="max(12px, env(safe-area-inset-top))"
+      />
     </PersistQueryClientProvider>
   );
 }

@@ -38,25 +38,13 @@ loadDevVarsIntoProcessEnv();
 const workspaceRoot = path.join(__dirname, "..");
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["phygital-payments-sdk"],
+  transpilePackages: ["phygital-wallet-sdk"],
   outputFileTracingRoot: workspaceRoot,
   turbopack: {
     root: workspaceRoot,
   },
-  redirects() {
-    return [{ source: "/accessory", destination: "/token", permanent: true }];
-  },
   async headers() {
     return [
-      {
-        source: "/collect",
-        headers: [
-          {
-            key: "Content-Security-Policy",
-            value: "frame-ancestors *;",
-          },
-        ],
-      },
       {
         source: "/:path*",
         headers: [

@@ -4,7 +4,6 @@ import { Nfc } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { GateMessage } from "@/components/layout/gate-message";
-import { CollectionVerifiedSeed } from "@/components/token/collection-verified-seed";
 import { TokenRouteShell } from "@/components/token/token-route-shell";
 import { LoadingStatus } from "@/components/shared/loading-status";
 import { usePhygitalTokenByAddress } from "@/hooks/token/use-phygital-token";
@@ -39,21 +38,14 @@ export function TokenAddressRoute({
       ) : tokenQuery.isError || !tokenQuery.data ? (
         <GateMessage
           icon={<Nfc className="size-5 text-muted-foreground" />}
-          title={copy.collection.itemLoadFailed}
+          title={copy.token.itemLoadFailed}
           body={toUserErrorMessage(
             tokenQuery.error,
-            copy.collection.itemNotOnChain,
+            copy.token.itemNotOnChain,
           )}
         />
       ) : (
-        <CollectionVerifiedSeed owner={String(tokenQuery.data.currentOwner)}>
-          {({ ownerVerified }) =>
-            renderHome({
-              token: tokenQuery.data,
-              liveConfirmed: ownerVerified,
-            })
-          }
-        </CollectionVerifiedSeed>
+        renderHome({ token: tokenQuery.data })
       )}
     </TokenRouteShell>
   );

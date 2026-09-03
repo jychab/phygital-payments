@@ -3,7 +3,6 @@ import {
   fetchMaybePhygitalToken,
   fetchPhygitalToken as fetchPhygitalTokenAccount,
   fetchPhygitalTokenByIdentifier as fetchPhygitalTokenAccountByIdentifier,
-  fetchPhygitalTokensByOwner as fetchPhygitalTokenAccountsByOwner,
   findPhygitalTokenPda,
   PhygitalTokenType,
   type PhygitalToken as PhygitalTokenAccount,
@@ -85,27 +84,6 @@ export async function fetchPhygitalTokenByIdentifier(
   return phygitalTokenFromAccount(tokenAddress, account);
 }
 
-/** All phygital tokens whose on-chain `owner` matches `owner`. */
-export async function fetchPhygitalTokensByOwner(
-  rpc: Rpc<SolanaRpcApi>,
-  owner: Address,
-): Promise<PhygitalToken[]> {
-  const accounts = await fetchPhygitalTokenAccountsByOwner(rpc, owner);
-  return Promise.all(
-    accounts.map(async (account) => {
-      const tokenAddress = await findPhygitalTokenPda(account.publicKey);
-      return phygitalTokenFromAccount(tokenAddress, account);
-    }),
-  );
-}
-
-/** True when no wallet has claimed the token yet. */
-export function isUnclaimedToken(
-  token: Pick<PhygitalToken, "currentOwner">,
-): boolean {
-  return token.currentOwner === DEFAULT_TOKEN_OWNER;
-}
-
 /**
  * True when on-chain `mint` is set (not `Pubkey::default()` / system program).
  * Unset mint is the same sentinel as unclaimed `owner`.
@@ -114,11 +92,4 @@ export function tokenHasLinkedMint(
   token: Pick<PhygitalToken, "mint">,
 ): boolean {
   return token.mint !== DEFAULT_TOKEN_OWNER;
-}
-
-/** Controlled accessories can open Pay (spending limit / Hold to Pay). */
-export function tokenAllowsPay(
-  token: Pick<PhygitalToken, "tokenType">,
-): boolean {
-  return token.tokenType === PhygitalTokenType.Controlled;
 }

@@ -9,9 +9,7 @@ import { CollectibleHeader } from "@/components/token/collectible-header";
 import { CollectibleHero } from "@/components/token/collectible-hero";
 import { CollectibleShortcuts } from "@/components/token/collectible-shortcuts";
 import { VerificationMetadataRow } from "@/components/token/authenticity-badge";
-import { CollectibleMetadataRow } from "@/components/token/collectible-metadata-group";
 import { TokenDetails } from "@/components/token/token-details";
-import { CopyableAddress } from "@/components/shared/copyable-address";
 import { StickyActions } from "@/components/shared/sticky-actions";
 import { MotionSection } from "@/components/shared/motion-section";
 import { Button } from "@/components/ui/button";
@@ -26,7 +24,6 @@ import {
 import { detailSplitClass } from "@/lib/layout";
 import { STICKY_ENTER_DELAY_MS } from "@/lib/motion";
 import {
-  isUnclaimedToken,
   tokenHasLinkedMint,
   type PhygitalToken,
 } from "@/lib/phygital/token";
@@ -39,16 +36,12 @@ export function TokenMintedPanel({
   token,
   liveConfirmed,
   onHoldToCheck,
-  onClaim,
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
   holdError?: string | null;
   onHoldToCheck?: () => void;
-  onClaim?: () => void;
 }) {
-  const unclaimed = isUnclaimedToken(token);
-  const canClaim = (unclaimed || !token.isLocked) && Boolean(onClaim);
   const showVerify = !liveConfirmed && Boolean(onHoldToCheck);
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const { collectible, rarity, shortcuts, loading, rarityLoading } =
@@ -73,9 +66,7 @@ export function TokenMintedPanel({
     rarity?.attributes ?? collectible?.attributes ?? [];
 
   const name = collectible?.name ?? "Card";
-  const cardOwner = String(token.currentOwner);
-  const hasSticky =
-    showVerify || canClaim || Boolean(primaryShortcut);
+  const hasSticky = showVerify || Boolean(primaryShortcut);
   let stagger = 0;
 
   return (
@@ -117,19 +108,6 @@ export function TokenMintedPanel({
                     liveConfirmed={liveConfirmed}
                     onVerifyAgain={onHoldToCheck}
                   />
-                  <CollectibleMetadataRow label={copy.token.linked}>
-                    {unclaimed ? (
-                      <span className="font-medium text-muted-foreground">
-                        {copy.token.notLinked}
-                      </span>
-                    ) : (
-                      <CopyableAddress
-                        address={cardOwner}
-                        length={4}
-                        label={copy.address.linkedWallet}
-                      />
-                    )}
-                  </CollectibleMetadataRow>
                 </div>
               </div>
             </MotionSection>
@@ -181,9 +159,7 @@ export function TokenMintedPanel({
               {showVerify ? (
                 <Button
                   type="button"
-                  variant={
-                    canClaim || primaryShortcut ? "outline" : "default"
-                  }
+                  variant={primaryShortcut ? "outline" : "default"}
                   size="lg"
                   className="w-full"
                   onClick={onHoldToCheck}
@@ -202,17 +178,6 @@ export function TokenMintedPanel({
                   }
                 >
                   {primaryShortcut.label}
-                </Button>
-              ) : null}
-              {canClaim ? (
-                <Button
-                  type="button"
-                  variant={primaryShortcut ? "outline" : "default"}
-                  size="lg"
-                  className="w-full"
-                  onClick={onClaim}
-                >
-                  {copy.claim.addToWallet}
                 </Button>
               ) : null}
             </StickyActions>

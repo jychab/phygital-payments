@@ -12,7 +12,7 @@ export async function fetchMintedCollectibleViewClient(
   mint: string,
 ): Promise<MintedCollectibleView> {
   const res = await queryFetch(
-    `/api/tokens/minted?id=${encodeURIComponent(mint)}`,
+    `/tokens/minted?id=${encodeURIComponent(mint)}`,
   );
   const body = await readJson<MintedCollectibleView & { error?: string }>(
     res,

@@ -21,18 +21,12 @@ export type HoldToCheckOverlay =
 /**
  * Hold-to-Check + Confirmed badge.
  *
- * Confirmed when:
- * - signed NFC tap params verify (`useTapVerify`), or
- * - `startAuthentication` succeeds in this page (optional seed from parent
- *   after the same-tree cold hold), or
- * - connected wallet matches `currentOwner` (optional seed from parent); never
- *   from sessionStorage.
+ * Confirmed when signed NFC tap params verify, or `startAuthentication`
+ * succeeds in this page (optional seed from parent after cold hold).
  */
 export function useHoldToCheck(
   token: PhygitalToken,
-  /**
-   * True when parent proved via WebAuthn/tap, or owner wallet session matches.
-   */
+  /** True when parent already proved via WebAuthn/tap in this tree. */
   webauthnProvenInTree = false,
 ) {
   const inApp = useIsInAppBrowser();

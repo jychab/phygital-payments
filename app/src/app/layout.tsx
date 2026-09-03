@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     default: brand.company,
     template: `%s — ${brand.company}`,
   },
-  description: products.collection.tagline,
+  description: products.recents.tagline,
 };
 
 export const viewport: Viewport = {
