@@ -56,8 +56,8 @@ function TokenHome({
 }
 
 /**
- * Route `/token` — Hold to Check, signed NFC URL, or Collection deep link.
- * Minted → card gallery UI; unminted → Wallet home.
+ * Route `/token` — home is always session-gated (`?address=`).
+ * Recents, Hold, and signed NFC taps enter that gate; missing session → Hold.
  */
 export function TokenApp() {
   const searchParams = useSearchParams();
@@ -79,12 +79,7 @@ export function TokenApp() {
 
   return (
     <TokenRouteShell layout="compact">
-      <TokenNfcApp
-        nfcCopy={TOKEN_NFC_COPY}
-        renderHome={({ token: loaded, liveConfirmed }) => (
-          <TokenHome token={loaded} liveConfirmed={liveConfirmed} />
-        )}
-      />
+      <TokenNfcApp nfcCopy={TOKEN_NFC_COPY} />
     </TokenRouteShell>
   );
 }

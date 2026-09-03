@@ -41,6 +41,7 @@ verifyTapRoutes.get("/verify-tap", async (c) => {
       return json({
         isVerified: true,
         secp256r1PublicKey: session.secp256r1PublicKey,
+        phygitalToken: session.phygitalToken,
         reentry: true,
         expiresAt: session.exp,
       });
@@ -75,11 +76,13 @@ verifyTapRoutes.get("/verify-tap", async (c) => {
 
     await writeCounterSession(secp256r1PublicKey, { c: counter });
 
+    let phygitalToken: string | undefined;
     let expiresAt: number | undefined;
     try {
-      const phygitalToken =
+      const resolved =
         await resolveTokenFromPasskeyPubkey(secp256r1PublicKey);
-      if (phygitalToken) {
+      if (resolved) {
+        phygitalToken = resolved;
         const minted = await mintSessionToken({
           phygitalToken,
           secp256r1PublicKey,
@@ -96,6 +99,7 @@ verifyTapRoutes.get("/verify-tap", async (c) => {
       secp256r1PublicKey,
       counter,
       reentry: false,
+      ...(phygitalToken ? { phygitalToken } : {}),
       ...(expiresAt != null ? { expiresAt } : {}),
     });
   } catch (err) {

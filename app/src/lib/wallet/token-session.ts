@@ -33,6 +33,11 @@ export async function fetchActiveTokenSession(
   return readJson<ActiveTokenSession>(res, copy.wallet.sessionCheckFailed);
 }
 
+/** Session-gated token home for this accessory. */
+export function tokenHomeHref(phygitalToken: string): string {
+  return `/token?address=${encodeURIComponent(phygitalToken)}`;
+}
+
 /** Hold accessory → mint HttpOnly session cookie. */
 export async function mintTokenSessionViaHold(): Promise<ActiveTokenSession> {
   const message = crypto.randomUUID();

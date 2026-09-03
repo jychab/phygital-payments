@@ -1,23 +1,14 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { GroupedList } from "@/components/shared/grouped-list";
-import { IdentityChip } from "@/components/shared/identity-chip";
-import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
-import { Button } from "@/components/ui/button";
-import {
-  initWebauthnSessionSnapshot,
-  markWebauthnVerified,
-} from "@/hooks/token/use-webauthn-session";
 import { copy } from "@/lib/copy/phygital";
 import { queryKeys, queryOptions } from "@/lib/queries";
 import { fetchDasCollectiblesClient } from "@/lib/tokens/das-collectible-client";
-import { toUserErrorMessage } from "@/lib/user-errors";
 import { galleryAnimate } from "@/lib/motion";
 import { cn, shortAddress } from "@/lib/utils";
 import {
@@ -25,10 +16,7 @@ import {
   listRecents,
   type RecentItem,
 } from "@/lib/wallet/recents";
-import {
-  fetchActiveTokenSession,
-  mintTokenSessionViaHold,
-} from "@/lib/wallet/token-session";
+import { tokenHomeHref } from "@/lib/wallet/token-session";
 
 function subscribe(onStoreChange: () => void) {
   const onFocus = () => onStoreChange();
@@ -49,13 +37,10 @@ function getServerSnapshot() {
   return EMPTY_RECENTS;
 }
 
-type ReopenPhase = "idle" | "checking" | "hold" | "holding";
-
-/** Device-local Recents hub — reopen via session cookie, or hold again. */
+/** Device-local Recents hub — opens `/token?address=` (session-gated). */
 export function RecentsHome() {
   const router = useRouter();
   const items = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const latest = items[0];
   const mintsNeedingDas = useMemo(
     () =>
       [
@@ -84,131 +69,8 @@ export function RecentsHome() {
     ...queryOptions.stable,
   });
 
-  const [phase, setPhase] = useState<ReopenPhase>("idle");
-  const [active, setActive] = useState<RecentItem | null>(null);
-  const [sessionExpired, setSessionExpired] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const headerExtra = useMemo(() => {
-    if (!latest?.walletAddress) return null;
-    return (
-      <IdentityChip walletAddress={latest.walletAddress} mode="copy" />
-    );
-  }, [latest?.walletAddress]);
-
-  function enterToken(secp256r1PublicKey: string) {
-    initWebauthnSessionSnapshot();
-    markWebauthnVerified(secp256r1PublicKey);
-    router.push("/token");
-  }
-
-  async function openRecent(item: RecentItem) {
-    setActive(item);
-    setError(null);
-    setSessionExpired(false);
-    setPhase("checking");
-    try {
-      const session = await fetchActiveTokenSession(item.tokenAddress);
-      if (session && session.phygitalToken === item.tokenAddress) {
-        enterToken(session.secp256r1PublicKey);
-        return;
-      }
-      // Cookie missing/expired for this accessory — hold again. Other
-      // accessories keep their own cookies.
-      setSessionExpired(!session);
-      setPhase("hold");
-    } catch (e) {
-      setError(toUserErrorMessage(e));
-      setPhase("hold");
-    }
-  }
-
-  async function holdToOpen() {
-    if (!active) return;
-    setError(null);
-    setPhase("holding");
-    try {
-      const session = await mintTokenSessionViaHold();
-      if (session.phygitalToken !== active.tokenAddress) {
-        throw new Error(copy.recents.wrongItem);
-      }
-      enterToken(session.secp256r1PublicKey);
-    } catch (e) {
-      toast.error(toUserErrorMessage(e, copy.verify.failedBody));
-      setError(toUserErrorMessage(e, copy.verify.failedBody));
-      setPhase("hold");
-    }
-  }
-
-  if (phase === "checking" || phase === "holding") {
-    return (
-      <AppShell layout="compact">
-        <NfcHoldStatus
-          size="lg"
-          busy
-          imageSrc={active?.imageUrl}
-          title={
-            phase === "checking" ? copy.common.loading : copy.verify.holdStill
-          }
-          body={
-            phase === "checking" ? undefined : copy.verify.holdStillBody
-          }
-        />
-      </AppShell>
-    );
-  }
-
-  if (phase === "hold" && active) {
-    return (
-      <AppShell layout="compact">
-        <NfcHoldStatus
-          size="lg"
-          imageSrc={active.imageUrl}
-          title={
-            sessionExpired
-              ? copy.recents.reopenSessionExpiredTitle
-              : error
-                ? copy.verify.failed
-                : copy.recents.reopenHoldTitle
-          }
-          body={
-            error ??
-            (sessionExpired
-              ? copy.recents.reopenSessionExpiredBody
-              : copy.recents.reopenHoldBody)
-          }
-          action={
-            <div className="flex w-full flex-col gap-2">
-              <Button
-                type="button"
-                size="lg"
-                className="w-full"
-                onClick={() => void holdToOpen()}
-              >
-                {error ? copy.common.tryAgain : copy.verify.holdToCheck}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-full"
-                onClick={() => {
-                  setPhase("idle");
-                  setActive(null);
-                  setError(null);
-                }}
-              >
-                {copy.common.cancel}
-              </Button>
-            </div>
-          }
-        />
-      </AppShell>
-    );
-  }
-
   return (
-    <AppShell layout="compact" headerExtra={headerExtra}>
+    <AppShell layout="compact">
       <div className="flex flex-1 flex-col gap-5">
         <h1 className={cn("text-large-title", galleryAnimate.rise)}>
           {copy.recents.heading}
@@ -235,7 +97,9 @@ export function RecentsHome() {
                       ? (dasBatch.data?.[item.mint.trim()] ?? null)
                       : null
                   }
-                  onOpen={() => void openRecent(item)}
+                  onOpen={() =>
+                    router.push(tokenHomeHref(item.tokenAddress))
+                  }
                 />
               </li>
             ))}

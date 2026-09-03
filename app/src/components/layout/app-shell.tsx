@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 import { brand } from "@/lib/copy/phygital";
 import {
@@ -11,9 +12,8 @@ import {
 import { galleryAnimate } from "@/lib/motion";
 import { isMainnet } from "@/lib/solana/cluster";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
 
-/** Chrome for every route: company wordmark; identity chip supplied by page. */
+/** Chrome for every route: optional centered company wordmark; trailing slot for page chrome. */
 export function AppShell({
   children,
   layout = "compact",
@@ -36,21 +36,11 @@ export function AppShell({
       >
         <div
           className={cn(
-            "mb-4 flex min-h-11 items-center justify-between gap-2 sm:gap-3 md:mb-5",
+            "relative mb-4 flex min-h-11 items-center md:mb-5",
             galleryAnimate.rise,
           )}
         >
-          <div className="flex min-w-0 items-center gap-2">
-            {showWordmark ? (
-              <Link
-                href="/"
-                className="truncate font-(family-name:--font-display) text-sm font-semibold tracking-tight text-foreground hover:opacity-80"
-              >
-                {brand.company}
-              </Link>
-            ) : (
-              <span className="w-4" aria-hidden />
-            )}
+          <div className="flex min-w-0 flex-1 items-center justify-start gap-2">
             {!isMainnet() ? (
               <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border/50 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground sm:px-2.5">
                 <span
@@ -59,9 +49,21 @@ export function AppShell({
                 />
                 Devnet
               </span>
-            ) : null}
+            ) : (
+              <span className="w-4" aria-hidden />
+            )}
           </div>
-          <div className="flex shrink-0 items-center gap-1">
+
+          {showWordmark ? (
+            <Link
+              href="/"
+              className="absolute left-1/2 max-w-[50%] -translate-x-1/2 truncate font-(family-name:--font-display) text-sm font-semibold tracking-tight text-foreground hover:opacity-80"
+            >
+              {brand.company}
+            </Link>
+          ) : null}
+
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-1">
             {headerExtra}
           </div>
         </div>

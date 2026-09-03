@@ -53,6 +53,12 @@ export const queryKeys = {
       [...queryKeys.walletPda.all(), token] as const,
   },
 
+  tokenSession: {
+    all: () => ["tokenSession"] as const,
+    byToken: (token: string | null) =>
+      [...queryKeys.tokenSession.all(), token] as const,
+  },
+
   phygitalToken: {
     all: () => ["phygitalTokens"] as const,
     byIdentifier: (identifier: string | null) =>

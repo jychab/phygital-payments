@@ -12,8 +12,10 @@ export type TapVerifyStatus = "pending" | "verified" | "failed";
 export type TapVerifyResult = {
   status: "verified" | "failed";
   secp256r1PublicKey?: string;
+  phygitalToken?: string;
   counter?: number;
   reentry?: boolean;
+  expiresAt?: number;
 };
 
 async function fetchTapVerification(
@@ -27,8 +29,10 @@ async function fetchTapVerification(
   const body = await readJson<{
     isVerified?: boolean;
     secp256r1PublicKey?: string;
+    phygitalToken?: string;
     counter?: number;
     reentry?: boolean;
+    expiresAt?: number;
     error?: string;
   }>(res, "verification failed");
 
@@ -39,8 +43,10 @@ async function fetchTapVerification(
   return {
     status: "verified",
     secp256r1PublicKey: body.secp256r1PublicKey,
+    phygitalToken: body.phygitalToken,
     counter: body.counter,
     reentry: body.reentry,
+    expiresAt: body.expiresAt,
   };
 }
 
@@ -78,7 +84,7 @@ export function useTapVerify() {
   });
 
   // Prefer a successful result over a later error status. An expired session
-  // plus the same tap URL must not unmount the verified token home.
+  // plus the same tap URL should still redirect into the session-gated home.
   const verify: TapVerifyStatus = !hasTapProof
     ? "failed"
     : verifyQuery.data?.status === "verified"
@@ -97,5 +103,6 @@ export function useTapVerify() {
     hasTapProof,
     verify,
     verifyPending,
+    result: verifyQuery.data ?? null,
   };
 }

@@ -9,6 +9,12 @@ export type RpcPreference =
   | { mode: "default" }
   | { mode: "custom"; url: string };
 
+/** Stable default for SSR / useSyncExternalStore. */
+export const DEFAULT_RPC_PREFERENCE: RpcPreference = { mode: "default" };
+
+let cachedRaw: string | null | undefined;
+let cachedPreference: RpcPreference = DEFAULT_RPC_PREFERENCE;
+
 export function getDefaultRpcUrl(): string {
   return (
     process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim() ||
@@ -37,19 +43,28 @@ export function displayRpcEndpoint(url: string): string {
 }
 
 export function readRpcPreference(): RpcPreference {
-  if (typeof window === "undefined") return { mode: "default" };
+  if (typeof window === "undefined") return DEFAULT_RPC_PREFERENCE;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { mode: "default" };
+    if (raw === cachedRaw) return cachedPreference;
+    cachedRaw = raw;
+    if (!raw) {
+      cachedPreference = DEFAULT_RPC_PREFERENCE;
+      return cachedPreference;
+    }
     const parsed = JSON.parse(raw) as { mode?: string; url?: string };
     if (parsed.mode === "custom" && typeof parsed.url === "string") {
       const url = parsed.url.trim();
-      if (isValidRpcUrl(url)) return { mode: "custom", url };
+      if (isValidRpcUrl(url)) {
+        cachedPreference = { mode: "custom", url };
+        return cachedPreference;
+      }
     }
   } catch {
     /* ignore corrupt storage */
   }
-  return { mode: "default" };
+  cachedPreference = DEFAULT_RPC_PREFERENCE;
+  return cachedPreference;
 }
 
 export function writeRpcPreference(pref: RpcPreference): void {

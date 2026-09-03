@@ -44,8 +44,7 @@
       "binding": "phygital_token",
       "database_name": "phygital-token",
       "database_id": "356d6b15-cd60-47b5-a014-648246bd27b5",
-      "migrations_dir": "d1/migrations",
-      "remote": true
+      "migrations_dir": "d1/migrations"
     }
   ],
   "kv_namespaces": [

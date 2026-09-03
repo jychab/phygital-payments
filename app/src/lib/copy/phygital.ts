@@ -224,6 +224,7 @@ export const copy = {
     mintAddress: "Token ID",
     itemLoadFailed: "Couldn’t load item",
     itemNotOnChain: "This item may no longer be available.",
+    wrongItem: "That isn’t this card or accessory.",
   },
   shortcut: {
     heading: "Shortcuts",

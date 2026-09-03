@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { copy } from "@/lib/copy/phygital";
 import { invalidateRpcDependentQueries } from "@/lib/queries";
 import {
+  DEFAULT_RPC_PREFERENCE,
   displayRpcEndpoint,
   getDefaultRpcUrl,
   isValidRpcUrl,
@@ -41,7 +42,7 @@ function getRpcPreferenceSnapshot(): RpcPreference {
 }
 
 function getServerSnapshot(): RpcPreference {
-  return { mode: "default" };
+  return DEFAULT_RPC_PREFERENCE;
 }
 
 function notifyRpcPreferenceChanged() {

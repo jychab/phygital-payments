@@ -1,24 +1,22 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
-import { useIsRestoring } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { LoadingStatus } from "@/components/shared/loading-status";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy/phygital";
-import { useAuthenticateToken } from "@/hooks/token/use-authenticate-token";
-import { usePhygitalToken } from "@/hooks/token/use-phygital-token";
 import { useTapVerify } from "@/hooks/token/use-tap-verify";
-import {
-  initWebauthnSessionSnapshot,
-  useWebauthnSession,
-} from "@/hooks/token/use-webauthn-session";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
-import type { PhygitalToken } from "@/lib/phygital/token";
+import { queryKeys } from "@/lib/queries";
 import { toUserErrorMessage } from "@/lib/user-errors";
+import {
+  mintTokenSessionViaHold,
+  tokenHomeHref,
+} from "@/lib/wallet/token-session";
 
 export type TokenNfcCopy = {
   inAppCheck: string;
@@ -29,78 +27,74 @@ export type TokenNfcCopy = {
   notSetUpBody: string;
 };
 
-export function TokenNfcApp({
-  nfcCopy,
-  renderHome,
-}: {
-  nfcCopy: TokenNfcCopy;
-  renderHome: (args: {
-    token: PhygitalToken;
-    liveConfirmed?: boolean;
-  }) => ReactNode;
-}) {
+/**
+ * Cold `/token` — Hold or signed NFC tap, then enter the session-gated home.
+ */
+export function TokenNfcApp({ nfcCopy }: { nfcCopy: TokenNfcCopy }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { hasTapProof, verify, verifyPending, result } = useTapVerify();
+  const tapAddress = result?.phygitalToken?.trim() ?? "";
+
   useEffect(() => {
-    initWebauthnSessionSnapshot();
-  }, []);
-
-  const { pk, hasTapProof, verify, verifyPending } = useTapVerify();
-  const { session: webauthnSession, markVerified } = useWebauthnSession();
-
-  const tapReady = hasTapProof && verify === "verified";
-  const webauthnReady = Boolean(webauthnSession?.secp256r1PublicKey);
-  const resolvedPk = pk ?? webauthnSession?.secp256r1PublicKey ?? null;
+    if (!hasTapProof || verify !== "verified" || !tapAddress) return;
+    if (
+      result?.secp256r1PublicKey &&
+      typeof result.expiresAt === "number"
+    ) {
+      queryClient.setQueryData(queryKeys.tokenSession.byToken(tapAddress), {
+        phygitalToken: tapAddress,
+        secp256r1PublicKey: result.secp256r1PublicKey,
+        expiresAt: result.expiresAt,
+      });
+    }
+    router.replace(tokenHomeHref(tapAddress));
+  }, [
+    hasTapProof,
+    verify,
+    tapAddress,
+    result?.secp256r1PublicKey,
+    result?.expiresAt,
+    queryClient,
+    router,
+  ]);
 
   if (hasTapProof && (verifyPending || verify === "pending")) {
     return <LoadingStatus label={copy.verify.verifyingChip} />;
   }
 
-  if ((tapReady || webauthnReady) && resolvedPk) {
-    return (
-      <VerifiedTokenFlow
-        pk={resolvedPk}
-        nfcCopy={nfcCopy}
-        renderHome={renderHome}
-        liveConfirmed
-      />
-    );
+  if (hasTapProof && verify === "verified") {
+    if (!tapAddress) {
+      return (
+        <NfcHoldStatus
+          size="lg"
+          pulsing={false}
+          title={nfcCopy.notSetUpTitle}
+          body={nfcCopy.notSetUpBody}
+        />
+      );
+    }
+    return <LoadingStatus label={copy.verify.verifyingChip} />;
   }
 
   return (
     <HoldToCheckLanding
       nfcCopy={nfcCopy}
       sessionExpired={hasTapProof && verify === "failed"}
-      onWebauthnVerified={markVerified}
     />
   );
-}
-
-function stripExpiredTapProofFromUrl(
-  router: ReturnType<typeof useRouter>,
-  searchParams: URLSearchParams,
-  passkey: string,
-): void {
-  const next = new URLSearchParams(searchParams.toString());
-  next.delete("s");
-  next.delete("c");
-  next.delete("n");
-  next.set("pk", passkey);
-  const qs = next.toString();
-  router.replace(qs ? `/token?${qs}` : "/token", { scroll: false });
 }
 
 function HoldToCheckLanding({
   nfcCopy,
   sessionExpired,
-  onWebauthnVerified,
 }: {
   nfcCopy: TokenNfcCopy;
   sessionExpired: boolean;
-  onWebauthnVerified: (secp256r1PublicKey: string) => void;
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
   const inApp = useIsInAppBrowser();
-  const { authenticate } = useAuthenticateToken();
 
   const [showInAppGate, setShowInAppGate] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -114,9 +108,12 @@ function HoldToCheckLanding({
     setError(null);
     setBusy(true);
     try {
-      const { secp256r1PublicKey } = await authenticate();
-      onWebauthnVerified(secp256r1PublicKey);
-      stripExpiredTapProofFromUrl(router, searchParams, secp256r1PublicKey);
+      const session = await mintTokenSessionViaHold();
+      queryClient.setQueryData(
+        queryKeys.tokenSession.byToken(session.phygitalToken),
+        session,
+      );
+      router.replace(tokenHomeHref(session.phygitalToken));
     } catch (err) {
       setError(toUserErrorMessage(err, copy.verify.failedBody));
     } finally {
@@ -182,46 +179,6 @@ function HoldToCheckLanding({
           {copy.verify.holdToCheck}
         </Button>
       }
-    />
-  );
-}
-
-function VerifiedTokenFlow({
-  pk,
-  nfcCopy,
-  renderHome,
-  liveConfirmed,
-}: {
-  pk: string;
-  nfcCopy: TokenNfcCopy;
-  renderHome: (args: {
-    token: PhygitalToken;
-    liveConfirmed?: boolean;
-  }) => ReactNode;
-  liveConfirmed: boolean;
-}) {
-  const isRestoring = useIsRestoring();
-  const tokenQuery = usePhygitalToken(pk);
-
-  if (tokenQuery.data) {
-    return renderHome({ token: tokenQuery.data, liveConfirmed });
-  }
-
-  if (
-    isRestoring ||
-    tokenQuery.isPending ||
-    tokenQuery.isLoading ||
-    tokenQuery.isFetching
-  ) {
-    return <LoadingStatus label={copy.verify.verifyingChip} />;
-  }
-
-  return (
-    <NfcHoldStatus
-      size="lg"
-      pulsing={false}
-      title={nfcCopy.notSetUpTitle}
-      body={nfcCopy.notSetUpBody}
     />
   );
 }
