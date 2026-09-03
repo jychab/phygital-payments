@@ -9,7 +9,7 @@ import {
   TokenVerifySessionGate,
   useTokenVerifySession,
 } from "@/hooks/token/use-token-verify-session";
-import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
+import { useMintedCollectibleView } from "@/hooks/token/use-minted-collectible-view";
 import { copy } from "@/lib/copy/phygital";
 import {
   tokenHasLinkedMint,
@@ -28,7 +28,8 @@ export function TokenMintedHome({
   const mint = tokenHasLinkedMint(session.token)
     ? String(session.token.mint)
     : null;
-  const { collectible } = useResolvedDasCollectible(mint);
+  // Shares cache with TokenMintedPanel (same key; seeds dasCollectible).
+  const { collectible } = useMintedCollectibleView(mint);
   const [showWallet, setShowWallet] = useState(false);
 
   const openWallet = useCallback(() => setShowWallet(true), []);

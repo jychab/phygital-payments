@@ -1,16 +1,14 @@
 import { scheduleBackgroundWork } from "@/shared/request-context";
 import type { CollectibleAttribute, CollectibleRarity } from "@/tokens/collectible";
-import {
-  mapAttributesFromDasContent,
-  type DasCollectibleAsset,
-} from "@/tokens/collectible";
+import { mapAttributesFromDasContent } from "@/tokens/collectible";
 import {
   enrichAttributes,
   scoreMintHowRare,
   traitKey,
 } from "@/tokens/rarity/howrare";
 import { tierFromRank } from "@/tokens/rarity/rarity-tier";
-import { postDasRpc } from "@/tokens/das-rpc";
+import { dasGetAssetsByGroup, postDasRpcBatch } from "@/tokens/das-rpc";
+import type { DasAsset, DasAssetList } from "@/tokens/das-schema";
 import {
   assignCollectionRanks,
   countUnscoredMints,
@@ -37,31 +35,43 @@ const BG_SCAN_PAGES = 5;
 const BG_SCORE_BATCHES = 4;
 const MAX_INDEX_LOOPS = 500;
 
-type DasGroupResponse = {
-  items?: DasCollectibleAsset[];
-};
-
 const inflightBuilds = new Map<string, Promise<void>>();
 
-async function fetchAssetsByGroupPage(
+/** Fetch several collection pages in one HTTP round-trip. */
+async function fetchAssetsByGroupPages(
   collectionMint: string,
-  page: number,
-): Promise<DasCollectibleAsset[]> {
-  const result = await postDasRpc<DasGroupResponse>({
+  startPage: number,
+  pageCount: number,
+): Promise<DasAsset[][]> {
+  if (pageCount <= 1) {
+    return [
+      await dasGetAssetsByGroup({
+        groupKey: "collection",
+        groupValue: collectionMint,
+        page: startPage,
+        limit: DAS_PAGE_LIMIT,
+      }),
+    ];
+  }
+
+  const calls = Array.from({ length: pageCount }, (_, i) => ({
     method: "getAssetsByGroup",
-    id: `rarity-group-${page}`,
+    id: `rarity-group-${startPage + i}`,
     params: {
       groupKey: "collection",
       groupValue: collectionMint,
-      page,
+      page: startPage + i,
       limit: DAS_PAGE_LIMIT,
     },
-  });
-  const items = result?.items ?? [];
-  return Array.isArray(items) ? items : [];
+  }));
+
+  const results = await postDasRpcBatch<DasAssetList[]>(calls);
+  return results.map((result) =>
+    Array.isArray(result?.items) ? result.items : [],
+  );
 }
 
-function assetToScannedMint(asset: DasCollectibleAsset): ScannedMintInput | null {
+function assetToScannedMint(asset: DasAsset): ScannedMintInput | null {
   const mint = asset.id?.trim();
   if (!mint) return null;
   const attributes = mapAttributesFromDasContent(asset.content);
@@ -100,11 +110,14 @@ async function scanNextPages(
   maxPages: number,
 ): Promise<CollectionRarityMeta> {
   let current = meta;
-  let pagesDone = 0;
   let nextPage = current.scanPage + 1;
+  const pages = await fetchAssetsByGroupPages(
+    collectionMint,
+    nextPage,
+    maxPages,
+  );
 
-  while (pagesDone < maxPages) {
-    const items = await fetchAssetsByGroupPage(collectionMint, nextPage);
+  for (const items of pages) {
     const mints = items
       .map(assetToScannedMint)
       .filter((m): m is ScannedMintInput => m != null);
@@ -117,7 +130,6 @@ async function scanNextPages(
       current,
     );
     current = patchCollectionRarityMeta(current, progress);
-    pagesDone += 1;
     nextPage += 1;
 
     if (items.length === 0 || items.length < DAS_PAGE_LIMIT) {
@@ -269,13 +281,10 @@ async function ensureCollectionIndexStarted(
   const db = getRarityDb();
   await ensureRaritySchema(db);
   const meta = await ensureCollectionRarityMeta(db, collectionMint);
-  if (meta.status === "ready") return meta;
-
-  const updated = await advanceCollectionRarityIndex(collectionMint);
-  if (updated.status !== "ready") {
+  if (meta.status !== "ready") {
     kickOffCollectionRarityBuild(collectionMint);
   }
-  return updated;
+  return meta;
 }
 
 async function buildCollectibleRarity(args: {
@@ -312,7 +321,7 @@ async function buildCollectibleRarity(args: {
   };
 }
 
-/** Advance index if needed, then read rarity for one mint (no duplicate meta fetch). */
+/** Read rarity if the D1 index is ready; otherwise start a background build. */
 export async function getCollectibleRarityForMint(args: {
   mint: string;
   collectionMint: string | null;

@@ -32,10 +32,12 @@ export const verifyTapRoutes = new Hono();
 verifyTapRoutes.get("/verify-tap", async (c) => {
   try {
     const params = new URL(c.req.url).searchParams;
-    const session = await readSessionCookie(c);
     const pk = params.get("pk");
+    const session = pk
+      ? await readSessionCookie(c, { secp256r1PublicKey: pk })
+      : null;
 
-    if (session && (!pk || pk === session.secp256r1PublicKey)) {
+    if (session) {
       return json({
         isVerified: true,
         secp256r1PublicKey: session.secp256r1PublicKey,
@@ -82,7 +84,7 @@ verifyTapRoutes.get("/verify-tap", async (c) => {
           phygitalToken,
           secp256r1PublicKey,
         });
-        setSessionCookie(c, minted.token, minted.expiresAt);
+        setSessionCookie(c, minted.token, minted.expiresAt, phygitalToken);
         expiresAt = minted.expiresAt;
       }
     } catch {

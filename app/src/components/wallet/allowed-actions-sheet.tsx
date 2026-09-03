@@ -2,24 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { usePolicyEditor } from "@/hooks/wallet/use-wallet-policy";
 import { copy } from "@/lib/copy/phygital";
-import {
-  fetchEffectivePolicy,
-  putPolicySummary,
-} from "@/lib/wallet/policies-client";
-import { toUserErrorMessage } from "@/lib/user-errors";
+import { DEFAULT_ALLOWED_PROGRAMS } from "@/lib/wallet/policies-client";
 
-const PAYMENTS_DEFAULT = [
-  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-  "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-  "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-  "11111111111111111111111111111111",
-  "ComputeBudget111111111111111111111111111111",
-];
+function isDefaultProgramList(list: string[]): boolean {
+  return (
+    list.length === DEFAULT_ALLOWED_PROGRAMS.length &&
+    DEFAULT_ALLOWED_PROGRAMS.every((p) => list.includes(p))
+  );
+}
 
 /** Payments-only vs custom program allowlist. */
 export function AllowedActionsSheet({
@@ -29,50 +24,20 @@ export function AllowedActionsSheet({
   phygitalTokenPda: string;
   onBack: () => void;
 }) {
+  const editor = usePolicyEditor(phygitalTokenPda);
   const [preset, setPreset] = useState<"payments" | "custom">("payments");
-  const [programs, setPrograms] = useState<string[]>(PAYMENTS_DEFAULT);
+  const [programs, setPrograms] = useState<string[]>([
+    ...DEFAULT_ALLOWED_PROGRAMS,
+  ]);
   const [draft, setDraft] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const summary = await fetchEffectivePolicy(phygitalTokenPda);
-        if (cancelled) return;
-        const list = summary.allowedPrograms;
-        const isDefault =
-          list.length === PAYMENTS_DEFAULT.length &&
-          PAYMENTS_DEFAULT.every((p) => list.includes(p));
-        setPreset(isDefault ? "payments" : "custom");
-        setPrograms(list.length ? list : PAYMENTS_DEFAULT);
-      } catch (e) {
-        toast.error(toUserErrorMessage(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [phygitalTokenPda]);
-
-  async function save() {
-    setSaving(true);
-    try {
-      await putPolicySummary(phygitalTokenPda, {
-        allowedPrograms:
-          preset === "payments" ? [...PAYMENTS_DEFAULT] : programs,
-      });
-      toast.success(copy.wallet.settingsSaved);
-      onBack();
-    } catch (e) {
-      toast.error(toUserErrorMessage(e));
-    } finally {
-      setSaving(false);
-    }
-  }
+    if (!editor.policy.data) return;
+    const list = editor.policy.data.allowedPrograms;
+    const isDefault = isDefaultProgramList(list);
+    setPreset(isDefault ? "payments" : "custom");
+    setPrograms(list.length ? list : [...DEFAULT_ALLOWED_PROGRAMS]);
+  }, [editor.policy.data]);
 
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -83,7 +48,7 @@ export function AllowedActionsSheet({
         <p className="text-sm font-medium">{copy.wallet.allowedActions}</p>
         <span className="w-16" aria-hidden />
       </div>
-      {loading ? (
+      {editor.loading ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {copy.common.loading}
         </p>
@@ -97,7 +62,7 @@ export function AllowedActionsSheet({
             variant={preset === "payments" ? "default" : "outline"}
             onClick={() => {
               setPreset("payments");
-              setPrograms([...PAYMENTS_DEFAULT]);
+              setPrograms([...DEFAULT_ALLOWED_PROGRAMS]);
             }}
           >
             {copy.wallet.paymentsOnly}
@@ -115,7 +80,7 @@ export function AllowedActionsSheet({
                 <Input
                   value={draft}
                   onChange={(e) => setDraft(e.target.value.trim())}
-                  placeholder="Program ID"
+                  placeholder={copy.wallet.programId}
                   className="font-mono text-sm"
                 />
                 <Button
@@ -127,7 +92,7 @@ export function AllowedActionsSheet({
                     setDraft("");
                   }}
                 >
-                  Add
+                  {copy.wallet.add}
                 </Button>
               </div>
               <ul className="flex flex-col gap-1 text-xs font-mono text-muted-foreground">
@@ -143,10 +108,20 @@ export function AllowedActionsSheet({
             type="button"
             size="lg"
             className="mt-auto"
-            disabled={saving}
-            onClick={() => void save()}
+            disabled={editor.saving}
+            onClick={() =>
+              void editor.save(
+                {
+                  allowedPrograms:
+                    preset === "payments"
+                      ? [...DEFAULT_ALLOWED_PROGRAMS]
+                      : programs,
+                },
+                onBack,
+              )
+            }
           >
-            {saving ? (
+            {editor.saving ? (
               <LoaderCircle className="size-4 animate-spin" />
             ) : (
               copy.wallet.holdToSave

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 import { address } from "@solana/kit";
 import { toast } from "sonner";
@@ -19,6 +20,10 @@ import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy/phygital";
+import {
+  invalidatePhygitalToken,
+  invalidateWalletBalances,
+} from "@/lib/queries";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { sendTransaction } from "@/lib/solana/tx";
 import { tryParseAddress } from "@/lib/solana/address";
@@ -35,14 +40,21 @@ export function SigningSettingsSheet({
   phygitalTokenPda: string;
   onClose: () => void;
 }) {
+  const queryClient = useQueryClient();
   const [view, setView] = useState<View>("menu");
   const [endpoint, setEndpoint] = useState("https://");
   const [verifier, setVerifier] = useState("");
 
+  function afterSigningTxConfirmed() {
+    // lastSignCount / verifier config on-chain; fee debit on cosign.
+    invalidatePhygitalToken(queryClient, phygitalTokenPda);
+    invalidateWalletBalances(queryClient, { tokens: [phygitalTokenPda] });
+  }
+
   async function saveCustom() {
     const verifierAddr = tryParseAddress(verifier.trim());
     if (!verifierAddr || !endpoint.trim().startsWith("https://")) {
-      toast.error("Enter a valid verifier address and HTTPS endpoint");
+      toast.error(copy.wallet.signingInvalidCustom);
       return;
     }
     setView("holding");
@@ -78,6 +90,7 @@ export function SigningSettingsSheet({
         feePayer,
       });
       await confirmed;
+      afterSigningTxConfirmed();
       setView("success");
       toast.success(copy.wallet.signingCustomSaved);
     } catch (e) {
@@ -113,8 +126,9 @@ export function SigningSettingsSheet({
         feePayer,
       });
       await confirmed;
+      afterSigningTxConfirmed();
       setView("success");
-      toast.success("Restored Revibase signing");
+      toast.success(copy.wallet.signingRestored);
     } catch (e) {
       setView("menu");
       toast.error(toUserErrorMessage(e));
@@ -163,7 +177,7 @@ export function SigningSettingsSheet({
         <Input
           value={verifier}
           onChange={(e) => setVerifier(e.target.value)}
-          placeholder="Verifier pubkey"
+          placeholder={copy.wallet.verifierPubkey}
           className="font-mono text-sm"
         />
         <label className="text-xs text-muted-foreground">{copy.wallet.customEndpoint}</label>

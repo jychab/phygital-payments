@@ -1,17 +1,12 @@
 # `tokens/`
 
-Read-only wallet / collectible APIs for the Revibase app.
+Server-only token helpers. **Wallet portfolio / collectible metadata / shortcuts
+run on the app** against `NEXT_PUBLIC_SOLANA_RPC_URL` (BYO-RPC ready).
 
 | File | Role |
 |------|------|
-| `routes.ts` | Hono mounts under `/tokens/*` |
-| `portfolio.ts` | Holdings + collectibles for a wallet |
-| `das-*.ts` | Helius DAS RPC wrappers |
-| `collectible.ts` | DAS → Collectible mapping |
-| `minted-view.ts` | Collectible + rarity + shortcuts bundle |
-| `collection-rarity.ts` / `rarity-db.ts` / `rarity/` | HowRare-style indexing |
-| `verified-tokens.ts` | Jupiter verified catalog (USDC fallback) |
-| `shortcuts.ts` | Phantom `shortcuts.json` proxy |
-| `payment-token.ts` / `usdc-mint.ts` / `amount.ts` | USDC helpers |
-
-Start at `routes.ts`, then follow imports.
+| `routes.ts` | `/tokens/fee-balance`, `/tokens/verified`, `POST /tokens/rarity` |
+| `verified-tokens.ts` | Jupiter verified catalog (API key) |
+| `das-*.ts` / `collectible.ts` | DAS helpers for **rarity indexing** only |
+| `collection-rarity.ts` / `rarity-db.ts` / `rarity/` | HowRare-style D1 index |
+| `payment-token.ts` / `usdc-mint.ts` | Verified-catalog token shape + USDC mint |

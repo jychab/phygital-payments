@@ -1,35 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertCircle } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { GateMessage } from "@/components/layout/gate-message";
 import { brand } from "@/lib/copy/phygital";
 import { galleryAnimate } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
-/** Full-page error for invalid iframe embeds (missing/invalid recipient, etc.). */
-export function EmbedError({
-  title,
-  body,
-}: {
-  title: string;
-  body: string;
-}) {
-  return (
-    <AppShell layout="compact">
-      <GateMessage
-        icon={<AlertCircle className="size-5 text-destructive" />}
-        title={title}
-        body={body}
-        destructive
-      />
-    </AppShell>
-  );
-}
-
-export function EmbedBoot({ children }: { children?: ReactNode }) {
+/** Compact route loading splash (Suspense / dynamic import). */
+export function RouteBoot({ children }: { children?: ReactNode }) {
   return (
     <AppShell layout="compact">
       <div className="flex flex-1 flex-col items-center justify-center gap-4 py-14">

@@ -6,13 +6,14 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 
 import { Toaster } from "@/components/ui/sonner";
 import { useResumeQueryRefresh } from "@/hooks/layout/use-resume-query-refresh";
+import { RpcPreferenceProvider } from "@/hooks/wallet/use-rpc-preference";
 import {
   CACHE_BUSTER,
   QUERY_CACHE_MAX_AGE_MS,
   createQueryPersister,
   shouldDehydrateQuery,
 } from "@/lib/queries/persist";
-import { queryKeys, queryOptions, shouldRetryQuery } from "@/lib/queries";
+import { queryOptions, shouldRetryQuery } from "@/lib/queries";
 
 /**
  * Shared by all routes: React Query + toasts.
@@ -44,19 +45,16 @@ export function AppProviders({ children }: { children: ReactNode }) {
         buster: CACHE_BUSTER,
         dehydrateOptions: { shouldDehydrateQuery },
       }}
-      onSuccess={() => {
-        void queryClient.invalidateQueries({
-          queryKey: queryKeys.phygitalToken.all(),
-        });
-      }}
     >
-      <ResumeQueryRefresh />
-      {children}
-      <Toaster
-        richColors
-        position="top-center"
-        offset="max(12px, env(safe-area-inset-top))"
-      />
+      <RpcPreferenceProvider>
+        <ResumeQueryRefresh />
+        {children}
+        <Toaster
+          richColors
+          position="top-center"
+          offset="max(12px, env(safe-area-inset-top))"
+        />
+      </RpcPreferenceProvider>
     </PersistQueryClientProvider>
   );
 }

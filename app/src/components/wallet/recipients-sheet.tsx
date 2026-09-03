@@ -6,12 +6,9 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { usePolicyEditor } from "@/hooks/wallet/use-wallet-policy";
 import { copy } from "@/lib/copy/phygital";
 import { identifyAccessory } from "@/lib/wallet/identify-accessory";
-import {
-  fetchEffectivePolicy,
-  putPolicySummary,
-} from "@/lib/wallet/policies-client";
 import { shortAddress } from "@/lib/utils";
 import { tryParseAddress } from "@/lib/solana/address";
 import { toUserErrorMessage } from "@/lib/user-errors";
@@ -24,38 +21,24 @@ export function RecipientsSheet({
   phygitalTokenPda: string;
   onBack: () => void;
 }) {
+  const editor = usePolicyEditor(phygitalTokenPda);
   const [mode, setMode] = useState<"anyone" | "allowlist">("anyone");
   const [allowlist, setAllowlist] = useState<string[]>([]);
   const [denylist, setDenylist] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
   const [denyDraft, setDenyDraft] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const summary = await fetchEffectivePolicy(phygitalTokenPda);
-        if (cancelled) return;
-        setMode(summary.recipientMode);
-        setAllowlist(summary.recipientAllowlist);
-        setDenylist(summary.recipientDenylist);
-      } catch (e) {
-        toast.error(toUserErrorMessage(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [phygitalTokenPda]);
+    if (!editor.policy.data) return;
+    setMode(editor.policy.data.recipientMode);
+    setAllowlist(editor.policy.data.recipientAllowlist);
+    setDenylist(editor.policy.data.recipientDenylist);
+  }, [editor.policy.data]);
 
   function addAddress(raw: string, target: "allow" | "deny") {
     const parsed = tryParseAddress(raw.trim());
     if (!parsed) {
-      toast.error("Enter a valid address");
+      toast.error(copy.wallet.invalidAddress);
       return;
     }
     const next = String(parsed);
@@ -80,20 +63,14 @@ export function RecipientsSheet({
   }
 
   async function save() {
-    setSaving(true);
-    try {
-      await putPolicySummary(phygitalTokenPda, {
+    await editor.save(
+      {
         recipientMode: mode,
         recipientAllowlist: mode === "allowlist" ? allowlist : [],
         recipientDenylist: denylist,
-      });
-      toast.success(copy.wallet.settingsSaved);
-      onBack();
-    } catch (e) {
-      toast.error(toUserErrorMessage(e));
-    } finally {
-      setSaving(false);
-    }
+      },
+      onBack,
+    );
   }
 
   return (
@@ -105,7 +82,7 @@ export function RecipientsSheet({
         <p className="text-sm font-medium">{copy.wallet.recipients}</p>
         <span className="w-16" aria-hidden />
       </div>
-      {loading ? (
+      {editor.loading ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {copy.common.loading}
         </p>
@@ -167,7 +144,7 @@ export function RecipientsSheet({
                     <span className="font-mono">{shortAddress(addr, 6)}</span>
                     <button
                       type="button"
-                      aria-label="Remove"
+                      aria-label={copy.common.remove}
                       onClick={() =>
                         setAllowlist((prev) => prev.filter((a) => a !== addr))
                       }
@@ -216,7 +193,7 @@ export function RecipientsSheet({
                   <span className="font-mono">{shortAddress(addr, 6)}</span>
                   <button
                     type="button"
-                    aria-label="Remove"
+                    aria-label={copy.common.remove}
                     onClick={() =>
                       setDenylist((prev) => prev.filter((a) => a !== addr))
                     }
@@ -231,10 +208,10 @@ export function RecipientsSheet({
             type="button"
             size="lg"
             className="mt-auto"
-            disabled={saving}
+            disabled={editor.saving}
             onClick={() => void save()}
           >
-            {saving ? (
+            {editor.saving ? (
               <LoaderCircle className="size-4 animate-spin" />
             ) : (
               copy.wallet.holdToSave

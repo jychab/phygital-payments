@@ -1,12 +1,19 @@
+import { resolveSolanaRpcUrl } from "@/lib/solana/rpc-preference";
+
 export type Cluster = "devnet" | "mainnet";
 
 const CLUSTER = (process.env.NEXT_PUBLIC_SOLANA_CLUSTER as Cluster) || "devnet";
 
-export const RPC_URL =
-  process.env.NEXT_PUBLIC_SOLANA_RPC_URL || "https://api.devnet.solana.com";
+/**
+ * Active Solana / DAS RPC. Honors a user custom endpoint from settings
+ * (localStorage), else `NEXT_PUBLIC_SOLANA_RPC_URL`.
+ */
+export function getSolanaRpcUrl(): string {
+  return resolveSolanaRpcUrl();
+}
 
 export function rpcSubscriptionsUrl(): string {
-  return RPC_URL.replace(/^http/, "ws");
+  return getSolanaRpcUrl().replace(/^http/, "ws");
 }
 
 export function getChainId(): `solana:${string}` {

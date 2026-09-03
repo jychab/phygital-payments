@@ -7,10 +7,34 @@ import {
 } from "@/auth/passkey-verify";
 import {
   mintSessionToken,
+  readSessionCookie,
   setSessionCookie,
 } from "@/auth/token-session";
 
 export const authSessionRoutes = new Hono();
+
+/** HttpOnly session for one phygital token, if still valid. */
+authSessionRoutes.get("/auth/token-session", async (c) => {
+  const phygitalToken = c.req.query("phygitalToken")?.trim();
+  if (!phygitalToken) {
+    return json(
+      { error: "phygitalToken required", code: "invalid_transaction" },
+      { status: 400 },
+    );
+  }
+  const session = await readSessionCookie(c, { phygitalToken });
+  if (!session) {
+    return json(
+      { error: "Hold your item to continue.", code: "session_required" },
+      { status: 401 },
+    );
+  }
+  return json({
+    phygitalToken: session.phygitalToken,
+    secp256r1PublicKey: session.secp256r1PublicKey,
+    expiresAt: session.exp,
+  });
+});
 
 authSessionRoutes.post("/auth/token-session", async (c) => {
   try {
@@ -40,10 +64,11 @@ authSessionRoutes.post("/auth/token-session", async (c) => {
       phygitalToken: verified.phygitalToken,
       secp256r1PublicKey: verified.secp256r1PublicKey,
     });
-    setSessionCookie(c, token, expiresAt);
+    setSessionCookie(c, token, expiresAt, verified.phygitalToken);
 
     return json({
       phygitalToken: verified.phygitalToken,
+      secp256r1PublicKey: verified.secp256r1PublicKey,
       expiresAt,
     });
   } catch (err) {

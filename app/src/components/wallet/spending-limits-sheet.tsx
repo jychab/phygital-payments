@@ -2,17 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
-import { toast } from "sonner";
 
 import { NavBar } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { usePolicyEditor } from "@/hooks/wallet/use-wallet-policy";
 import { copy } from "@/lib/copy/phygital";
-import {
-  fetchEffectivePolicy,
-  putPolicySummary,
-} from "@/lib/wallet/policies-client";
-import { toUserErrorMessage } from "@/lib/user-errors";
 
 /** Max per-send USDC / SOL limits. */
 export function SpendingLimitsSheet({
@@ -22,45 +17,15 @@ export function SpendingLimitsSheet({
   phygitalTokenPda: string;
   onBack: () => void;
 }) {
+  const editor = usePolicyEditor(phygitalTokenPda);
   const [maxPerSend, setMaxPerSend] = useState("");
   const [maxSol, setMaxSol] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const summary = await fetchEffectivePolicy(phygitalTokenPda);
-        if (cancelled) return;
-        setMaxPerSend(summary.maxTransferUsdc ?? "");
-        setMaxSol(summary.maxTransferSol ?? "");
-      } catch (e) {
-        toast.error(toUserErrorMessage(e));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [phygitalTokenPda]);
-
-  async function save() {
-    setSaving(true);
-    try {
-      await putPolicySummary(phygitalTokenPda, {
-        maxTransferUsdc: maxPerSend.trim() || null,
-        maxTransferSol: maxSol.trim() || null,
-      });
-      toast.success(copy.wallet.settingsSaved);
-      onBack();
-    } catch (e) {
-      toast.error(toUserErrorMessage(e));
-    } finally {
-      setSaving(false);
-    }
-  }
+    if (!editor.policy.data) return;
+    setMaxPerSend(editor.policy.data.maxTransferUsdc ?? "");
+    setMaxSol(editor.policy.data.maxTransferSol ?? "");
+  }, [editor.policy.data]);
 
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -72,7 +37,7 @@ export function SpendingLimitsSheet({
         }
         title={copy.wallet.spendingLimits}
       />
-      {loading ? (
+      {editor.loading ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {copy.common.loading}
         </p>
@@ -108,10 +73,18 @@ export function SpendingLimitsSheet({
             type="button"
             size="lg"
             className="mt-auto"
-            disabled={saving}
-            onClick={() => void save()}
+            disabled={editor.saving}
+            onClick={() =>
+              void editor.save(
+                {
+                  maxTransferUsdc: maxPerSend.trim() || null,
+                  maxTransferSol: maxSol.trim() || null,
+                },
+                onBack,
+              )
+            }
           >
-            {saving ? (
+            {editor.saving ? (
               <LoaderCircle className="size-4 animate-spin" />
             ) : (
               copy.wallet.holdToSave

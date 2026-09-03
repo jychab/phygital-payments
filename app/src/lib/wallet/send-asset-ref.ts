@@ -3,6 +3,7 @@ import type {
   PaymentTokenHolding,
 } from "@/lib/tokens/payment-token";
 import { NATIVE_SOL_TOKEN_PROGRAM } from "@/lib/tokens/payment-token";
+import { DasInterface } from "@/lib/solana/das-schema";
 import type { WalletCollectible } from "@/lib/wallet/portfolio-types";
 
 type SendAssetKind =
@@ -29,7 +30,7 @@ export function isCollectibleSendKind(kind: SendAssetKind): boolean {
   );
 }
 
-function holdingToSendKind(h: { tokenProgram: string }): SendAssetKind {
+function holdingToSendKind(h: { tokenProgram?: string | null }): SendAssetKind {
   return h.tokenProgram === NATIVE_SOL_TOKEN_PROGRAM ? "native" : "fungible";
 }
 
@@ -38,8 +39,8 @@ function collectibleToSendKind(c: {
   compressed: boolean;
 }): SendAssetKind {
   if (c.compressed) return "cnft";
-  if (c.interface === "ProgrammableNFT") return "pnft";
-  if (c.interface === "MplCoreAsset") return "core";
+  if (c.interface === DasInterface.PROGRAMMABLE_NFT) return "pnft";
+  if (c.interface === DasInterface.MPL_CORE_ASSET) return "core";
   return "nft";
 }
 
@@ -60,7 +61,7 @@ export function holdingToSendAsset(h: PaymentTokenHolding): SendAssetRef {
     kind: holdingToSendKind(h),
     mint: h.mint,
     decimals: h.decimals,
-    tokenProgram: h.tokenProgram,
+    tokenProgram: h.tokenProgram ?? null,
     symbol: h.symbol,
     name: h.name,
     icon: h.icon,

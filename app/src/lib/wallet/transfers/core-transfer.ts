@@ -7,7 +7,7 @@ import {
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 import { getTransferV1Instruction } from "@macalinao/clients-mpl-core";
 
-import { fetchDasAsset } from "@/lib/wallet/das-asset";
+import { dasGetAsset } from "@/lib/solana/das-rpc";
 
 const SPL_NOOP_PROGRAM_ID = address(
   "noopb9bkMVfRPU8AsbpTUg8AQkHtKwMYZiFUjNRtMmV",
@@ -19,7 +19,8 @@ export async function buildCoreTransferInstructions(args: {
   authority: TransactionSigner;
   newOwner: Address;
 }): Promise<Instruction[]> {
-  const das = await fetchDasAsset(String(args.asset));
+  const das = await dasGetAsset(String(args.asset));
+  if (!das?.id) throw new Error("getAsset returned no asset");
   const collection = das.grouping?.find(
     (g) => g.group_key === "collection",
   )?.group_value;

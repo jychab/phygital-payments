@@ -1,11 +1,18 @@
 import { startAuthentication } from "phygital-token-sdk";
 
+import { copy } from "@/lib/copy/phygital";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { queryFetch, QueryHttpError, readJson } from "@/lib/queries/http";
 
 type UnlockHooks = {
   onStart?: () => void;
   onEnd?: () => void;
+};
+
+export type ActiveTokenSession = {
+  phygitalToken: string;
+  secp256r1PublicKey: string;
+  expiresAt: number;
 };
 
 let unlockHooks: UnlockHooks = {};
@@ -15,11 +22,19 @@ export function setTokenSessionUnlockHooks(hooks: UnlockHooks): void {
   unlockHooks = hooks;
 }
 
-/** Hold accessory → mint HttpOnly session cookie for policy writes. */
-async function mintTokenSessionViaHold(): Promise<{
-  phygitalToken: string;
-  expiresAt: number;
-}> {
+/** Read the HttpOnly session cookie for this accessory, if still valid. */
+export async function fetchActiveTokenSession(
+  phygitalToken: string,
+): Promise<ActiveTokenSession | null> {
+  const res = await queryFetch(
+    `/auth/token-session?phygitalToken=${encodeURIComponent(phygitalToken)}`,
+  );
+  if (res.status === 401) return null;
+  return readJson<ActiveTokenSession>(res, copy.wallet.sessionCheckFailed);
+}
+
+/** Hold accessory → mint HttpOnly session cookie. */
+export async function mintTokenSessionViaHold(): Promise<ActiveTokenSession> {
   const message = crypto.randomUUID();
   const response = await startAuthentication(message, getSolanaRpc());
   const res = await queryFetch("/auth/token-session", {
@@ -27,7 +42,7 @@ async function mintTokenSessionViaHold(): Promise<{
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message, response }),
   });
-  return readJson(res, "Couldn’t unlock session");
+  return readJson(res, copy.wallet.sessionUnlockFailed);
 }
 
 /** Run a cookie-authed API call; on 401, Hold unlock then retry once. */

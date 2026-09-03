@@ -14,9 +14,9 @@ const STORAGE_KEY = "phygital-wallet.react-query";
 
 /**
  * Bump to drop incompatible cached shapes after schema changes.
- * v14: drop Pay/Collect/binder persist leftovers after API Worker split.
+ * v15: persist portfolio / fee / policy / verified catalog.
  */
-const CACHE_BUSTER = "v14";
+const CACHE_BUSTER = "v15";
 
 export { CACHE_BUSTER };
 
@@ -26,10 +26,15 @@ const MAP_TAG = "$map" as const;
 type TaggedBigInt = { [BIGINT_TAG]: string };
 type TaggedMap = { [MAP_TAG]: [unknown, unknown][] };
 
-/** Roots worth instant paint. Must match `queryKeys` in `./index.ts`. */
+/** Roots worth instant paint. Must match `queryKeys` in `./keys.ts`. */
 const PERSISTED_QUERY_ROOTS = new Set([
   "phygitalTokens",
   "dasCollectible",
+  "mintedCollectibleView",
+  "walletPortfolio",
+  "feeBalance",
+  "verifiedTokens",
+  "walletPolicy",
 ]);
 
 function isTaggedBigInt(value: object): value is TaggedBigInt {

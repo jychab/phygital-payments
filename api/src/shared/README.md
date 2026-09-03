@@ -10,4 +10,4 @@ Infrastructure used by every domain. Prefer **not** putting product logic here.
 | `db.ts` | D1 accessor (`phygital_token` binding) |
 | `crypto/base64.ts` | Kit base64 helpers |
 | `solana/` | Cluster + address parse |
-| `utils.ts` | `shortAddress`, `getErrorMessage` |
+| `utils.ts` | `getErrorMessage` |

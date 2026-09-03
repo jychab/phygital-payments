@@ -45,11 +45,15 @@ describe("isPersistedQueryKey", () => {
       true,
     );
     expect(isPersistedQueryKey(["dasCollectible", "mint"])).toBe(true);
+    expect(isPersistedQueryKey(["mintedCollectibleView", "mint"])).toBe(true);
+    expect(isPersistedQueryKey(["walletPortfolio", "owner"])).toBe(true);
+    expect(isPersistedQueryKey(["feeBalance", "token"])).toBe(true);
+    expect(isPersistedQueryKey(["verifiedTokens"])).toBe(true);
+    expect(isPersistedQueryKey(["walletPolicy", "token"])).toBe(true);
   });
 
   it("skips growing or one-shot caches", () => {
-    expect(isPersistedQueryKey(["walletPortfolio", "owner"])).toBe(false);
     expect(isPersistedQueryKey(["tapVerify", "pk=1"])).toBe(false);
-    expect(isPersistedQueryKey(["mintedCollectibleView", "mint"])).toBe(false);
+    expect(isPersistedQueryKey(["dasCollectible", "batch", "a"])).toBe(false);
   });
 });

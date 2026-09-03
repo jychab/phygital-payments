@@ -4,12 +4,11 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { EmbedBoot, EmbedError } from "@/components/layout/embed-gate";
+import { RouteBoot } from "@/components/layout/route-boot";
 import { TokenAddressRoute } from "@/components/token/token-address-route";
 import { TokenMintedHome } from "@/components/token/token-minted-home";
 import { TokenNfcApp } from "@/components/token/token-nfc-app";
 import { TokenUnmintedHome } from "@/components/token/token-unminted-home";
-import { useIsEmbedded } from "@/hooks/layout/use-is-embedded";
 import { copy } from "@/lib/copy/phygital";
 import {
   tokenHasLinkedMint,
@@ -21,7 +20,7 @@ const TokenRouteShell = dynamic(
     import("@/components/token/token-route-shell").then(
       (m) => m.TokenRouteShell,
     ),
-  { ssr: false, loading: () => <EmbedBoot /> },
+  { ssr: false, loading: () => <RouteBoot /> },
 );
 
 const TOKEN_NFC_COPY = {
@@ -61,22 +60,8 @@ function TokenHome({
  * Minted → card gallery UI; unminted → Wallet home.
  */
 export function TokenApp() {
-  const embedded = useIsEmbedded();
   const searchParams = useSearchParams();
   const address = searchParams.get("address")?.trim() ?? "";
-
-  if (embedded === null) {
-    return <EmbedBoot />;
-  }
-
-  if (embedded) {
-    return (
-      <EmbedError
-        title={copy.embed.cantOpenTitle}
-        body={copy.embed.tokenBody}
-      />
-    );
-  }
 
   if (address) {
     return (

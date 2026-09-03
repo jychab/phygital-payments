@@ -54,10 +54,10 @@ describe("QueryHttpError / retry policy", () => {
       .mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await queryFetch("/tokens/portfolio", { cache: "force-cache" });
+    await queryFetch("/tokens/verified", { cache: "force-cache" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://127.0.0.1:8787/tokens/portfolio",
+      "http://127.0.0.1:8787/tokens/verified",
       expect.objectContaining({ cache: "no-store" }),
     );
   });

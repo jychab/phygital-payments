@@ -30,6 +30,8 @@ export function WalletHomePanel({
   onSeeAllCollectibles,
   feeBalanceLow,
   onTopUpFees,
+  customRpcEndpoint,
+  onChangeRpc,
   className,
 }: {
   portfolio: WalletPortfolio | undefined;
@@ -43,6 +45,9 @@ export function WalletHomePanel({
   onSeeAllCollectibles: () => void;
   feeBalanceLow?: boolean;
   onTopUpFees?: () => void;
+  /** Masked host when a custom RPC is active (Backpack-style reminder). */
+  customRpcEndpoint?: string | null;
+  onChangeRpc?: () => void;
   className?: string;
 }) {
   const holdings = portfolio?.holdings ?? [];
@@ -82,6 +87,24 @@ export function WalletHomePanel({
           icon={<ArrowDown className="size-5" />}
         />
       </div>
+
+      {customRpcEndpoint && onChangeRpc ? (
+        <button
+          type="button"
+          onClick={onChangeRpc}
+          className="mx-3 rounded-2xl border border-border/60 bg-muted/30 px-4 py-3 text-left text-sm transition-colors hover:bg-muted/50"
+        >
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="font-medium">{copy.wallet.rpcBannerTitle}</p>
+            <span className="shrink-0 text-xs text-primary">
+              {copy.wallet.rpcBannerChange}
+            </span>
+          </div>
+          <p className="mt-1 truncate text-xs text-muted-foreground">
+            {copy.wallet.rpcBannerBody(customRpcEndpoint)}
+          </p>
+        </button>
+      ) : null}
 
       {feeBalanceLow && onTopUpFees ? (
         <button

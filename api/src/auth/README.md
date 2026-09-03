@@ -4,8 +4,8 @@ Owner-app authentication and standing-policy HTTP surface.
 
 | File | Role |
 |------|------|
-| `session-routes.ts` | `POST /auth/token-session` — passkey → HttpOnly cookie |
-| `token-session.ts` | Mint / parse / require session cookie |
+| `session-routes.ts` | `GET`/`POST /auth/token-session` — read or mint per-token HttpOnly cookie |
+| `token-session.ts` | Mint / parse / require session cookie (`revibase_phygital_session.<token>`) |
 | `passkey-verify.ts` | `verifyResponse` + resolve phygital token PDA |
 | `policies-routes.ts` | `GET/PUT /policies/:token`, `POST .../grants` |
 

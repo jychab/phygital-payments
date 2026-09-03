@@ -9,7 +9,11 @@ export type RecentItem = {
   walletAddress: string;
   kind: RecentKind;
   label: string;
+  /** Linked mint when this is a card; used for DAS art. */
+  mint?: string | null;
   imageUrl?: string | null;
+  /** Passkey pubkey for re-hold matching when the session cookie expires. */
+  secp256r1PublicKey?: string | null;
   updatedAt: number;
 };
 
@@ -59,12 +63,16 @@ export function listRecents(): RecentItem[] {
   return cachedItems;
 }
 
-export function upsertRecent(item: Omit<RecentItem, "updatedAt"> & { updatedAt?: number }) {
+export function upsertRecent(
+  item: Omit<RecentItem, "updatedAt"> & { updatedAt?: number },
+) {
   const next: RecentItem = {
     ...item,
     updatedAt: item.updatedAt ?? Date.now(),
   };
-  const rest = listRecents().filter((r) => r.tokenAddress !== next.tokenAddress);
+  const rest = listRecents().filter(
+    (r) => r.tokenAddress !== next.tokenAddress,
+  );
   writeAll([next, ...rest]);
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("revibase:recents"));

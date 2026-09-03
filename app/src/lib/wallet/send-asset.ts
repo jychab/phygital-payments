@@ -9,20 +9,17 @@ import {
   findAssociatedTokenPda,
   getCreateAssociatedTokenIdempotentInstruction,
   getTransferCheckedInstruction,
-  TOKEN_PROGRAM_ADDRESS,
 } from "@solana-program/token";
-import {
-  findAssociatedTokenPda as findAssociatedToken2022Pda,
-  getCreateAssociatedTokenIdempotentInstruction as getCreateAta2022,
-  getTransferCheckedInstruction as getTransferChecked2022,
-  TOKEN_2022_PROGRAM_ADDRESS,
-} from "@solana-program/token-2022";
+import { getTransferCheckedInstruction as getTransferChecked2022 } from "@solana-program/token-2022";
 import { getPhygitalWalletSigner } from "phygital-wallet-sdk";
 
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { sendTransaction } from "@/lib/solana/tx";
 import { uiAmountToRaw } from "@/lib/tokens/amount";
-import { isToken2022Program } from "@/lib/tokens/payment-token";
+import {
+  isToken2022Program,
+  requireSupportedTokenProgram,
+} from "@/lib/tokens/payment-token";
 import { walletPdaForToken } from "@/lib/wallet/pda";
 import type { SendAssetRef } from "@/lib/wallet/send-asset-ref";
 import { buildCnftTransferInstructions } from "@/lib/wallet/transfers/cnft-transfer";
@@ -117,9 +114,7 @@ async function buildSendInstructions(args: {
         owner: args.walletPda,
         authority: args.walletSigner,
         recipient: args.recipient,
-        tokenProgram: address(
-          args.tokenProgram ?? String(TOKEN_PROGRAM_ADDRESS),
-        ),
+        tokenProgram: requireSupportedTokenProgram(args.tokenProgram),
       });
     case "cnft":
       return buildCnftTransferInstructions({
@@ -152,39 +147,9 @@ async function buildSplTransfer(args: {
 }): Promise<Instruction[]> {
   const mint = address(args.mint);
   const raw = uiAmountToRaw(args.amountUi, args.decimals);
-  const use2022 = isToken2022Program(args.tokenProgram);
+  const tokenProgram = requireSupportedTokenProgram(args.tokenProgram);
+  const use2022 = isToken2022Program(tokenProgram);
 
-  if (use2022) {
-    const [sourceAta] = await findAssociatedToken2022Pda({
-      mint,
-      owner: args.walletPda,
-      tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
-    });
-    const [destAta] = await findAssociatedToken2022Pda({
-      mint,
-      owner: args.recipient,
-      tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
-    });
-    return [
-      getCreateAta2022({
-        payer: args.walletSigner,
-        ata: destAta,
-        owner: args.recipient,
-        mint,
-        tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
-      }),
-      getTransferChecked2022({
-        source: sourceAta,
-        mint,
-        destination: destAta,
-        authority: args.walletSigner,
-        amount: raw,
-        decimals: args.decimals,
-      }),
-    ];
-  }
-
-  const tokenProgram = TOKEN_PROGRAM_ADDRESS;
   const [sourceAta] = await findAssociatedTokenPda({
     mint,
     owner: args.walletPda,
@@ -195,21 +160,32 @@ async function buildSplTransfer(args: {
     owner: args.recipient,
     tokenProgram,
   });
-  return [
-    getCreateAssociatedTokenIdempotentInstruction({
-      payer: args.walletSigner,
-      ata: destAta,
-      owner: args.recipient,
-      mint,
-      tokenProgram,
-    }),
-    getTransferCheckedInstruction({
-      source: sourceAta,
-      mint,
-      destination: destAta,
-      authority: args.walletSigner,
-      amount: raw,
-      decimals: args.decimals,
-    }),
-  ];
+
+  const createAta = getCreateAssociatedTokenIdempotentInstruction({
+    payer: args.walletSigner,
+    ata: destAta,
+    owner: args.recipient,
+    mint,
+    tokenProgram,
+  });
+
+  const transfer = use2022
+    ? getTransferChecked2022({
+        source: sourceAta,
+        mint,
+        destination: destAta,
+        authority: args.walletSigner,
+        amount: raw,
+        decimals: args.decimals,
+      })
+    : getTransferCheckedInstruction({
+        source: sourceAta,
+        mint,
+        destination: destAta,
+        authority: args.walletSigner,
+        amount: raw,
+        decimals: args.decimals,
+      });
+
+  return [createAta, transfer];
 }

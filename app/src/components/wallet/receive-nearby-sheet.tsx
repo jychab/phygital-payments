@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { PolicyDeniedError } from "phygital-wallet-sdk";
@@ -16,11 +17,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useVerifiedTokens } from "@/hooks/wallet/use-verified-tokens";
+import { useWalletPortfolio } from "@/hooks/wallet/use-wallet-portfolio";
 import { copy } from "@/lib/copy/phygital";
-import type { PaymentToken } from "@/lib/tokens/payment-token";
+import { invalidateWalletBalances } from "@/lib/queries";
 import { shortAddress } from "@/lib/utils";
 import { toUserErrorMessage } from "@/lib/user-errors";
-import { fetchWalletPortfolio } from "@/lib/wallet/holdings-client";
 import { identifyAccessory } from "@/lib/wallet/identify-accessory";
 import { createOneTimeGrant } from "@/lib/wallet/policies-client";
 import { policySoftDenyBody } from "@/lib/wallet/policy-deny-copy";
@@ -30,7 +32,6 @@ import {
   paymentTokenToSendAsset,
   type SendAssetRef,
 } from "@/lib/wallet/send-asset-ref";
-import { fetchVerifiedTokens } from "@/lib/wallet/verified-tokens-client";
 
 type LinkedPayer = {
   walletPda: string;
@@ -49,60 +50,39 @@ export function ReceiveNearbySheet({
   onClose: () => void;
   onReceived: () => void;
 }) {
-  const [catalog, setCatalog] = useState<PaymentToken[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const verified = useVerifiedTokens();
+  const catalog = verified.data ?? [];
+  const catalogLoading = verified.isLoading && !verified.data;
   const [asset, setAsset] = useState<SendAssetRef | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [amount, setAmount] = useState("");
   const [from, setFrom] = useState<LinkedPayer | null>(null);
-  const [payerBalanceUi, setPayerBalanceUi] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>("form");
   const [busy, setBusy] = useState(false);
   const [hardError, setHardError] = useState<string | null>(null);
   const [softDeny, setSoftDeny] = useState<PolicyDeniedError | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const tokens = await fetchVerifiedTokens();
-        if (cancelled) return;
-        setCatalog(tokens);
-        if (tokens[0]) {
-          setAsset((prev) => prev ?? paymentTokenToSendAsset(tokens[0]!));
-        }
-      } catch (e) {
-        if (!cancelled) toast.error(toUserErrorMessage(e));
-      } finally {
-        if (!cancelled) setCatalogLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const payerPortfolio = useWalletPortfolio(from?.walletPda ?? null);
 
   useEffect(() => {
-    if (!from || !asset) {
-      setPayerBalanceUi(null);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const portfolio = await fetchWalletPortfolio(from.walletPda);
-        if (cancelled) return;
-        const h = portfolio.holdings.find((x) => x.mint === asset.mint);
-        setPayerBalanceUi(h?.balanceUi ?? "0");
-      } catch {
-        if (!cancelled) setPayerBalanceUi(null);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [from, asset]);
+    if (verified.isError) toast.error(toUserErrorMessage(verified.error));
+  }, [verified.isError, verified.error]);
+
+  useEffect(() => {
+    const first = verified.data?.[0];
+    if (!first) return;
+    setAsset((prev) => prev ?? paymentTokenToSendAsset(first));
+  }, [verified.data]);
+
+  const payerBalanceUi = useMemo(() => {
+    if (!from || !asset || !payerPortfolio.data) return null;
+    return (
+      payerPortfolio.data.holdings.find((x) => x.mint === asset.mint)
+        ?.balanceUi ?? "0"
+    );
+  }, [from, asset, payerPortfolio.data]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -145,7 +125,6 @@ export function ReceiveNearbySheet({
 
   function clearFrom() {
     setFrom(null);
-    setPayerBalanceUi(null);
     setHardError(null);
     setSoftDeny(null);
   }
@@ -174,6 +153,11 @@ export function ReceiveNearbySheet({
       await confirmed;
       setPhase("success");
       toast.success(copy.wallet.received);
+      // Payer spent assets + fees; recipient gained assets.
+      invalidateWalletBalances(queryClient, {
+        wallets: [recipientWallet, from.walletPda],
+        tokens: [from.tokenPda],
+      });
       onReceived();
     } catch (e) {
       window.clearTimeout(holdTimer);
@@ -189,6 +173,11 @@ export function ReceiveNearbySheet({
             ? copy.wallet.feeBalanceInsufficient
             : toUserErrorMessage(e),
         );
+        if (e.code === "insufficient_fee_balance") {
+          invalidateWalletBalances(queryClient, {
+            tokens: [from.tokenPda],
+          });
+        }
         return;
       }
       setPhase("form");
@@ -322,10 +311,7 @@ export function ReceiveNearbySheet({
             token={{
               mint: asset.mint,
               symbol: asset.symbol,
-              name: asset.name,
               icon: asset.icon,
-              decimals: asset.decimals,
-              tokenProgram: asset.tokenProgram ?? "",
             }}
             className="size-6"
           />
@@ -360,7 +346,7 @@ export function ReceiveNearbySheet({
               className="text-xs font-medium text-primary"
               onClick={() => setAmount(payerBalanceUi)}
             >
-              Max
+              {copy.wallet.max}
             </button>
           </>
         ) : null}

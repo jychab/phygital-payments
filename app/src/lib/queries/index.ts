@@ -5,50 +5,14 @@
  * React Query is the only client cache.
  */
 
-import { fetchDasCollectibleClient } from "@/lib/tokens/das-collectible-client";
-import type { Collectible } from "@/lib/tokens/collectible";
-
 export { shouldRetryQuery } from "./http";
-
-export const queryKeys = {
-  dasCollectible: {
-    all: () => ["dasCollectible"] as const,
-    byMint: (mint: string | null) =>
-      [...queryKeys.dasCollectible.all(), mint] as const,
-  },
-
-  mintedCollectibleView: {
-    all: () => ["mintedCollectibleView"] as const,
-    byMint: (mint: string | null) =>
-      [...queryKeys.mintedCollectibleView.all(), mint] as const,
-  },
-
-  tapVerify: {
-    all: () => ["tapVerify"] as const,
-    byParams: (params: string) =>
-      [...queryKeys.tapVerify.all(), params] as const,
-  },
-
-  walletPortfolio: {
-    all: () => ["walletPortfolio"] as const,
-    byOwner: (owner: string | null) =>
-      [...queryKeys.walletPortfolio.all(), owner] as const,
-  },
-
-  feeBalance: {
-    all: () => ["feeBalance"] as const,
-    byToken: (token: string | null) =>
-      [...queryKeys.feeBalance.all(), token] as const,
-  },
-
-  phygitalToken: {
-    all: () => ["phygitalTokens"] as const,
-    byIdentifier: (identifier: string | null) =>
-      [...queryKeys.phygitalToken.all(), "identifier", identifier] as const,
-    byAddress: (token: string | null) =>
-      [...queryKeys.phygitalToken.all(), "address", token] as const,
-  },
-};
+export { queryKeys } from "./keys";
+export {
+  applyWalletPolicyPatch,
+  invalidatePhygitalToken,
+  invalidateRpcDependentQueries,
+  invalidateWalletBalances,
+} from "./mutations";
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -77,7 +41,3 @@ export const queryOptions = {
     staleTime: Infinity,
   },
 } as const;
-
-export function fetchDasCollectible(mint: string): Promise<Collectible | null> {
-  return fetchDasCollectibleClient(mint);
-}

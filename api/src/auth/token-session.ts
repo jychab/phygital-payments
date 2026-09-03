@@ -4,7 +4,7 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import { base64UrlToBytes, bytesToBase64Url } from "@/shared/crypto/base64";
 import { getEnv } from "@/shared/request-context";
 
-const SESSION_COOKIE = "revibase_phygital_session";
+const SESSION_COOKIE_PREFIX = "revibase_phygital_session.";
 const SESSION_TTL_MS = 10 * 60 * 1000;
 
 export type TokenSession = {
@@ -13,6 +13,10 @@ export type TokenSession = {
   exp: number;
   jti: string;
 };
+
+export function sessionCookieName(phygitalToken: string): string {
+  return `${SESSION_COOKIE_PREFIX}${phygitalToken.trim()}`;
+}
 
 function requireSessionSecret(): string {
   const secret = getEnv().POLICY_SESSION_SECRET?.trim();
@@ -60,9 +64,10 @@ export async function mintSessionToken(args: {
 }
 
 async function parseSessionToken(
-  token: string,
+  token: string | undefined,
   now = Date.now(),
 ): Promise<TokenSession | null> {
+  if (!token) return null;
   const [payloadB64, macB64] = token.split(".");
   if (!payloadB64 || !macB64) return null;
   try {
@@ -83,14 +88,38 @@ async function parseSessionToken(
   }
 }
 
+export async function findSessionInCookies(
+  cookies: Record<string, string>,
+  match: { phygitalToken: string } | { secp256r1PublicKey: string },
+  now = Date.now(),
+): Promise<TokenSession | null> {
+  if ("phygitalToken" in match) {
+    const token = match.phygitalToken.trim();
+    const session = await parseSessionToken(
+      cookies[sessionCookieName(token)],
+      now,
+    );
+    return session?.phygitalToken === token ? session : null;
+  }
+
+  const pk = match.secp256r1PublicKey.trim();
+  for (const [name, raw] of Object.entries(cookies)) {
+    if (!name.startsWith(SESSION_COOKIE_PREFIX)) continue;
+    const session = await parseSessionToken(raw, now);
+    if (session?.secp256r1PublicKey === pk) return session;
+  }
+  return null;
+}
+
 export function setSessionCookie(
   c: Context,
   token: string,
   expiresAt: number,
+  phygitalToken: string,
 ): void {
   const maxAge = Math.max(1, Math.floor((expiresAt - Date.now()) / 1000));
   const { secure, sameSite } = cookieAttrsForRequest(c);
-  setCookie(c, SESSION_COOKIE, token, {
+  setCookie(c, sessionCookieName(phygitalToken), token, {
     httpOnly: true,
     secure,
     sameSite,
@@ -99,8 +128,8 @@ export function setSessionCookie(
   });
 }
 
-function clearSessionCookie(c: Context): void {
-  deleteCookie(c, SESSION_COOKIE, { path: "/" });
+function clearSessionCookie(c: Context, phygitalToken: string): void {
+  deleteCookie(c, sessionCookieName(phygitalToken), { path: "/" });
 }
 
 /** Local HTTP cannot set SameSite=None;Secure — use Lax so cookies stick in wrangler dev. */
@@ -123,11 +152,10 @@ function cookieAttrsForRequest(c: Context): {
 /** Read the owner session cookie if present and still valid. */
 export async function readSessionCookie(
   c: Context,
+  match: { phygitalToken: string } | { secp256r1PublicKey: string },
   now = Date.now(),
 ): Promise<TokenSession | null> {
-  const raw = getCookie(c, SESSION_COOKIE);
-  if (!raw) return null;
-  return parseSessionToken(raw, now);
+  return findSessionInCookies(getCookie(c), match, now);
 }
 
 /** Require cookie session matching `:phygitalToken` path param. */
@@ -142,7 +170,7 @@ export async function requireTokenSession(
     );
   }
 
-  const raw = getCookie(c, SESSION_COOKIE);
+  const raw = getCookie(c, sessionCookieName(expected));
   if (!raw) {
     return c.json(
       {
@@ -155,7 +183,7 @@ export async function requireTokenSession(
 
   const session = await parseSessionToken(raw);
   if (!session) {
-    clearSessionCookie(c);
+    clearSessionCookie(c, expected);
     return c.json(
       {
         error: "Session expired. Hold your item to continue.",

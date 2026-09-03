@@ -19,7 +19,7 @@ function holding(
   mint: string,
   symbol: string,
   balanceUi: string,
-  tokenProgram: string = CLASSIC_TOKEN_PROGRAM,
+  tokenProgram: string = String(CLASSIC_TOKEN_PROGRAM),
 ) {
   return {
     mint,
@@ -28,7 +28,7 @@ function holding(
     icon: null,
     decimals: 6,
     tokenProgram,
-    balanceRaw: "0",
+    balanceRaw: balanceUi,
     balanceUi,
   };
 }

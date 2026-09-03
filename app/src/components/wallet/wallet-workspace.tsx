@@ -17,9 +17,11 @@ import { RecipientsSheet } from "@/components/wallet/recipients-sheet";
 import { AllowedActionsSheet } from "@/components/wallet/allowed-actions-sheet";
 import { SigningSettingsSheet } from "@/components/wallet/signing-settings-sheet";
 import { FeeBalanceSheet } from "@/components/wallet/fee-balance-sheet";
+import { RpcConnectionSheet } from "@/components/wallet/rpc-connection-sheet";
 import { TokensAllSheet } from "@/components/wallet/tokens-all-sheet";
 import { CollectiblesAllSheet } from "@/components/wallet/collectibles-all-sheet";
 import { HoldToUnlockGate } from "@/components/wallet/hold-to-unlock-gate";
+import { useRpcPreference } from "@/hooks/wallet/use-rpc-preference";
 import { Button } from "@/components/ui/button";
 import { useTokenWalletChip } from "@/hooks/wallet/use-token-wallet-chip";
 import { useWalletPortfolio } from "@/hooks/wallet/use-wallet-portfolio";
@@ -30,7 +32,7 @@ import { copy } from "@/lib/copy/phygital";
 import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
 import { shellLayoutClass } from "@/lib/layout";
 import { cn } from "@/lib/utils";
-import { queryKeys } from "@/lib/queries";
+import { invalidateWalletBalances } from "@/lib/queries";
 import type { WalletCollectible } from "@/lib/wallet/portfolio-types";
 import {
   collectibleToSendAsset,
@@ -101,7 +103,13 @@ function WalletWorkspaceInner({
 }) {
   const tokenAddress = String(token.address);
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
-  const { collectible } = useResolvedDasCollectible(mint);
+  // Parent (minted home) already resolved collectible via minted-view cache.
+  const { collectible } = useResolvedDasCollectible(mint, {
+    enabled: cardLabel == null,
+  });
+  const resolvedLabel =
+    collectible?.name ?? cardLabel ?? (mint ? copy.recents.card : copy.recents.accessory);
+  const resolvedImage = collectible?.image ?? cardImage ?? null;
   const [screen, setScreen] = useState<Screen>("home");
   const [sendAsset, setSendAsset] = useState<SendAssetRef | null>(null);
   const [sendTokensOnly, setSendTokensOnly] = useState(true);
@@ -118,6 +126,7 @@ function WalletWorkspaceInner({
 
   const portfolio = useWalletPortfolio(walletAddress);
   const feeBalance = useFeeBalance(tokenAddress);
+  const rpc = useRpcPreference();
 
   useEffect(() => {
     if (!walletAddress) return;
@@ -125,17 +134,24 @@ function WalletWorkspaceInner({
       tokenAddress,
       walletAddress,
       kind: mint ? "card" : "accessory",
-      label: collectible?.name ?? (mint ? copy.recents.card : copy.recents.accessory),
-      imageUrl: collectible?.image ?? null,
+      label: resolvedLabel,
+      mint: mint ?? null,
+      imageUrl: resolvedImage,
+      secp256r1PublicKey: token.secp256r1PublicKey,
     });
-  }, [walletAddress, tokenAddress, mint, collectible?.name, collectible?.image]);
+  }, [
+    walletAddress,
+    tokenAddress,
+    mint,
+    resolvedLabel,
+    resolvedImage,
+    token.secp256r1PublicKey,
+  ]);
 
   const refresh = useCallback(() => {
-    void queryClient.invalidateQueries({
-      queryKey: queryKeys.walletPortfolio.byOwner(walletAddress),
-    });
-    void queryClient.invalidateQueries({
-      queryKey: queryKeys.feeBalance.byToken(tokenAddress),
+    invalidateWalletBalances(queryClient, {
+      wallets: [walletAddress],
+      tokens: [tokenAddress],
     });
   }, [queryClient, walletAddress, tokenAddress]);
 
@@ -156,7 +172,7 @@ function WalletWorkspaceInner({
     );
   }
 
-  const backLabel = cardLabel ?? copy.wallet.backToCard;
+  const backLabel = cardLabel ?? collectible?.name ?? copy.wallet.backToCard;
 
   let body: ReactNode;
 
@@ -251,6 +267,10 @@ function WalletWorkspaceInner({
         onClose={() => setScreen("settings")}
       />
     );
+  } else if (screen === "rpcConnection") {
+    body = (
+      <RpcConnectionSheet onBack={() => setScreen("settings")} />
+    );
   } else {
     body = (
       <div className="flex flex-1 flex-col">
@@ -291,6 +311,8 @@ function WalletWorkspaceInner({
           onSeeAllCollectibles={() => setScreen("collectiblesAll")}
           feeBalanceLow={feeBalance.data?.low}
           onTopUpFees={() => setScreen("feeBalance")}
+          customRpcEndpoint={rpc.isCustom ? rpc.displayEndpoint : null}
+          onChangeRpc={() => setScreen("rpcConnection")}
         />
       </div>
     );

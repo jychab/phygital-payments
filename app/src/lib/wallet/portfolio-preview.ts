@@ -15,7 +15,10 @@ export function sortHoldings(
     const aSol = isNativeSolHolding(a);
     const bSol = isNativeSolHolding(b);
     if (aSol !== bSol) return aSol ? -1 : 1;
-    return Number(b.balanceUi) - Number(a.balanceUi);
+    const aBal = BigInt(a.balanceRaw || "0");
+    const bBal = BigInt(b.balanceRaw || "0");
+    if (aBal === bBal) return 0;
+    return aBal > bBal ? -1 : 1;
   });
 }
 

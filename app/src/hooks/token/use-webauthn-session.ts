@@ -41,11 +41,16 @@ export function useWebauthnSession() {
   );
 
   const markVerified = useCallback((secp256r1PublicKey: string) => {
-    writeWebauthnSession(secp256r1PublicKey);
-    notify();
+    markWebauthnVerified(secp256r1PublicKey);
   }, []);
 
   return { session, markVerified };
+}
+
+/** Persist passkey proof and notify listeners (Recents reopen, Hold to Check). */
+export function markWebauthnVerified(secp256r1PublicKey: string): void {
+  writeWebauthnSession(secp256r1PublicKey);
+  notify();
 }
 
 /** Hydrate from sessionStorage once on the client. */

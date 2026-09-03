@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, LoaderCircle, Nfc } from "lucide-react";
 import { toast } from "sonner";
 import { PolicyDeniedError } from "phygital-wallet-sdk";
@@ -19,6 +20,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { copy } from "@/lib/copy/phygital";
+import { invalidateWalletBalances } from "@/lib/queries";
 import { tryParseAddress } from "@/lib/solana/address";
 import { shortAddress } from "@/lib/utils";
 import { toUserErrorMessage } from "@/lib/user-errors";
@@ -71,6 +73,7 @@ export function SendSheet({
   onSent: () => void;
   onChangeLimits?: (code?: string) => void;
 }) {
+  const queryClient = useQueryClient();
   const [asset, setAsset] = useState<SendAssetRef | null>(() =>
     defaultAsset(portfolio, initialAsset, tokensOnly),
   );
@@ -166,6 +169,11 @@ export function SendSheet({
             ? copy.wallet.feeBalanceInsufficient
             : toUserErrorMessage(e),
         );
+        if (e.code === "insufficient_fee_balance") {
+          invalidateWalletBalances(queryClient, {
+            tokens: [phygitalTokenPda],
+          });
+        }
         return;
       }
       setPhase("form");
@@ -320,10 +328,7 @@ export function SendSheet({
               token={{
                 mint: asset.mint,
                 symbol: asset.symbol,
-                name: asset.name,
                 icon: asset.icon,
-                decimals: asset.decimals,
-                tokenProgram: asset.tokenProgram ?? "",
               }}
               className="size-6"
             />
@@ -367,7 +372,7 @@ export function SendSheet({
               className="text-xs font-medium text-primary"
               onClick={() => setAmount(balanceUi)}
             >
-              Max
+              {copy.wallet.max}
             </button>
           </>
         )}
@@ -472,10 +477,7 @@ export function SendSheet({
                             token={{
                               mint: h.mint,
                               symbol: h.symbol,
-                              name: h.name,
                               icon: h.icon,
-                              decimals: h.decimals,
-                              tokenProgram: h.tokenProgram,
                             }}
                             className="size-8"
                           />

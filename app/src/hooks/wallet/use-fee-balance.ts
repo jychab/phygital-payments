@@ -10,6 +10,6 @@ export function useFeeBalance(phygitalToken: string | null) {
     queryKey: queryKeys.feeBalance.byToken(phygitalToken),
     queryFn: () => fetchFeeBalance(phygitalToken!),
     enabled: Boolean(phygitalToken),
-    ...queryOptions.volatile,
+    ...queryOptions.default,
   });
 }

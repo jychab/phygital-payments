@@ -1,40 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { walletPdaForToken } from "@/lib/wallet/pda";
+import { queryKeys, queryOptions } from "@/lib/queries";
 
-/** Resolve wallet PDA for a phygital token address. */
+/** Resolve wallet PDA for a phygital token address (cached local derivation). */
 export function useWalletPda(tokenAddress: string | null) {
-  const [wallet, setWallet] = useState<string | null>(null);
-  const [pending, setPending] = useState(Boolean(tokenAddress));
+  const query = useQuery({
+    queryKey: queryKeys.walletPda.byToken(tokenAddress),
+    queryFn: async () => String(await walletPdaForToken(tokenAddress!)),
+    enabled: Boolean(tokenAddress),
+    ...queryOptions.immutable,
+  });
 
-  useEffect(() => {
-    if (!tokenAddress) {
-      setWallet(null);
-      setPending(false);
-      return;
-    }
-    let cancelled = false;
-    setPending(true);
-    void walletPdaForToken(tokenAddress).then(
-      (pda) => {
-        if (!cancelled) {
-          setWallet(String(pda));
-          setPending(false);
-        }
-      },
-      () => {
-        if (!cancelled) {
-          setWallet(null);
-          setPending(false);
-        }
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [tokenAddress]);
-
-  return { walletAddress: wallet, pending };
+  return {
+    walletAddress: query.data ?? null,
+    pending: Boolean(tokenAddress) && query.isPending,
+  };
 }

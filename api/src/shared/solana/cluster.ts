@@ -1,6 +1,6 @@
-export type Cluster = "devnet" | "mainnet";
-
 import { getEnv } from "@/shared/request-context";
+
+type Cluster = "devnet" | "mainnet";
 
 function getCluster(): Cluster {
   const raw = getEnv().SOLANA_CLUSTER?.trim().toLowerCase();

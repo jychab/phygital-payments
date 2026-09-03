@@ -15,6 +15,21 @@ import { getRpcUrl } from "@/shared/solana/cluster";
 let cachedDefaultVerifiers: { at: number; set: Set<string> } | null = null;
 const CONFIG_CACHE_MS = 60_000;
 
+function verifierSetFromConfig(
+  encoded: Awaited<ReturnType<typeof fetchEncodedAccounts>>[number],
+): Set<string> {
+  const config = decodeConfig(encoded);
+  const set = new Set<string>();
+  if (config.exists) {
+    const count = config.data.verifierCount;
+    for (let i = 0; i < count; i++) {
+      const v = config.data.verifiers[i];
+      if (v) set.add(String(v));
+    }
+  }
+  return set;
+}
+
 async function loadDefaultVerifierSet(): Promise<Set<string>> {
   const now = Date.now();
   if (
@@ -27,15 +42,7 @@ async function loadDefaultVerifierSet(): Promise<Set<string>> {
   const rpc = createSolanaRpc(getRpcUrl());
   const [configPda] = await findConfigPda();
   const [encoded] = await fetchEncodedAccounts(rpc, [configPda]);
-  const config = decodeConfig(encoded);
-  const set = new Set<string>();
-  if (config.exists) {
-    const count = config.data.verifierCount;
-    for (let i = 0; i < count; i++) {
-      const v = config.data.verifiers[i];
-      if (v) set.add(String(v));
-    }
-  }
+  const set = verifierSetFromConfig(encoded);
   cachedDefaultVerifiers = { at: now, set };
   return set;
 }
@@ -46,17 +53,33 @@ export async function usesDefaultVerifierPaymaster(
 ): Promise<boolean> {
   const rpc = createSolanaRpc(getRpcUrl());
   const token = address(phygitalToken);
-  const [tokenVerifierPda] = await findTokenVerifierPda({
-    phygitalToken: token,
-  });
-  const [tvEncoded] = await fetchEncodedAccounts(rpc, [tokenVerifierPda]);
-  const tokenVerifier = decodeTokenVerifier(tvEncoded);
+  const [[configPda], [tokenVerifierPda]] = await Promise.all([
+    findConfigPda(),
+    findTokenVerifierPda({ phygitalToken: token }),
+  ]);
 
-  if (!tokenVerifier.exists) {
-    return true;
+  const now = Date.now();
+  const cacheHit =
+    cachedDefaultVerifiers &&
+    now - cachedDefaultVerifiers.at < CONFIG_CACHE_MS;
+
+  if (cacheHit) {
+    const [tvEncoded] = await fetchEncodedAccounts(rpc, [tokenVerifierPda]);
+    const tokenVerifier = decodeTokenVerifier(tvEncoded);
+    if (!tokenVerifier.exists) return true;
+    return cachedDefaultVerifiers!.set.has(String(tokenVerifier.data.verifier));
   }
 
-  const defaults = await loadDefaultVerifierSet();
+  // One multi-get: Config + TokenVerifier.
+  const [configEncoded, tvEncoded] = await fetchEncodedAccounts(rpc, [
+    configPda,
+    tokenVerifierPda,
+  ]);
+  const defaults = verifierSetFromConfig(configEncoded);
+  cachedDefaultVerifiers = { at: now, set: defaults };
+
+  const tokenVerifier = decodeTokenVerifier(tvEncoded);
+  if (!tokenVerifier.exists) return true;
   return defaults.has(String(tokenVerifier.data.verifier));
 }
 
@@ -65,9 +88,4 @@ export async function isDefaultConfigVerifier(
 ): Promise<boolean> {
   const defaults = await loadDefaultVerifierSet();
   return defaults.has(verifier);
-}
-
-/** Test helper — clear Config verifier cache. */
-export function clearDefaultVerifierCache(): void {
-  cachedDefaultVerifiers = null;
 }

@@ -9,10 +9,7 @@ import {
 } from "@solana/kit";
 import { getTransferInstructionAsync } from "@macalinao/clients-mpl-bubblegum";
 
-import {
-  fetchDasAsset,
-  fetchDasAssetProof,
-} from "@/lib/wallet/das-asset";
+import { dasGetAssetWithProof } from "@/lib/solana/das-rpc";
 
 function hash32FromBase58(value: string): number[] {
   return Array.from(getAddressEncoder().encode(address(value.trim())));
@@ -29,10 +26,9 @@ export async function buildCnftTransferInstructions(args: {
   leafOwnerSigner: TransactionSigner;
   newLeafOwner: Address;
 }): Promise<Instruction[]> {
-  const [asset, assetProof] = await Promise.all([
-    fetchDasAsset(args.assetId),
-    fetchDasAssetProof(args.assetId),
-  ]);
+  const { asset, proof: assetProof } = await dasGetAssetWithProof(
+    args.assetId,
+  );
   if (asset.compression?.compressed !== true) {
     throw new Error("Asset is not compressed");
   }

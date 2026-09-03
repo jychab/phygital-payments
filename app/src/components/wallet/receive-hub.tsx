@@ -1,11 +1,15 @@
 "use client";
 
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { brand, copy } from "@/lib/copy/phygital";
+import { queryKeys, queryOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { fetchVerifiedTokens } from "@/lib/wallet/verified-tokens-client";
 
 /** Receive hub — QR + Receive nearby. */
 export function ReceiveHub({
@@ -17,9 +21,17 @@ export function ReceiveHub({
   onClose: () => void;
   onReceiveNearby: () => void;
 }) {
+  const queryClient = useQueryClient();
   const payUrl = `solana:${walletAddress.trim()}?label=${encodeURIComponent(brand.company)}`;
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(payUrl)}`;
 
+  useEffect(() => {
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.verifiedTokens.all(),
+      queryFn: () => fetchVerifiedTokens(),
+      ...queryOptions.stable,
+    });
+  }, [queryClient]);
   async function copyAddress() {
     try {
       await navigator.clipboard.writeText(walletAddress);

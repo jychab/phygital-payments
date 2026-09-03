@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 
-import {
-  isDefaultMint,
-  USDC_ICON_URL,
-  type PaymentToken,
-} from "@/lib/tokens/payment-token";
+import { isDefaultMint, USDC_ICON_URL } from "@/lib/tokens/payment-token";
 import { cn } from "@/lib/utils";
 
 export function TokenIcon({
@@ -14,7 +10,11 @@ export function TokenIcon({
   size = "md",
   className,
 }: {
-  token: PaymentToken;
+  token: {
+    mint: string;
+    symbol: string;
+    icon: string | null;
+  };
   size?: "xs" | "sm" | "md";
   className?: string;
 }) {

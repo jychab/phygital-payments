@@ -11,8 +11,9 @@ import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFeeBalance } from "@/hooks/wallet/use-fee-balance";
+import { useWalletPda } from "@/hooks/wallet/use-wallet-pda";
 import { copy } from "@/lib/copy/phygital";
-import { queryKeys } from "@/lib/queries";
+import { invalidateWalletBalances } from "@/lib/queries";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { topUpFeeBalance } from "@/lib/wallet/top-up-fee-balance";
 
@@ -27,6 +28,7 @@ export function FeeBalanceSheet({
   onBack: () => void;
 }) {
   const fee = useFeeBalance(phygitalTokenPda);
+  const { walletAddress } = useWalletPda(phygitalTokenPda);
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState("0.01");
   const [phase, setPhase] = useState<Phase>("form");
@@ -48,8 +50,10 @@ export function FeeBalanceSheet({
       await confirmed;
       setPhase("success");
       toast.success(copy.wallet.topUpSuccess);
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.feeBalance.byToken(phygitalTokenPda),
+      // Fee credit is webhook-async; SOL left the wallet immediately.
+      invalidateWalletBalances(queryClient, {
+        wallets: [walletAddress],
+        tokens: [phygitalTokenPda],
       });
     } catch (e) {
       window.clearTimeout(holdTimer);

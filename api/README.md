@@ -8,7 +8,7 @@ Cloudflare Worker (Hono) behind `https://api.revibase.com`.
 api/src/
   index.ts          Worker entry — CORS, request store, mounts domains
   shared/           Cross-cutting: HTTP helpers, D1, Solana cluster, crypto
-  tokens/           Collectibles, portfolio, DAS, rarity, shortcuts, fee-balance
+  tokens/           Verified catalog, rarity index, fee-balance
   tap/              NFC /verify-tap (session cookie, else counter + new cookie)
   auth/             Owner session mint + standing policy / grant routes
   verifier/         ★ Template: POST /preview + POST /sign (forkable)
@@ -21,7 +21,7 @@ api/src/
 | Wallet co-signing / custom verifier | [`src/verifier/README.md`](./src/verifier/README.md) |
 | Fee balance / top-up / webhook | this README § Fee balance |
 | How HTTP routes are mounted | [`src/index.ts`](./src/index.ts) |
-| Collectible / portfolio APIs | [`src/tokens/README.md`](./src/tokens/README.md) |
+| Verified tokens / rarity index | [`src/tokens/README.md`](./src/tokens/README.md) |
 | NFC tap verify | [`src/tap/README.md`](./src/tap/README.md) |
 | Session cookie + Settings policies | [`src/auth/README.md`](./src/auth/README.md) |
 
@@ -44,19 +44,18 @@ pnpm --filter api dev
 |--------|------|--------|
 | GET | `/health` | entry |
 | GET | `/verify-tap` | `tap/` |
-| POST | `/auth/token-session` | `auth/` |
+| GET/POST | `/auth/token-session` | `auth/` (GET takes `?phygitalToken=`) |
 | POST | `/preview` | `verifier/` (+ fee balance gate) |
 | POST | `/sign` | `verifier/` (+ fee balance gate) |
 | GET/PUT | `/policies/:phygitalToken` | `auth/` → uses `verifier/approval` |
 | POST | `/policies/:phygitalToken/grants` | `auth/` → uses `verifier/approval` |
-| GET | `/tokens/portfolio` | `tokens/` |
 | GET | `/tokens/fee-balance` | `tokens/` / `fees/` |
-| GET | `/tokens/collectible` | `tokens/` |
-| POST | `/tokens/collectible/batch` | `tokens/` |
-| GET | `/tokens/minted` | `tokens/` |
-| GET | `/tokens/rarity` | `tokens/` |
-| GET | `/tokens/shortcuts` | `tokens/` |
+| GET | `/tokens/verified` | `tokens/` (Jupiter) |
+| POST | `/tokens/rarity` | `tokens/` (D1; client supplies DAS fields) |
 | POST | `/webhooks/helius` | `webhooks/` |
+
+**Client-side (app RPC / browser):** portfolio, collectible metadata, shortcuts.
+Set `NEXT_PUBLIC_SOLANA_RPC_URL` to a DAS-capable endpoint (e.g. Helius).
 
 ## Fee balance (default-verifier paymaster)
 
@@ -66,7 +65,7 @@ sponsored from that keypair. Per-`phygital_token` prepaid balance lives in D1:
 1. **Top-up:** wallet sends SOL → `TOP_UP_ACCUMULATOR` with SPL Memo =
    `phygitalToken` address. Helius webhook credits `token_fee_balances`.
 2. **Gate:** `/preview` and `/sign` both require
-   `FEE_BASE + FEE_LAMPORTS_PER_IX * ixCount` (see `src/fees/constants.ts`).
+   `FEE_BASE_LAMPORTS + FEE_LAMPORTS_PER_IX * ixCount` (see `src/fees/constants.ts`).
    Top-up intents themselves are exempt. Custom (non-default) verifiers skip the gate.
 3. **Debit:** webhook on confirmed `phygital-wallet` execute with
    `nativeBalanceChange < 0` on a default verifier → debit that token.

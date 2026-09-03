@@ -28,10 +28,7 @@ export function TokenHoldingRow({
         token={{
           mint: holding.mint,
           symbol: holding.symbol,
-          name: holding.name,
           icon: holding.icon,
-          decimals: holding.decimals,
-          tokenProgram: holding.tokenProgram,
         }}
         className="size-8"
       />

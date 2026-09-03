@@ -1,4 +1,3 @@
-
 import { getD1, D1_BATCH_CHUNK } from "@/shared/db";
 
 /** Bump when score formula changes — forces per-collection D1 rebuild. */
@@ -17,7 +16,6 @@ export type CollectionRarityMeta = {
   totalSupply: number;
   scanPage: number;
   scanComplete: boolean;
-  scoreCursor: string | null;
   builtAt: number | null;
   errorMessage: string | null;
 };
@@ -38,7 +36,6 @@ type MetaRow = {
   total_supply: number;
   scan_page: number;
   scan_complete: number;
-  score_cursor: string | null;
   built_at: number | null;
   error_message: string | null;
 };
@@ -135,7 +132,6 @@ function rowToMeta(row: MetaRow): CollectionRarityMeta {
     totalSupply: row.total_supply,
     scanPage: row.scan_page,
     scanComplete: row.scan_complete === 1,
-    scoreCursor: row.score_cursor,
     builtAt: row.built_at,
     errorMessage: row.error_message,
   };
@@ -171,7 +167,7 @@ export async function getCollectionRarityMeta(
   const row = await db
     .prepare(
       `SELECT collection_mint, status, algorithm_version, total_supply,
-              scan_page, scan_complete, score_cursor, built_at, error_message
+              scan_page, scan_complete, built_at, error_message
        FROM collection_rarity_meta WHERE collection_mint = ?`,
     )
     .bind(collectionMint)
