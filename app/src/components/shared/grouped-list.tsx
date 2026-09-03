@@ -38,6 +38,8 @@ export function GroupedRow({
   children,
   className,
   onClick,
+  href,
+  leading,
   trailing,
   subtitle,
   destructive,
@@ -45,6 +47,9 @@ export function GroupedRow({
   children: ReactNode;
   className?: string;
   onClick?: () => void;
+  /** External link — renders as anchor instead of button/div. */
+  href?: string;
+  leading?: ReactNode;
   trailing?: ReactNode;
   subtitle?: ReactNode;
   destructive?: boolean;
@@ -54,12 +59,14 @@ export function GroupedRow({
     "min-h-11 transition-colors",
     onClick &&
       "hover:bg-muted/50 active:bg-muted/70 focus-visible:bg-muted/50 focus-visible:outline-none",
+    href && "hover:bg-muted/20",
     destructive && "text-destructive",
     className,
   );
 
   const body = (
     <>
+      {leading}
       <div className="min-w-0 flex-1">
         <div className="text-sm font-medium">{children}</div>
         {subtitle ? (
@@ -78,7 +85,16 @@ export function GroupedRow({
 
   return (
     <li className="border-b border-border/50 last:border-b-0">
-      {onClick ? (
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className={cn(rowClass, "block no-underline")}
+        >
+          {body}
+        </a>
+      ) : onClick ? (
         <button type="button" onClick={onClick} className={rowClass}>
           {body}
         </button>

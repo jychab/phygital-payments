@@ -19,6 +19,18 @@ export function useResumeQueryRefresh() {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.phygitalToken.all(),
       });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.walletPortfolio.all(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.walletActivity.all(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.feeBalance.all(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.walletPolicy.all(),
+      });
     }
 
     window.addEventListener("pageshow", onPageShow);

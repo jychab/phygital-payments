@@ -15,7 +15,9 @@ import { useWalletPda } from "@/hooks/wallet/use-wallet-pda";
 import { copy } from "@/lib/copy/phygital";
 import { invalidateWalletBalances } from "@/lib/queries";
 import { toUserErrorMessage } from "@/lib/user-errors";
+import { pushLocalWalletActivity } from "@/lib/wallet/activity-local";
 import { topUpFeeBalance } from "@/lib/wallet/top-up-fee-balance";
+import { NATIVE_SOL_MINT } from "@/lib/tokens/payment-token";
 
 type Phase = "form" | "holding" | "success";
 
@@ -41,7 +43,7 @@ export function FeeBalanceSheet({
     setBusy(true);
     const holdTimer = window.setTimeout(() => setPhase("holding"), 250);
     try {
-      const { confirmed } = await topUpFeeBalance({
+      const { signature, confirmed } = await topUpFeeBalance({
         phygitalTokenPda,
         amountUi: amount,
       });
@@ -49,6 +51,29 @@ export function FeeBalanceSheet({
       setPhase("holding");
       await confirmed;
       setPhase("success");
+      if (walletAddress) {
+        pushLocalWalletActivity({
+          id: signature,
+          walletAddress,
+          kind: "topUp",
+          title: copy.wallet.topUpSuccess,
+          subtitle: null,
+          amountLabel: `-${amount} SOL`,
+          statusLabel: copy.wallet.topUpPending,
+          timestamp: Math.floor(Date.now() / 1000),
+          signature,
+          mint: NATIVE_SOL_MINT,
+          balanceDeltas: [
+            {
+              mint: NATIVE_SOL_MINT,
+              direction: "out",
+              amountUi: amount,
+            },
+          ],
+          pending: false,
+          source: "local",
+        });
+      }
       toast.success(copy.wallet.topUpSuccess);
       // Fee credit is webhook-async; SOL left the wallet immediately.
       invalidateWalletBalances(queryClient, {

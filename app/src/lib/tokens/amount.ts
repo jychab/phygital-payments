@@ -16,6 +16,15 @@ export function formatTokenAmount(raw: bigint, decimals: number): string {
   return negative ? `-${formatted}` : formatted;
 }
 
+/** Shorten a formatted UI amount for hero display (lists keep full precision). */
+export function formatCompactTokenAmount(uiAmount: string): string {
+  const value = Number(uiAmount);
+  if (!Number.isFinite(value)) return uiAmount;
+  const abs = Math.abs(value);
+  const maximumFractionDigits = abs >= 1000 ? 2 : abs >= 1 ? 4 : 6;
+  return value.toLocaleString(undefined, { maximumFractionDigits });
+}
+
 export function uiAmountToRaw(uiAmount: string, decimals: number): bigint {
   const trimmed = uiAmount.trim();
   if (!trimmed || Number(trimmed) <= 0) {

@@ -36,6 +36,15 @@ function buildFungibleHoldings(assets: DasAsset[]): PaymentTokenHolding[] {
     if (balanceRaw <= 0n) continue;
 
     seen.add(mint);
+    const priceInfo = tokenInfo?.price_info;
+    const pricePerTokenUsd =
+      typeof priceInfo?.price_per_token === "number"
+        ? priceInfo.price_per_token
+        : null;
+    const totalPriceUsd =
+      typeof priceInfo?.total_price === "number" ? priceInfo.total_price : null;
+    const balanceUi = formatTokenAmount(balanceRaw, decimals);
+
     holdings.push({
       mint,
       symbol: tokenInfo?.symbol || asset.content?.metadata?.symbol || "-",
@@ -44,7 +53,11 @@ function buildFungibleHoldings(assets: DasAsset[]): PaymentTokenHolding[] {
       decimals,
       tokenProgram: tokenInfo?.token_program,
       balanceRaw: balanceRaw.toString(),
-      balanceUi: formatTokenAmount(balanceRaw, decimals),
+      balanceUi,
+      pricePerTokenUsd,
+      valueUsd:
+        totalPriceUsd ??
+        (pricePerTokenUsd != null ? Number(balanceUi) * pricePerTokenUsd : null),
     });
   }
 
@@ -90,6 +103,8 @@ function buildCollectibles(assets: DasAsset[]): WalletCollectible[] {
 async function fetchOwnerAssets(owner: string): Promise<{
   items: DasAsset[];
   nativeBalanceLamports: bigint;
+  nativeBalancePricePerSolUsd: number | null;
+  nativeBalanceTotalPriceUsd: number | null;
 }> {
   const displayOptions = {
     showFungible: true,
@@ -105,6 +120,14 @@ async function fetchOwnerAssets(owner: string): Promise<{
   });
   const items = [...first.items];
   const total = first.total ?? items.length;
+  const nativeBalancePricePerSolUsd =
+    typeof first.nativeBalance?.price_per_sol === "number"
+      ? first.nativeBalance.price_per_sol
+      : null;
+  const nativeBalanceTotalPriceUsd =
+    typeof first.nativeBalance?.total_price === "number"
+      ? first.nativeBalance.total_price
+      : null;
   const pagesNeeded = Math.min(
     DAS_MAX_PAGES,
     Math.max(1, Math.ceil(total / DAS_PAGE_SIZE)),
@@ -113,6 +136,8 @@ async function fetchOwnerAssets(owner: string): Promise<{
     return {
       items,
       nativeBalanceLamports: BigInt(first.nativeBalance?.lamports ?? 0),
+      nativeBalancePricePerSolUsd,
+      nativeBalanceTotalPriceUsd,
     };
   }
 
@@ -140,6 +165,8 @@ async function fetchOwnerAssets(owner: string): Promise<{
   return {
     items,
     nativeBalanceLamports: BigInt(first.nativeBalance?.lamports ?? 0),
+    nativeBalancePricePerSolUsd,
+    nativeBalanceTotalPriceUsd,
   };
 }
 
@@ -148,13 +175,20 @@ export async function fetchWalletPortfolioFromDas(owner: string): Promise<{
   holdings: PaymentTokenHolding[];
   collectibles: WalletCollectible[];
 }> {
-  const { items, nativeBalanceLamports } = await fetchOwnerAssets(owner);
+  const {
+    items,
+    nativeBalanceLamports,
+    nativeBalancePricePerSolUsd,
+    nativeBalanceTotalPriceUsd,
+  } = await fetchOwnerAssets(owner);
   const holdings = buildFungibleHoldings(items);
   if (nativeBalanceLamports > 0n) {
     holdings.unshift(
       nativeSolHolding(
         nativeBalanceLamports,
         formatTokenAmount(nativeBalanceLamports, 9),
+        nativeBalancePricePerSolUsd,
+        nativeBalanceTotalPriceUsd,
       ),
     );
   }

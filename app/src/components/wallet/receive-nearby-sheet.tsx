@@ -23,6 +23,7 @@ import { copy } from "@/lib/copy/phygital";
 import { invalidateWalletBalances } from "@/lib/queries";
 import { shortAddress } from "@/lib/utils";
 import { toUserErrorMessage } from "@/lib/user-errors";
+import { pushLocalWalletActivity } from "@/lib/wallet/activity-local";
 import { identifyAccessory } from "@/lib/wallet/identify-accessory";
 import { createOneTimeGrant } from "@/lib/wallet/policies-client";
 import { policySoftDenyBody } from "@/lib/wallet/policy-deny-copy";
@@ -136,7 +137,7 @@ export function ReceiveNearbySheet({
     setSoftDeny(null);
     const holdTimer = window.setTimeout(() => setPhase("holding"), 250);
     try {
-      const { confirmed } = await receiveAssetFromNearbyPayer({
+      const { signature, confirmed } = await receiveAssetFromNearbyPayer({
         payerPhygitalTokenPda: from.tokenPda,
         expectedPayerWallet: from.walletPda,
         recipientWallet,
@@ -152,6 +153,27 @@ export function ReceiveNearbySheet({
       setPhase("holding");
       await confirmed;
       setPhase("success");
+      pushLocalWalletActivity({
+        id: signature,
+        walletAddress: recipientWallet,
+        kind: "received",
+        title: copy.wallet.received,
+        subtitle: from.walletPda,
+        amountLabel: `+${amount} ${asset.symbol}`,
+        statusLabel: null,
+        timestamp: Math.floor(Date.now() / 1000),
+        signature,
+        mint: asset.mint,
+        balanceDeltas: [
+          {
+            mint: asset.mint,
+            direction: "in",
+            amountUi: amount,
+          },
+        ],
+        pending: false,
+        source: "local",
+      });
       toast.success(copy.wallet.received);
       // Payer spent assets + fees; recipient gained assets.
       invalidateWalletBalances(queryClient, {
@@ -193,6 +215,20 @@ export function ReceiveNearbySheet({
     setBusy(true);
     try {
       await createOneTimeGrant(from.tokenPda, softDeny.intentHash);
+      pushLocalWalletActivity({
+        id: `approved:${from.walletPda}:${asset?.mint ?? "unknown"}:${Date.now()}`,
+        walletAddress: recipientWallet,
+        kind: "approved",
+        title: copy.wallet.approveOnce,
+        subtitle: from.walletPda,
+        amountLabel: null,
+        statusLabel: null,
+        timestamp: Math.floor(Date.now() / 1000),
+        signature: null,
+        mint: null,
+        pending: false,
+        source: "local",
+      });
       setSoftDeny(null);
       await runReceive();
     } catch (e) {

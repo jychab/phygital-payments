@@ -34,6 +34,10 @@ export type PaymentTokenHolding = Omit<PaymentToken, "tokenProgram"> & {
   tokenProgram?: string;
   balanceRaw: string;
   balanceUi: string;
+  /** USD price info from DAS / `token_info.price_info` (if available). */
+  pricePerTokenUsd?: number | null;
+  /** Total USD value for this holding (if available). */
+  valueUsd?: number | null;
 };
 
 export function isDefaultMint(mint: string | Address): boolean {
@@ -80,6 +84,8 @@ export function requireSupportedTokenProgram(
 export function nativeSolHolding(
   balanceRaw: bigint,
   balanceUi: string,
+  pricePerTokenUsd?: number | null,
+  valueUsd?: number | null,
 ): PaymentTokenHolding {
   return {
     mint: NATIVE_SOL_MINT,
@@ -90,5 +96,7 @@ export function nativeSolHolding(
     tokenProgram: NATIVE_SOL_TOKEN_PROGRAM,
     balanceRaw: balanceRaw.toString(),
     balanceUi,
+    pricePerTokenUsd: pricePerTokenUsd ?? null,
+    valueUsd: valueUsd ?? null,
   };
 }

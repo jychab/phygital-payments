@@ -7,7 +7,9 @@ import { ArrowLeft } from "lucide-react";
 import { NavBar } from "@/components/shared/nav-bar";
 import { StageTransition } from "@/components/shared/stage-transition";
 import { WalletHomePanel } from "@/components/wallet/wallet-home-panel";
-import { SendSheet } from "@/components/wallet/send-sheet";
+import { SendDialog } from "@/components/wallet/send-dialog";
+import { SendHoldStage } from "@/components/wallet/send-hold-stage";
+import { ActivityAllSheet } from "@/components/wallet/activity-all-sheet";
 import { CollectibleDetailSheet } from "@/components/wallet/collectible-detail-sheet";
 import { ReceiveHub } from "@/components/wallet/receive-hub";
 import { ReceiveNearbySheet } from "@/components/wallet/receive-nearby-sheet";
@@ -25,6 +27,7 @@ import { useRpcPreference } from "@/hooks/wallet/use-rpc-preference";
 import { Button } from "@/components/ui/button";
 import { useTokenWalletChip } from "@/hooks/wallet/use-token-wallet-chip";
 import { useWalletPortfolio } from "@/hooks/wallet/use-wallet-portfolio";
+import { useWalletActivity } from "@/hooks/wallet/use-wallet-activity";
 import { useFeeBalance } from "@/hooks/wallet/use-fee-balance";
 import { upsertRecent } from "@/lib/wallet/recents";
 import { tokenHasLinkedMint, type PhygitalToken } from "@/lib/phygital/token";
@@ -46,8 +49,14 @@ type Screen =
   | "nearby"
   | "tokensAll"
   | "collectiblesAll"
+  | "activity"
   | "settings"
   | SettingsTarget;
+
+const timeFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: "numeric",
+  minute: "2-digit",
+});
 
 function settingsFromDenyCode(code?: string): Screen {
   if (code === "recipient_not_allowed") return "recipients";
@@ -113,6 +122,10 @@ function WalletWorkspaceInner({
   const [screen, setScreen] = useState<Screen>("home");
   const [sendAsset, setSendAsset] = useState<SendAssetRef | null>(null);
   const [sendTokensOnly, setSendTokensOnly] = useState(true);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [sendHoldPhase, setSendHoldPhase] = useState<"holding" | "success" | null>(
+    null,
+  );
   const [detail, setDetail] = useState<WalletCollectible | null>(null);
   const queryClient = useQueryClient();
 
@@ -121,13 +134,12 @@ function WalletWorkspaceInner({
   const { walletAddress } = useTokenWalletChip({
     token,
     mode: "copy",
-    onSettings,
   });
 
   const portfolio = useWalletPortfolio(walletAddress);
+  const activity = useWalletActivity(walletAddress, 20);
   const feeBalance = useFeeBalance(tokenAddress);
   const rpc = useRpcPreference();
-
   useEffect(() => {
     if (!walletAddress) return;
     upsertRecent({
@@ -155,11 +167,22 @@ function WalletWorkspaceInner({
     });
   }, [queryClient, walletAddress, tokenAddress]);
 
+  const activityRefetch = activity.refetch;
+  const portfolioRefetch = portfolio.refetch;
+  const refreshWallet = useCallback(() => {
+    refresh();
+    void activityRefetch();
+    void portfolioRefetch();
+  }, [activityRefetch, portfolioRefetch, refresh]);
+
   const openSend = useCallback(
     (asset: SendAssetRef | null, tokensOnly: boolean) => {
       setSendAsset(asset);
       setSendTokensOnly(tokensOnly);
-      setScreen("send");
+      setSendHoldPhase(null);
+      setDetail(null);
+      setScreen("home");
+      setSendDialogOpen(true);
     },
     [],
   );
@@ -178,17 +201,14 @@ function WalletWorkspaceInner({
 
   if (screen === "send") {
     body = (
-      <SendSheet
-        phygitalTokenPda={tokenAddress}
-        portfolio={portfolio.data}
-        initialAsset={sendAsset}
-        tokensOnly={sendTokensOnly}
+      <SendHoldStage
+        phase={sendHoldPhase ?? "holding"}
+        imageSrc={sendAsset?.icon}
         onClose={() => {
-          setScreen("home");
+          setSendHoldPhase(null);
           setSendAsset(null);
+          setScreen("home");
         }}
-        onSent={refresh}
-        onChangeLimits={(code) => setScreen(settingsFromDenyCode(code))}
       />
     );
   } else if (screen === "receive") {
@@ -222,6 +242,13 @@ function WalletWorkspaceInner({
         linkedMint={mint}
         onBack={() => setScreen("home")}
         onSelect={setDetail}
+      />
+    );
+  } else if (screen === "activity") {
+    body = (
+      <ActivityAllSheet
+        walletAddress={walletAddress}
+        onBack={() => setScreen("home")}
       />
     );
   } else if (screen === "settings") {
@@ -302,6 +329,7 @@ function WalletWorkspaceInner({
         <WalletHomePanel
           portfolio={portfolio.data}
           loading={portfolio.isLoading}
+          tokenAddress={tokenAddress}
           linkedMint={mint}
           onSend={() => openSend(null, true)}
           onSendAsset={(asset) => openSend(asset, true)}
@@ -309,10 +337,23 @@ function WalletWorkspaceInner({
           onSelectCollectible={setDetail}
           onSeeAllTokens={() => setScreen("tokensAll")}
           onSeeAllCollectibles={() => setScreen("collectiblesAll")}
+          onSeeAllActivity={() => setScreen("activity")}
+          onManageDevice={onSettings}
           feeBalanceLow={feeBalance.data?.low}
           onTopUpFees={() => setScreen("feeBalance")}
           customRpcEndpoint={rpc.isCustom ? rpc.displayEndpoint : null}
           onChangeRpc={() => setScreen("rpcConnection")}
+          onRefresh={refreshWallet}
+          refreshing={portfolio.isFetching || activity.isFetching}
+          lastUpdatedLabel={
+            portfolio.dataUpdatedAt
+              ? copy.wallet.lastUpdated(
+                  timeFormatter.format(portfolio.dataUpdatedAt),
+                )
+              : null
+          }
+          activityItems={activity.items}
+          activityAssetMetaByMint={activity.mintMeta}
         />
       </div>
     );
@@ -320,6 +361,21 @@ function WalletWorkspaceInner({
 
   return (
     <>
+      <SendDialog
+        phygitalTokenPda={tokenAddress}
+        walletAddress={walletAddress}
+        portfolio={portfolio.data}
+        initialAsset={sendAsset}
+        tokensOnly={sendTokensOnly}
+        open={sendDialogOpen}
+        onOpenChange={setSendDialogOpen}
+        onHoldPhaseChange={(phase) => {
+          setSendHoldPhase(phase);
+          setScreen("send");
+        }}
+        onSent={refresh}
+        onChangeLimits={(code) => setScreen(settingsFromDenyCode(code))}
+      />
       <StageTransition stageKey={screen} variant="fade">
         {body}
       </StageTransition>

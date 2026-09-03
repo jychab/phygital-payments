@@ -2,6 +2,8 @@
  * Device-local Recents — last-tapped cards and accessories (no login).
  */
 
+import { createLocalStore } from "@/lib/local-store";
+
 export type RecentKind = "card" | "accessory";
 
 export type RecentItem = {
@@ -17,14 +19,10 @@ export type RecentItem = {
   updatedAt: number;
 };
 
-const STORAGE_KEY = "revibase.recents.v1";
 const MAX_RECENTS = 24;
 
 /** Stable empty list for SSR / useSyncExternalStore. */
 export const EMPTY_RECENTS: RecentItem[] = [];
-
-let cachedRaw: string | null | undefined;
-let cachedItems: RecentItem[] = EMPTY_RECENTS;
 
 function parseItems(raw: string | null): RecentItem[] {
   if (!raw) return EMPTY_RECENTS;
@@ -39,28 +37,29 @@ function parseItems(raw: string | null): RecentItem[] {
         typeof (row as RecentItem).walletAddress === "string",
     );
     if (items.length === 0) return EMPTY_RECENTS;
-    return items.sort((a, b) => b.updatedAt - a.updatedAt);
-  } catch {
+    return items.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, MAX_RECENTS);
+  } catch (e) {
+    console.warn("[recents] Failed to parse stored recents", e);
     return EMPTY_RECENTS;
   }
 }
 
-function writeAll(items: RecentItem[]) {
-  if (typeof window === "undefined") return;
-  const raw = JSON.stringify(items.slice(0, MAX_RECENTS));
-  window.localStorage.setItem(STORAGE_KEY, raw);
-  cachedRaw = raw;
-  cachedItems = parseItems(raw);
-}
+export const recentsStore = createLocalStore<RecentItem>({
+  storageKey: "revibase.recents.v1",
+  eventName: "revibase:recents",
+  maxItems: MAX_RECENTS,
+  empty: EMPTY_RECENTS,
+  label: "recents",
+  parse: parseItems,
+});
 
 /** Cached snapshot — same reference until localStorage contents change. */
 export function listRecents(): RecentItem[] {
-  if (typeof window === "undefined") return EMPTY_RECENTS;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (raw === cachedRaw) return cachedItems;
-  cachedRaw = raw;
-  cachedItems = parseItems(raw);
-  return cachedItems;
+  return recentsStore.list() as RecentItem[];
+}
+
+export function subscribeRecents(onStoreChange: () => void): () => void {
+  return recentsStore.subscribe(onStoreChange);
 }
 
 export function upsertRecent(
@@ -70,11 +69,6 @@ export function upsertRecent(
     ...item,
     updatedAt: item.updatedAt ?? Date.now(),
   };
-  const rest = listRecents().filter(
-    (r) => r.tokenAddress !== next.tokenAddress,
-  );
-  writeAll([next, ...rest]);
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("revibase:recents"));
-  }
+  const rest = listRecents().filter((r) => r.tokenAddress !== next.tokenAddress);
+  recentsStore.write([next, ...rest]);
 }

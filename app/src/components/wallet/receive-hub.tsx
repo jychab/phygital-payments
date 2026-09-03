@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
+import { Copy, QrCode, Share2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
+import { WalletAddressRow } from "@/components/shared/copyable-address";
+import { NavBar } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
 import { brand, copy } from "@/lib/copy/phygital";
 import { queryKeys, queryOptions } from "@/lib/queries";
-import { cn } from "@/lib/utils";
 import { fetchVerifiedTokens } from "@/lib/wallet/verified-tokens-client";
 
 /** Receive hub — QR + Receive nearby. */
@@ -35,54 +36,89 @@ export function ReceiveHub({
   async function copyAddress() {
     try {
       await navigator.clipboard.writeText(walletAddress);
-      toast.success(copy.wallet.addressCopied);
+      toast.success(copy.wallet.copied);
     } catch {
       toast.error(copy.wallet.addressCopyFailed);
     }
   }
 
+  async function shareAddress() {
+    const payload = {
+      title: brand.company,
+      text: walletAddress,
+      url: payUrl,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(payload);
+      } else {
+        await navigator.clipboard.writeText(walletAddress);
+      }
+      toast.success(copy.wallet.shareAddress);
+    } catch (e) {
+      // Ignore user-cancelled share (AbortError / NotAllowedError)
+      if (e instanceof DOMException && (e.name === "AbortError" || e.name === "NotAllowedError")) return;
+      console.warn("[receive-hub] Share failed", e);
+    }
+  }
+
   return (
-    <div className="flex flex-1 flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-          {copy.common.cancel}
-        </Button>
-        <p className="text-sm font-medium">{copy.wallet.receive}</p>
-        <span className="w-16" aria-hidden />
+    <div className="flex flex-1 flex-col gap-6">
+      <NavBar
+        leading={
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            {copy.common.cancel}
+          </Button>
+        }
+        title={copy.wallet.receive}
+      />
+
+      <div className="flex flex-col items-center gap-3 px-2 text-center">
+        <div className="rounded-[28px] border border-border/50 bg-white p-4 shadow-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={qrSrc} alt="" width={192} height={192} className="size-48 rounded-2xl" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium">{copy.wallet.receiveAnything}</p>
+          <p className="text-xs text-muted-foreground">{brand.company}</p>
+        </div>
       </div>
 
-      <div className="flex flex-col items-center gap-4 pt-4">
+      <WalletAddressRow address={walletAddress} length={6} />
+
+      <div className="grid grid-cols-2 gap-3">
         <button
           type="button"
           onClick={() => void copyAddress()}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            void copyAddress();
-          }}
-          className={cn(
-            "rounded-2xl bg-white p-4 shadow-sm",
-            "transition-opacity hover:opacity-90",
-          )}
-          aria-label={copy.wallet.copyAddress}
+          className="flex items-center justify-center gap-2 rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/30"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qrSrc} alt="" width={180} height={180} className="size-[180px]" />
+          <Copy className="size-4" aria-hidden />
+          {copy.wallet.copyAddress}
         </button>
-        <p className="text-sm text-muted-foreground">{copy.wallet.shareAddress}</p>
+        <button
+          type="button"
+          onClick={() => void shareAddress()}
+          className="flex items-center justify-center gap-2 rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/30"
+        >
+          <Share2 className="size-4" aria-hidden />
+          {copy.wallet.share}
+        </button>
       </div>
 
       <button
         type="button"
         onClick={onReceiveNearby}
-        className="mt-auto flex items-center gap-3 rounded-2xl bg-muted/25 px-4 py-4 text-left transition-colors hover:bg-muted/40"
+        className="mt-auto flex items-center gap-3 rounded-3xl bg-muted/25 px-4 py-4 text-left transition-colors hover:bg-muted/40"
       >
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-background text-muted-foreground">
+          <QrCode className="size-5" aria-hidden />
+        </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{copy.wallet.receiveNearby}</p>
           <p className="text-xs text-muted-foreground">
             {copy.wallet.receiveNearbyHint}
           </p>
         </div>
-        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
       </button>
     </div>
   );

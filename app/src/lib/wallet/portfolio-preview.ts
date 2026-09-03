@@ -11,10 +11,23 @@ export const ALL_LIST_SEARCH_THRESHOLD = 8;
 export function sortHoldings(
   holdings: PaymentTokenHolding[],
 ): PaymentTokenHolding[] {
+  const hasUsd = holdings.some(
+    (h) => typeof h.valueUsd === "number" && Number.isFinite(h.valueUsd),
+  );
+
   return [...holdings].sort((a, b) => {
+    const aUsd = a.valueUsd;
+    const bUsd = b.valueUsd;
+    const aHasUsd = typeof aUsd === "number" && Number.isFinite(aUsd);
+    const bHasUsd = typeof bUsd === "number" && Number.isFinite(bUsd);
+
+    if (hasUsd && aHasUsd && bHasUsd && aUsd !== bUsd) return bUsd - aUsd;
+    if (hasUsd && aHasUsd !== bHasUsd) return aHasUsd ? -1 : 1;
+
     const aSol = isNativeSolHolding(a);
     const bSol = isNativeSolHolding(b);
     if (aSol !== bSol) return aSol ? -1 : 1;
+
     const aBal = BigInt(a.balanceRaw || "0");
     const bBal = BigInt(b.balanceRaw || "0");
     if (aBal === bBal) return 0;

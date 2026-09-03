@@ -36,11 +36,13 @@ export function TokenMintedPanel({
   token,
   liveConfirmed,
   onHoldToCheck,
+  onOpenWallet,
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
   holdError?: string | null;
   onHoldToCheck?: () => void;
+  onOpenWallet?: () => void;
 }) {
   const showVerify = !liveConfirmed && Boolean(onHoldToCheck);
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
@@ -106,6 +108,20 @@ export function TokenMintedPanel({
                 />
               ) : null}
             </MotionSection>
+
+              {liveConfirmed && onOpenWallet ? (
+                <MotionSection staggerIndex={stagger++}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-fit px-3"
+                    onClick={onOpenWallet}
+                  >
+                    {copy.wallet.openWallet}
+                  </Button>
+                </MotionSection>
+              ) : null}
 
             <MotionSection staggerIndex={stagger++}>
               <div className="divide-y divide-border/40">

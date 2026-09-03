@@ -34,6 +34,10 @@ export function invalidateWalletBalances(
     void queryClient.invalidateQueries({
       queryKey: queryKeys.walletPortfolio.byOwner(owner),
     });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.walletActivity.all(),
+      predicate: (query) => query.queryKey[1] === owner,
+    });
   }
   for (const token of uniq(args.tokens ?? [])) {
     void queryClient.invalidateQueries({

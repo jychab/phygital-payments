@@ -60,7 +60,15 @@ export function TokenNfcApp({ nfcCopy }: { nfcCopy: TokenNfcCopy }) {
   ]);
 
   if (hasTapProof && (verifyPending || verify === "pending")) {
-    return <LoadingStatus label={copy.verify.verifyingChip} />;
+    return (
+      <NfcHoldStatus
+        size="lg"
+        pulsing
+        busy
+        title={copy.verify.verifyingChip}
+        body={undefined}
+      />
+    );
   }
 
   if (hasTapProof && verify === "verified") {

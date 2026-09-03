@@ -61,6 +61,7 @@ export function TokenMintedHome({
             liveConfirmed={session.liveConfirmed}
             holdError={session.holdError}
             onHoldToCheck={() => void session.holdToCheck()}
+            onOpenWallet={openWallet}
           />
         </div>
       )}

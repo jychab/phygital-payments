@@ -7,7 +7,7 @@ import { useIsRestoring, useQuery, useQueryClient } from "@tanstack/react-query"
 import { GateMessage } from "@/components/layout/gate-message";
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
 import { TokenRouteShell } from "@/components/token/token-route-shell";
-import { LoadingStatus } from "@/components/shared/loading-status";
+ 
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
@@ -60,6 +60,10 @@ export function TokenAddressRoute({
   }, []);
 
   const token = hydrated && !isRestoring ? tokenQuery.data : undefined;
+
+  const mint = token && tokenHasLinkedMint(token) ? String(token.mint) : null;
+  const { collectible } = useResolvedDasCollectible(mint);
+
   const sessionQuery = useQuery({
     queryKey: queryKeys.tokenSession.byToken(tokenAddress),
     queryFn: () => fetchActiveTokenSession(tokenAddress),
@@ -90,7 +94,14 @@ export function TokenAddressRoute({
       {unlocked && token ? (
         renderHome({ token, liveConfirmed: true })
       ) : waitingToken || waitingSession ? (
-        <LoadingStatus label={copy.common.loading} />
+        <NfcHoldStatus
+          size="lg"
+          pulsing
+          busy
+          imageSrc={collectible?.image}
+          imageAlt={collectible?.name ?? ""}
+          title={copy.verify.verifyingChip}
+        />
       ) : token ? (
         <AddressHoldGate
           token={token}

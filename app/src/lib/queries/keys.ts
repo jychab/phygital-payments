@@ -31,6 +31,18 @@ export const queryKeys = {
       [...queryKeys.walletPortfolio.all(), owner] as const,
   },
 
+  walletActivity: {
+    all: () => ["walletActivity"] as const,
+    byOwner: (owner: string | null, limit = 20, before?: string | null) =>
+      [...queryKeys.walletActivity.all(), owner, limit, before ?? null] as const,
+  },
+
+  activityMintMeta: {
+    all: () => ["activityMintMeta"] as const,
+    byMints: (mints: string[]) =>
+      [...queryKeys.activityMintMeta.all(), mints.join(",")] as const,
+  },
+
   feeBalance: {
     all: () => ["feeBalance"] as const,
     byToken: (token: string | null) =>

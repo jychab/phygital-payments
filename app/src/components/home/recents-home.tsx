@@ -14,18 +14,18 @@ import { cn, shortAddress } from "@/lib/utils";
 import {
   EMPTY_RECENTS,
   listRecents,
+  subscribeRecents,
   type RecentItem,
 } from "@/lib/wallet/recents";
 import { tokenHomeHref } from "@/lib/wallet/token-session";
 
 function subscribe(onStoreChange: () => void) {
   const onFocus = () => onStoreChange();
-  const onCustom = () => onStoreChange();
+  const unsubStore = subscribeRecents(onStoreChange);
   window.addEventListener("focus", onFocus);
-  window.addEventListener("revibase:recents", onCustom);
   return () => {
+    unsubStore();
     window.removeEventListener("focus", onFocus);
-    window.removeEventListener("revibase:recents", onCustom);
   };
 }
 
