@@ -25,6 +25,12 @@ const SET_TOKEN_VERIFIER_CHALLENGE_PREFIX = new TextEncoder().encode(
 const CLEAR_TOKEN_VERIFIER_CHALLENGE_PREFIX = new TextEncoder().encode(
   "phygital_wallet:clear_tv:v1",
 );
+const SET_RECOVERY_WALLET_CHALLENGE_PREFIX = new TextEncoder().encode(
+  "phygital_wallet:set_rw:v1",
+);
+const CLEAR_RECOVERY_WALLET_CHALLENGE_PREFIX = new TextEncoder().encode(
+  "phygital_wallet:clear_rw:v1",
+);
 
 type SlotChallenge = {
   slotNumber: bigint;
@@ -256,5 +262,66 @@ export async function buildClearTokenVerifierChallenge(
 ): Promise<SlotChallenge> {
   return withSlotChallenge(rpc, (slotHash) =>
     hashClearTokenVerifierChallenge(slotHash, phygitalToken),
+  );
+}
+
+function hashSetRecoveryWalletChallenge(
+  slotHash: Uint8Array,
+  phygitalToken: Address,
+  recoveryWallet: Address,
+): Uint8Array {
+  const tokenBytes = new Uint8Array(addressEncoder.encode(phygitalToken));
+  const recoveryBytes = new Uint8Array(addressEncoder.encode(recoveryWallet));
+  const preimage = new Uint8Array(
+    SET_RECOVERY_WALLET_CHALLENGE_PREFIX.length +
+      32 +
+      tokenBytes.length +
+      recoveryBytes.length,
+  );
+  let offset = 0;
+  preimage.set(SET_RECOVERY_WALLET_CHALLENGE_PREFIX, offset);
+  offset += SET_RECOVERY_WALLET_CHALLENGE_PREFIX.length;
+  preimage.set(slotHash, offset);
+  offset += 32;
+  preimage.set(tokenBytes, offset);
+  offset += tokenBytes.length;
+  preimage.set(recoveryBytes, offset);
+  return sha256(preimage);
+}
+
+function hashClearRecoveryWalletChallenge(
+  slotHash: Uint8Array,
+  phygitalToken: Address,
+): Uint8Array {
+  const tokenBytes = new Uint8Array(addressEncoder.encode(phygitalToken));
+  const preimage = new Uint8Array(
+    CLEAR_RECOVERY_WALLET_CHALLENGE_PREFIX.length + 32 + tokenBytes.length,
+  );
+  let offset = 0;
+  preimage.set(CLEAR_RECOVERY_WALLET_CHALLENGE_PREFIX, offset);
+  offset += CLEAR_RECOVERY_WALLET_CHALLENGE_PREFIX.length;
+  preimage.set(slotHash, offset);
+  offset += 32;
+  preimage.set(tokenBytes, offset);
+  return sha256(preimage);
+}
+
+/** SlotHashes + passkey challenge bound to the recovery wallet pubkey. */
+export async function buildSetRecoveryWalletChallenge(
+  rpc: Rpc<GetAccountInfoApi>,
+  phygitalToken: Address,
+  recoveryWallet: Address,
+): Promise<SlotChallenge> {
+  return withSlotChallenge(rpc, (slotHash) =>
+    hashSetRecoveryWalletChallenge(slotHash, phygitalToken, recoveryWallet),
+  );
+}
+
+export async function buildClearRecoveryWalletChallenge(
+  rpc: Rpc<GetAccountInfoApi>,
+  phygitalToken: Address,
+): Promise<SlotChallenge> {
+  return withSlotChallenge(rpc, (slotHash) =>
+    hashClearRecoveryWalletChallenge(slotHash, phygitalToken),
   );
 }

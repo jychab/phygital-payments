@@ -36,45 +36,66 @@ import {
 } from "@solana/kit/program-client-core";
 import {
   getConfigCodec,
+  getRecoveryWalletCodec,
   getTokenVerifierCodec,
   type Config,
   type ConfigArgs,
+  type RecoveryWallet,
+  type RecoveryWalletArgs,
   type TokenVerifier,
   type TokenVerifierArgs,
 } from "../accounts/index.js";
 import {
   getAddVerifierInstructionAsync,
+  getClearRecoveryWalletInstructionAsync,
   getClearTokenVerifierInstructionAsync,
   getExecuteInstructionAsync,
   getInitializeConfigInstructionAsync,
+  getRecoveryWalletExecuteInstructionAsync,
   getRemoveVerifierInstructionAsync,
+  getSetRecoveryWalletInstructionAsync,
   getSetTokenVerifierInstructionAsync,
   parseAddVerifierInstruction,
+  parseClearRecoveryWalletInstruction,
   parseClearTokenVerifierInstruction,
   parseExecuteInstruction,
   parseInitializeConfigInstruction,
+  parseRecoveryWalletExecuteInstruction,
   parseRemoveVerifierInstruction,
+  parseSetRecoveryWalletInstruction,
   parseSetTokenVerifierInstruction,
   type AddVerifierAsyncInput,
+  type ClearRecoveryWalletAsyncInput,
   type ClearTokenVerifierAsyncInput,
   type ExecuteAsyncInput,
   type InitializeConfigAsyncInput,
   type ParsedAddVerifierInstruction,
+  type ParsedClearRecoveryWalletInstruction,
   type ParsedClearTokenVerifierInstruction,
   type ParsedExecuteInstruction,
   type ParsedInitializeConfigInstruction,
+  type ParsedRecoveryWalletExecuteInstruction,
   type ParsedRemoveVerifierInstruction,
+  type ParsedSetRecoveryWalletInstruction,
   type ParsedSetTokenVerifierInstruction,
+  type RecoveryWalletExecuteAsyncInput,
   type RemoveVerifierAsyncInput,
+  type SetRecoveryWalletAsyncInput,
   type SetTokenVerifierAsyncInput,
 } from "../instructions/index.js";
-import { findConfigPda, findTokenVerifierPda, findWalletPda } from "../pdas/index.js";
+import {
+  findConfigPda,
+  findRecoveryWalletAccountPda,
+  findTokenVerifierPda,
+  findWalletPda,
+} from "../pdas/index.js";
 
 export const PHYGITAL_WALLET_PROGRAM_ADDRESS =
   "Fjbi9JrRAmSBdxQxbkcxYDp6JUwnLbFhU2GsieWQBLSg" as Address<"Fjbi9JrRAmSBdxQxbkcxYDp6JUwnLbFhU2GsieWQBLSg">;
 
 export enum PhygitalWalletAccount {
   Config,
+  RecoveryWallet,
   TokenVerifier,
 }
 
@@ -97,6 +118,17 @@ export function identifyPhygitalWalletAccount(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([172, 239, 138, 56, 173, 41, 182, 161]),
+      ),
+      0,
+    )
+  ) {
+    return PhygitalWalletAccount.RecoveryWallet;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([52, 84, 111, 160, 81, 247, 144, 43]),
       ),
       0,
@@ -112,10 +144,13 @@ export function identifyPhygitalWalletAccount(
 
 export enum PhygitalWalletInstruction {
   AddVerifier,
+  ClearRecoveryWallet,
   ClearTokenVerifier,
   Execute,
   InitializeConfig,
+  RecoveryWalletExecute,
   RemoveVerifier,
+  SetRecoveryWallet,
   SetTokenVerifier,
 }
 
@@ -133,6 +168,17 @@ export function identifyPhygitalWalletInstruction(
     )
   ) {
     return PhygitalWalletInstruction.AddVerifier;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([91, 208, 70, 146, 50, 221, 202, 245]),
+      ),
+      0,
+    )
+  ) {
+    return PhygitalWalletInstruction.ClearRecoveryWallet;
   }
   if (
     containsBytes(
@@ -171,12 +217,34 @@ export function identifyPhygitalWalletInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([91, 171, 164, 84, 112, 80, 230, 134]),
+      ),
+      0,
+    )
+  ) {
+    return PhygitalWalletInstruction.RecoveryWalletExecute;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([179, 9, 132, 183, 233, 23, 172, 111]),
       ),
       0,
     )
   ) {
     return PhygitalWalletInstruction.RemoveVerifier;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([211, 147, 53, 173, 100, 180, 242, 49]),
+      ),
+      0,
+    )
+  ) {
+    return PhygitalWalletInstruction.SetRecoveryWallet;
   }
   if (
     containsBytes(
@@ -202,6 +270,9 @@ export type ParsedPhygitalWalletInstruction<
       instructionType: PhygitalWalletInstruction.AddVerifier;
     } & ParsedAddVerifierInstruction<TProgram>)
   | ({
+      instructionType: PhygitalWalletInstruction.ClearRecoveryWallet;
+    } & ParsedClearRecoveryWalletInstruction<TProgram>)
+  | ({
       instructionType: PhygitalWalletInstruction.ClearTokenVerifier;
     } & ParsedClearTokenVerifierInstruction<TProgram>)
   | ({
@@ -211,8 +282,14 @@ export type ParsedPhygitalWalletInstruction<
       instructionType: PhygitalWalletInstruction.InitializeConfig;
     } & ParsedInitializeConfigInstruction<TProgram>)
   | ({
+      instructionType: PhygitalWalletInstruction.RecoveryWalletExecute;
+    } & ParsedRecoveryWalletExecuteInstruction<TProgram>)
+  | ({
       instructionType: PhygitalWalletInstruction.RemoveVerifier;
     } & ParsedRemoveVerifierInstruction<TProgram>)
+  | ({
+      instructionType: PhygitalWalletInstruction.SetRecoveryWallet;
+    } & ParsedSetRecoveryWalletInstruction<TProgram>)
   | ({
       instructionType: PhygitalWalletInstruction.SetTokenVerifier;
     } & ParsedSetTokenVerifierInstruction<TProgram>);
@@ -227,6 +304,13 @@ export function parsePhygitalWalletInstruction<TProgram extends string>(
       return {
         instructionType: PhygitalWalletInstruction.AddVerifier,
         ...parseAddVerifierInstruction(instruction),
+      };
+    }
+    case PhygitalWalletInstruction.ClearRecoveryWallet: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: PhygitalWalletInstruction.ClearRecoveryWallet,
+        ...parseClearRecoveryWalletInstruction(instruction),
       };
     }
     case PhygitalWalletInstruction.ClearTokenVerifier: {
@@ -250,11 +334,25 @@ export function parsePhygitalWalletInstruction<TProgram extends string>(
         ...parseInitializeConfigInstruction(instruction),
       };
     }
+    case PhygitalWalletInstruction.RecoveryWalletExecute: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: PhygitalWalletInstruction.RecoveryWalletExecute,
+        ...parseRecoveryWalletExecuteInstruction(instruction),
+      };
+    }
     case PhygitalWalletInstruction.RemoveVerifier: {
       assertIsInstructionWithAccounts(instruction);
       return {
         instructionType: PhygitalWalletInstruction.RemoveVerifier,
         ...parseRemoveVerifierInstruction(instruction),
+      };
+    }
+    case PhygitalWalletInstruction.SetRecoveryWallet: {
+      assertIsInstructionWithAccounts(instruction);
+      return {
+        instructionType: PhygitalWalletInstruction.SetRecoveryWallet,
+        ...parseSetRecoveryWalletInstruction(instruction),
       };
     }
     case PhygitalWalletInstruction.SetTokenVerifier: {
@@ -287,6 +385,8 @@ export type PhygitalWalletPlugin = {
 export type PhygitalWalletPluginAccounts = {
   config: ReturnType<typeof getConfigCodec> &
     SelfFetchFunctions<ConfigArgs, Config>;
+  recoveryWallet: ReturnType<typeof getRecoveryWalletCodec> &
+    SelfFetchFunctions<RecoveryWalletArgs, RecoveryWallet>;
   tokenVerifier: ReturnType<typeof getTokenVerifierCodec> &
     SelfFetchFunctions<TokenVerifierArgs, TokenVerifier>;
 };
@@ -295,6 +395,10 @@ export type PhygitalWalletPluginInstructions = {
   addVerifier: (
     input: AddVerifierAsyncInput,
   ) => ReturnType<typeof getAddVerifierInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  clearRecoveryWallet: (
+    input: ClearRecoveryWalletAsyncInput,
+  ) => ReturnType<typeof getClearRecoveryWalletInstructionAsync> &
     SelfPlanAndSendFunctions;
   clearTokenVerifier: (
     input: ClearTokenVerifierAsyncInput,
@@ -307,9 +411,17 @@ export type PhygitalWalletPluginInstructions = {
     input: InitializeConfigAsyncInput,
   ) => ReturnType<typeof getInitializeConfigInstructionAsync> &
     SelfPlanAndSendFunctions;
+  recoveryWalletExecute: (
+    input: RecoveryWalletExecuteAsyncInput,
+  ) => ReturnType<typeof getRecoveryWalletExecuteInstructionAsync> &
+    SelfPlanAndSendFunctions;
   removeVerifier: (
     input: RemoveVerifierAsyncInput,
   ) => ReturnType<typeof getRemoveVerifierInstructionAsync> &
+    SelfPlanAndSendFunctions;
+  setRecoveryWallet: (
+    input: MakeOptional<SetRecoveryWalletAsyncInput, "payer">,
+  ) => ReturnType<typeof getSetRecoveryWalletInstructionAsync> &
     SelfPlanAndSendFunctions;
   setTokenVerifier: (
     input: MakeOptional<SetTokenVerifierAsyncInput, "payer">,
@@ -320,6 +432,7 @@ export type PhygitalWalletPluginInstructions = {
 export type PhygitalWalletPluginPdas = {
   config: typeof findConfigPda;
   tokenVerifier: typeof findTokenVerifierPda;
+  recoveryWalletAccount: typeof findRecoveryWalletAccountPda;
   wallet: typeof findWalletPda;
 };
 
@@ -338,6 +451,10 @@ export function phygitalWalletProgram() {
       phygitalWallet: <PhygitalWalletPlugin>{
         accounts: {
           config: addSelfFetchFunctions(client, getConfigCodec()),
+          recoveryWallet: addSelfFetchFunctions(
+            client,
+            getRecoveryWalletCodec(),
+          ),
           tokenVerifier: addSelfFetchFunctions(client, getTokenVerifierCodec()),
         },
         instructions: {
@@ -345,6 +462,11 @@ export function phygitalWalletProgram() {
             addSelfPlanAndSendFunctions(
               client,
               getAddVerifierInstructionAsync(input),
+            ),
+          clearRecoveryWallet: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getClearRecoveryWalletInstructionAsync(input),
             ),
           clearTokenVerifier: (input) =>
             addSelfPlanAndSendFunctions(
@@ -361,10 +483,23 @@ export function phygitalWalletProgram() {
               client,
               getInitializeConfigInstructionAsync(input),
             ),
+          recoveryWalletExecute: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getRecoveryWalletExecuteInstructionAsync(input),
+            ),
           removeVerifier: (input) =>
             addSelfPlanAndSendFunctions(
               client,
               getRemoveVerifierInstructionAsync(input),
+            ),
+          setRecoveryWallet: (input) =>
+            addSelfPlanAndSendFunctions(
+              client,
+              getSetRecoveryWalletInstructionAsync({
+                ...input,
+                payer: input.payer ?? client.payer,
+              }),
             ),
           setTokenVerifier: (input) =>
             addSelfPlanAndSendFunctions(
@@ -378,6 +513,7 @@ export function phygitalWalletProgram() {
         pdas: {
           config: findConfigPda,
           tokenVerifier: findTokenVerifierPda,
+          recoveryWalletAccount: findRecoveryWalletAccountPda,
           wallet: findWalletPda,
         },
         identifyAccount: identifyPhygitalWalletAccount,

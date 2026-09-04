@@ -58,6 +58,14 @@ export const PHYGITAL_WALLET_ERROR__WALLET_INVARIANT_VIOLATED = 0x1783; // 6019
 export const PHYGITAL_WALLET_ERROR__PROTECTED_ACCOUNT_PRIVILEGE = 0x1784; // 6020
 /** InvalidTokenVerifier: Token verifier pubkey must be a non-default key */
 export const PHYGITAL_WALLET_ERROR__INVALID_TOKEN_VERIFIER = 0x1785; // 6021
+/** RecoveryWalletMismatch: Recovery wallet account does not match the phygital token */
+export const PHYGITAL_WALLET_ERROR__RECOVERY_WALLET_MISMATCH = 0x1786; // 6022
+/** RecoveryWalletPayerMismatch: Rent receiver must match the recovery wallet account creator */
+export const PHYGITAL_WALLET_ERROR__RECOVERY_WALLET_PAYER_MISMATCH = 0x1787; // 6023
+/** InvalidRecoveryWallet: Recovery wallet pubkey must be a non-default key */
+export const PHYGITAL_WALLET_ERROR__INVALID_RECOVERY_WALLET = 0x1788; // 6024
+/** UnauthorizedRecoveryWallet: Recovery wallet signer does not match the configured recovery key */
+export const PHYGITAL_WALLET_ERROR__UNAUTHORIZED_RECOVERY_WALLET = 0x1789; // 6025
 
 export type PhygitalWalletError =
   | typeof PHYGITAL_WALLET_ERROR__ENDPOINT_TOO_LONG
@@ -65,11 +73,14 @@ export type PhygitalWalletError =
   | typeof PHYGITAL_WALLET_ERROR__INVALID_ACCOUNT_DATA
   | typeof PHYGITAL_WALLET_ERROR__INVALID_ACCOUNT_INDEX
   | typeof PHYGITAL_WALLET_ERROR__INVALID_ENDPOINT
+  | typeof PHYGITAL_WALLET_ERROR__INVALID_RECOVERY_WALLET
   | typeof PHYGITAL_WALLET_ERROR__INVALID_SLOT_HASH
   | typeof PHYGITAL_WALLET_ERROR__INVALID_SYSVAR_DATA_FORMAT
   | typeof PHYGITAL_WALLET_ERROR__INVALID_TOKEN_VERIFIER
   | typeof PHYGITAL_WALLET_ERROR__PHYGITAL_TOKEN_CPI_NOT_ALLOWED
   | typeof PHYGITAL_WALLET_ERROR__PROTECTED_ACCOUNT_PRIVILEGE
+  | typeof PHYGITAL_WALLET_ERROR__RECOVERY_WALLET_MISMATCH
+  | typeof PHYGITAL_WALLET_ERROR__RECOVERY_WALLET_PAYER_MISMATCH
   | typeof PHYGITAL_WALLET_ERROR__SELF_REENTRANCY_NOT_ALLOWED
   | typeof PHYGITAL_WALLET_ERROR__TOKEN_IS_CURRENTLY_UN_LOCKED
   | typeof PHYGITAL_WALLET_ERROR__TOKEN_VERIFIER_MISMATCH
@@ -77,6 +88,7 @@ export type PhygitalWalletError =
   | typeof PHYGITAL_WALLET_ERROR__TOKEN_VERIFIER_REQUIRED
   | typeof PHYGITAL_WALLET_ERROR__TOO_MANY_VERIFIERS
   | typeof PHYGITAL_WALLET_ERROR__UNAUTHORIZED_ADMIN
+  | typeof PHYGITAL_WALLET_ERROR__UNAUTHORIZED_RECOVERY_WALLET
   | typeof PHYGITAL_WALLET_ERROR__UNAUTHORIZED_VERIFIER
   | typeof PHYGITAL_WALLET_ERROR__VERIFIER_ALREADY_EXISTS
   | typeof PHYGITAL_WALLET_ERROR__VERIFIER_NOT_FOUND
@@ -92,11 +104,14 @@ if (process.env["NODE_ENV"] !== "production") {
     [PHYGITAL_WALLET_ERROR__INVALID_ACCOUNT_DATA]: `Account data is missing or malformed`,
     [PHYGITAL_WALLET_ERROR__INVALID_ACCOUNT_INDEX]: `Compact instruction account index out of bounds`,
     [PHYGITAL_WALLET_ERROR__INVALID_ENDPOINT]: `Verifier endpoint URL is empty or invalid`,
+    [PHYGITAL_WALLET_ERROR__INVALID_RECOVERY_WALLET]: `Recovery wallet pubkey must be a non-default key`,
     [PHYGITAL_WALLET_ERROR__INVALID_SLOT_HASH]: `Slot not found in SlotHashes sysvar — signature has expired or is being replayed`,
     [PHYGITAL_WALLET_ERROR__INVALID_SYSVAR_DATA_FORMAT]: `Invalid SlotHashes sysvar data format`,
     [PHYGITAL_WALLET_ERROR__INVALID_TOKEN_VERIFIER]: `Token verifier pubkey must be a non-default key`,
     [PHYGITAL_WALLET_ERROR__PHYGITAL_TOKEN_CPI_NOT_ALLOWED]: `CPI into the phygital-token program is not allowed`,
     [PHYGITAL_WALLET_ERROR__PROTECTED_ACCOUNT_PRIVILEGE]: `Protected account may not be a signer or writable in inner instructions`,
+    [PHYGITAL_WALLET_ERROR__RECOVERY_WALLET_MISMATCH]: `Recovery wallet account does not match the phygital token`,
+    [PHYGITAL_WALLET_ERROR__RECOVERY_WALLET_PAYER_MISMATCH]: `Rent receiver must match the recovery wallet account creator`,
     [PHYGITAL_WALLET_ERROR__SELF_REENTRANCY_NOT_ALLOWED]: `Self-reentrancy via CPI into this program is not allowed`,
     [PHYGITAL_WALLET_ERROR__TOKEN_IS_CURRENTLY_UN_LOCKED]: `Token must be lockable and currently locked`,
     [PHYGITAL_WALLET_ERROR__TOKEN_VERIFIER_MISMATCH]: `Token verifier account does not match the phygital token`,
@@ -104,6 +119,7 @@ if (process.env["NODE_ENV"] !== "production") {
     [PHYGITAL_WALLET_ERROR__TOKEN_VERIFIER_REQUIRED]: `Token has a custom verifier configured; that key must sign`,
     [PHYGITAL_WALLET_ERROR__TOO_MANY_VERIFIERS]: `Config verifier set is full`,
     [PHYGITAL_WALLET_ERROR__UNAUTHORIZED_ADMIN]: `Only the config admin may perform this action`,
+    [PHYGITAL_WALLET_ERROR__UNAUTHORIZED_RECOVERY_WALLET]: `Recovery wallet signer does not match the configured recovery key`,
     [PHYGITAL_WALLET_ERROR__UNAUTHORIZED_VERIFIER]: `Verifier is not authorized for this execute`,
     [PHYGITAL_WALLET_ERROR__VERIFIER_ALREADY_EXISTS]: `Verifier is already in the config set`,
     [PHYGITAL_WALLET_ERROR__VERIFIER_NOT_FOUND]: `Verifier was not found in the config set`,

@@ -100,7 +100,7 @@ export function OpenApprovalsSheet({
             {copy.common.cancel}
           </Button>
         }
-        title={copy.wallet.send}
+        title={copy.wallet.openApprovalsTitle}
       />
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-2 text-center">
         <h2 className="font-(family-name:--font-display) text-2xl font-medium">

@@ -46,4 +46,12 @@ pub enum PhygitalError {
     ProtectedAccountPrivilege,
     #[msg("Token verifier pubkey must be a non-default key")]
     InvalidTokenVerifier,
+    #[msg("Recovery wallet account does not match the phygital token")]
+    RecoveryWalletMismatch,
+    #[msg("Rent receiver must match the recovery wallet account creator")]
+    RecoveryWalletPayerMismatch,
+    #[msg("Recovery wallet pubkey must be a non-default key")]
+    InvalidRecoveryWallet,
+    #[msg("Recovery wallet signer does not match the configured recovery key")]
+    UnauthorizedRecoveryWallet,
 }

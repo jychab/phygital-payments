@@ -75,6 +75,18 @@ export const queryKeys = {
       [...queryKeys.walletPda.all(), token] as const,
   },
 
+  recoveryWallet: {
+    all: () => ["recoveryWallet"] as const,
+    byToken: (token: string | null) =>
+      [...queryKeys.recoveryWallet.all(), token] as const,
+  },
+
+  tokenVerifier: {
+    all: () => ["tokenVerifier"] as const,
+    byToken: (token: string | null) =>
+      [...queryKeys.tokenVerifier.all(), token] as const,
+  },
+
   phygitalToken: {
     all: () => ["phygitalTokens"] as const,
     byIdentifier: (identifier: string | null) =>

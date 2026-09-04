@@ -78,3 +78,17 @@ pub struct TokenVerifier {
     pub payer: Pubkey,
     pub bump: u8,
 }
+
+/// Optional ed25519 recovery key for a phygital token. When set, that key may
+/// call `recovery_wallet_execute` to drive the program wallet without the
+/// accessory passkey (lost-device recovery).
+#[account]
+#[derive(InitSpace)]
+pub struct RecoveryWallet {
+    pub phygital_token: Pubkey,
+    /// Ed25519 pubkey authorized to recover the wallet.
+    pub recovery_wallet: Pubkey,
+    /// Account that paid init rent; close refunds this pubkey.
+    pub payer: Pubkey,
+    pub bump: u8,
+}

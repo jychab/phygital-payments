@@ -53,6 +53,148 @@
       ]
     },
     {
+      "name": "clear_recovery_wallet",
+      "discriminator": [
+        91,
+        208,
+        70,
+        146,
+        50,
+        221,
+        202,
+        245
+      ],
+      "accounts": [
+        {
+          "name": "verifier",
+          "docs": [
+            "Verifier co-signer. Token override (exclusive) or config default set."
+          ],
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "phygital_token",
+          "writable": true,
+          "relations": [
+            "recovery_wallet_account"
+          ]
+        },
+        {
+          "name": "token_verifier",
+          "docs": [
+            "Optional per-token verifier override PDA (may be uninitialized)."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "phygital_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rent_receiver",
+          "writable": true
+        },
+        {
+          "name": "recovery_wallet_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  99,
+                  111,
+                  118,
+                  101,
+                  114,
+                  121,
+                  95,
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "phygital_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slot_hashes",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "instructions_sysvar",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "phygital_token_program",
+          "address": "DuPpckdjjgVAnYok2aTMAt264ZPBXqq3JSazJjCUzTJQ"
+        }
+      ],
+      "args": [
+        {
+          "name": "secp256r1_verify_args",
+          "type": {
+            "defined": {
+              "name": "Secp256r1VerifyArgs"
+            }
+          }
+        },
+        {
+          "name": "slot_number",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "clear_token_verifier",
       "discriminator": [
         83,
@@ -364,6 +506,112 @@
       ]
     },
     {
+      "name": "recovery_wallet_execute",
+      "docs": [
+        "Ed25519 recovery-key execute (no accessory passkey). Requires a prior",
+        "`set_recovery_wallet` and a matching recovery signer."
+      ],
+      "discriminator": [
+        91,
+        171,
+        164,
+        84,
+        112,
+        80,
+        230,
+        134
+      ],
+      "accounts": [
+        {
+          "name": "recovery_wallet",
+          "docs": [
+            "Must match `recovery_wallet_account.recovery_wallet`."
+          ],
+          "signer": true
+        },
+        {
+          "name": "phygital_token",
+          "writable": true,
+          "relations": [
+            "recovery_wallet_account"
+          ]
+        },
+        {
+          "name": "recovery_wallet_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  99,
+                  111,
+                  118,
+                  101,
+                  114,
+                  121,
+                  95,
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "phygital_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "wallet",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  103,
+                  114,
+                  97,
+                  109,
+                  95,
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "phygital_token"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "compact_instructions",
+          "type": {
+            "vec": {
+              "defined": {
+                "name": "CompactInstruction"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "remove_verifier",
       "discriminator": [
         179,
@@ -405,6 +653,157 @@
         {
           "name": "verifier",
           "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_recovery_wallet",
+      "discriminator": [
+        211,
+        147,
+        53,
+        173,
+        100,
+        180,
+        242,
+        49
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Fee payer for rent; not an authorization authority."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "verifier",
+          "docs": [
+            "Verifier co-signer. Token override (exclusive) or config default set."
+          ],
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "phygital_token",
+          "writable": true
+        },
+        {
+          "name": "token_verifier",
+          "docs": [
+            "Optional per-token verifier override PDA (may be uninitialized)."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  111,
+                  107,
+                  101,
+                  110,
+                  95,
+                  118,
+                  101,
+                  114,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "phygital_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "recovery_wallet_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  99,
+                  111,
+                  118,
+                  101,
+                  114,
+                  121,
+                  95,
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "phygital_token"
+              }
+            ]
+          }
+        },
+        {
+          "name": "slot_hashes",
+          "address": "SysvarS1otHashes111111111111111111111111111"
+        },
+        {
+          "name": "instructions_sysvar",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "phygital_token_program",
+          "address": "DuPpckdjjgVAnYok2aTMAt264ZPBXqq3JSazJjCUzTJQ"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "recovery_wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "secp256r1_verify_args",
+          "type": {
+            "defined": {
+              "name": "Secp256r1VerifyArgs"
+            }
+          }
+        },
+        {
+          "name": "slot_number",
+          "type": "u64"
         }
       ]
     },
@@ -545,6 +944,19 @@
       ]
     },
     {
+      "name": "RecoveryWallet",
+      "discriminator": [
+        172,
+        239,
+        138,
+        56,
+        173,
+        41,
+        182,
+        161
+      ]
+    },
+    {
       "name": "TokenVerifier",
       "discriminator": [
         52,
@@ -668,6 +1080,26 @@
       "code": 6021,
       "name": "InvalidTokenVerifier",
       "msg": "Token verifier pubkey must be a non-default key"
+    },
+    {
+      "code": 6022,
+      "name": "RecoveryWalletMismatch",
+      "msg": "Recovery wallet account does not match the phygital token"
+    },
+    {
+      "code": 6023,
+      "name": "RecoveryWalletPayerMismatch",
+      "msg": "Rent receiver must match the recovery wallet account creator"
+    },
+    {
+      "code": 6024,
+      "name": "InvalidRecoveryWallet",
+      "msg": "Recovery wallet pubkey must be a non-default key"
+    },
+    {
+      "code": 6025,
+      "name": "UnauthorizedRecoveryWallet",
+      "msg": "Recovery wallet signer does not match the configured recovery key"
     }
   ],
   "types": [
@@ -749,6 +1181,41 @@
       }
     },
     {
+      "name": "RecoveryWallet",
+      "docs": [
+        "Optional ed25519 recovery key for a phygital token. When set, that key may",
+        "call `recovery_wallet_execute` to drive the program wallet without the",
+        "accessory passkey (lost-device recovery)."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "phygital_token",
+            "type": "pubkey"
+          },
+          {
+            "name": "recovery_wallet",
+            "docs": [
+              "Ed25519 pubkey authorized to recover the wallet."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "payer",
+            "docs": [
+              "Account that paid init rent; close refunds this pubkey."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "Secp256r1VerifyArgs",
       "docs": [
         "Instruction-arg mirror of `phygital_token_client::Secp256r1VerifyArgs`.",
@@ -825,6 +1292,11 @@
       "name": "PROGRAM_WALLET_SEED",
       "type": "bytes",
       "value": "[112, 114, 111, 103, 114, 97, 109, 95, 119, 97, 108, 108, 101, 116]"
+    },
+    {
+      "name": "RECOVERY_WALLET_SEED",
+      "type": "bytes",
+      "value": "[114, 101, 99, 111, 118, 101, 114, 121, 95, 119, 97, 108, 108, 101, 116]"
     },
     {
       "name": "TOKEN_VERIFIER_SEED",

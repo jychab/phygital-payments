@@ -7,10 +7,14 @@ import { NavBar } from "@/components/shared/nav-bar";
 import { GroupedList, GroupedRow } from "@/components/shared/grouped-list";
 import { Button } from "@/components/ui/button";
 import { useFeeBalance } from "@/hooks/wallet/use-fee-balance";
+import { useRecoveryWallet } from "@/hooks/wallet/use-recovery-wallet";
 import { useRpcPreference } from "@/hooks/wallet/use-rpc-preference";
+import { useTokenVerifier } from "@/hooks/wallet/use-token-verifier";
 import { copy } from "@/lib/copy/phygital";
 import { fetchEffectivePolicy } from "@/lib/wallet/policies-client";
+import type { LinkStatus } from "@/lib/wallet/device-auth-client";
 import { queryKeys, queryOptions } from "@/lib/queries";
+import { shortAddress } from "@/lib/utils";
 import type { WalletRole } from "@/components/token/token-address-route";
 
 export type SettingsTarget =
@@ -18,22 +22,25 @@ export type SettingsTarget =
   | "recipients"
   | "allowedActions"
   | "signing"
+  | "recoveryWallet"
   | "rpcConnection"
   | "feeBalance"
   | "access"
   | "contacts";
 
-/** Wallet settings hub — primary policies + Advanced group. */
+/** Wallet settings hub — status on primary rows + policies + Advanced. */
 export function SettingsHub({
   onBack,
   onOpen,
   phygitalTokenPda,
   role = "visitor",
+  linkStatus,
 }: {
   onBack: () => void;
   onOpen: (target: SettingsTarget) => void;
   phygitalTokenPda?: string;
   role?: WalletRole;
+  linkStatus?: LinkStatus;
 }) {
   const queryClient = useQueryClient();
   const fee = useFeeBalance(phygitalTokenPda ?? null);
@@ -45,6 +52,13 @@ export function SettingsHub({
   const rpcLabel = rpc.isCustom
     ? `${copy.wallet.rpcConnection} · ${copy.wallet.rpcCustom}`
     : `${copy.wallet.rpcConnection} · ${copy.wallet.rpcDefault}`;
+
+  const accessSubtitle =
+    linkStatus === "linked_here"
+      ? copy.wallet.setupDeviceLinkedHere
+      : linkStatus === "linked_elsewhere"
+        ? copy.wallet.setupDeviceLinkedElsewhere
+        : copy.wallet.setupDeviceNotLinked;
 
   useEffect(() => {
     if (!phygitalTokenPda || !isOwner) return;
@@ -67,11 +81,24 @@ export function SettingsHub({
       />
 
       <GroupedList>
-        <GroupedRow onClick={() => onOpen("access")}>
-          <span className="flex w-full items-center justify-between gap-2">
-            <span>{copy.wallet.accessAndRecovery}</span>
-          </span>
+        <GroupedRow
+          onClick={() => onOpen("access")}
+          subtitle={accessSubtitle}
+        >
+          {copy.wallet.accessAndRecovery}
         </GroupedRow>
+        {isOwner ? (
+          <RecoverySettingsRow
+            phygitalTokenPda={phygitalTokenPda}
+            onOpen={() => onOpen("recoveryWallet")}
+          />
+        ) : null}
+        {isOwner ? (
+          <SigningSettingsRow
+            phygitalTokenPda={phygitalTokenPda}
+            onOpen={() => onOpen("signing")}
+          />
+        ) : null}
         <GroupedRow onClick={() => onOpen("contacts")}>
           {copy.wallet.contacts}
         </GroupedRow>
@@ -88,7 +115,10 @@ export function SettingsHub({
       </GroupedList>
 
       {isOwner ? (
-        <GroupedList footer={copy.wallet.policyDefaultSigningOnly}>
+        <GroupedList
+          label={copy.wallet.policySection}
+          footer={copy.wallet.policyDefaultSigningOnly}
+        >
           <GroupedRow onClick={() => onOpen("spendingLimits")}>
             {copy.wallet.spendingLimits}
           </GroupedRow>
@@ -112,12 +142,49 @@ export function SettingsHub({
             ) : null}
           </span>
         </GroupedRow>
-        {isOwner ? (
-          <GroupedRow onClick={() => onOpen("signing")}>
-            {copy.wallet.signing}
-          </GroupedRow>
-        ) : null}
       </GroupedList>
     </div>
+  );
+}
+
+function RecoverySettingsRow({
+  phygitalTokenPda,
+  onOpen,
+}: {
+  phygitalTokenPda?: string;
+  onOpen: () => void;
+}) {
+  const recovery = useRecoveryWallet(phygitalTokenPda ?? null);
+  const subtitle = recovery.isLoading
+    ? copy.common.loading
+    : recovery.data?.configured && recovery.data.recoveryWallet
+      ? shortAddress(recovery.data.recoveryWallet, 4)
+      : copy.wallet.recoveryWalletNotConfigured;
+
+  return (
+    <GroupedRow onClick={onOpen} subtitle={subtitle}>
+      {copy.wallet.recoveryWallet}
+    </GroupedRow>
+  );
+}
+
+function SigningSettingsRow({
+  phygitalTokenPda,
+  onOpen,
+}: {
+  phygitalTokenPda?: string;
+  onOpen: () => void;
+}) {
+  const verifier = useTokenVerifier(phygitalTokenPda ?? null);
+  const subtitle = verifier.isLoading
+    ? copy.common.loading
+    : verifier.data?.custom
+      ? copy.wallet.signingCustom
+      : copy.wallet.signingDefault;
+
+  return (
+    <GroupedRow onClick={onOpen} subtitle={subtitle}>
+      {copy.wallet.signing}
+    </GroupedRow>
   );
 }

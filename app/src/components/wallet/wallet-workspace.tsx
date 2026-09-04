@@ -17,6 +17,7 @@ import { SpendingLimitsSheet } from "@/components/wallet/spending-limits-sheet";
 import { RecipientsSheet } from "@/components/wallet/recipients-sheet";
 import { AllowedActionsSheet } from "@/components/wallet/allowed-actions-sheet";
 import { SigningSettingsSheet } from "@/components/wallet/signing-settings-sheet";
+import { RecoveryWalletSheet } from "@/components/wallet/recovery-wallet-sheet";
 import { FeeBalanceSheet } from "@/components/wallet/fee-balance-sheet";
 import { AccessRecoverySheet } from "@/components/wallet/access-recovery-sheet";
 import { ContactsSheet } from "@/components/wallet/contacts-sheet";
@@ -122,6 +123,7 @@ function WalletWorkspaceInner({
     cardLabel ??
     (mint ? copy.home.card : copy.home.accessory);
   const [screen, setScreen] = useState<Screen>("home");
+  const [recoveryReturn, setRecoveryReturn] = useState<Screen>("settings");
   const [sendAsset, setSendAsset] = useState<SendAssetRef | null>(null);
   const [sendTokensOnly, setSendTokensOnly] = useState(true);
   const [sendHoldPhase, setSendHoldPhase] = useState<"holding" | "success" | null>(
@@ -132,6 +134,11 @@ function WalletWorkspaceInner({
   const queryClient = useQueryClient();
 
   const onSettings = useCallback(() => setScreen("settings"), []);
+
+  const openRecovery = useCallback((from: Screen) => {
+    setRecoveryReturn(from);
+    setScreen("recoveryWallet");
+  }, []);
 
   const { walletAddress } = useWalletPda(tokenAddress);
 
@@ -312,8 +319,15 @@ function WalletWorkspaceInner({
       <SettingsHub
         phygitalTokenPda={tokenAddress}
         role={role}
+        linkStatus={linkStatus}
         onBack={() => setScreen("home")}
-        onOpen={(target) => setScreen(target)}
+        onOpen={(target) => {
+          if (target === "recoveryWallet") {
+            openRecovery("settings");
+            return;
+          }
+          setScreen(target);
+        }}
       />
     );
   } else if (screen === "feeBalance") {
@@ -351,12 +365,22 @@ function WalletWorkspaceInner({
         onClose={() => setScreen("settings")}
       />
     );
+  } else if (isOwner && screen === "recoveryWallet") {
+    body = (
+      <RecoveryWalletSheet
+        phygitalTokenPda={tokenAddress}
+        onClose={() => setScreen(recoveryReturn)}
+      />
+    );
   } else if (screen === "access") {
     body = (
       <AccessRecoverySheet
         phygitalTokenPda={tokenAddress}
         role={role}
         onBack={() => setScreen("settings")}
+        onOpenRecovery={
+          isOwner ? () => openRecovery("access") : undefined
+        }
       />
     );
   } else if (screen === "contacts") {
@@ -385,6 +409,9 @@ function WalletWorkspaceInner({
           onSeeAllCollectibles={() => setScreen("collectiblesAll")}
           onSeeAllActivity={() => setScreen("activity")}
           onManageDevice={onSettings}
+          onAddRecovery={
+            isOwner ? () => openRecovery("home") : undefined
+          }
           visitorNotice={
             isOwner
               ? null

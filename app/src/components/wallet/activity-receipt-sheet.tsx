@@ -145,7 +145,7 @@ export function ActivityReceiptSheet({
               </div>
             ) : null}
             <div className="flex items-center justify-between gap-3 px-4 py-3">
-              <span className="text-muted-foreground">Time</span>
+              <span className="text-muted-foreground">{copy.wallet.receiptTime}</span>
               <span>{formatReceiptTime(item.timestamp)}</span>
             </div>
           </div>

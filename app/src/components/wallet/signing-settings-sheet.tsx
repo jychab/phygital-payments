@@ -24,7 +24,9 @@ import { copy } from "@/lib/copy/phygital";
 import {
   invalidatePhygitalToken,
   invalidateWalletBalances,
+  queryKeys,
 } from "@/lib/queries";
+import { useTokenVerifier } from "@/hooks/wallet/use-token-verifier";
 import { getSolanaRpc } from "@/lib/solana/rpc";
 import { sendTransaction } from "@/lib/solana/tx";
 import { tryParseAddress } from "@/lib/solana/address";
@@ -46,10 +48,15 @@ export function SigningSettingsSheet({
   const [endpoint, setEndpoint] = useState("https://");
   const [verifier, setVerifier] = useState("");
 
+  const verifierStatus = useTokenVerifier(phygitalTokenPda);
+
   function afterSigningTxConfirmed() {
     // lastSignCount / verifier config on-chain; fee debit on cosign.
     invalidatePhygitalToken(queryClient, phygitalTokenPda);
     invalidateWalletBalances(queryClient, { tokens: [phygitalTokenPda] });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.tokenVerifier.byToken(phygitalTokenPda),
+    });
   }
 
   async function saveCustom() {
@@ -218,7 +225,11 @@ export function SigningSettingsSheet({
       <p className="text-sm text-muted-foreground">{copy.wallet.signingBody}</p>
       <div className="rounded-2xl bg-muted/25 px-4 py-3">
         <p className="text-xs text-muted-foreground">{copy.wallet.signingCurrent}</p>
-        <p className="text-sm font-medium">{copy.wallet.signingDefault}</p>
+        <p className="text-sm font-medium">
+          {verifierStatus.data?.custom
+            ? copy.wallet.signingCustom
+            : copy.wallet.signingDefault}
+        </p>
       </div>
       <Button
         type="button"

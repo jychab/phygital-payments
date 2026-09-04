@@ -7,8 +7,11 @@
  */
 
 export * from "./addVerifier.js";
+export * from "./clearRecoveryWallet.js";
 export * from "./clearTokenVerifier.js";
 export * from "./execute.js";
 export * from "./initializeConfig.js";
+export * from "./recoveryWalletExecute.js";
 export * from "./removeVerifier.js";
+export * from "./setRecoveryWallet.js";
 export * from "./setTokenVerifier.js";

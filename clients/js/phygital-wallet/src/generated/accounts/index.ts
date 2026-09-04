@@ -7,4 +7,5 @@
  */
 
 export * from "./config.js";
+export * from "./recoveryWallet.js";
 export * from "./tokenVerifier.js";

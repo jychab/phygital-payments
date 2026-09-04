@@ -8,6 +8,9 @@ use common::{
 use phygital_wallet::instructions::token_verifier::{
     build_clear_token_verifier_challenge, build_set_token_verifier_challenge,
 };
+use phygital_wallet::instructions::recovery_wallet::{
+    build_clear_recovery_wallet_challenge, build_set_recovery_wallet_challenge,
+};
 use phygital_wallet::CompactInstruction;
 use sha2::{Digest, Sha256};
 use solana_keypair::Keypair;
@@ -145,6 +148,46 @@ fn clear_token_verifier_challenge_golden_vector() {
     let expected: [u8; 32] = Sha256::digest(&preimage).into();
     assert_eq!(
         build_clear_token_verifier_challenge(slot_hash, &phygital_token),
+        expected
+    );
+}
+
+#[test]
+fn set_recovery_wallet_challenge_binds_key() {
+    let slot_hash = [9u8; 32];
+    let phygital_token = Pubkey::default();
+    let recovery = Keypair::new().pubkey();
+    let mut preimage = Vec::new();
+    preimage.extend_from_slice(b"phygital_wallet:set_rw:v1");
+    preimage.extend_from_slice(&slot_hash);
+    preimage.extend_from_slice(phygital_token.as_ref());
+    preimage.extend_from_slice(recovery.as_ref());
+    let expected: [u8; 32] = Sha256::digest(&preimage).into();
+    assert_eq!(
+        build_set_recovery_wallet_challenge(slot_hash, &phygital_token, &recovery),
+        expected
+    );
+    assert_ne!(
+        build_set_recovery_wallet_challenge(slot_hash, &phygital_token, &recovery),
+        build_set_recovery_wallet_challenge(
+            slot_hash,
+            &phygital_token,
+            &Keypair::new().pubkey()
+        )
+    );
+}
+
+#[test]
+fn clear_recovery_wallet_challenge_golden_vector() {
+    let slot_hash = [11u8; 32];
+    let phygital_token = Pubkey::default();
+    let mut preimage = Vec::new();
+    preimage.extend_from_slice(b"phygital_wallet:clear_rw:v1");
+    preimage.extend_from_slice(&slot_hash);
+    preimage.extend_from_slice(phygital_token.as_ref());
+    let expected: [u8; 32] = Sha256::digest(&preimage).into();
+    assert_eq!(
+        build_clear_recovery_wallet_challenge(slot_hash, &phygital_token),
         expected
     );
 }

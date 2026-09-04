@@ -17,8 +17,8 @@ use anchor_spl::token_2022::ID as TOKEN_2022_ID;
 use borsh::BorshDeserialize;
 use litesvm::LiteSVM;
 use phygital_wallet::{
-    ADMIN, CONFIG_SEED, PROGRAM_WALLET_SEED,
-    TOKEN_VERIFIER_SEED, CompactInstruction, Secp256r1VerifyArgs,
+    ADMIN, CONFIG_SEED, PROGRAM_WALLET_SEED, RECOVERY_WALLET_SEED, TOKEN_VERIFIER_SEED,
+    CompactInstruction, Secp256r1VerifyArgs,
 };
 use phygital_token_client::{PhygitalToken, PhygitalTokenType, PHYGITAL_TOKEN_DISCRIMINATOR};
 use solana_account::Account as SolanaAccount;
@@ -230,6 +230,14 @@ impl TestContext {
         .0
     }
 
+    pub fn recovery_wallet_pda(&self, phygital_token: Pubkey) -> Pubkey {
+        Pubkey::find_program_address(
+            &[RECOVERY_WALLET_SEED, phygital_token.as_ref()],
+            &self.program_id,
+        )
+        .0
+    }
+
     pub fn initialize_config(
         &mut self,
         initial_verifiers: &[Pubkey],
@@ -354,6 +362,126 @@ impl TestContext {
             }
             .to_account_metas(None),
             data: phygital_wallet::instruction::ClearTokenVerifier {
+                secp256r1_verify_args: verify_args,
+                slot_number,
+            }
+            .data(),
+        };
+        if signer.pubkey() == self.payer.pubkey() {
+            Self::send_instructions(&mut self.svm, &[secp_ix, ix], &[self.payer.pubkey()])
+        } else {
+            Self::send_instructions(
+                &mut self.svm,
+                &[secp_ix, ix],
+                &[self.payer.pubkey(), signer.pubkey()],
+            )
+        }
+    }
+
+    pub fn set_recovery_wallet(
+        &mut self,
+        passkey: &mut TestPasskey,
+        phygital_token: Pubkey,
+        recovery_wallet: Pubkey,
+    ) -> litesvm::types::TransactionResult {
+        self.set_recovery_wallet_with_signer(
+            passkey,
+            phygital_token,
+            recovery_wallet,
+            &self.verifier.insecure_clone(),
+        )
+    }
+
+    pub fn set_recovery_wallet_with_signer(
+        &mut self,
+        passkey: &mut TestPasskey,
+        phygital_token: Pubkey,
+        recovery_wallet: Pubkey,
+        signer: &Keypair,
+    ) -> litesvm::types::TransactionResult {
+        let (slot_number, slot_hash) = current_slot_entry(&self.svm);
+        let challenge =
+            phygital_wallet::instructions::recovery_wallet::build_set_recovery_wallet_challenge(
+                slot_hash,
+                &phygital_token,
+                &recovery_wallet,
+            );
+        let (secp_ix, verify_args) =
+            passkey.verify_asset_secp256r1_instruction_with_rp_id(challenge, TEST_RP_ID);
+        let ix = anchor_lang::solana_program::instruction::Instruction {
+            program_id: self.program_id,
+            accounts: phygital_wallet::accounts::SetRecoveryWallet {
+                payer: self.payer.pubkey(),
+                verifier: signer.pubkey(),
+                config: self.config_pda(),
+                phygital_token,
+                token_verifier: self.token_verifier_pda(phygital_token),
+                recovery_wallet_account: self.recovery_wallet_pda(phygital_token),
+                slot_hashes: SLOT_HASHES_SYSVAR_ID,
+                instructions_sysvar: INSTRUCTIONS_SYSVAR_ID,
+                phygital_token_program: phygital_token_client::PHYGITAL_TOKEN_ID,
+                system_program: anchor_lang::system_program::ID,
+            }
+            .to_account_metas(None),
+            data: phygital_wallet::instruction::SetRecoveryWallet {
+                recovery_wallet,
+                secp256r1_verify_args: verify_args,
+                slot_number,
+            }
+            .data(),
+        };
+        if signer.pubkey() == self.payer.pubkey() {
+            Self::send_instructions(&mut self.svm, &[secp_ix, ix], &[self.payer.pubkey()])
+        } else {
+            Self::send_instructions(
+                &mut self.svm,
+                &[secp_ix, ix],
+                &[self.payer.pubkey(), signer.pubkey()],
+            )
+        }
+    }
+
+    pub fn clear_recovery_wallet(
+        &mut self,
+        passkey: &mut TestPasskey,
+        phygital_token: Pubkey,
+    ) -> litesvm::types::TransactionResult {
+        self.clear_recovery_wallet_with_signer(
+            passkey,
+            phygital_token,
+            &self.verifier.insecure_clone(),
+        )
+    }
+
+    pub fn clear_recovery_wallet_with_signer(
+        &mut self,
+        passkey: &mut TestPasskey,
+        phygital_token: Pubkey,
+        signer: &Keypair,
+    ) -> litesvm::types::TransactionResult {
+        let (slot_number, slot_hash) = current_slot_entry(&self.svm);
+        let challenge =
+            phygital_wallet::instructions::recovery_wallet::build_clear_recovery_wallet_challenge(
+                slot_hash,
+                &phygital_token,
+            );
+        let (secp_ix, verify_args) =
+            passkey.verify_asset_secp256r1_instruction_with_rp_id(challenge, TEST_RP_ID);
+        let ix = anchor_lang::solana_program::instruction::Instruction {
+            program_id: self.program_id,
+            accounts: phygital_wallet::accounts::ClearRecoveryWallet {
+                verifier: signer.pubkey(),
+                config: self.config_pda(),
+                phygital_token,
+                token_verifier: self.token_verifier_pda(phygital_token),
+                rent_receiver: self.payer.pubkey(),
+                recovery_wallet_account: self.recovery_wallet_pda(phygital_token),
+                slot_hashes: SLOT_HASHES_SYSVAR_ID,
+                instructions_sysvar: INSTRUCTIONS_SYSVAR_ID,
+                phygital_token_program: phygital_token_client::PHYGITAL_TOKEN_ID,
+            }
+            .to_account_metas(None),
+            data: phygital_wallet::instruction::ClearRecoveryWallet {
                 secp256r1_verify_args: verify_args,
                 slot_number,
             }
@@ -775,6 +903,66 @@ impl TestContext {
             }
             .data(),
         }
+    }
+
+    pub fn recovery_wallet_execute_ix(
+        &self,
+        asset: Pubkey,
+        recovery_wallet: Pubkey,
+        compact_instructions: Vec<CompactInstruction>,
+        remaining: Vec<anchor_lang::solana_program::instruction::AccountMeta>,
+    ) -> anchor_lang::solana_program::instruction::Instruction {
+        let mut accounts = phygital_wallet::accounts::RecoveryWalletExecute {
+            recovery_wallet,
+            phygital_token: asset,
+            recovery_wallet_account: self.recovery_wallet_pda(asset),
+            wallet: self.wallet(asset),
+        }
+        .to_account_metas(None);
+        accounts.extend(remaining);
+
+        anchor_lang::solana_program::instruction::Instruction {
+            program_id: self.program_id,
+            accounts,
+            data: phygital_wallet::instruction::RecoveryWalletExecute {
+                compact_instructions,
+            }
+            .data(),
+        }
+    }
+
+    pub fn send_recovery_wallet_execute(
+        &mut self,
+        asset: Pubkey,
+        recovery: &Keypair,
+        compact_instructions: Vec<CompactInstruction>,
+        remaining: Vec<anchor_lang::solana_program::instruction::AccountMeta>,
+        extra_signers: &[Pubkey],
+    ) -> litesvm::types::TransactionResult {
+        let ix = self.recovery_wallet_execute_ix(
+            asset,
+            recovery.pubkey(),
+            compact_instructions,
+            remaining,
+        );
+        let mut signers = vec![self.payer.pubkey(), recovery.pubkey()];
+        for s in extra_signers {
+            if !signers.contains(s) {
+                signers.push(*s);
+            }
+        }
+        Self::send_instructions(&mut self.svm, &[ix], &signers)
+    }
+
+    pub fn send_recovery_lamport_transfer(
+        &mut self,
+        asset: Pubkey,
+        recovery: &Keypair,
+        recipient: Pubkey,
+        amount: u64,
+    ) -> litesvm::types::TransactionResult {
+        let (remaining, compact) = self.lamport_transfer_compact(asset, recipient, amount);
+        self.send_recovery_wallet_execute(asset, recovery, compact, remaining, &[])
     }
 
     pub fn send_execute_spl_transfer(

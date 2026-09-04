@@ -67,6 +67,7 @@ export function WalletHomePanel({
   activityItems,
   activityAssetMetaByMint,
   visitorNotice,
+  onAddRecovery,
   status = "live",
   className,
 }: {
@@ -93,6 +94,8 @@ export function WalletHomePanel({
   activityItems?: WalletActivityItem[];
   activityAssetMetaByMint?: Record<string, { symbol: string; name: string }>;
   onManageDevice: () => void;
+  /** Owner: open recovery set/clear from the first-funds ack. */
+  onAddRecovery?: () => void;
   /** Quiet visitor role notice (not linked as owner on this phone). */
   visitorNotice?: string | null;
   status?: "live" | "refreshing" | "error";
@@ -115,7 +118,7 @@ export function WalletHomePanel({
   const [firstRunDismissed, setFirstRunDismissed] = useLocalFlag(FIRST_RUN_FLAG);
   const [recoveryAcked, setRecoveryAcked] = useLocalFlag(RECOVERY_ACK_FLAG);
   const showFirstRun = empty && !linkedMint && !firstRunDismissed;
-  const showRecoveryAck = hasFungible && !recoveryAcked;
+  const showRecoveryAck = Boolean(onAddRecovery) && hasFungible && !recoveryAcked;
 
   const tokenPreview = useMemo(() => previewHoldings(holdings), [holdings]);
   const collectiblePreview = useMemo(
@@ -483,9 +486,21 @@ export function WalletHomePanel({
               type="button"
               size="lg"
               className="w-full"
-              onClick={() => setRecoveryAcked(true)}
+              onClick={() => {
+                setRecoveryAcked(true);
+                onAddRecovery?.();
+              }}
             >
               {copy.wallet.recoveryAckCta}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              className="w-full"
+              onClick={() => setRecoveryAcked(true)}
+            >
+              {copy.wallet.recoveryAckSkip}
             </Button>
           </div>
         </DialogContent>

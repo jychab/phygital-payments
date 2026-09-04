@@ -6,46 +6,41 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { NavBar } from "@/components/shared/nav-bar";
+import { GroupedList, GroupedRow } from "@/components/shared/grouped-list";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import type { WalletRole } from "@/components/token/token-address-route";
+import { useRecoveryWallet } from "@/hooks/wallet/use-recovery-wallet";
 import { copy } from "@/lib/copy/phygital";
 import { queryKeys } from "@/lib/queries";
+import { shortAddress } from "@/lib/utils";
 import { toUserErrorMessage } from "@/lib/user-errors";
-import {
-  deleteDeviceCredential,
-  signOutDevice,
-  unlinkToken,
-} from "@/lib/wallet/device-auth-client";
+import { unlinkToken } from "@/lib/wallet/device-auth-client";
 
-type AccessAction = "unlink" | "remove" | "signOut";
-
-/** Access: unlink this accessory, remove phone (cascade), or sign out. */
+/** Access: recovery status and unlink this item (owners). */
 export function AccessRecoverySheet({
   phygitalTokenPda,
   role,
   onBack,
+  onOpenRecovery,
 }: {
   phygitalTokenPda: string;
   role: WalletRole;
   onBack: () => void;
+  /** Owner: open recovery set/clear sheet. */
+  onOpenRecovery?: () => void;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [busy, setBusy] = useState<AccessAction | null>(null);
+  const [busy, setBusy] = useState(false);
+  const isOwner = role === "owner";
+  const recovery = useRecoveryWallet(isOwner ? phygitalTokenPda : null);
 
-  async function run(kind: AccessAction) {
-    setBusy(kind);
+  async function unlink() {
+    setBusy(true);
     try {
-      if (kind === "unlink") {
-        await unlinkToken(phygitalTokenPda);
-        toast.success(copy.wallet.deviceUnlinked);
-      } else if (kind === "remove") {
-        await deleteDeviceCredential();
-        toast.success(copy.wallet.deviceAuthRemoved);
-      } else {
-        await signOutDevice();
-      }
+      await unlinkToken(phygitalTokenPda);
+      toast.success(copy.wallet.deviceUnlinked);
       await queryClient.invalidateQueries({
         queryKey: queryKeys.deviceAuth.all(),
       });
@@ -53,9 +48,13 @@ export function AccessRecoverySheet({
     } catch (e) {
       toast.error(toUserErrorMessage(e));
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
+
+  const recoverySubtitle = recovery.data?.configured && recovery.data.recoveryWallet
+    ? shortAddress(recovery.data.recoveryWallet, 4)
+    : copy.wallet.recoveryWalletNotConfigured;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -73,54 +72,42 @@ export function AccessRecoverySheet({
           {copy.wallet.accessAndRecoveryBody}
         </p>
       </div>
+
+      {isOwner && onOpenRecovery ? (
+        <GroupedList>
+          <GroupedRow
+            onClick={onOpenRecovery}
+            subtitle={
+              recovery.isLoading
+                ? copy.common.loading
+                : recoverySubtitle
+            }
+          >
+            {copy.wallet.accessRecoveryRow}
+          </GroupedRow>
+        </GroupedList>
+      ) : !isOwner ? (
+        <p className="px-1 text-sm text-muted-foreground">
+          {copy.wallet.accessRecoveryAskOwner}
+        </p>
+      ) : null}
+
       <div className="mt-auto flex flex-col gap-2">
         <p className="text-sm text-muted-foreground">
           {copy.wallet.deviceAuthReady}
         </p>
-        {role === "owner" ? (
+        {isOwner ? (
           <Button
             type="button"
             variant="outline"
             size="lg"
             className="w-full"
-            disabled={busy != null}
-            onClick={() => void run("unlink")}
+            disabled={busy}
+            onClick={() => void unlink()}
           >
-            {busy === "unlink" ? (
-              <Spinner className="size-4" />
-            ) : (
-              copy.wallet.deviceUnlink
-            )}
+            {busy ? <Spinner className="size-4" /> : copy.wallet.deviceUnlink}
           </Button>
         ) : null}
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="w-full"
-          disabled={busy != null}
-          onClick={() => void run("remove")}
-        >
-          {busy === "remove" ? (
-            <Spinner className="size-4" />
-          ) : (
-            copy.wallet.deviceAuthRemove
-          )}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="lg"
-          className="w-full"
-          disabled={busy != null}
-          onClick={() => void run("signOut")}
-        >
-          {busy === "signOut" ? (
-            <Spinner className="size-4" />
-          ) : (
-            copy.wallet.deviceSignOut
-          )}
-        </Button>
       </div>
     </div>
   );

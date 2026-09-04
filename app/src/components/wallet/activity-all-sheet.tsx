@@ -50,12 +50,12 @@ export function ActivityAllSheet({
             {copy.common.back}
           </Button>
         }
-        title="Activity"
+        title={copy.wallet.activity}
       />
 
       <ActivityList
         items={pages}
-        emptyLabel="No activity yet"
+        emptyLabel={copy.wallet.noActivity}
         assetMetaByMint={activity.mintMeta}
         hasMore={Boolean(activity.nextCursor)}
         loadingMore={activity.isFetching && before != null}

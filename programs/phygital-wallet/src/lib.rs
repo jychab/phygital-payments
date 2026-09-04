@@ -59,6 +59,32 @@ pub mod phygital_wallet {
         )
     }
 
+    pub fn set_recovery_wallet(
+        ctx: Context<SetRecoveryWallet>,
+        recovery_wallet: Pubkey,
+        secp256r1_verify_args: Secp256r1VerifyArgs,
+        slot_number: u64,
+    ) -> Result<()> {
+        instructions::recovery_wallet::set_recovery_wallet_handler(
+            ctx,
+            recovery_wallet,
+            secp256r1_verify_args,
+            slot_number,
+        )
+    }
+
+    pub fn clear_recovery_wallet(
+        ctx: Context<ClearRecoveryWallet>,
+        secp256r1_verify_args: Secp256r1VerifyArgs,
+        slot_number: u64,
+    ) -> Result<()> {
+        instructions::recovery_wallet::clear_recovery_wallet_handler(
+            ctx,
+            secp256r1_verify_args,
+            slot_number,
+        )
+    }
+
     /// Passkey-gated execute of compact inner instructions.
     pub fn execute<'info>(
         ctx: Context<'info, Execute<'info>>,
@@ -72,5 +98,14 @@ pub mod phygital_wallet {
             secp256r1_verify_args,
             slot_number,
         )
+    }
+
+    /// Ed25519 recovery-key execute (no accessory passkey). Requires a prior
+    /// `set_recovery_wallet` and a matching recovery signer.
+    pub fn recovery_wallet_execute<'info>(
+        ctx: Context<'info, RecoveryWalletExecute<'info>>,
+        compact_instructions: Vec<CompactInstruction>,
+    ) -> Result<()> {
+        instructions::recovery_wallet::recovery_wallet_execute_handler(ctx, compact_instructions)
     }
 }

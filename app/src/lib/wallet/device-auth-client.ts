@@ -215,23 +215,6 @@ export async function loginDevice(): Promise<DeviceSessionInfo> {
   return { credentialId: body.credentialId, expiresAt: body.expiresAt };
 }
 
-export async function signOutDevice(): Promise<void> {
-  const res = await queryFetch("/auth/device-session", { method: "DELETE" });
-  await readJson(res, "Couldn’t sign out");
-}
-
-export async function deleteDeviceCredential(): Promise<void> {
-  const { challengeId, credential } = await assertPlatformPasskey(
-    "Removal was cancelled",
-  );
-  const res = await queryFetch("/auth/device", {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ challengeId, credential }),
-  });
-  await readJson(res, "Couldn’t remove this phone");
-}
-
 export async function fetchDeviceLinks(): Promise<DeviceLink[]> {
   const res = await queryFetch("/auth/device/links");
   const body = await readJson<{ links: DeviceLink[] }>(
