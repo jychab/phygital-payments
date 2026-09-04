@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
-import { RecentsHome } from "@/components/home/recents-home";
+import { OwnedHome } from "@/components/home/owned-home";
 import { products } from "@/lib/copy/phygital";
 
 export const metadata: Metadata = {
-  title: products.recents.name,
-  description: products.recents.tagline,
+  title: products.home.name,
+  description: products.home.tagline,
 };
 
 export default function Home() {
-  return <RecentsHome />;
+  return <OwnedHome />;
 }

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 
+import { mintPossessionToken } from "@/auth/possession-token";
 import { json } from "@/shared/http";
 import { evaluateCounter } from "@/tap/counter-session";
 import {
@@ -7,12 +8,6 @@ import {
   writeCounterSession,
 } from "@/tap/counter-store";
 import { verifyDynamicUrlWithoutCounterCheck } from "@/tap/verify-dynamic-url";
-import { resolveTokenFromPasskeyPubkey } from "@/auth/passkey-verify";
-import {
-  mintSessionToken,
-  readSessionCookie,
-  setSessionCookie,
-} from "@/auth/token-session";
 
 function toUserErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof Error && err.message.trim()) {
@@ -32,20 +27,6 @@ export const verifyTapRoutes = new Hono();
 verifyTapRoutes.get("/verify-tap", async (c) => {
   try {
     const params = new URL(c.req.url).searchParams;
-    const pk = params.get("pk");
-    const session = pk
-      ? await readSessionCookie(c, { secp256r1PublicKey: pk })
-      : null;
-
-    if (session) {
-      return json({
-        isVerified: true,
-        secp256r1PublicKey: session.secp256r1PublicKey,
-        phygitalToken: session.phygitalToken,
-        reentry: true,
-        expiresAt: session.exp,
-      });
-    }
 
     if (!["pk", "s", "c", "n"].every((k) => params.get(k))) {
       return json(
@@ -76,31 +57,24 @@ verifyTapRoutes.get("/verify-tap", async (c) => {
 
     await writeCounterSession(secp256r1PublicKey, { c: counter });
 
-    let phygitalToken: string | undefined;
-    let expiresAt: number | undefined;
+    let possessionToken: string | undefined;
+    let possessionExpiresAt: number | undefined;
     try {
-      const resolved =
-        await resolveTokenFromPasskeyPubkey(secp256r1PublicKey);
-      if (resolved) {
-        phygitalToken = resolved;
-        const minted = await mintSessionToken({
-          phygitalToken,
-          secp256r1PublicKey,
-        });
-        setSessionCookie(c, minted.token, minted.expiresAt, phygitalToken);
-        expiresAt = minted.expiresAt;
-      }
+      const minted = await mintPossessionToken({ secp256r1PublicKey });
+      possessionToken = minted.token;
+      possessionExpiresAt = minted.expiresAt;
     } catch {
-      /* session mint is best-effort on verify-tap */
+      /* possession mint is best-effort */
     }
 
     return json({
       isVerified: true,
       secp256r1PublicKey,
       counter,
-      reentry: false,
-      ...(phygitalToken ? { phygitalToken } : {}),
-      ...(expiresAt != null ? { expiresAt } : {}),
+      ...(possessionToken ? { possessionToken } : {}),
+      ...(possessionExpiresAt != null
+        ? { possessionExpiresAt }
+        : {}),
     });
   } catch (err) {
     return json(

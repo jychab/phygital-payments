@@ -4,11 +4,18 @@ Owner-app authentication and standing-policy HTTP surface.
 
 | File | Role |
 |------|------|
-| `session-routes.ts` | `GET`/`POST /auth/token-session` — read or mint per-token HttpOnly cookie |
-| `token-session.ts` | Mint / parse / require session cookie (`revibase_phygital_session.<token>`) |
-| `passkey-verify.ts` | `verifyResponse` + resolve phygital token PDA |
-| `policies-routes.ts` | `GET/PUT /policies/:token`, `POST .../grants` |
+| `device-routes.ts` | Platform passkey register / login / remove; token links |
+| `device-session.ts` | Single device session cookie (`revibase_device_session`) |
+| `device-db.ts` | `device_credentials` + `device_token_links` D1 |
+| `possession-token.ts` | Short-lived tap/Hold proof for linking (not app session) |
+| `pending-approvals-db.ts` | Soft-deny inbox rows |
+| `passkey-verify.ts` | Accessory `verifyResponse` + resolve phygital token PDA |
+| `policies-routes.ts` | `GET/PUT /policies/:token`, grants, open approvals |
+| `webauthn-challenge.ts` | Platform WebAuthn challenge KV |
 
-Policies and grants are **Revibase product UX**. Storage + evaluation live in
-[`../verifier/approval/`](../verifier/approval/). Custom verifiers usually
-delete `approval/` and these policy routes together.
+App session is minted only by platform passkey (register or assert).
+Accessory Hold / NFC never mints the login cookie.
+
+Admin writes (Approve / Change limits / Cancel) require device session **and**
+owner link for that token. `/preview` skips pending upsert for the owner;
+never upserts when the token is unlinked.

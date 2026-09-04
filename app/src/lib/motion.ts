@@ -1,5 +1,24 @@
 /** Gallery motion tokens — compositor-friendly Tailwind arbitrary animations. */
 
+export const blurEnterTransition = {
+  duration: 0.28,
+  ease: [0.22, 1, 0.36, 1] as const,
+};
+
+export function blurEnter(reduced: boolean | null) {
+  if (reduced) {
+    return {
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+    };
+  }
+  return {
+    initial: { opacity: 0, y: 10, filter: "blur(6px)" },
+    animate: { opacity: 1, y: 0, filter: "blur(0px)" },
+  };
+}
+
+
 export const STAGGER_STEP_MS = 60;
 export const STAGGER_CAP = 6;
 /** Sticky dock trails content settle on token / claim landings. */

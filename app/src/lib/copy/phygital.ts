@@ -11,11 +11,9 @@ export const brand = {
 } as const;
 
 export const products = {
-  recents: {
-    id: "recents",
-    name: "Recents",
-    title: "Recents — Revibase",
-    tagline: "Cards and accessories you’ve tapped",
+  home: {
+    name: "Wallets",
+    tagline: "Your linked cards and accessories",
   },
 } as const;
 
@@ -37,7 +35,9 @@ export const copy = {
     openWalletAria: (label: string) => `Open wallet ${label}`,
     copyAddressAria: (label: string) => `Copy address ${label}`,
     addMoney: "Add money to get started",
-    accessoryConnected: "Connected",
+    sendNeedsFunds: "Add money to send",
+    balancesUpdating: "Updating…",
+    balancesUpdateFailed: "Couldn’t update",
     manageDevice: "Manage device",
     send: "Send",
     receive: "Receive",
@@ -90,6 +90,8 @@ export const copy = {
     selectAsset: "Select asset",
     sendCollectible: "Sending 1 collectible",
     insufficientBalance: "Not enough balance for this amount",
+    selfSend: "You can’t send to this wallet",
+    viewReceipt: "View receipt",
     openCard: "Open card",
     feeBalance: "Network fees",
     feeBalanceHint: "Prepaid SOL Revibase uses to sponsor your sends",
@@ -130,6 +132,57 @@ export const copy = {
     contactNote: "Note",
     noContacts: "No saved contacts yet",
     useContact: "Use contact",
+    removeContact: "Remove",
+    contactsHint: "Saved from sends on this phone.",
+    firstRunTitle: "Your accessory wallet",
+    firstRunBody:
+      "Receive SOL or tokens here. Hold this item to your phone whenever you send.",
+    firstRunCta: "Receive to get started",
+    firstRunDismiss: "Skip for now",
+    networkFeeSponsored: (amountUi: string) =>
+      `Network fee ~${amountUi} SOL (sponsored)`,
+    networkFeeShort: (amountUi: string) => `~${amountUi} SOL fee`,
+    copySignature: "Copy signature",
+    viewOnExplorer: "View on explorer",
+    receiptPending: "Pending",
+    receiptDetails: "Details",
+    accessAndRecovery: "Access",
+    accessAndRecoveryHint: "How this wallet stays yours",
+    accessAndRecoveryBody:
+      "Spending uses this physical item. This phone’s passkey signs you in and owns linked accessories. Approving exceptions or changing limits needs ownership on this phone. Revibase cannot restore access if you lose the item or this phone’s passkey. There is no seed phrase or backup.",
+    recoveryAckTitle: "Keep this accessory safe",
+    recoveryAckBody:
+      "This wallet has no recovery phrase. If you lose the item or this phone’s passkey, the funds cannot be restored.",
+    recoveryAckCta: "I understand",
+    deviceLoginTitle: "Sign in to Revibase",
+    deviceLoginBody:
+      "Use this phone’s Face ID or passkey. Login if you’ve registered before; Register to create a new one.",
+    deviceLoginCta: "Login",
+    deviceRegisterCta: "Register",
+    deviceLinkTitle: "Link this accessory",
+    deviceLinkBody:
+      "Link it to this phone so you can approve larger sends and change limits. You can skip and use the wallet as a visitor.",
+    deviceLinkCta: "Link to this phone",
+    deviceLinkSkip: "Not now",
+    deviceVisitorNotice: "Visitor — linked on another phone",
+    deviceVisitorUnlinkedNotice: "Visitor — not linked on this phone",
+    deviceVisitorSoftDeny:
+      "This send isn’t allowed by the owner’s limits. Ask them to approve it on their phone.",
+    deviceAuthReady: "This phone is signed in",
+    deviceAuthRemove: "Remove this phone",
+    deviceAuthRemoved: "Phone removed",
+    deviceUnlink: "Unlink this accessory",
+    deviceUnlinked: "Accessory unlinked",
+    deviceSignOut: "Sign out",
+    deviceAddAccessory: "Hold to add",
+    deviceAddAccessoryBody: "Hold a card or accessory to link or open it.",
+    openApprovalContinue: "They can continue in the other app",
+    nearbyPolicyTitle: "Send from their phone",
+    nearbyPolicyBody:
+      "This amount isn’t allowed by their spending settings. Ask them to open their wallet and send here instead.",
+    nearbyPolicyFeeBody:
+      "They don’t have enough fee balance to sponsor this. Ask them to top up on their phone, then send here.",
+    nearbyPolicyGotIt: "Got it",
     signingBody:
       "Revibase signs with you when you tap and enforces your spending limits, recipients, and allowed actions. Change only if you trust another service.",
     signingCustomPolicyWarn:
@@ -145,8 +198,6 @@ export const copy = {
     customEndpoint: "Endpoint URL",
     customVerifier: "Verifier address",
     verifierPubkey: "Verifier pubkey",
-    sessionCheckFailed: "Couldn’t check session",
-    sessionUnlockFailed: "Couldn’t unlock session",
     policyDefaultSigningOnly:
       "These settings apply only while Revibase is your signing service. A custom service ignores them.",
     approveSendTitle: "Approve this send?",
@@ -156,8 +207,6 @@ export const copy = {
     approveSendBodyTime: "Sending isn’t allowed right now.",
     approveOnce: "Approve once",
     changeLimits: "Change limits",
-    holdToUnlock: "Hold to unlock",
-    sessionExpiredBody: "Hold your item to continue.",
     sendBlockedHard:
       "This payment isn’t allowed by your settings. Change limits in Settings.",
     spendingLimits: "Spending limits",
@@ -174,17 +223,13 @@ export const copy = {
     save: "Save",
     settingsSaved: "Settings saved",
   },
-  recents: {
-    heading: "Recents",
-    emptyTitle: "Nothing here yet",
-    emptyBody: "Hold a card or accessory to this phone.",
+  home: {
+    heading: "Wallets",
+    emptyTitle: "No linked accessories",
     card: "Card",
     accessory: "Accessory",
-    reopenHoldTitle: "Hold to open",
-    reopenHoldBody: "Hold your item flat against the back of this phone.",
-    reopenSessionExpiredTitle: "Session ended",
-    reopenSessionExpiredBody: "Hold your item here again to open it.",
-    wrongItem: "That isn’t the same card or accessory. Hold the one from Recents.",
+    holdTitle: "Hold to open",
+    holdBody: "Hold your item flat against the back of this phone.",
   },
   address: {
     default: "address",
@@ -202,8 +247,6 @@ export const copy = {
   verify: {
     holdToCheck: "Hold to verify",
     introBody: "Hold your item flat against the back of this phone.",
-    sessionExpiredTitle: "Verification timed out",
-    sessionExpiredBody: "Hold your item here again.",
     verifying: "Verifying…",
     verifyAgain: "Verify again",
     verifyAgainHint: "Hold here to re-check",
@@ -219,7 +262,9 @@ export const copy = {
     notVerifiedHint: "Hold your item flat against the back of this phone.",
     verifyingChip: "Checking your item…",
     notSetUpTitle: "Not set up",
-    notSetUpBody: "This item isn't registered on Revibase yet.",
+    notSetUpBody: "This item isn’t registered on Revibase yet.",
+    loadTimedOut: "Taking too long",
+    loadTimedOutBody: "Check your connection and try again.",
     verifyToUnlockShortcut: "Verify to unlock actions",
   },
   token: {
@@ -241,6 +286,7 @@ export const copy = {
     mintAddress: "Token ID",
     itemLoadFailed: "Couldn’t load item",
     itemNotOnChain: "This item may no longer be available.",
+    unnamedCard: "Collectible",
     wrongItem: "That isn’t this card or accessory.",
   },
   shortcut: {
@@ -253,6 +299,7 @@ export const copy = {
     openInBrowserTitle: "Open in your browser",
     openInBrowserBody: "Open this link in your phone’s browser to continue.",
     copyLink: "Copy link",
+    openInSafari: "Open in Safari",
     linkCopied: "Link copied",
     linkCopyFailed: "Couldn’t copy link",
   },
@@ -261,23 +308,23 @@ export const copy = {
 /** User-facing send / verify error titles and bodies (see user-errors.ts). */
 export const errorCopy = {
   fallback: {
-    title: "Not Completed",
+    title: "Not completed",
     body: "Something went wrong. Try again.",
   },
   couldntVerify: {
-    title: "Couldn't Verify",
+    title: "Couldn’t verify",
     body: "Hold your item here again and try once more.",
   },
   notEnoughMoney: {
-    title: "Not Enough Money",
+    title: "Not enough money",
     body: "There isn’t enough in this wallet for this amount.",
   },
   paymentFailed: {
-    title: "Not Completed",
+    title: "Not completed",
     body: "This couldn’t go through. Check the amount and try again.",
   },
   accessoryLocked: {
-    title: "Accessory Locked",
+    title: "Accessory locked",
     body: "This accessory can’t send right now.",
   },
   sessionEnded: {
@@ -285,7 +332,7 @@ export const errorCopy = {
     body: "Hold your item here again to verify.",
   },
   accessoryNotReady: {
-    title: "Accessory Isn’t Ready",
+    title: "Accessory isn’t ready",
     body: "This accessory isn’t ready to send yet.",
   },
   wrongItem: {
@@ -309,7 +356,7 @@ export const errorCopy = {
     body: "Enter a valid amount.",
   },
   amountTooPrecise: {
-    title: "Amount Too Precise",
+    title: "Amount too precise",
     body: "Use fewer decimal places.",
   },
   tryAgainBody: {

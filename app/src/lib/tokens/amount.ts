@@ -25,9 +25,17 @@ export function formatCompactTokenAmount(uiAmount: string): string {
   return value.toLocaleString(undefined, { maximumFractionDigits });
 }
 
+/** Keep a single decimal point while stripping non-numeric characters. */
+export function sanitizeDecimalInput(raw: string): string {
+  const cleaned = raw.replace(/[^0-9.]/g, "");
+  const dot = cleaned.indexOf(".");
+  if (dot === -1) return cleaned;
+  return `${cleaned.slice(0, dot + 1)}${cleaned.slice(dot + 1).replace(/\./g, "")}`;
+}
+
 export function uiAmountToRaw(uiAmount: string, decimals: number): bigint {
   const trimmed = uiAmount.trim();
-  if (!trimmed || Number(trimmed) <= 0) {
+  if (!trimmed || Number(trimmed) <= 0 || trimmed.split(".").length > 2) {
     throw new Error(errorCopy.enterAmount.body);
   }
   const [whole = "0", frac = ""] = trimmed.split(".");

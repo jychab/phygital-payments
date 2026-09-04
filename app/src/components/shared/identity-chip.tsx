@@ -22,7 +22,7 @@ export function IdentityChip({
   className?: string;
 }) {
   if (!walletAddress) {
-    return <span aria-hidden className="h-9 w-9" />;
+    return <span aria-hidden className="h-11 w-11" />;
   }
 
   const label = shortAddress(walletAddress, 4);
@@ -45,7 +45,7 @@ export function IdentityChip({
       type="button"
       onClick={() => void onClick()}
       className={cn(
-        "inline-flex h-9 max-w-[10.5rem] items-center gap-1.5 rounded-full",
+        "inline-flex min-h-11 h-11 max-w-[10.5rem] items-center gap-1.5 rounded-full",
         "border border-border/60 bg-card/40 px-2.5 text-xs text-foreground",
         "transition-colors hover:bg-card/70",
         className,

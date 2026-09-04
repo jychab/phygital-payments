@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, BellRing, Clock3, RefreshCcw } from "lucide-react";
 
 import { GroupedList, GroupedRow } from "@/components/shared/grouped-list";
-import { explorerTxUrl } from "@/lib/solana/cluster";
+import { ActivityReceiptSheet } from "@/components/wallet/activity-receipt-sheet";
 import { NATIVE_SOL_MINT } from "@/lib/tokens/payment-token";
 import type { WalletActivityItem } from "@/lib/wallet/portfolio-types";
 import { cn, shortAddress } from "@/lib/utils";
@@ -57,6 +58,8 @@ export function ActivityList({
   assetMetaByMint?: Record<string, { symbol: string; name: string }>;
   className?: string;
 }) {
+  const [selected, setSelected] = useState<WalletActivityItem | null>(null);
+
   if (items.length === 0) {
     return (
       <p className={cn("px-4 py-8 text-center text-sm text-muted-foreground", className)}>
@@ -73,7 +76,6 @@ export function ActivityList({
           const subtitle = item.subtitle
             ? shortAddress(item.subtitle, 6)
             : item.statusLabel ?? "Just now";
-          const href = item.signature ? explorerTxUrl(item.signature) : undefined;
 
           const deltas = item.balanceDeltas ?? [];
           const deltaRows =
@@ -105,7 +107,7 @@ export function ActivityList({
           return (
             <GroupedRow
               key={item.id}
-              href={href}
+              onClick={() => setSelected(item)}
               leading={
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-muted/30 text-muted-foreground">
                   <Icon className="size-4" aria-hidden />
@@ -136,6 +138,14 @@ export function ActivityList({
           See more
         </button>
       ) : null}
+      <ActivityReceiptSheet
+        item={selected}
+        open={selected != null}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null);
+        }}
+        assetMetaByMint={assetMetaByMint}
+      />
     </div>
   );
 }

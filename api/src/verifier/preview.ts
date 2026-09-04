@@ -1,13 +1,14 @@
 /**
  * POST /preview — preflight before NFC / passkey (no co-sign).
  *
- * 1. Parse instructions
- * 2. Require wallet PDA as a signer on the intent
- * 3. Fee balance gate (default verifier paymaster)
- * 4. `authorizeIntent` (swap in `authorize.ts` / `approval/`)
+ * Soft deny may upsert `pending_approvals` when an owner exists and this
+ * browser is not the owner (device session + link). Never upsert when unlinked.
  */
 import { Hono } from "hono";
 
+import { getLinkForToken } from "@/auth/device-db";
+import { readDeviceSession } from "@/auth/device-session";
+import { upsertPendingApproval } from "@/auth/pending-approvals-db";
 import { assertFeeBalance } from "@/fees/fee-balance-gate";
 import { json } from "@/shared/http";
 import { assertPreviewWalletSigner } from "@/verifier/assert-preview-wallet";
@@ -66,6 +67,25 @@ previewRoutes.post("/preview", async (c) => {
 
     if (result.ok) {
       return json({ ok: true, intentHash: result.intentHash });
+    }
+
+    if (result.soft) {
+      const ownerLink = await getLinkForToken(phygitalToken);
+      if (ownerLink) {
+        const session = await readDeviceSession(c);
+        const isOwner =
+          session != null && session.credentialId === ownerLink.credentialId;
+        if (!isOwner) {
+          await upsertPendingApproval({
+            phygitalToken,
+            intentHash: result.intentHash,
+            code: result.code,
+            error: result.error,
+            details: result.details,
+          });
+        }
+      }
+      // unlinked → no upsert
     }
 
     return json({

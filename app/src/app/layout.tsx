@@ -9,7 +9,13 @@ export const metadata: Metadata = {
     default: brand.company,
     template: `%s — ${brand.company}`,
   },
-  description: products.recents.tagline,
+  description: products.home.tagline,
+  applicationName: brand.company,
+  appleWebApp: {
+    capable: true,
+    title: brand.company,
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {

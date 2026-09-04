@@ -2,141 +2,98 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { findPhygitalTokenPda } from "phygital-token-sdk";
 
 import { InAppBrowserGate } from "@/components/shared/in-app-browser-gate";
-import { LoadingStatus } from "@/components/shared/loading-status";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
-import { copy } from "@/lib/copy/phygital";
+import { useAccessoryHold } from "@/hooks/token/use-accessory-hold";
 import { useTapVerify } from "@/hooks/token/use-tap-verify";
-import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
-import { queryKeys } from "@/lib/queries";
+import { copy } from "@/lib/copy/phygital";
 import { toUserErrorMessage } from "@/lib/user-errors";
-import {
-  mintTokenSessionViaHold,
-  tokenHomeHref,
-} from "@/lib/wallet/token-session";
+import { storeAccessoryProof, storePossessionToken } from "@/lib/wallet/device-auth-client";
+import { tokenHomeHref } from "@/lib/wallet/token-home-href";
 
 export type TokenNfcCopy = {
   inAppCheck: string;
   holdBody: string;
-  sessionExpiredTitle: string;
-  sessionExpiredBody: string;
-  notSetUpTitle: string;
-  notSetUpBody: string;
 };
 
 /**
- * Cold `/token` — Hold or signed NFC tap, then enter the session-gated home.
+ * Cold `/token` — NFC tap or Hold, then address-gated home.
+ * Tap verify runs here (parent DeviceLoginGate may still be resolving session).
  */
 export function TokenNfcApp({ nfcCopy }: { nfcCopy: TokenNfcCopy }) {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const { hasTapProof, verify, verifyPending, result } = useTapVerify();
-  const tapAddress = result?.phygitalToken?.trim() ?? "";
+  const { hasTapProof, verify, verifyPending, result, verifyError } =
+    useTapVerify();
+  const accessory = useAccessoryHold();
+  const [routeError, setRouteError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!hasTapProof || verify !== "verified" || !tapAddress) return;
-    if (
-      result?.secp256r1PublicKey &&
-      typeof result.expiresAt === "number"
-    ) {
-      queryClient.setQueryData(queryKeys.tokenSession.byToken(tapAddress), {
-        phygitalToken: tapAddress,
-        secp256r1PublicKey: result.secp256r1PublicKey,
-        expiresAt: result.expiresAt,
-      });
+    if (!hasTapProof || verify !== "verified" || !result?.secp256r1PublicKey) {
+      return;
     }
-    router.replace(tokenHomeHref(tapAddress));
-  }, [
-    hasTapProof,
-    verify,
-    tapAddress,
-    result?.secp256r1PublicKey,
-    result?.expiresAt,
-    queryClient,
-    router,
-  ]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const pda = String(
+          await findPhygitalTokenPda(result.secp256r1PublicKey!),
+        );
+        if (result.possessionToken) {
+          storePossessionToken(pda, result.possessionToken);
+        }
+        if (!cancelled) router.replace(tokenHomeHref(pda));
+      } catch (e) {
+        if (!cancelled) setRouteError(toUserErrorMessage(e));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasTapProof, verify, result, router]);
 
-  if (hasTapProof && (verifyPending || verify === "pending")) {
+  async function holdToOpen() {
+    setRouteError(null);
+    const auth = await accessory.hold();
+    if (!auth) return;
+    try {
+      const pda = String(await findPhygitalTokenPda(auth.secp256r1PublicKey));
+      // Reuse this Hold for browse + link (same role as NFC possessionToken).
+      storeAccessoryProof(pda, {
+        message: auth.message,
+        response: auth.response,
+      });
+      router.replace(tokenHomeHref(pda));
+    } catch (e) {
+      setRouteError(toUserErrorMessage(e));
+    }
+  }
+
+  if (accessory.showInAppGate) {
+    return <InAppBrowserGate body={nfcCopy.inAppCheck} />;
+  }
+
+  if (
+    hasTapProof &&
+    (verifyPending || verify === "pending" || verify === "verified") &&
+    !routeError
+  ) {
     return (
       <NfcHoldStatus
         size="lg"
         pulsing
         busy
         title={copy.verify.verifyingChip}
-        body={undefined}
       />
     );
   }
 
-  if (hasTapProof && verify === "verified") {
-    if (!tapAddress) {
-      return (
-        <NfcHoldStatus
-          size="lg"
-          pulsing={false}
-          title={nfcCopy.notSetUpTitle}
-          body={nfcCopy.notSetUpBody}
-        />
-      );
-    }
-    return <LoadingStatus label={copy.verify.verifyingChip} />;
-  }
-
-  return (
-    <HoldToCheckLanding
-      nfcCopy={nfcCopy}
-      sessionExpired={hasTapProof && verify === "failed"}
-    />
-  );
-}
-
-function HoldToCheckLanding({
-  nfcCopy,
-  sessionExpired,
-}: {
-  nfcCopy: TokenNfcCopy;
-  sessionExpired: boolean;
-}) {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const inApp = useIsInAppBrowser();
-
-  const [showInAppGate, setShowInAppGate] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function onCheck() {
-    if (inApp) {
-      setShowInAppGate(true);
-      return;
-    }
-    setError(null);
-    setBusy(true);
-    try {
-      const session = await mintTokenSessionViaHold();
-      queryClient.setQueryData(
-        queryKeys.tokenSession.byToken(session.phygitalToken),
-        session,
-      );
-      router.replace(tokenHomeHref(session.phygitalToken));
-    } catch (err) {
-      setError(toUserErrorMessage(err, copy.verify.failedBody));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (showInAppGate) {
-    return <InAppBrowserGate body={nfcCopy.inAppCheck} />;
-  }
-
-  if (busy) {
+  if (accessory.holding) {
     return (
       <NfcHoldStatus
         size="lg"
+        pulsing
         busy
         title={copy.verify.holdStill}
         body={copy.verify.holdStillBody}
@@ -144,47 +101,27 @@ function HoldToCheckLanding({
     );
   }
 
-  if (error) {
-    return (
-      <NfcHoldStatus
-        size="lg"
-        pulsing={false}
-        title={copy.verify.failed}
-        body={error || copy.verify.failedBody}
-        action={
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            onClick={() => void onCheck()}
-          >
-            {copy.common.tryAgain}
-          </Button>
-        }
-      />
-    );
-  }
-
-  const landingTitle = sessionExpired
-    ? nfcCopy.sessionExpiredTitle
-    : copy.verify.holdToCheck;
-  const landingBody = sessionExpired
-    ? nfcCopy.sessionExpiredBody
-    : nfcCopy.holdBody;
+  const error =
+    accessory.error ??
+    routeError ??
+    (hasTapProof && verify === "failed"
+      ? toUserErrorMessage(verifyError)
+      : null);
 
   return (
     <NfcHoldStatus
       size="lg"
-      title={landingTitle}
-      body={landingBody}
+      pulsing={!error}
+      title={error ? copy.verify.failed : copy.verify.holdToCheck}
+      body={error ?? nfcCopy.holdBody}
       action={
         <Button
           type="button"
           size="lg"
           className="w-full"
-          onClick={() => void onCheck()}
+          onClick={() => void holdToOpen()}
         >
-          {copy.verify.holdToCheck}
+          {error ? copy.common.tryAgain : copy.verify.holdToCheck}
         </Button>
       }
     />

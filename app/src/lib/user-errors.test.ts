@@ -7,7 +7,7 @@ describe("toUserFacingError", () => {
     const facing = toUserFacingError(
       new Error("They don't have enough balance for this payment."),
     );
-    expect(facing.title).toBe("Not Enough Money");
+    expect(facing.title).toBe("Not enough money");
     expect(facing.body).toMatch(/enough/i);
   });
 
@@ -17,7 +17,7 @@ describe("toUserFacingError", () => {
         "Transaction would fail on-chain:\nProgram log: Error: insufficient funds",
       ),
     );
-    expect(sim.title).toBe("Not Enough Money");
+    expect(sim.title).toBe("Not enough money");
   });
 
   it("maps a passkey mismatch to Different item", () => {
@@ -37,6 +37,6 @@ describe("toUserFacingError", () => {
     const facing = toUserFacingError(
       new Error("Amount supports at most 6 decimals"),
     );
-    expect(facing.title).toBe("Amount Too Precise");
+    expect(facing.title).toBe("Amount too precise");
   });
 });

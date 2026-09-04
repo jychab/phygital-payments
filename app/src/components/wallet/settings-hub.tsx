@@ -11,6 +11,7 @@ import { useRpcPreference } from "@/hooks/wallet/use-rpc-preference";
 import { copy } from "@/lib/copy/phygital";
 import { fetchEffectivePolicy } from "@/lib/wallet/policies-client";
 import { queryKeys, queryOptions } from "@/lib/queries";
+import type { WalletRole } from "@/components/token/token-address-route";
 
 export type SettingsTarget =
   | "spendingLimits"
@@ -18,21 +19,26 @@ export type SettingsTarget =
   | "allowedActions"
   | "signing"
   | "rpcConnection"
-  | "feeBalance";
+  | "feeBalance"
+  | "access"
+  | "contacts";
 
 /** Wallet settings hub — primary policies + Advanced group. */
 export function SettingsHub({
   onBack,
   onOpen,
   phygitalTokenPda,
+  role = "visitor",
 }: {
   onBack: () => void;
   onOpen: (target: SettingsTarget) => void;
   phygitalTokenPda?: string;
+  role?: WalletRole;
 }) {
   const queryClient = useQueryClient();
   const fee = useFeeBalance(phygitalTokenPda ?? null);
   const rpc = useRpcPreference();
+  const isOwner = role === "owner";
   const feeLabel = fee.data
     ? `${copy.wallet.feeBalance} · ${fee.data.balanceUi} SOL`
     : copy.wallet.feeBalance;
@@ -41,13 +47,13 @@ export function SettingsHub({
     : `${copy.wallet.rpcConnection} · ${copy.wallet.rpcDefault}`;
 
   useEffect(() => {
-    if (!phygitalTokenPda) return;
+    if (!phygitalTokenPda || !isOwner) return;
     void queryClient.prefetchQuery({
       queryKey: queryKeys.walletPolicy.byToken(phygitalTokenPda),
       queryFn: () => fetchEffectivePolicy(phygitalTokenPda),
       ...queryOptions.default,
     });
-  }, [phygitalTokenPda, queryClient]);
+  }, [phygitalTokenPda, queryClient, isOwner]);
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -61,6 +67,14 @@ export function SettingsHub({
       />
 
       <GroupedList>
+        <GroupedRow onClick={() => onOpen("access")}>
+          <span className="flex w-full items-center justify-between gap-2">
+            <span>{copy.wallet.accessAndRecovery}</span>
+          </span>
+        </GroupedRow>
+        <GroupedRow onClick={() => onOpen("contacts")}>
+          {copy.wallet.contacts}
+        </GroupedRow>
         <GroupedRow onClick={() => onOpen("feeBalance")}>
           <span className="flex w-full items-center justify-between gap-2">
             <span>{feeLabel}</span>
@@ -73,17 +87,19 @@ export function SettingsHub({
         </GroupedRow>
       </GroupedList>
 
-      <GroupedList footer={copy.wallet.policyDefaultSigningOnly}>
-        <GroupedRow onClick={() => onOpen("spendingLimits")}>
-          {copy.wallet.spendingLimits}
-        </GroupedRow>
-        <GroupedRow onClick={() => onOpen("recipients")}>
-          {copy.wallet.recipients}
-        </GroupedRow>
-        <GroupedRow onClick={() => onOpen("allowedActions")}>
-          {copy.wallet.allowedActions}
-        </GroupedRow>
-      </GroupedList>
+      {isOwner ? (
+        <GroupedList footer={copy.wallet.policyDefaultSigningOnly}>
+          <GroupedRow onClick={() => onOpen("spendingLimits")}>
+            {copy.wallet.spendingLimits}
+          </GroupedRow>
+          <GroupedRow onClick={() => onOpen("recipients")}>
+            {copy.wallet.recipients}
+          </GroupedRow>
+          <GroupedRow onClick={() => onOpen("allowedActions")}>
+            {copy.wallet.allowedActions}
+          </GroupedRow>
+        </GroupedList>
+      ) : null}
 
       <GroupedList label={copy.wallet.advanced}>
         <GroupedRow onClick={() => onOpen("rpcConnection")}>
@@ -96,9 +112,11 @@ export function SettingsHub({
             ) : null}
           </span>
         </GroupedRow>
-        <GroupedRow onClick={() => onOpen("signing")}>
-          {copy.wallet.signing}
-        </GroupedRow>
+        {isOwner ? (
+          <GroupedRow onClick={() => onOpen("signing")}>
+            {copy.wallet.signing}
+          </GroupedRow>
+        ) : null}
       </GroupedList>
     </div>
   );

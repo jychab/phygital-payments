@@ -111,6 +111,18 @@ export async function createGrant(args: {
     )
     .bind(grantId, args.phygitalToken, args.intentHash, expiresAt, now)
     .run();
+
+  // Resolve matching open approval if present (Approve once from inbox).
+  await db()
+    .prepare(
+      `UPDATE pending_approvals
+       SET resolved_at = ?
+       WHERE phygital_token = ? AND intent_hash = ?
+         AND resolved_at IS NULL`,
+    )
+    .bind(now, args.phygitalToken, args.intentHash)
+    .run();
+
   return { grantId, expiresAt };
 }
 

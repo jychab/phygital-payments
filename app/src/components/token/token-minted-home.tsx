@@ -15,14 +15,20 @@ import {
   tokenHasLinkedMint,
   type PhygitalToken,
 } from "@/lib/phygital/token";
+import type { WalletRole } from "@/components/token/token-address-route";
+import type { LinkStatus } from "@/lib/wallet/device-auth-client";
 
 /** Minted-token home — card gallery; Wallet via identity chip. */
 export function TokenMintedHome({
   token: tokenProp,
   liveConfirmed: liveConfirmedProp = false,
+  role = "visitor",
+  linkStatus,
 }: {
   token: PhygitalToken;
   liveConfirmed?: boolean;
+  role?: WalletRole;
+  linkStatus?: LinkStatus;
 }) {
   const session = useTokenVerifySession(tokenProp, liveConfirmedProp);
   const mint = tokenHasLinkedMint(session.token)
@@ -49,6 +55,8 @@ export function TokenMintedHome({
       {showWallet ? (
         <WalletWorkspace
           token={session.token}
+          role={role}
+          linkStatus={linkStatus}
           showBackToCard
           onBackToCard={() => setShowWallet(false)}
           cardLabel={collectible?.name ?? copy.wallet.backToCard}

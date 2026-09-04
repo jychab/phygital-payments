@@ -19,7 +19,7 @@ export const appCors = cors({
     }
     return null;
   },
-  allowMethods: ["GET", "POST", "PUT", "OPTIONS"],
+  allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Accept"],
   credentials: true,
   maxAge: 86400,

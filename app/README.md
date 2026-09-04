@@ -1,6 +1,6 @@
 # Revibase
 
-Next.js frontend for Revibase: **Recents** and **Wallet** on `/token`.
+Next.js frontend for Revibase: signed-in **home** (owned links) and **Wallet** on `/token`.
 Backend APIs live in the sibling [`api/`](../api/) Worker (`https://api.revibase.com`).
 
 ## Setup

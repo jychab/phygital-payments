@@ -54,7 +54,6 @@ describe("isPersistedQueryKey", () => {
 
   it("skips growing or one-shot caches", () => {
     expect(isPersistedQueryKey(["tapVerify", "pk=1"])).toBe(false);
-    expect(isPersistedQueryKey(["dasCollectible", "batch", "a"])).toBe(false);
-    expect(isPersistedQueryKey(["tokenSession", "token"])).toBe(false);
+    expect(isPersistedQueryKey(["deviceAuth", "session"])).toBe(false);
   });
 });

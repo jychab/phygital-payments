@@ -46,8 +46,10 @@ try {
   const signed = await signTransactionMessageWithSigners(message);
 } catch (e) {
   if (e instanceof PolicyDeniedError && e.soft) {
-    // Offer Approve once → POST /policies/:token/grants → retry send
-    // (SDK always re-previews; grant makes preview succeed)
+    // Soft deny may create an open approval for the *owner* phone when one is
+    // linked. Owner tabs with a valid device session + link skip the inbox row.
+    // Unlinked tokens never upsert. Visitors / external dapps: message only or
+    // wait for the owner to Approve once / Change limits, then retry.
   }
   throw e;
 }
@@ -59,6 +61,10 @@ After resolving the verifier, the SDK uses the API **base** (`token_verifier.end
 - Co-sign: `POST {base}/sign`
 
 Soft denials throw `PolicyDeniedError` with `code`, `soft`, and `intentHash`.
+Preview uses `credentials: "include"` so an **owner** Revibase tab (device
+session + link) can skip creating an open-approval inbox row. Visitors and
+external dapps still upsert when an owner exists; **unlinked** tokens never
+upsert.
 
 ## Token verifier override
 

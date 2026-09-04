@@ -11,7 +11,11 @@ import { bindVerifiedPasskey } from "@/lib/token/bind-passkey";
 export async function authenticateToken(args?: {
   expectedPublicKey?: string;
   onPasskeyComplete?: () => void;
-}): Promise<{ secp256r1PublicKey: string }> {
+}): Promise<{
+  secp256r1PublicKey: string;
+  message: string;
+  response: Awaited<ReturnType<typeof startAuthentication>>;
+}> {
   const message = crypto.randomUUID();
   const response = await startAuthentication(message, getSolanaRpc());
 
@@ -23,5 +27,5 @@ export async function authenticateToken(args?: {
   // Only signal success after crypto verify — not right after the OS prompt.
   args?.onPasskeyComplete?.();
 
-  return { secp256r1PublicKey };
+  return { secp256r1PublicKey, message, response };
 }

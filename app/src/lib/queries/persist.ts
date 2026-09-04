@@ -73,8 +73,6 @@ export function isPersistedQueryKey(queryKey: readonly unknown[]): boolean {
   if (typeof root !== "string" || !PERSISTED_QUERY_ROOTS.has(root)) {
     return false;
   }
-  // Prefetch batch keys are ephemeral; per-mint entries are what we restore.
-  if (root === "dasCollectible" && queryKey[1] === "batch") return false;
   return true;
 }
 

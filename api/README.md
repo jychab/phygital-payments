@@ -9,8 +9,8 @@ api/src/
   index.ts          Worker entry — CORS, request store, mounts domains
   shared/           Cross-cutting: HTTP helpers, D1, Solana cluster, crypto
   tokens/           Verified catalog, rarity index, fee-balance
-  tap/              NFC /verify-tap (session cookie, else counter + new cookie)
-  auth/             Owner session mint + standing policy / grant routes
+  tap/              NFC /verify-tap (pubkey + optional possession token)
+  auth/             Device session + token links + standing policy / grants
   verifier/         ★ Template: POST /preview + POST /sign (forkable)
   fees/             Paymaster fee-balance ledger + Helius accounting
   webhooks/         POST /webhooks/helius
@@ -44,7 +44,11 @@ pnpm --filter api dev
 |--------|------|--------|
 | GET | `/health` | entry |
 | GET | `/verify-tap` | `tap/` |
-| GET/POST | `/auth/token-session` | `auth/` (GET takes `?phygitalToken=`) |
+| GET/POST/DELETE | `/auth/device-session` | `auth/` (platform passkey login) |
+| GET/POST/DELETE | `/auth/device` | `auth/` (register / cascade remove) |
+| GET/POST | `/auth/device/links` | `auth/` (owned links; POST link) |
+| GET | `/auth/device/links/status` | `auth/` |
+| DELETE | `/auth/device/links/:token` | `auth/` (owner unlink) |
 | POST | `/preview` | `verifier/` (+ fee balance gate) |
 | POST | `/sign` | `verifier/` (+ fee balance gate) |
 | GET/PUT | `/policies/:phygitalToken` | `auth/` → uses `verifier/approval` |
@@ -81,7 +85,7 @@ Apply migration: `wrangler d1 migrations apply phygital-token --remote`
 | Name | Where | Purpose |
 |------|-------|---------|
 | `VERIFIER_SECRET_KEY` | secret | ed25519 co-signer for `/sign` |
-| `POLICY_SESSION_SECRET` | secret | HMAC for owner session cookie |
+| `POLICY_SESSION_SECRET` | secret | HMAC for device session + possession tokens |
 | `TOP_UP_ACCUMULATOR` | secret/var | SOL address that receives top-ups |
 | `HELIUS_WEBHOOK_AUTH` | secret | Shared auth for `/webhooks/helius` |
 | `SOLANA_RPC_URL` / `SOLANA_CLUSTER` | vars | DAS / chain reads |

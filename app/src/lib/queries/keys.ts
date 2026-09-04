@@ -1,17 +1,11 @@
 /** React Query key factories. Keep in sync with `persist.ts` root names. */
 
 export const queryKeys = {
-  dasCollectible: {
-    all: () => ["dasCollectible"] as const,
-    byMint: (mint: string | null) =>
-      [...queryKeys.dasCollectible.all(), mint] as const,
-    batch: (mints: string[]) =>
-      [
-        ...queryKeys.dasCollectible.all(),
-        "batch",
-        ...[...mints].sort(),
-      ] as const,
-  },
+    dasCollectible: {
+      all: () => ["dasCollectible"] as const,
+      byMint: (mint: string | null) =>
+        [...queryKeys.dasCollectible.all(), mint] as const,
+    },
 
   mintedCollectibleView: {
     all: () => ["mintedCollectibleView"] as const,
@@ -59,16 +53,24 @@ export const queryKeys = {
       [...queryKeys.walletPolicy.all(), token] as const,
   },
 
+  walletApprovals: {
+    all: () => ["walletApprovals"] as const,
+    byToken: (token: string | null) =>
+      [...queryKeys.walletApprovals.all(), token] as const,
+  },
+
+  deviceAuth: {
+    all: () => ["deviceAuth"] as const,
+    session: () => [...queryKeys.deviceAuth.all(), "session"] as const,
+    links: () => [...queryKeys.deviceAuth.all(), "links"] as const,
+    linkStatus: (token: string | null) =>
+      [...queryKeys.deviceAuth.all(), "status", token] as const,
+  },
+
   walletPda: {
     all: () => ["walletPda"] as const,
     byToken: (token: string | null) =>
       [...queryKeys.walletPda.all(), token] as const,
-  },
-
-  tokenSession: {
-    all: () => ["tokenSession"] as const,
-    byToken: (token: string | null) =>
-      [...queryKeys.tokenSession.all(), token] as const,
   },
 
   phygitalToken: {

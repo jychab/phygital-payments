@@ -1,14 +1,17 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { LazyMotion, domAnimation, m } from "framer-motion";
-import { ArrowDown, ArrowUp, Nfc, RefreshCcw, Settings } from "lucide-react";
+import { LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
+import { ArrowDown, ArrowUp, RefreshCcw, Settings } from "lucide-react";
 
+import { CopyableAddress } from "@/components/shared/copyable-address";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ActivityList } from "@/components/wallet/activity-list";
 import { CollectiblesGrid } from "@/components/wallet/collectibles-grid";
 import { TokenHoldingRow } from "@/components/wallet/token-holding-row";
 import { GroupedList } from "@/components/shared/grouped-list";
+import { useLocalFlag } from "@/lib/local-flag";
 import { copy } from "@/lib/copy/phygital";
 import type {
   WalletActivityItem,
@@ -24,7 +27,11 @@ import {
 } from "@/lib/wallet/portfolio-preview";
 import { formatUsd, sumUsd } from "@/lib/currency/usd";
 import { formatCompactTokenAmount } from "@/lib/tokens/amount";
-import { cn, shortAddress } from "@/lib/utils";
+import { blurEnter, blurEnterTransition } from "@/lib/motion";
+import { cn } from "@/lib/utils";
+
+const FIRST_RUN_FLAG = "revibase.first-run.wallet.v1";
+const RECOVERY_ACK_FLAG = "revibase.recovery-ack.v1";
 
 /** Shared Wallet panel — calm home: capped tokens + collectibles, See All. */
 const EMPTY_HOLDINGS: WalletPortfolio["holdings"] = [];
@@ -34,15 +41,11 @@ const sectionTransition = {
   duration: 0.34,
   ease: [0.22, 1, 0.36, 1] as const,
 };
-const sectionVariants = {
-  hidden: { opacity: 0, y: 12, filter: "blur(6px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)" },
-};
 
 export function WalletHomePanel({
   portfolio,
   loading,
-  tokenAddress,
+  walletAddress,
   linkedMint,
   onManageDevice,
   onSend,
@@ -57,15 +60,16 @@ export function WalletHomePanel({
   customRpcEndpoint,
   onChangeRpc,
   onRefresh,
-  refreshing,
   lastUpdatedLabel,
   activityItems,
   activityAssetMetaByMint,
+  visitorNotice,
+  status = "live",
   className,
 }: {
   portfolio: WalletPortfolio | undefined;
   loading?: boolean;
-  tokenAddress: string;
+  walletAddress: string;
   linkedMint?: string | null;
   onSend: () => void;
   onSendAsset: (asset: SendAssetRef) => void;
@@ -80,17 +84,33 @@ export function WalletHomePanel({
   customRpcEndpoint?: string | null;
   onChangeRpc?: () => void;
   onRefresh?: () => void;
-  refreshing?: boolean;
   lastUpdatedLabel?: string | null;
   activityItems?: WalletActivityItem[];
   activityAssetMetaByMint?: Record<string, { symbol: string; name: string }>;
   onManageDevice: () => void;
+  /** Quiet visitor role notice (not linked as owner on this phone). */
+  visitorNotice?: string | null;
+  status?: "live" | "refreshing" | "error";
   className?: string;
 }) {
   const holdings = portfolio?.holdings ?? EMPTY_HOLDINGS;
   const collectibles = portfolio?.collectibles ?? EMPTY_COLLECTIBLES;
   const hasFungible = holdings.some((h) => Number(h.balanceUi) > 0);
   const empty = !loading && holdings.length === 0 && collectibles.length === 0;
+  const prefersReducedMotion = useReducedMotion();
+  const sectionVariants = prefersReducedMotion
+    ? {
+        hidden: { opacity: 0 },
+        show: { opacity: 1 },
+      }
+    : {
+        hidden: { opacity: 0, y: 12, filter: "blur(6px)" },
+        show: { opacity: 1, y: 0, filter: "blur(0px)" },
+      };
+  const [firstRunDismissed, setFirstRunDismissed] = useLocalFlag(FIRST_RUN_FLAG);
+  const [recoveryAcked, setRecoveryAcked] = useLocalFlag(RECOVERY_ACK_FLAG);
+  const showFirstRun = empty && !linkedMint && !firstRunDismissed;
+  const showRecoveryAck = hasFungible && !recoveryAcked;
 
   const tokenPreview = useMemo(() => previewHoldings(holdings), [holdings]);
   const collectiblePreview = useMemo(
@@ -115,11 +135,12 @@ export function WalletHomePanel({
   const heroValue = showUsdHero
     ? formatUsd(totalUsd)
     : (primaryCryptoLine ?? "—");
-  const heroSecondary = showUsdHero
-    ? primaryCryptoLine
-    : primaryCryptoLine
-      ? null
-      : copy.wallet.addMoney;
+  const showStatus = status === "error" || status === "refreshing";
+  const statusLabel =
+    status === "error"
+      ? copy.wallet.balancesUpdateFailed
+      : copy.wallet.balancesUpdating;
+  const refreshing = status === "refreshing";
 
   if (loading && !portfolio) {
     return (
@@ -173,8 +194,8 @@ export function WalletHomePanel({
           hidden: {},
           show: {
             transition: {
-              staggerChildren: 0.045,
-              delayChildren: 0.03,
+              staggerChildren: prefersReducedMotion ? 0 : 0.045,
+              delayChildren: prefersReducedMotion ? 0 : 0.03,
             },
           },
         }}
@@ -185,17 +206,17 @@ export function WalletHomePanel({
         transition={sectionTransition}
       >
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <Nfc className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-            <p className="min-w-0 truncate font-mono text-xs text-muted-foreground">
-              {shortAddress(tokenAddress, 6)}
-            </p>
-          </div>
+          <CopyableAddress
+            address={walletAddress}
+            length={6}
+            label={copy.address.wallet}
+            className="min-h-11 text-xs text-muted-foreground"
+          />
           {onRefresh ? (
             <button
               type="button"
               aria-label={copy.wallet.refresh}
-              className="inline-flex items-center gap-1 rounded-full px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
               onClick={onRefresh}
             >
               <RefreshCcw
@@ -206,14 +227,42 @@ export function WalletHomePanel({
             </button>
           ) : null}
         </div>
-        <div className="inline-flex shrink-0 items-center gap-1.5">
-          <span className="size-1.5 rounded-full bg-success" aria-hidden />
-          <p className="text-xs font-medium text-success">
-            {copy.wallet.accessoryConnected}
-          </p>
+        <div className="flex shrink-0 items-center gap-2">
+          {showStatus ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5"
+              onClick={status === "error" ? onRefresh : undefined}
+              disabled={status !== "error" || !onRefresh}
+            >
+              <span
+                className={cn(
+                  "size-1.5 rounded-full",
+                  status === "error"
+                    ? "bg-muted-foreground"
+                    : "bg-muted-foreground/70",
+                )}
+                aria-hidden
+              />
+              <p className="text-xs font-medium text-muted-foreground">
+                {statusLabel}
+              </p>
+            </button>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={copy.wallet.manageDevice}
+            onClick={onManageDevice}
+            className="rounded-2xl border border-border/60 bg-muted/30"
+          >
+            <Settings className="size-4" aria-hidden />
+          </Button>
         </div>
       </m.div>
 
+      {!showFirstRun ? (
       <m.div
         className="flex flex-col items-center gap-1.5 py-1 text-center"
         variants={sectionVariants}
@@ -221,54 +270,83 @@ export function WalletHomePanel({
       >
         <m.h1
           className="text-balance-hero tabular-nums"
-          initial={{ opacity: 0, scale: 0.985, y: 8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
+          initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985, y: 8 }}
+          animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1], delay: 0.04 }}
         >
           {heroValue}
         </m.h1>
-        {heroSecondary ? (
+        {empty ? (
+          <button
+            type="button"
+            onClick={onReceive}
+            className="text-sm font-medium text-primary"
+          >
+            {copy.wallet.addMoney}
+          </button>
+        ) : primaryCryptoLine && showUsdHero ? (
           <p className="text-sm text-muted-foreground tabular-nums">
-            {heroSecondary}
+            {primaryCryptoLine}
           </p>
         ) : null}
         {lastUpdatedLabel ? (
           <p className="text-xs text-muted-foreground">{lastUpdatedLabel}</p>
         ) : null}
       </m.div>
+      ) : null}
 
+      {showFirstRun ? (
+        <m.div
+          className="mx-4 flex flex-col gap-4 rounded-3xl bg-muted/20 px-5 py-6 text-center"
+          variants={sectionVariants}
+          transition={sectionTransition}
+        >
+          <div className="space-y-2">
+            <p className="text-large-title">{copy.wallet.firstRunTitle}</p>
+            <p className="mx-auto max-w-xs text-sm leading-relaxed text-muted-foreground">
+              {copy.wallet.firstRunBody}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button type="button" size="lg" className="w-full" onClick={onReceive}>
+              {copy.wallet.firstRunCta}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              className="w-full"
+              onClick={() => setFirstRunDismissed(true)}
+            >
+              {copy.wallet.firstRunDismiss}
+            </Button>
+          </div>
+        </m.div>
+      ) : null}
+
+      {!showFirstRun ? (
       <m.div
-        className="flex items-center justify-between"
+        className="flex items-center gap-10"
         variants={sectionVariants}
         transition={sectionTransition}
       >
-        <div className="flex items-center gap-10">
-          {hasFungible ? (
-            <QuickActionButton
-              label={copy.wallet.send}
-              icon={<ArrowUp className="size-5" />}
-              primary
-              onClick={onSend}
-            />
-          ) : null}
-          <QuickActionButton
-            label={copy.wallet.receive}
-            icon={<ArrowDown className="size-5" />}
-            onClick={onReceive}
-          />
-        </div>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={copy.wallet.manageDevice}
-          onClick={onManageDevice}
-          className="rounded-2xl border border-border/60 bg-muted/30"
-        >
-          <Settings className="size-4" aria-hidden />
-        </Button>
+        <QuickActionButton
+          label={copy.wallet.send}
+          icon={<ArrowUp className="size-5" />}
+          primary={hasFungible}
+          disabled={!hasFungible}
+          disabledHint={copy.wallet.sendNeedsFunds}
+          onClick={onSend}
+        />
+        <QuickActionButton
+          label={copy.wallet.receive}
+          icon={<ArrowDown className="size-5" />}
+          onClick={onReceive}
+        />
       </m.div>
+      ) : null}
+
+      {visitorNotice ? <QuietNotice label={visitorNotice} /> : null}
 
       {customRpcEndpoint && onChangeRpc ? (
         <QuietNotice
@@ -306,9 +384,7 @@ export function WalletHomePanel({
           </div>
           <GroupedList>
             {tokenPreview.map((h) => (
-              <li key={h.mint}>
-                <TokenHoldingRow holding={h} onSelect={onSendAsset} />
-              </li>
+              <TokenHoldingRow key={h.mint} holding={h} onSelect={onSendAsset} />
             ))}
           </GroupedList>
         </m.section>
@@ -364,6 +440,28 @@ export function WalletHomePanel({
         </m.section>
       ) : null}
       </m.div>
+      <Dialog open={showRecoveryAck} onOpenChange={(open) => {
+        if (!open) setRecoveryAcked(true);
+      }}>
+        <DialogContent className="max-w-sm p-6">
+          <div className="space-y-3">
+            <DialogTitle className="text-base font-medium">
+              {copy.wallet.recoveryAckTitle}
+            </DialogTitle>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {copy.wallet.recoveryAckBody}
+            </p>
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              onClick={() => setRecoveryAcked(true)}
+            >
+              {copy.wallet.recoveryAckCta}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </LazyMotion>
   );
 }
@@ -373,19 +471,26 @@ function QuickActionButton({
   icon,
   onClick,
   primary,
+  disabled,
+  disabledHint,
 }: {
   label: string;
   icon: ReactNode;
   onClick: () => void;
   primary?: boolean;
+  disabled?: boolean;
+  disabledHint?: string;
 }) {
   return (
     <m.button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-center gap-2"
-      whileHover={{ y: -1.5 }}
-      whileTap={{ scale: 0.98 }}
+      disabled={disabled}
+      title={disabled ? disabledHint : undefined}
+      aria-label={disabled && disabledHint ? `${label}. ${disabledHint}` : label}
+      className="flex flex-col items-center gap-2 disabled:opacity-40"
+      whileHover={disabled ? undefined : { y: -1.5 }}
+      whileTap={disabled ? undefined : { scale: 0.98 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
     >
       <m.span
@@ -395,7 +500,7 @@ function QuickActionButton({
             ? "border-transparent bg-primary text-primary-foreground"
             : "border-border/60 bg-muted/30 text-foreground",
         )}
-        whileHover={{ scale: 1.03 }}
+        whileHover={disabled ? undefined : { scale: 1.03 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
       >
         {icon}
@@ -413,19 +518,33 @@ function QuietNotice({
   onClick,
 }: {
   label: string;
-  action: string;
-  onClick: () => void;
+  action?: string;
+  onClick?: () => void;
 }) {
+  const prefersReducedMotion = useReducedMotion();
+  const enter = blurEnter(prefersReducedMotion);
+  if (!action || !onClick) {
+    return (
+      <m.div
+        className="mx-4 rounded-2xl bg-muted/20 px-4 py-2.5"
+        initial={enter.initial}
+        animate={enter.animate}
+        transition={blurEnterTransition}
+      >
+        <p className="text-xs text-muted-foreground">{label}</p>
+      </m.div>
+    );
+  }
   return (
     <m.button
       type="button"
       onClick={onClick}
       className="mx-4 flex items-center justify-between gap-3 rounded-2xl bg-muted/20 px-4 py-2.5 text-left transition-colors hover:bg-muted/30"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={enter.initial}
+      animate={enter.animate}
       whileHover={{ y: -1 }}
       whileTap={{ scale: 0.995 }}
-      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      transition={blurEnterTransition}
     >
       <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{label}</p>
       <span className="shrink-0 text-xs font-medium text-primary">{action}</span>

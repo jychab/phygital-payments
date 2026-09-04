@@ -68,13 +68,13 @@ export function TokenMintedPanel({
   const attributesWithRarity: CollectibleAttributeWithRarity[] =
     rarity?.attributes ?? collectible?.attributes ?? [];
 
-  const name = collectible?.name ?? "Card";
+  const name = collectible?.name ?? copy.token.unnamedCard;
   const hasSticky = showVerify || Boolean(primaryShortcut);
   const hasBelowFold =
     attributesWithRarity.length > 0 ||
     Boolean(collectible?.description) ||
     Boolean(collectible) ||
-    true;
+    Boolean(mint);
   let stagger = 0;
 
   return (
@@ -109,20 +109,6 @@ export function TokenMintedPanel({
               ) : null}
             </MotionSection>
 
-              {liveConfirmed && onOpenWallet ? (
-                <MotionSection staggerIndex={stagger++}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="w-fit px-3"
-                    onClick={onOpenWallet}
-                  >
-                    {copy.wallet.openWallet}
-                  </Button>
-                </MotionSection>
-              ) : null}
-
             <MotionSection staggerIndex={stagger++}>
               <div className="divide-y divide-border/40">
                 <VerificationMetadataRow
@@ -131,6 +117,20 @@ export function TokenMintedPanel({
                 />
               </div>
             </MotionSection>
+
+            {liveConfirmed && onOpenWallet ? (
+              <MotionSection staggerIndex={stagger++}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                  onClick={onOpenWallet}
+                >
+                  {copy.wallet.openWallet}
+                </Button>
+              </MotionSection>
+            ) : null}
 
             {!liveConfirmed && chipShortcuts.length > 0 ? (
               <MotionSection staggerIndex={stagger++}>
@@ -231,6 +231,17 @@ export function TokenMintedPanel({
                   }
                 >
                   {primaryShortcut.label}
+                </Button>
+              ) : null}
+              {liveConfirmed && onOpenWallet && primaryShortcut ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                  onClick={onOpenWallet}
+                >
+                  {copy.wallet.openWallet}
                 </Button>
               ) : null}
             </StickyActions>

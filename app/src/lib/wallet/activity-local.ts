@@ -64,3 +64,13 @@ export function pushLocalWalletActivity(item: WalletActivityItem) {
   const rest = activityStore.list().filter((existing) => existing.id !== item.id);
   writeActivity([item, ...rest]);
 }
+
+export function patchLocalWalletActivity(
+  id: string,
+  patch: Partial<WalletActivityItem>,
+) {
+  const next = activityStore.list().map((item) =>
+    item.id === id ? { ...item, ...patch } : item,
+  );
+  writeActivity(next as WalletActivityItem[]);
+}

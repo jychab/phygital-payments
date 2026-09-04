@@ -6,8 +6,7 @@ import {
 
 /**
  * KV-backed high-water mark for tap anti-replay (counter only, no TTL).
- * Remounts are authorized by the session cookie. Uses the shared
- * `revibase_counter` namespace (same as vault / developer mint).
+ * Uses the shared `revibase_counter` namespace (same as vault / developer mint).
  */
 
 function getCounterKv(): KVNamespace {

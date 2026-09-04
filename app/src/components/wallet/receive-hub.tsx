@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { WalletAddressRow } from "@/components/shared/copyable-address";
+import { WalletQrCode } from "@/components/wallet/wallet-qr";
 import { NavBar } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
 import { brand, copy } from "@/lib/copy/phygital";
@@ -24,7 +25,6 @@ export function ReceiveHub({
 }) {
   const queryClient = useQueryClient();
   const payUrl = `solana:${walletAddress.trim()}?label=${encodeURIComponent(brand.company)}`;
-  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(payUrl)}`;
 
   useEffect(() => {
     void queryClient.prefetchQuery({
@@ -75,8 +75,7 @@ export function ReceiveHub({
 
       <div className="flex flex-col items-center gap-3 px-2 text-center">
         <div className="rounded-[28px] border border-border/50 bg-white p-4 shadow-sm">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qrSrc} alt="" width={192} height={192} className="size-48 rounded-2xl" />
+          <WalletQrCode value={payUrl} size={192} className="size-48" />
         </div>
         <div className="space-y-1">
           <p className="text-sm font-medium">{copy.wallet.receiveAnything}</p>

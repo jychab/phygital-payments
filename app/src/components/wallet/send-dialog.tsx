@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, LazyMotion, domAnimation, m } from "framer-motion";
+import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import { ChevronDown, LoaderCircle, Nfc } from "lucide-react";
 import { toast } from "sonner";
 import { PolicyDeniedError } from "phygital-wallet-sdk";
 
 import { NavBar } from "@/components/shared/nav-bar";
 import { TokenIcon } from "@/components/shared/token-chip";
+import type { WalletRole } from "@/components/token/token-address-route";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -18,14 +19,15 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { copy } from "@/lib/copy/phygital";
 import { invalidateWalletBalances } from "@/lib/queries";
 import { tryParseAddress } from "@/lib/solana/address";
-import { shortAddress } from "@/lib/utils";
+import { cn, shortAddress } from "@/lib/utils";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { useAddressBook } from "@/hooks/wallet/use-address-book";
+import { useFeeBalance } from "@/hooks/wallet/use-fee-balance";
 import {
   touchAddressBookEntry,
   upsertAddressBookEntry,
 } from "@/lib/wallet/address-book";
-import { pushLocalWalletActivity } from "@/lib/wallet/activity-local";
+import { pushLocalWalletActivity, patchLocalWalletActivity } from "@/lib/wallet/activity-local";
 import { identifyAccessory } from "@/lib/wallet/identify-accessory";
 import { createOneTimeGrant } from "@/lib/wallet/policies-client";
 import { policySoftDenyBody } from "@/lib/wallet/policy-deny-copy";
@@ -37,6 +39,13 @@ import {
   isCollectibleSendKind,
   type SendAssetRef,
 } from "@/lib/wallet/send-asset-ref";
+import {
+  estimateSponsoredFeeLamports,
+  formatSponsoredFeeUi,
+} from "@/lib/wallet/sponsored-fee";
+import { sanitizeDecimalInput } from "@/lib/tokens/amount";
+import { blurEnter, blurEnterTransition } from "@/lib/motion";
+import type { SendHoldRecap } from "@/components/wallet/send-hold-stage";
 
 type Phase = "form" | "holding" | "success";
 
@@ -69,6 +78,7 @@ export function SendDialog({
   onHoldPhaseChange,
   onSent,
   onChangeLimits,
+  role = "visitor",
 }: {
   phygitalTokenPda: string;
   walletAddress: string;
@@ -77,9 +87,10 @@ export function SendDialog({
   tokensOnly?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onHoldPhaseChange: (phase: "holding" | "success") => void;
+  onHoldPhaseChange: (phase: "holding" | "success", recap?: SendHoldRecap) => void;
   onSent: () => void;
   onChangeLimits?: (code?: string) => void;
+  role?: WalletRole;
 }) {
   const queryClient = useQueryClient();
   const [asset, setAsset] = useState<SendAssetRef | null>(() =>
@@ -98,6 +109,9 @@ export function SendDialog({
   const [contactName, setContactName] = useState("");
   const [contactNote, setContactNote] = useState("");
   const addressBook = useAddressBook();
+  const feeBalance = useFeeBalance(phygitalTokenPda);
+  const prefersReducedMotion = useReducedMotion();
+  const enter = blurEnter(prefersReducedMotion);
 
   useEffect(() => {
     if (!open) return;
@@ -133,10 +147,56 @@ export function SendDialog({
   }, [asset, portfolio, nft]);
 
   const balanceNum = Number(balanceUi);
-  const parsedRecipient = tryParseAddress(recipient.trim());
+  const trimmedRecipient = recipient.trim();
+  const parsedRecipient = tryParseAddress(trimmedRecipient);
+  const invalidRecipient =
+    trimmedRecipient.length > 0 && parsedRecipient == null;
+  const selfSend = Boolean(
+    parsedRecipient && String(parsedRecipient) === walletAddress,
+  );
+  const amountNum = Number(amount);
+  const overBalance = !nft && amount.length > 0 && amountNum > balanceNum + 1e-9;
   const amountOk =
-    nft || (Number(amount) > 0 && Number(amount) <= balanceNum + 1e-9);
-  const canSend = Boolean(asset && parsedRecipient && amountOk && !busy);
+    nft || (amountNum > 0 && Number.isFinite(amountNum) && !overBalance);
+  const canSend = Boolean(
+    asset && parsedRecipient && amountOk && !selfSend && !busy,
+  );
+  const savedRecipient = addressBook.find(
+    (entry) => parsedRecipient && entry.address === String(parsedRecipient),
+  );
+
+  const feeEstimateLamports = asset
+    ? estimateSponsoredFeeLamports(asset.kind)
+    : 0;
+  const feeEstimateUi = formatSponsoredFeeUi(feeEstimateLamports);
+  const feeLabel = asset
+    ? copy.wallet.networkFeeSponsored(feeEstimateUi)
+    : null;
+  const feeShortLabel = asset
+    ? copy.wallet.networkFeeShort(feeEstimateUi)
+    : null;
+  const feeBalanceLamports = feeBalance.data?.balanceLamports;
+  const feeInsufficient =
+    asset != null &&
+    typeof feeBalanceLamports === "number" &&
+    feeBalanceLamports < feeEstimateLamports;
+
+  function recapForSend(signature?: string | null): SendHoldRecap {
+    const recipientLabel = savedRecipient?.name
+      ?? (parsedRecipient ? shortAddress(String(parsedRecipient), 6) : trimmedRecipient);
+    return {
+      amountLabel: nft
+        ? (asset?.name ?? copy.wallet.sendCollectible)
+        : `${amount} ${asset?.symbol ?? ""}`.trim(),
+      recipientLabel,
+      feeLabel: feeShortLabel,
+      signature: signature ?? null,
+      recipientAddress: parsedRecipient ? String(parsedRecipient) : null,
+      mint: asset?.mint ?? null,
+      amountUi: nft ? "1" : amount,
+      walletAddress,
+    };
+  }
 
   async function pickRecipientNfc() {
     setBusy(true);
@@ -156,16 +216,17 @@ export function SendDialog({
   }
 
   async function runSend() {
-    if (!asset || !parsedRecipient || !amountOk) return;
+    if (!asset || !parsedRecipient || !amountOk || selfSend) return;
 
     setBusy(true);
     setHardError(null);
     setSoftDeny(null);
+    const recap = recapForSend();
 
     // Start hold stage only after a short delay, so soft-deny doesn't flash.
     const holdTimer = window.setTimeout(() => {
       setPhase("holding");
-      onHoldPhaseChange("holding");
+      onHoldPhaseChange("holding", recap);
       closeDialog();
     }, 250);
 
@@ -184,15 +245,8 @@ export function SendDialog({
 
       window.clearTimeout(holdTimer);
       setPhase("holding");
-      onHoldPhaseChange("holding");
+      onHoldPhaseChange("holding", recap);
       closeDialog();
-
-      await confirmed;
-
-      window.clearTimeout(holdTimer);
-      setPhase("success");
-      onHoldPhaseChange("success");
-      touchAddressBookEntry(String(parsedRecipient));
       pushLocalWalletActivity({
         id: signature,
         walletAddress,
@@ -211,9 +265,17 @@ export function SendDialog({
             amountUi: nft ? "1" : amount,
           },
         ],
-        pending: false,
+        pending: true,
         source: "local",
       });
+
+      await confirmed;
+
+      window.clearTimeout(holdTimer);
+      patchLocalWalletActivity(signature, { pending: false });
+      setPhase("success");
+      onHoldPhaseChange("success", recapForSend(signature));
+      touchAddressBookEntry(String(parsedRecipient));
       toast.success(copy.wallet.sent);
       onSent();
     } catch (e) {
@@ -279,9 +341,6 @@ export function SendDialog({
 
   const holdings = portfolio?.holdings ?? [];
   const collectibles = tokensOnly ? [] : portfolio?.collectibles ?? [];
-  const savedRecipient = addressBook.find(
-    (entry) => parsedRecipient && entry.address === String(parsedRecipient),
-  );
 
   if (phase === "holding" || phase === "success") {
     return (
@@ -295,9 +354,9 @@ export function SendDialog({
     <LazyMotion features={domAnimation}>
       <m.div
         className="flex max-h-[80vh] flex-col gap-6 overflow-y-auto"
-        initial={{ opacity: 0, y: 10, filter: "blur(6px)" }}
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        initial={enter.initial}
+        animate={enter.animate}
+        transition={blurEnterTransition}
       >
       <NavBar
         leading={
@@ -370,7 +429,7 @@ export function SendDialog({
                 placeholder="0"
                 value={amount}
                 onChange={(e) =>
-                  setAmount(e.target.value.replace(/[^0-9.]/g, ""))
+                  setAmount(sanitizeDecimalInput(e.target.value))
                 }
                 aria-label={copy.wallet.send}
               />
@@ -378,6 +437,11 @@ export function SendDialog({
             <p className="text-sm text-muted-foreground">
               {copy.wallet.ofAvailableAsset(balanceUi, asset?.symbol ?? "")}
             </p>
+            {overBalance ? (
+              <p className="text-xs text-destructive">
+                {copy.wallet.insufficientBalance}
+              </p>
+            ) : null}
             <button
               type="button"
               className="text-xs font-medium text-primary"
@@ -448,6 +512,16 @@ export function SendDialog({
             </m.p>
           ) : null}
         </AnimatePresence>
+        {invalidRecipient ? (
+          <p className="px-1 text-xs text-destructive">
+            {copy.wallet.invalidAddress}
+          </p>
+        ) : null}
+        {selfSend ? (
+          <p className="px-1 text-xs text-destructive">
+            {copy.wallet.selfSend}
+          </p>
+        ) : null}
         {parsedRecipient && !savedRecipient ? (
           <button
             type="button"
@@ -462,6 +536,30 @@ export function SendDialog({
           </button>
         ) : null}
       </m.div>
+
+      {feeLabel ? (
+        <div className="rounded-2xl bg-muted/20 px-4 py-3">
+          <p
+            className={cn(
+              "text-sm",
+              feeInsufficient ? "text-destructive" : "text-muted-foreground",
+            )}
+          >
+            {feeInsufficient
+              ? copy.wallet.feeBalanceInsufficient
+              : feeLabel}
+          </p>
+          {feeInsufficient && onChangeLimits ? (
+            <button
+              type="button"
+              className="mt-2 text-xs font-medium text-primary"
+              onClick={() => onChangeLimits("insufficient_fee_balance")}
+            >
+              {copy.wallet.topUpFees}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <AnimatePresence initial={false}>
         {hardError ? (
@@ -681,9 +779,9 @@ export function SendDialog({
           <LazyMotion features={domAnimation}>
             <m.div
               className="flex max-h-[80vh] flex-col gap-6 overflow-y-auto p-4 sm:p-6"
-              initial={{ opacity: 0, y: 10, filter: "blur(6px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              initial={enter.initial}
+              animate={enter.animate}
+              transition={blurEnterTransition}
             >
             <NavBar
               leading={
@@ -710,10 +808,14 @@ export function SendDialog({
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
               >
-                {copy.wallet.approveSendTitle}
+                {role === "owner"
+                  ? copy.wallet.approveSendTitle
+                  : copy.wallet.nearbyPolicyTitle}
               </m.h2>
               <p className="max-w-sm text-sm text-muted-foreground">
-                {policySoftDenyBody(softDeny)}
+                {role === "owner"
+                  ? policySoftDenyBody(softDeny)
+                  : copy.wallet.deviceVisitorSoftDeny}
               </p>
               <m.div
                 className="w-full max-w-sm rounded-2xl bg-muted/25 px-4 py-3 text-left"
@@ -736,30 +838,43 @@ export function SendDialog({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
             >
-              <Button
-                type="button"
-                size="lg"
-                className="w-full"
-                disabled={busy}
-                onClick={() => void approveOnce()}
-              >
-                {busy ? (
-                  <LoaderCircle className="size-4 animate-spin" />
-                ) : (
-                  copy.wallet.approveOnce
-                )}
-              </Button>
-              {onChangeLimits ? (
+              {role === "owner" ? (
+                <>
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="w-full"
+                    disabled={busy}
+                    onClick={() => void approveOnce()}
+                  >
+                    {busy ? (
+                      <LoaderCircle className="size-4 animate-spin" />
+                    ) : (
+                      copy.wallet.approveOnce
+                    )}
+                  </Button>
+                  {onChangeLimits ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      disabled={busy}
+                      onClick={() => onChangeLimits(softDeny.code)}
+                    >
+                      {copy.wallet.changeLimits}
+                    </Button>
+                  ) : null}
+                </>
+              ) : (
                 <Button
                   type="button"
-                  variant="ghost"
+                  size="lg"
                   className="w-full"
-                  disabled={busy}
-                  onClick={() => onChangeLimits(softDeny.code)}
+                  onClick={() => setSoftDeny(null)}
                 >
-                  {copy.wallet.changeLimits}
+                  {copy.common.done}
                 </Button>
-              ) : null}
+              )}
             </m.div>
             </m.div>
           </LazyMotion>

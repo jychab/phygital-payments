@@ -25,11 +25,13 @@ export function queryFetch(
 /** HTTP failure from `readJson` / API clients — carries status for retry policy. */
 export class QueryHttpError extends Error {
   readonly status: number;
+  readonly code: string | null;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string | null) {
     super(message);
     this.name = "QueryHttpError";
     this.status = status;
+    this.code = code ?? null;
   }
 }
 
@@ -86,9 +88,16 @@ export async function readJson<T>(
   res: Response,
   fallback: string,
 ): Promise<T> {
-  const body = (await res.json().catch(() => ({}))) as T & { error?: string };
+  const body = (await res.json().catch(() => ({}))) as T & {
+    error?: string;
+    code?: string;
+  };
   if (!res.ok) {
-    throw new QueryHttpError(body.error ?? fallback, res.status);
+    throw new QueryHttpError(
+      body.error ?? fallback,
+      res.status,
+      body.code ?? null,
+    );
   }
   return body;
 }

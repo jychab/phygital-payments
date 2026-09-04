@@ -8,34 +8,38 @@ import { NavBar } from "@/components/shared/nav-bar";
 import { StageTransition } from "@/components/shared/stage-transition";
 import { WalletHomePanel } from "@/components/wallet/wallet-home-panel";
 import { SendDialog } from "@/components/wallet/send-dialog";
-import { SendHoldStage } from "@/components/wallet/send-hold-stage";
+import { SendHoldStage, type SendHoldRecap } from "@/components/wallet/send-hold-stage";
 import { ActivityAllSheet } from "@/components/wallet/activity-all-sheet";
 import { CollectibleDetailSheet } from "@/components/wallet/collectible-detail-sheet";
 import { ReceiveHub } from "@/components/wallet/receive-hub";
 import { ReceiveNearbySheet } from "@/components/wallet/receive-nearby-sheet";
+import { OpenApprovalsSheet } from "@/components/wallet/open-approvals-sheet";
 import { SettingsHub, type SettingsTarget } from "@/components/wallet/settings-hub";
 import { SpendingLimitsSheet } from "@/components/wallet/spending-limits-sheet";
 import { RecipientsSheet } from "@/components/wallet/recipients-sheet";
 import { AllowedActionsSheet } from "@/components/wallet/allowed-actions-sheet";
 import { SigningSettingsSheet } from "@/components/wallet/signing-settings-sheet";
 import { FeeBalanceSheet } from "@/components/wallet/fee-balance-sheet";
+import { AccessRecoverySheet } from "@/components/wallet/access-recovery-sheet";
+import { ContactsSheet } from "@/components/wallet/contacts-sheet";
 import { RpcConnectionSheet } from "@/components/wallet/rpc-connection-sheet";
 import { TokensAllSheet } from "@/components/wallet/tokens-all-sheet";
 import { CollectiblesAllSheet } from "@/components/wallet/collectibles-all-sheet";
-import { HoldToUnlockGate } from "@/components/wallet/hold-to-unlock-gate";
 import { useRpcPreference } from "@/hooks/wallet/use-rpc-preference";
 import { Button } from "@/components/ui/button";
 import { useTokenWalletChip } from "@/hooks/wallet/use-token-wallet-chip";
 import { useWalletPortfolio } from "@/hooks/wallet/use-wallet-portfolio";
 import { useWalletActivity } from "@/hooks/wallet/use-wallet-activity";
 import { useFeeBalance } from "@/hooks/wallet/use-fee-balance";
-import { upsertRecent } from "@/lib/wallet/recents";
+import { useOpenApprovals } from "@/hooks/wallet/use-open-approvals";
 import { tokenHasLinkedMint, type PhygitalToken } from "@/lib/phygital/token";
 import { copy } from "@/lib/copy/phygital";
 import { useResolvedDasCollectible } from "@/hooks/token/use-das-collectible";
 import { shellLayoutClass } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 import { invalidateWalletBalances } from "@/lib/queries";
+import type { LinkStatus } from "@/lib/wallet/device-auth-client";
+import type { WalletRole } from "@/components/token/token-address-route";
 import type { WalletCollectible } from "@/lib/wallet/portfolio-types";
 import {
   collectibleToSendAsset,
@@ -71,12 +75,16 @@ function settingsFromDenyCode(code?: string): Screen {
  */
 export function WalletWorkspace({
   token,
+  role = "visitor",
+  linkStatus,
   showBackToCard,
   onBackToCard,
   cardLabel,
   cardImage,
 }: {
   token: PhygitalToken;
+  role?: WalletRole;
+  linkStatus?: LinkStatus;
   showBackToCard?: boolean;
   onBackToCard?: () => void;
   cardLabel?: string;
@@ -84,27 +92,31 @@ export function WalletWorkspace({
 }) {
   return (
     <div className={cn("mx-auto flex w-full flex-1 flex-col", shellLayoutClass.compact)}>
-      <HoldToUnlockGate>
-        <WalletWorkspaceInner
-          token={token}
-          showBackToCard={showBackToCard}
-          onBackToCard={onBackToCard}
-          cardLabel={cardLabel}
-          cardImage={cardImage}
-        />
-      </HoldToUnlockGate>
+      <WalletWorkspaceInner
+        token={token}
+        role={role}
+        linkStatus={linkStatus}
+        showBackToCard={showBackToCard}
+        onBackToCard={onBackToCard}
+        cardLabel={cardLabel}
+        cardImage={cardImage}
+      />
     </div>
   );
 }
 
 function WalletWorkspaceInner({
   token,
+  role,
+  linkStatus,
   showBackToCard,
   onBackToCard,
   cardLabel,
   cardImage,
 }: {
   token: PhygitalToken;
+  role: WalletRole;
+  linkStatus?: LinkStatus;
   showBackToCard?: boolean;
   onBackToCard?: () => void;
   cardLabel?: string;
@@ -117,7 +129,7 @@ function WalletWorkspaceInner({
     enabled: cardLabel == null,
   });
   const resolvedLabel =
-    collectible?.name ?? cardLabel ?? (mint ? copy.recents.card : copy.recents.accessory);
+    collectible?.name ?? cardLabel ?? (mint ? copy.home.card : copy.home.accessory);
   const resolvedImage = collectible?.image ?? cardImage ?? null;
   const [screen, setScreen] = useState<Screen>("home");
   const [sendAsset, setSendAsset] = useState<SendAssetRef | null>(null);
@@ -126,6 +138,7 @@ function WalletWorkspaceInner({
   const [sendHoldPhase, setSendHoldPhase] = useState<"holding" | "success" | null>(
     null,
   );
+  const [sendRecap, setSendRecap] = useState<SendHoldRecap | null>(null);
   const [detail, setDetail] = useState<WalletCollectible | null>(null);
   const queryClient = useQueryClient();
 
@@ -136,29 +149,29 @@ function WalletWorkspaceInner({
     mode: "copy",
   });
 
-  const portfolio = useWalletPortfolio(walletAddress);
-  const activity = useWalletActivity(walletAddress, 20);
-  const feeBalance = useFeeBalance(tokenAddress);
-  const rpc = useRpcPreference();
+  // Defer secondary fetches so portfolio paints first on unminted unlock.
+  const [deferSecondary, setDeferSecondary] = useState(false);
   useEffect(() => {
-    if (!walletAddress) return;
-    upsertRecent({
-      tokenAddress,
-      walletAddress,
-      kind: mint ? "card" : "accessory",
-      label: resolvedLabel,
-      mint: mint ?? null,
-      imageUrl: resolvedImage,
-      secp256r1PublicKey: token.secp256r1PublicKey,
-    });
-  }, [
-    walletAddress,
-    tokenAddress,
-    mint,
-    resolvedLabel,
-    resolvedImage,
-    token.secp256r1PublicKey,
-  ]);
+    const id = window.requestAnimationFrame(() => setDeferSecondary(true));
+    return () => window.cancelAnimationFrame(id);
+  }, []);
+
+  const portfolio = useWalletPortfolio(walletAddress);
+  const activity = useWalletActivity(
+    deferSecondary ? walletAddress : null,
+    20,
+  );
+  const feeBalance = useFeeBalance(tokenAddress);
+  const isOwner = role === "owner";
+  const openApprovals = useOpenApprovals(
+    isOwner && deferSecondary ? tokenAddress : null,
+  );
+  const [dismissApprovals, setDismissApprovals] = useState(false);
+  const rpc = useRpcPreference();
+
+  useEffect(() => {
+    if (openApprovals.approvals.length > 0) setDismissApprovals(false);
+  }, [openApprovals.approvals.length]);
 
   const refresh = useCallback(() => {
     invalidateWalletBalances(queryClient, {
@@ -167,19 +180,12 @@ function WalletWorkspaceInner({
     });
   }, [queryClient, walletAddress, tokenAddress]);
 
-  const activityRefetch = activity.refetch;
-  const portfolioRefetch = portfolio.refetch;
-  const refreshWallet = useCallback(() => {
-    refresh();
-    void activityRefetch();
-    void portfolioRefetch();
-  }, [activityRefetch, portfolioRefetch, refresh]);
-
   const openSend = useCallback(
     (asset: SendAssetRef | null, tokensOnly: boolean) => {
       setSendAsset(asset);
       setSendTokensOnly(tokensOnly);
       setSendHoldPhase(null);
+      setSendRecap(null);
       setDetail(null);
       setScreen("home");
       setSendDialogOpen(true);
@@ -197,15 +203,39 @@ function WalletWorkspaceInner({
 
   const backLabel = cardLabel ?? collectible?.name ?? copy.wallet.backToCard;
 
+  const showOpenApprovals =
+    isOwner &&
+    !dismissApprovals &&
+    !sendDialogOpen &&
+    openApprovals.approvals.length > 0 &&
+    screen === "home";
+
   let body: ReactNode;
 
-  if (screen === "send") {
+  if (showOpenApprovals) {
+    body = (
+      <OpenApprovalsSheet
+        phygitalTokenPda={tokenAddress}
+        approvals={openApprovals.approvals}
+        onChangeLimits={(code) => {
+          setDismissApprovals(true);
+          setScreen(settingsFromDenyCode(code));
+        }}
+        onDone={() => {
+          setDismissApprovals(true);
+          void openApprovals.refetch();
+        }}
+      />
+    );
+  } else if (screen === "send") {
     body = (
       <SendHoldStage
         phase={sendHoldPhase ?? "holding"}
         imageSrc={sendAsset?.icon}
+        recap={sendRecap}
         onClose={() => {
           setSendHoldPhase(null);
+          setSendRecap(null);
           setSendAsset(null);
           setScreen("home");
         }}
@@ -255,6 +285,7 @@ function WalletWorkspaceInner({
     body = (
       <SettingsHub
         phygitalTokenPda={tokenAddress}
+        role={role}
         onBack={() => setScreen("home")}
         onOpen={(target) => setScreen(target)}
       />
@@ -266,34 +297,44 @@ function WalletWorkspaceInner({
         onBack={() => setScreen("settings")}
       />
     );
-  } else if (screen === "spendingLimits") {
+  } else if (isOwner && screen === "spendingLimits") {
     body = (
       <SpendingLimitsSheet
         phygitalTokenPda={tokenAddress}
         onBack={() => setScreen("settings")}
       />
     );
-  } else if (screen === "recipients") {
+  } else if (isOwner && screen === "recipients") {
     body = (
       <RecipientsSheet
         phygitalTokenPda={tokenAddress}
         onBack={() => setScreen("settings")}
       />
     );
-  } else if (screen === "allowedActions") {
+  } else if (isOwner && screen === "allowedActions") {
     body = (
       <AllowedActionsSheet
         phygitalTokenPda={tokenAddress}
         onBack={() => setScreen("settings")}
       />
     );
-  } else if (screen === "signing") {
+  } else if (isOwner && screen === "signing") {
     body = (
       <SigningSettingsSheet
         phygitalTokenPda={tokenAddress}
         onClose={() => setScreen("settings")}
       />
     );
+  } else if (screen === "access") {
+    body = (
+      <AccessRecoverySheet
+        phygitalTokenPda={tokenAddress}
+        role={role}
+        onBack={() => setScreen("settings")}
+      />
+    );
+  } else if (screen === "contacts") {
+    body = <ContactsSheet onBack={() => setScreen("settings")} />;
   } else if (screen === "rpcConnection") {
     body = (
       <RpcConnectionSheet onBack={() => setScreen("settings")} />
@@ -329,7 +370,7 @@ function WalletWorkspaceInner({
         <WalletHomePanel
           portfolio={portfolio.data}
           loading={portfolio.isLoading}
-          tokenAddress={tokenAddress}
+          walletAddress={walletAddress}
           linkedMint={mint}
           onSend={() => openSend(null, true)}
           onSendAsset={(asset) => openSend(asset, true)}
@@ -339,12 +380,25 @@ function WalletWorkspaceInner({
           onSeeAllCollectibles={() => setScreen("collectiblesAll")}
           onSeeAllActivity={() => setScreen("activity")}
           onManageDevice={onSettings}
+          visitorNotice={
+            isOwner
+              ? null
+              : linkStatus === "unlinked"
+                ? copy.wallet.deviceVisitorUnlinkedNotice
+                : copy.wallet.deviceVisitorNotice
+          }
           feeBalanceLow={feeBalance.data?.low}
           onTopUpFees={() => setScreen("feeBalance")}
           customRpcEndpoint={rpc.isCustom ? rpc.displayEndpoint : null}
           onChangeRpc={() => setScreen("rpcConnection")}
-          onRefresh={refreshWallet}
-          refreshing={portfolio.isFetching || activity.isFetching}
+          onRefresh={refresh}
+          status={
+            portfolio.isError
+              ? "error"
+              : portfolio.isFetching || activity.isFetching
+                ? "refreshing"
+                : "live"
+          }
           lastUpdatedLabel={
             portfolio.dataUpdatedAt
               ? copy.wallet.lastUpdated(
@@ -369,12 +423,18 @@ function WalletWorkspaceInner({
         tokensOnly={sendTokensOnly}
         open={sendDialogOpen}
         onOpenChange={setSendDialogOpen}
-        onHoldPhaseChange={(phase) => {
+        onHoldPhaseChange={(phase, recap) => {
+          if (recap) setSendRecap(recap);
           setSendHoldPhase(phase);
           setScreen("send");
         }}
         onSent={refresh}
-        onChangeLimits={(code) => setScreen(settingsFromDenyCode(code))}
+        onChangeLimits={
+          isOwner
+            ? (code) => setScreen(settingsFromDenyCode(code))
+            : undefined
+        }
+        role={role}
       />
       <StageTransition stageKey={screen} variant="fade">
         {body}

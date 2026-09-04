@@ -6,7 +6,7 @@
  */
 import { Hono } from "hono";
 
-import { authSessionRoutes } from "@/auth/session-routes";
+import { deviceAuthRoutes } from "@/auth/device-routes";
 import { policyRoutes } from "@/auth/policies-routes";
 import { appCors } from "@/shared/cors";
 import { runWithRequestStore } from "@/shared/request-context";
@@ -37,7 +37,7 @@ app.route("/", walletRoutes);
 app.route("/", verifyTapRoutes);
 app.route("/", verifierRoutes);
 app.route("/", policyRoutes);
-app.route("/", authSessionRoutes);
+app.route("/", deviceAuthRoutes);
 app.route("/", heliusWebhookRoutes);
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));

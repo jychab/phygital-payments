@@ -5,15 +5,20 @@ import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { RouteBoot } from "@/components/layout/route-boot";
-import { TokenAddressRoute } from "@/components/token/token-address-route";
+import {
+  TokenAddressRoute,
+  type WalletRole,
+} from "@/components/token/token-address-route";
 import { TokenMintedHome } from "@/components/token/token-minted-home";
 import { TokenNfcApp } from "@/components/token/token-nfc-app";
 import { TokenUnmintedHome } from "@/components/token/token-unminted-home";
+import { DeviceLoginGate } from "@/components/wallet/device-login-gate";
 import { copy } from "@/lib/copy/phygital";
 import {
   tokenHasLinkedMint,
   type PhygitalToken,
 } from "@/lib/phygital/token";
+import type { LinkStatus } from "@/lib/wallet/device-auth-client";
 
 const TokenRouteShell = dynamic(
   () =>
@@ -26,24 +31,26 @@ const TokenRouteShell = dynamic(
 const TOKEN_NFC_COPY = {
   inAppCheck: copy.gate.openInBrowserBody,
   holdBody: copy.verify.introBody,
-  sessionExpiredTitle: copy.verify.sessionExpiredTitle,
-  sessionExpiredBody: copy.verify.sessionExpiredBody,
-  notSetUpTitle: copy.verify.notSetUpTitle,
-  notSetUpBody: copy.verify.notSetUpBody,
 };
 
 function TokenHome({
   token,
   liveConfirmed,
+  role,
+  linkStatus,
 }: {
   token: PhygitalToken;
   liveConfirmed?: boolean;
+  role: WalletRole;
+  linkStatus?: LinkStatus;
 }): ReactNode {
   if (tokenHasLinkedMint(token)) {
     return (
       <TokenMintedHome
         token={token}
         liveConfirmed={liveConfirmed}
+        role={role}
+        linkStatus={linkStatus}
       />
     );
   }
@@ -51,35 +58,39 @@ function TokenHome({
     <TokenUnmintedHome
       token={token}
       liveConfirmed={liveConfirmed}
+      role={role}
+      linkStatus={linkStatus}
     />
   );
 }
 
 /**
- * Route `/token` — home is always session-gated (`?address=`).
- * Recents, Hold, and signed NFC taps enter that gate; missing session → Hold.
+ * Route `/token` — one device login gate; tap verify runs in parallel with
+ * session check on cold NFC entry.
  */
 export function TokenApp() {
   const searchParams = useSearchParams();
   const address = searchParams.get("address")?.trim() ?? "";
 
-  if (address) {
-    return (
-      <TokenAddressRoute
-        tokenAddress={address}
-        renderHome={({ token, liveConfirmed }) => (
-          <TokenHome
-            token={token}
-            liveConfirmed={liveConfirmed}
-          />
-        )}
-      />
-    );
-  }
-
   return (
-    <TokenRouteShell layout="compact">
-      <TokenNfcApp nfcCopy={TOKEN_NFC_COPY} />
-    </TokenRouteShell>
+    <DeviceLoginGate keepMounted={!address}>
+      {address ? (
+        <TokenAddressRoute
+          tokenAddress={address}
+          renderHome={({ token, liveConfirmed, role, linkStatus }) => (
+            <TokenHome
+              token={token}
+              liveConfirmed={liveConfirmed}
+              role={role}
+              linkStatus={linkStatus}
+            />
+          )}
+        />
+      ) : (
+        <TokenRouteShell layout="compact">
+          <TokenNfcApp nfcCopy={TOKEN_NFC_COPY} />
+        </TokenRouteShell>
+      )}
+    </DeviceLoginGate>
   );
 }

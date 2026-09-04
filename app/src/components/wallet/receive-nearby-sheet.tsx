@@ -9,6 +9,7 @@ import { PolicyDeniedError } from "phygital-wallet-sdk";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { NavBar } from "@/components/shared/nav-bar";
 import { TokenIcon } from "@/components/shared/token-chip";
+import { WalletQrCode } from "@/components/wallet/wallet-qr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,13 +20,12 @@ import {
 } from "@/components/ui/sheet";
 import { useVerifiedTokens } from "@/hooks/wallet/use-verified-tokens";
 import { useWalletPortfolio } from "@/hooks/wallet/use-wallet-portfolio";
-import { copy } from "@/lib/copy/phygital";
+import { brand, copy } from "@/lib/copy/phygital";
 import { invalidateWalletBalances } from "@/lib/queries";
 import { shortAddress } from "@/lib/utils";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { pushLocalWalletActivity } from "@/lib/wallet/activity-local";
 import { identifyAccessory } from "@/lib/wallet/identify-accessory";
-import { createOneTimeGrant } from "@/lib/wallet/policies-client";
 import { policySoftDenyBody } from "@/lib/wallet/policy-deny-copy";
 import { ALL_LIST_SEARCH_THRESHOLD } from "@/lib/wallet/portfolio-preview";
 import { receiveAssetFromNearbyPayer } from "@/lib/wallet/send-asset";
@@ -39,7 +39,7 @@ type LinkedPayer = {
   tokenPda: string;
 };
 
-type Phase = "form" | "identifying" | "holding" | "success";
+type Phase = "form" | "identifying" | "holding" | "success" | "handoff";
 
 /** Receive nearby — pick verified token → amount → tap From → Hold. */
 export function ReceiveNearbySheet({
@@ -63,9 +63,12 @@ export function ReceiveNearbySheet({
   const [phase, setPhase] = useState<Phase>("form");
   const [busy, setBusy] = useState(false);
   const [hardError, setHardError] = useState<string | null>(null);
-  const [softDeny, setSoftDeny] = useState<PolicyDeniedError | null>(null);
+  const [handoffDeny, setHandoffDeny] = useState<PolicyDeniedError | null>(
+    null,
+  );
 
   const payerPortfolio = useWalletPortfolio(from?.walletPda ?? null);
+  const payUrl = `solana:${recipientWallet.trim()}?label=${encodeURIComponent(brand.company)}`;
 
   useEffect(() => {
     if (verified.isError) toast.error(toUserErrorMessage(verified.error));
@@ -113,7 +116,7 @@ export function ReceiveNearbySheet({
         tokenPda: String(id.token.address),
       });
       setHardError(null);
-      setSoftDeny(null);
+      setHandoffDeny(null);
       toast.success(copy.wallet.accessoryLinked);
       setPhase("form");
     } catch (e) {
@@ -127,14 +130,14 @@ export function ReceiveNearbySheet({
   function clearFrom() {
     setFrom(null);
     setHardError(null);
-    setSoftDeny(null);
+    setHandoffDeny(null);
   }
 
   async function runReceive() {
     if (!from || !asset || !amountOk) return;
     setBusy(true);
     setHardError(null);
-    setSoftDeny(null);
+    setHandoffDeny(null);
     const holdTimer = window.setTimeout(() => setPhase("holding"), 250);
     try {
       const { signature, confirmed } = await receiveAssetFromNearbyPayer({
@@ -175,7 +178,6 @@ export function ReceiveNearbySheet({
         source: "local",
       });
       toast.success(copy.wallet.received);
-      // Payer spent assets + fees; recipient gained assets.
       invalidateWalletBalances(queryClient, {
         wallets: [recipientWallet, from.walletPda],
         tokens: [from.tokenPda],
@@ -184,17 +186,8 @@ export function ReceiveNearbySheet({
     } catch (e) {
       window.clearTimeout(holdTimer);
       if (e instanceof PolicyDeniedError) {
-        if (e.soft && e.intentHash) {
-          setSoftDeny(e);
-          setPhase("form");
-          return;
-        }
-        setPhase("form");
-        setHardError(
-          e.code === "insufficient_fee_balance"
-            ? copy.wallet.feeBalanceInsufficient
-            : toUserErrorMessage(e),
-        );
+        setPhase("handoff");
+        setHandoffDeny(e);
         if (e.code === "insufficient_fee_balance") {
           invalidateWalletBalances(queryClient, {
             tokens: [from.tokenPda],
@@ -206,33 +199,6 @@ export function ReceiveNearbySheet({
       toast.error(toUserErrorMessage(e));
     } finally {
       window.clearTimeout(holdTimer);
-      setBusy(false);
-    }
-  }
-
-  async function approveOnce() {
-    if (!softDeny?.intentHash || !from) return;
-    setBusy(true);
-    try {
-      await createOneTimeGrant(from.tokenPda, softDeny.intentHash);
-      pushLocalWalletActivity({
-        id: `approved:${from.walletPda}:${asset?.mint ?? "unknown"}:${Date.now()}`,
-        walletAddress: recipientWallet,
-        kind: "approved",
-        title: copy.wallet.approveOnce,
-        subtitle: from.walletPda,
-        amountLabel: null,
-        statusLabel: null,
-        timestamp: Math.floor(Date.now() / 1000),
-        signature: null,
-        mint: null,
-        pending: false,
-        source: "local",
-      });
-      setSoftDeny(null);
-      await runReceive();
-    } catch (e) {
-      toast.error(toUserErrorMessage(e));
       setBusy(false);
     }
   }
@@ -275,7 +241,14 @@ export function ReceiveNearbySheet({
     );
   }
 
-  if (softDeny) {
+  if (phase === "handoff") {
+    const feeBlocked = handoffDeny?.code === "insufficient_fee_balance";
+    const reason = feeBlocked
+      ? copy.wallet.nearbyPolicyFeeBody
+      : handoffDeny?.soft
+        ? policySoftDenyBody(handoffDeny).replace(/\byour\b/gi, "their")
+        : copy.wallet.nearbyPolicyBody;
+
     return (
       <div className="flex flex-1 flex-col gap-6">
         <NavBar
@@ -284,7 +257,10 @@ export function ReceiveNearbySheet({
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setSoftDeny(null)}
+              onClick={() => {
+                setHandoffDeny(null);
+                setPhase("form");
+              }}
             >
               {copy.common.cancel}
             </Button>
@@ -292,11 +268,14 @@ export function ReceiveNearbySheet({
         />
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-2 text-center">
           <h2 className="font-(family-name:--font-display) text-2xl font-medium">
-            {copy.wallet.approveSendTitle}
+            {copy.wallet.nearbyPolicyTitle}
           </h2>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            {policySoftDenyBody(softDeny)}
-          </p>
+          <p className="max-w-sm text-sm text-muted-foreground">{reason}</p>
+          {!feeBlocked ? (
+            <p className="max-w-sm text-sm text-muted-foreground">
+              {copy.wallet.nearbyPolicyBody}
+            </p>
+          ) : null}
           <div className="w-full max-w-sm rounded-2xl bg-muted/25 px-4 py-3 text-left">
             <p className="font-(family-name:--font-display) text-lg">
               {amount} {asset?.symbol ?? ""}
@@ -305,19 +284,20 @@ export function ReceiveNearbySheet({
               {copy.wallet.from} {shortAddress(from?.walletPda ?? "", 6)}
             </p>
           </div>
+          <div className="rounded-[28px] border border-border/50 bg-white p-4 shadow-sm">
+            <WalletQrCode value={payUrl} size={160} className="size-40" />
+          </div>
         </div>
         <Button
           type="button"
           size="lg"
           className="w-full"
-          disabled={busy}
-          onClick={() => void approveOnce()}
+          onClick={() => {
+            setHandoffDeny(null);
+            setPhase("form");
+          }}
         >
-          {busy ? (
-            <LoaderCircle className="size-4 animate-spin" />
-          ) : (
-            copy.wallet.approveOnce
-          )}
+          {copy.wallet.nearbyPolicyGotIt}
         </Button>
       </div>
     );
@@ -490,10 +470,7 @@ export function ReceiveNearbySheet({
                           setSearch("");
                         }}
                       >
-                        <TokenIcon
-                          token={t}
-                          className="size-8"
-                        />
+                        <TokenIcon token={t} className="size-8" />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">
                             {t.symbol}

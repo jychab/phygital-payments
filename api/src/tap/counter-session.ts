@@ -1,8 +1,7 @@
 /**
  * Server-side counter for tap anti-replay (shared with vault /
- * `revibase_counter` KV). A chip counter is single-use. Remounts of the same
- * tap reuse the issued session cookie — this module only judges monotonic
- * counters, not a grace window.
+ * `revibase_counter` KV). A chip counter is single-use; the same or lower
+ * counter is always rejected. This module only judges monotonic counters.
  *
  * Pure logic (no KV) — `counter-store` owns IO.
  */
@@ -40,7 +39,7 @@ export function parseCounterState(raw: string | null): CounterState | null {
 /**
  * Judge an incoming counter against the stored high-water mark.
  * - `new`: counter > stored (or no state) — consume and advance KV
- * - `replay`: same or lower counter — reject (session cookie covers remounts)
+ * - `replay`: same or lower counter — reject (client must use a fresh tap)
  */
 export function evaluateCounter(
   state: CounterState | null,

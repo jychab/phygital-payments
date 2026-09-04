@@ -69,9 +69,7 @@ export function TokensAllSheet({
       ) : (
         <GroupedList>
           {filtered.map((h) => (
-            <li key={h.mint} className="border-b border-border/50 last:border-b-0">
-              <TokenHoldingRow holding={h} onSelect={onSelect} />
-            </li>
+            <TokenHoldingRow key={h.mint} holding={h} onSelect={onSelect} />
           ))}
         </GroupedList>
       )}

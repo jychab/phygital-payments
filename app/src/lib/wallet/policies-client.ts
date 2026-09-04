@@ -5,7 +5,7 @@ import {
   SYSTEM_PROGRAM,
   TOKEN_2022_PROGRAM,
 } from "@/lib/tokens/payment-token";
-import { withTokenSessionRetry } from "@/lib/wallet/token-session";
+import { withDeviceAuth } from "@/lib/wallet/device-auth-client";
 
 /** Must match `api/src/verifier/approval/types.ts` DEFAULT_ALLOWED_PROGRAMS. */
 export const DEFAULT_ALLOWED_PROGRAMS = [
@@ -31,6 +31,17 @@ export type PolicySummary = {
   allowedPrograms: string[];
 };
 
+export type OpenApproval = {
+  id: string;
+  phygitalToken: string;
+  intentHash: string;
+  code: string;
+  error: string;
+  details: Record<string, unknown> | null;
+  expiresAt: number;
+  createdAt: number;
+};
+
 export async function fetchEffectivePolicy(
   phygitalToken: string,
 ): Promise<PolicySummary> {
@@ -46,7 +57,7 @@ export async function putPolicySummary(
   phygitalToken: string,
   summary: Partial<PolicySummary>,
 ): Promise<void> {
-  await withTokenSessionRetry(async () => {
+  await withDeviceAuth(async () => {
     const res = await queryFetch(
       `/policies/${encodeURIComponent(phygitalToken)}`,
       {
@@ -63,7 +74,7 @@ export async function createOneTimeGrant(
   phygitalToken: string,
   intentHash: string,
 ): Promise<void> {
-  await withTokenSessionRetry(async () => {
+  await withDeviceAuth(async () => {
     const res = await queryFetch(
       `/policies/${encodeURIComponent(phygitalToken)}/grants`,
       {
@@ -73,5 +84,31 @@ export async function createOneTimeGrant(
       },
     );
     await readJson(res, "Couldn’t approve this send");
+  });
+}
+
+export async function fetchOpenApprovals(
+  phygitalToken: string,
+): Promise<OpenApproval[]> {
+  const res = await queryFetch(
+    `/policies/${encodeURIComponent(phygitalToken)}/approvals`,
+  );
+  const body = await readJson<{ approvals: OpenApproval[] }>(
+    res,
+    "Couldn’t load approvals",
+  );
+  return body.approvals;
+}
+
+export async function cancelOpenApproval(
+  phygitalToken: string,
+  intentHash: string,
+): Promise<void> {
+  await withDeviceAuth(async () => {
+    const res = await queryFetch(
+      `/policies/${encodeURIComponent(phygitalToken)}/approvals/${encodeURIComponent(intentHash)}`,
+      { method: "DELETE" },
+    );
+    await readJson(res, "Couldn’t cancel this approval");
   });
 }

@@ -29,6 +29,26 @@ export const queryOptions = {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   },
+  /**
+   * Device session cookie (~30m). Short stale window avoids remount churn
+   * while still refreshing on focus after expiry nearby.
+   */
+  deviceSession: {
+    staleTime: 60 * SECOND,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  },
+  /**
+   * Owned links / link status. Invalidate on link/unlink; otherwise allow a
+   * brief cache so home ↔ token navigation does not always re-GET.
+   */
+  deviceLinks: {
+    staleTime: 30 * SECOND,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  },
   /** Changes after user actions; mutations already invalidate. */
   default: { refetchOnWindowFocus: false, staleTime: 5 * MINUTE },
   /** Catalog / rarely changing metadata. */
