@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LoaderCircle, Nfc, Trash2 } from "lucide-react";
+import { Nfc, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { NavBar } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePolicyEditor } from "@/hooks/wallet/use-wallet-policy";
@@ -12,6 +13,7 @@ import { identifyAccessory } from "@/lib/wallet/identify-accessory";
 import { shortAddress } from "@/lib/utils";
 import { tryParseAddress } from "@/lib/solana/address";
 import { toUserErrorMessage } from "@/lib/user-errors";
+import { Spinner } from "@/components/ui/spinner";
 
 /** Anyone vs allowlist recipients. */
 export function RecipientsSheet({
@@ -75,13 +77,14 @@ export function RecipientsSheet({
 
   return (
     <div className="flex flex-1 flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-          {copy.common.back}
-        </Button>
-        <p className="text-sm font-medium">{copy.wallet.recipients}</p>
-        <span className="w-16" aria-hidden />
-      </div>
+      <NavBar
+        leading={
+          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
+            {copy.common.back}
+          </Button>
+        }
+        title={copy.wallet.recipients}
+      />
       {editor.loading ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {copy.common.loading}
@@ -142,15 +145,17 @@ export function RecipientsSheet({
                     className="flex items-center justify-between rounded-xl bg-muted/25 px-3 py-2 text-sm"
                   >
                     <span className="font-mono">{shortAddress(addr, 6)}</span>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon-sm"
                       aria-label={copy.common.remove}
                       onClick={() =>
                         setAllowlist((prev) => prev.filter((a) => a !== addr))
                       }
                     >
                       <Trash2 className="size-4 text-muted-foreground" />
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -191,15 +196,17 @@ export function RecipientsSheet({
                   className="flex items-center justify-between rounded-xl bg-muted/25 px-3 py-2 text-sm"
                 >
                   <span className="font-mono">{shortAddress(addr, 6)}</span>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon-sm"
                     aria-label={copy.common.remove}
                     onClick={() =>
                       setDenylist((prev) => prev.filter((a) => a !== addr))
                     }
                   >
                     <Trash2 className="size-4 text-muted-foreground" />
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -212,7 +219,7 @@ export function RecipientsSheet({
             onClick={() => void save()}
           >
             {editor.saving ? (
-              <LoaderCircle className="size-4 animate-spin" />
+              <Spinner className="size-4" />
             ) : (
               copy.wallet.holdToSave
             )}

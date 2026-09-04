@@ -8,7 +8,10 @@
 
 import type { QueryClient } from "@tanstack/react-query";
 
+import { formatTokenAmount, uiAmountToRaw } from "@/lib/tokens/amount";
+import type { PaymentTokenHolding } from "@/lib/tokens/payment-token";
 import type { PolicySummary } from "@/lib/wallet/policies-client";
+import type { WalletPortfolio } from "@/lib/wallet/portfolio-types";
 
 import { queryKeys } from "./keys";
 
@@ -20,6 +23,70 @@ function cachedTokenAddress(data: unknown): string | null {
   if (!data || typeof data !== "object" || !("address" in data)) return null;
   const address = (data as { address: unknown }).address;
   return address == null ? null : String(address);
+}
+
+function adjustHolding(
+  holding: PaymentTokenHolding,
+  amountUi: string,
+  direction: "in" | "out",
+): PaymentTokenHolding {
+  try {
+    const delta = uiAmountToRaw(amountUi, holding.decimals);
+    const current = BigInt(holding.balanceRaw);
+    const nextRaw =
+      direction === "out"
+        ? current > delta
+          ? current - delta
+          : 0n
+        : current + delta;
+    const balanceUi = formatTokenAmount(nextRaw, holding.decimals);
+    const valueUsd =
+      holding.pricePerTokenUsd != null
+        ? Number(balanceUi) * holding.pricePerTokenUsd
+        : holding.valueUsd;
+    return {
+      ...holding,
+      balanceRaw: nextRaw.toString(),
+      balanceUi,
+      valueUsd,
+    };
+  } catch {
+    return holding;
+  }
+}
+
+/** Light optimistic portfolio patch before invalidate catches up. */
+export function applyOptimisticPortfolioDelta(
+  queryClient: QueryClient,
+  args: {
+    owner: string;
+    mint: string;
+    amountUi: string;
+    direction: "in" | "out";
+    /** Remove collectible from cache instead of adjusting a fungible holding. */
+    removeCollectible?: boolean;
+  },
+): void {
+  queryClient.setQueryData<WalletPortfolio>(
+    queryKeys.walletPortfolio.byOwner(args.owner),
+    (prev) => {
+      if (!prev) return prev;
+      if (args.removeCollectible) {
+        return {
+          ...prev,
+          collectibles: prev.collectibles.filter((c) => c.mint !== args.mint),
+        };
+      }
+      return {
+        ...prev,
+        holdings: prev.holdings.map((h) =>
+          h.mint === args.mint
+            ? adjustHolding(h, args.amountUi, args.direction)
+            : h,
+        ),
+      };
+    },
+  );
 }
 
 /** Portfolio + fee balance after a send, receive, or fee top-up. */

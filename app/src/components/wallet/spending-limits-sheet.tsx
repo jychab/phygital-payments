@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LoaderCircle } from "lucide-react";
 
 import { NavBar } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FieldLabel, Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { usePolicyEditor } from "@/hooks/wallet/use-wallet-policy";
 import { copy } from "@/lib/copy/phygital";
 
@@ -49,9 +49,9 @@ export function SpendingLimitsSheet({
           <p className="text-xs text-muted-foreground">
             {copy.wallet.policyDefaultSigningOnly}
           </p>
-          <label className="text-xs text-muted-foreground">
+          <FieldLabel className="normal-case tracking-normal text-xs">
             {copy.wallet.maxPerSend}
-          </label>
+          </FieldLabel>
           <Input
             inputMode="decimal"
             value={maxPerSend}
@@ -60,9 +60,9 @@ export function SpendingLimitsSheet({
             }
             placeholder="50"
           />
-          <label className="text-xs text-muted-foreground">
+          <FieldLabel className="normal-case tracking-normal text-xs">
             {copy.wallet.maxSolPerSend}
-          </label>
+          </FieldLabel>
           <Input
             inputMode="decimal"
             value={maxSol}
@@ -85,7 +85,7 @@ export function SpendingLimitsSheet({
             }
           >
             {editor.saving ? (
-              <LoaderCircle className="size-4 animate-spin" />
+              <Spinner className="size-4" />
             ) : (
               copy.wallet.holdToSave
             )}

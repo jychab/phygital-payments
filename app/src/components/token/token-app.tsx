@@ -35,32 +35,20 @@ const TOKEN_NFC_COPY = {
 
 function TokenHome({
   token,
-  liveConfirmed,
   role,
   linkStatus,
 }: {
   token: PhygitalToken;
-  liveConfirmed?: boolean;
   role: WalletRole;
   linkStatus?: LinkStatus;
 }): ReactNode {
   if (tokenHasLinkedMint(token)) {
     return (
-      <TokenMintedHome
-        token={token}
-        liveConfirmed={liveConfirmed}
-        role={role}
-        linkStatus={linkStatus}
-      />
+      <TokenMintedHome token={token} role={role} linkStatus={linkStatus} />
     );
   }
   return (
-    <TokenUnmintedHome
-      token={token}
-      liveConfirmed={liveConfirmed}
-      role={role}
-      linkStatus={linkStatus}
-    />
+    <TokenUnmintedHome token={token} role={role} linkStatus={linkStatus} />
   );
 }
 
@@ -77,10 +65,9 @@ export function TokenApp() {
       {address ? (
         <TokenAddressRoute
           tokenAddress={address}
-          renderHome={({ token, liveConfirmed, role, linkStatus }) => (
+          renderHome={({ token, role, linkStatus }) => (
             <TokenHome
               token={token}
-              liveConfirmed={liveConfirmed}
               role={role}
               linkStatus={linkStatus}
             />

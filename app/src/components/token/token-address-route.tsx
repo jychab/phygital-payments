@@ -2,7 +2,12 @@
 
 import { Nfc } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { useIsRestoring, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useIsRestoring,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { findPhygitalTokenPda } from "phygital-token-sdk";
 
 import { GateMessage } from "@/components/layout/gate-message";
@@ -38,7 +43,6 @@ export type WalletRole = "owner" | "visitor";
 
 export type TokenHomeRenderArgs = {
   token: PhygitalToken;
-  liveConfirmed?: boolean;
   role: WalletRole;
   linkStatus?: LinkStatus;
 };
@@ -138,7 +142,6 @@ function TokenAddressRouteInner({
       {unlocked && token && !showLinkPrompt ? (
         renderHome({
           token,
-          liveConfirmed: true,
           role,
           linkStatus: linkStatus.data,
         })
@@ -215,18 +218,14 @@ function LinkPrompt({
   const queryClient = useQueryClient();
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const { collectible } = useResolvedDasCollectible(mint);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function doLink() {
-    setError(null);
-    setBusy(true);
-    const meta = {
-      label: collectible?.name ?? null,
-      imageUrl: collectible?.image ?? null,
-      mint,
-    };
-    try {
+  const link = useMutation({
+    mutationFn: async () => {
+      const meta = {
+        label: collectible?.name ?? null,
+        imageUrl: collectible?.image ?? null,
+        mint,
+      };
       const tapToken = peekPossessionToken(tokenAddress);
       const accessoryProof = peekAccessoryProof(tokenAddress);
 
@@ -238,6 +237,7 @@ function LinkPrompt({
             ...meta,
           });
           clearAllPossession(tokenAddress);
+          return;
         } catch (e) {
           const possessionFailed =
             e instanceof QueryHttpError && e.code === "possession_invalid";
@@ -251,33 +251,37 @@ function LinkPrompt({
             ...meta,
           });
           clearAllPossession(tokenAddress);
+          return;
         }
-      } else if (accessoryProof) {
+      }
+
+      if (accessoryProof) {
         await linkToken({
           phygitalToken: tokenAddress,
           accessory: accessoryProof,
           ...meta,
         });
         clearAllPossession(tokenAddress);
-      } else {
-        await linkToken({
-          phygitalToken: tokenAddress,
-          accessory: await holdAccessoryAuth(),
-          ...meta,
-        });
+        return;
       }
+
+      await linkToken({
+        phygitalToken: tokenAddress,
+        accessory: await holdAccessoryAuth(),
+        ...meta,
+      });
+    },
+    onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.deviceAuth.all(),
       });
       onLinked();
-    } catch (e) {
-      setError(toUserErrorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
+    },
+  });
 
-  if (busy) {
+  const error = link.error ? toUserErrorMessage(link.error) : null;
+
+  if (link.isPending) {
     return (
       <NfcHoldStatus
         size="lg"
@@ -305,7 +309,7 @@ function LinkPrompt({
             type="button"
             size="lg"
             className="w-full"
-            onClick={() => void doLink()}
+            onClick={() => link.mutate()}
           >
             {error ? copy.common.tryAgain : copy.wallet.deviceLinkCta}
           </Button>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { PolicyDeniedError } from "phygital-wallet-sdk";
@@ -9,7 +8,8 @@ import { PolicyDeniedError } from "phygital-wallet-sdk";
 import { NavBar } from "@/components/shared/nav-bar";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FieldLabel, Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { useFeeBalance } from "@/hooks/wallet/use-fee-balance";
 import { useWalletPda } from "@/hooks/wallet/use-wallet-pda";
 import { copy } from "@/lib/copy/phygital";
@@ -157,9 +157,9 @@ export function FeeBalanceSheet({
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="px-1 text-xs font-medium text-muted-foreground">
+        <FieldLabel className="px-1 normal-case tracking-normal text-xs">
           {copy.wallet.topUpAmount}
-        </label>
+        </FieldLabel>
         <Input
           inputMode="decimal"
           value={amount}
@@ -177,7 +177,7 @@ export function FeeBalanceSheet({
           onClick={() => void runTopUp()}
         >
           {busy ? (
-            <LoaderCircle className="size-4 animate-spin" />
+            <Spinner className="size-4" />
           ) : (
             copy.wallet.holdToTopUp
           )}

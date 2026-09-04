@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /** Grouped inset rows — iOS Settings-style metadata card. */
@@ -56,24 +57,27 @@ export function CollectibleMetadataRow({
     </>
   );
 
-  const rowClasses = cn("flex items-center py-2 justify-between gap-3 text-xs", className);
+  const rowClasses = cn(
+    "h-auto min-h-0 w-full justify-between gap-3 rounded-none px-0 py-2 text-left text-xs font-normal",
+    className,
+  );
 
   if (onPress) {
     return (
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={onPress}
-        className={cn(
-          rowClasses,
-          "w-full text-left transition-colors",
-          "hover:bg-muted/40 active:bg-muted/50",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-        )}
+        className={cn(rowClasses, "hover:bg-muted/40 active:bg-muted/50")}
       >
         {content}
-      </button>
+      </Button>
     );
   }
 
-  return <div className={rowClasses}>{content}</div>;
+  return (
+    <div className={cn("flex items-center justify-between gap-3 py-2 text-xs", className)}>
+      {content}
+    </div>
+  );
 }

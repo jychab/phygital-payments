@@ -14,6 +14,7 @@ import { TokenDetails } from "@/components/token/token-details";
 import { StickyActions } from "@/components/shared/sticky-actions";
 import { MotionSection } from "@/components/shared/motion-section";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useMintedCollectibleView } from "@/hooks/token/use-minted-collectible-view";
 import { useShortcutOpener } from "@/hooks/token/use-shortcut-opener";
 import { copy } from "@/lib/copy/phygital";
@@ -36,13 +37,10 @@ export function TokenMintedPanel({
   token,
   liveConfirmed,
   onHoldToCheck,
-  onOpenWallet,
 }: {
   token: PhygitalToken;
   liveConfirmed: boolean;
-  holdError?: string | null;
   onHoldToCheck?: () => void;
-  onOpenWallet?: () => void;
 }) {
   const showVerify = !liveConfirmed && Boolean(onHoldToCheck);
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
@@ -102,10 +100,7 @@ export function TokenMintedPanel({
                   rarityLoading={rarityLoading}
                 />
               ) : loading ? (
-                <div
-                  className="h-14 animate-pulse rounded-xl bg-muted/40"
-                  aria-hidden
-                />
+                <Skeleton className="h-14 w-full rounded-xl" aria-hidden />
               ) : null}
             </MotionSection>
 
@@ -113,24 +108,10 @@ export function TokenMintedPanel({
               <div className="divide-y divide-border/40">
                 <VerificationMetadataRow
                   liveConfirmed={liveConfirmed}
-                  onVerifyAgain={onHoldToCheck}
+                  onVerify={onHoldToCheck}
                 />
               </div>
             </MotionSection>
-
-            {liveConfirmed && onOpenWallet ? (
-              <MotionSection staggerIndex={stagger++}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  className="w-full"
-                  onClick={onOpenWallet}
-                >
-                  {copy.wallet.openWallet}
-                </Button>
-              </MotionSection>
-            ) : null}
 
             {!liveConfirmed && chipShortcuts.length > 0 ? (
               <MotionSection staggerIndex={stagger++}>
@@ -153,10 +134,11 @@ export function TokenMintedPanel({
 
             {hasBelowFold ? (
               <MotionSection staggerIndex={stagger++}>
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => setDetailsOpen((o) => !o)}
-                  className="flex w-full min-h-11 items-center justify-between rounded-2xl bg-grouped px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/50"
+                  className="h-auto min-h-11 w-full justify-between rounded-2xl bg-grouped px-4 py-3 text-sm font-medium hover:bg-muted/50"
                 >
                   {detailsOpen
                     ? copy.token.hideDetails
@@ -166,7 +148,7 @@ export function TokenMintedPanel({
                   ) : (
                     <ChevronDown className="size-4 text-muted-foreground" />
                   )}
-                </button>
+                </Button>
               </MotionSection>
             ) : null}
 
@@ -231,17 +213,6 @@ export function TokenMintedPanel({
                   }
                 >
                   {primaryShortcut.label}
-                </Button>
-              ) : null}
-              {liveConfirmed && onOpenWallet && primaryShortcut ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  className="w-full"
-                  onClick={onOpenWallet}
-                >
-                  {copy.wallet.openWallet}
                 </Button>
               ) : null}
             </StickyActions>

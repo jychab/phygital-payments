@@ -1,5 +1,6 @@
 import { tierLabel, type RarityTier } from "@/lib/tokens/rarity/rarity-tier";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { CollectibleMetadataRow } from "@/components/token/collectible-metadata-group";
 import { copy } from "@/lib/copy/phygital";
 
@@ -54,9 +55,10 @@ export function RarityTierBadge({
 }) {
   const styles = TIER_CLASS[tier];
   return (
-    <span
+    <Badge
+      variant="outline"
       className={cn(
-        "inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium tracking-wide",
+        "h-auto max-w-full border px-2 py-0.5 text-[11px] tracking-wide",
         styles.pill,
         className,
       )}
@@ -65,7 +67,7 @@ export function RarityTierBadge({
       {detail ? (
         <span className="truncate font-normal opacity-85">· {detail}</span>
       ) : null}
-    </span>
+    </Badge>
   );
 }
 

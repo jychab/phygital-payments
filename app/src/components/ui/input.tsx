@@ -1,17 +1,18 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
+import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 
 const inputVariants = cva(
-  "w-full min-w-0 rounded-xl border border-border/60 bg-clip-padding text-foreground outline-none transition-all duration-150 ease-out placeholder:text-muted-foreground/60 disabled:pointer-events-none disabled:opacity-50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive/50 aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:bg-input/30 dark:focus-visible:ring-ring/40",
+  "w-full min-w-0 rounded-xl border border-border/60 bg-clip-padding text-foreground outline-none transition-all duration-150 ease-out placeholder:text-muted-foreground/60 disabled:pointer-events-none disabled:opacity-50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive/50 aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:focus-visible:ring-ring/40",
   {
     variants: {
       variant: {
-        default: "bg-background/60",
+        default: "bg-background/60 dark:bg-input/30",
         muted: "border-border/60 bg-muted/30",
         hero:
-          "h-auto min-h-0 border-transparent bg-transparent px-0 text-center font-(family-name:--font-display) text-[2.75rem] leading-none tracking-tight tabular-nums placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 md:text-5xl",
+          "h-auto min-h-0 border-transparent bg-transparent px-0 text-center font-(family-name:--font-display) text-[2.75rem] leading-none tracking-tight tabular-nums placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 dark:focus-visible:ring-0 md:text-5xl",
       },
       size: {
         // 16px / 44pt — Safari zooms any focused control below 16px; HIG min hit target is 44pt.
@@ -19,12 +20,6 @@ const inputVariants = cva(
         sm: "h-11 min-h-11 px-3.5 text-base",
       },
     },
-    compoundVariants: [
-      {
-        variant: "hero",
-        className: "h-auto min-h-0 px-0 text-[2.75rem] md:text-5xl",
-      },
-    ],
     defaultVariants: {
       variant: "default",
       size: "default",
@@ -32,13 +27,13 @@ const inputVariants = cva(
   },
 )
 
-function Input({
-  className,
-  variant,
-  size,
-  type = "text",
-  ...props
-}: React.ComponentProps<"input"> & VariantProps<typeof inputVariants>) {
+const Input = React.forwardRef<
+  HTMLInputElement,
+  React.ComponentProps<"input"> & VariantProps<typeof inputVariants>
+>(function Input(
+  { className, variant, size, type = "text", ...props },
+  ref,
+) {
   return (
     <input
       type={type}
@@ -54,17 +49,19 @@ function Input({
         // Keep computed size ≥ 16px so iOS does not zoom on focus (callers may pass text-xs).
         variant !== "hero" && "text-[max(1rem,16px)]",
       )}
+      ref={ref}
       {...props}
     />
   )
-}
+})
+Input.displayName = "Input"
 
 function FieldLabel({
   className,
   ...props
-}: React.ComponentProps<"label">) {
+}: React.ComponentProps<typeof Label>) {
   return (
-    <label
+    <Label
       className={cn(
         "text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground",
         className,

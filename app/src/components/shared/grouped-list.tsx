@@ -3,9 +3,28 @@
 import type { ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/** iOS Settings / Telegram-style inset grouped list. */
+function groupedRowClass({
+  interactive,
+  destructive,
+  className,
+}: {
+  interactive: boolean;
+  destructive?: boolean;
+  className?: string;
+}) {
+  return cn(
+    interactive
+      ? "h-auto min-h-11 w-full justify-start gap-3 rounded-none px-4 py-3 text-left font-normal hover:bg-muted/50 active:bg-muted/70"
+      : "flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left",
+    destructive && "text-destructive",
+    interactive && destructive && "hover:text-destructive",
+    className,
+  );
+}
+
 export function GroupedList({
   children,
   className,
@@ -43,6 +62,7 @@ export function GroupedRow({
   trailing,
   subtitle,
   destructive,
+  asChild,
 }: {
   children: ReactNode;
   className?: string;
@@ -53,16 +73,21 @@ export function GroupedRow({
   trailing?: ReactNode;
   subtitle?: ReactNode;
   destructive?: boolean;
+  /** Pass a single element (e.g. motion button); leading/trailing are ignored. */
+  asChild?: boolean;
 }) {
-  const rowClass = cn(
-    "flex w-full items-center gap-3 px-4 py-3 text-left",
-    "min-h-11 transition-colors",
-    onClick &&
-      "hover:bg-muted/50 active:bg-muted/70 focus-visible:bg-muted/50 focus-visible:outline-none",
-    href && "hover:bg-muted/20",
-    destructive && "text-destructive",
-    className,
-  );
+  const interactive = Boolean(onClick || href || asChild);
+  const rowClass = groupedRowClass({ interactive, destructive, className });
+
+  if (asChild) {
+    return (
+      <li className="border-b border-border/50 last:border-b-0">
+        <Button asChild variant="ghost" className={rowClass}>
+          {children}
+        </Button>
+      </li>
+    );
+  }
 
   const body = (
     <>
@@ -86,18 +111,24 @@ export function GroupedRow({
   return (
     <li className="border-b border-border/50 last:border-b-0">
       {href ? (
-        <a
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          className={cn(rowClass, "block no-underline")}
+        <Button
+          variant="ghost"
+          asChild
+          className={cn(rowClass, "hover:bg-muted/20")}
+        >
+          <a href={href} target="_blank" rel="noreferrer">
+            {body}
+          </a>
+        </Button>
+      ) : onClick ? (
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onClick}
+          className={rowClass}
         >
           {body}
-        </a>
-      ) : onClick ? (
-        <button type="button" onClick={onClick} className={rowClass}>
-          {body}
-        </button>
+        </Button>
       ) : (
         <div className={rowClass}>{body}</div>
       )}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy/phygital";
 import { cn, shortAddress } from "@/lib/utils";
 
@@ -60,16 +61,16 @@ export function CopyableAddress({
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       onClick={onCopy}
       title={address}
       aria-label={
         copied ? copy.address.copiedAria(label) : copy.address.copyAria(label, address)
       }
       className={cn(
-        "group/copy inline-flex items-center gap-1.5 rounded-md font-mono text-foreground",
-        "transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
+        "group/copy h-auto min-h-0 gap-1.5 rounded-md px-1.5 py-0.5 font-mono text-foreground hover:bg-transparent hover:text-foreground",
         className,
       )}
     >
@@ -92,6 +93,6 @@ export function CopyableAddress({
       <span aria-live="polite" className="sr-only">
         {copied ? copy.address.copiedToClipboard : ""}
       </span>
-    </button>
+    </Button>
   );
 }

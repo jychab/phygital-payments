@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { RarityTierBadge } from "@/components/token/rarity-tier-badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatRarityRankWithTie } from "@/lib/tokens/rarity/format";
 import type { CollectibleRarity } from "@/lib/tokens/collectible";
 import { cn } from "@/lib/utils";
@@ -56,10 +57,7 @@ export function CollectibleHeader({
         </div>
       ) : null}
       {rarityLoading ? (
-        <div
-          className="h-5 w-40 animate-pulse rounded-full bg-muted/40"
-          aria-hidden
-        />
+        <Skeleton className="h-5 w-40 rounded-full" aria-hidden />
       ) : rarity ? (
         <RarityTierBadge
           tier={rarity.tier}

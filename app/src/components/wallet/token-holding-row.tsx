@@ -2,11 +2,11 @@
 
 import { m, useReducedMotion } from "framer-motion";
 
+import { GroupedRow } from "@/components/shared/grouped-list";
 import { TokenIcon } from "@/components/shared/token-chip";
 import type { PaymentTokenHolding } from "@/lib/tokens/payment-token";
 import { formatUsd } from "@/lib/currency/usd";
 import { holdingToSendAsset, type SendAssetRef } from "@/lib/wallet/send-asset-ref";
-import { cn } from "@/lib/utils";
 
 /** Shared token row for home preview and See All. */
 export function TokenHoldingRow({
@@ -20,13 +20,9 @@ export function TokenHoldingRow({
 }) {
   const prefersReducedMotion = useReducedMotion();
   return (
-    <li className="border-b border-border/50 last:border-b-0">
+    <GroupedRow asChild className={className}>
       <m.button
         type="button"
-        className={cn(
-          "flex w-full min-h-11 items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 active:bg-muted/70",
-          className,
-        )}
         onClick={() => onSelect(holdingToSendAsset(holding))}
         whileHover={prefersReducedMotion ? undefined : { x: 1.5 }}
         whileTap={prefersReducedMotion ? undefined : { scale: 0.995 }}
@@ -53,6 +49,6 @@ export function TokenHoldingRow({
           ) : null}
         </div>
       </m.button>
-    </li>
+    </GroupedRow>
   );
 }

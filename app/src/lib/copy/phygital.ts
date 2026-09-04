@@ -12,7 +12,7 @@ export const brand = {
 
 export const products = {
   home: {
-    name: "Wallets",
+    name: "Cards & Accessories",
     tagline: "Your linked cards and accessories",
   },
 } as const;
@@ -27,13 +27,11 @@ export const copy = {
     close: "Close",
     wallet: "Wallet",
     remove: "Remove",
+    devnet: "Devnet",
   },
   wallet: {
-    copyAddress: "Copy address",
-    addressCopied: "Address copied",
     addressCopyFailed: "Couldn’t copy address",
-    openWalletAria: (label: string) => `Open wallet ${label}`,
-    copyAddressAria: (label: string) => `Copy address ${label}`,
+    showCardAria: "Back to card",
     addMoney: "Add money to get started",
     sendNeedsFunds: "Add money to send",
     balancesUpdating: "Updating…",
@@ -52,7 +50,6 @@ export const copy = {
     noMatchingCollectibles: "No collectibles match",
     noActivity: "No activity yet",
     settings: "Settings",
-    settingsAria: "Open settings",
     signing: "Signing",
     rpcConnection: "RPC Connection",
     rpcBody:
@@ -72,11 +69,12 @@ export const copy = {
     rpcInvalidUrl: "Enter a valid http(s) RPC URL",
     advanced: "Advanced",
     backToCard: "Card",
-    backToCardNamed: (name: string) => name,
-    openWallet: "Wallet",
-    openWalletAriaLabel: "Open wallet",
+    backToCardChip: "Back",
+    toWalletChip: "To Wallet",
+    openWalletAriaLabel: "Go to wallet",
     holdToSend: "Hold to send",
     holdToReceive: "Hold to receive",
+    holdToReceiveDesktopHint: "You’ll hold their accessory next",
     holdToSave: "Hold to save",
     max: "Max",
     maxSolPerSend: "Max SOL per send",
@@ -91,6 +89,7 @@ export const copy = {
     sendCollectible: "Sending 1 collectible",
     insufficientBalance: "Not enough balance for this amount",
     selfSend: "You can’t send to this wallet",
+    cantReceiveFromSelf: "You can’t receive from this accessory",
     viewReceipt: "View receipt",
     openCard: "Open card",
     feeBalance: "Network fees",
@@ -175,7 +174,6 @@ export const copy = {
     deviceUnlinked: "Accessory unlinked",
     deviceSignOut: "Sign out",
     deviceAddAccessory: "Hold to add",
-    deviceAddAccessoryBody: "Hold a card or accessory to link or open it.",
     openApprovalContinue: "They can continue in the other app",
     nearbyPolicyTitle: "Send from their phone",
     nearbyPolicyBody:
@@ -224,11 +222,14 @@ export const copy = {
     settingsSaved: "Settings saved",
   },
   home: {
-    heading: "Wallets",
-    emptyTitle: "No linked accessories",
+    emptyTitle: "Add your first card or accessory",
+    emptyBody:
+      "Hold a card or accessory flat against the back of this phone to link it here.",
+    cards: "Cards",
+    accessories: "Accessories",
     card: "Card",
     accessory: "Accessory",
-    holdTitle: "Hold to open",
+    holdTitle: "Hold to add",
     holdBody: "Hold your item flat against the back of this phone.",
   },
   address: {
@@ -250,6 +251,7 @@ export const copy = {
     verifying: "Verifying…",
     verifyAgain: "Verify again",
     verifyAgainHint: "Hold here to re-check",
+    verifyCta: "Verify",
     verified: "Verified",
     verifiedAgainBody: "This item is authentic.",
     failed: "Couldn’t verify",

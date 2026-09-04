@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle } from "lucide-react";
+import type { ReactNode } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { LoadingStatus } from "@/components/shared/loading-status";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { copy } from "@/lib/copy/phygital";
 import { queryKeys, queryOptions } from "@/lib/queries";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import {
+  fetchDeviceLinks,
   fetchDeviceSession,
   loginDevice,
   registerDevice,
@@ -32,29 +34,31 @@ export function DeviceLoginGate({
     queryFn: fetchDeviceSession,
     ...queryOptions.deviceSession,
   });
-  const [busy, setBusy] = useState<"login" | "register" | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  async function run(kind: "login" | "register") {
-    setError(null);
-    setBusy(kind);
-    try {
-      const next =
-        kind === "login" ? await loginDevice() : await registerDevice();
-      queryClient.setQueryData(queryKeys.deviceAuth.session(), next);
-    } catch (e) {
-      setError(toUserErrorMessage(e));
-    } finally {
-      setBusy(null);
-    }
+  function onAuthSuccess(
+    next: Awaited<ReturnType<typeof loginDevice>>,
+  ) {
+    queryClient.setQueryData(queryKeys.deviceAuth.session(), next);
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.deviceAuth.links(),
+      queryFn: fetchDeviceLinks,
+      ...queryOptions.deviceLinks,
+    });
   }
 
-  const loading = (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16">
-      <LoaderCircle className="size-6 animate-spin text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">{copy.common.loading}</p>
-    </div>
-  );
+  const loginMutation = useMutation({
+    mutationFn: loginDevice,
+    onSuccess: onAuthSuccess,
+  });
+  const registerMutation = useMutation({
+    mutationFn: registerDevice,
+    onSuccess: onAuthSuccess,
+  });
+
+  const busy = loginMutation.isPending || registerMutation.isPending;
+  const authError = loginMutation.error ?? registerMutation.error;
+
+  const loading = <LoadingStatus />;
 
   const loginUi = (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-16 text-center">
@@ -63,7 +67,9 @@ export function DeviceLoginGate({
           {copy.wallet.deviceLoginTitle}
         </h1>
         <p className="max-w-sm text-sm text-muted-foreground">
-          {error ?? copy.wallet.deviceLoginBody}
+          {authError
+            ? toUserErrorMessage(authError)
+            : copy.wallet.deviceLoginBody}
         </p>
       </div>
       <div className="flex w-full max-w-sm flex-col gap-2">
@@ -71,11 +77,14 @@ export function DeviceLoginGate({
           type="button"
           size="lg"
           className="w-full"
-          disabled={busy != null}
-          onClick={() => void run("login")}
+          disabled={busy}
+          onClick={() => {
+            registerMutation.reset();
+            loginMutation.mutate();
+          }}
         >
-          {busy === "login" ? (
-            <LoaderCircle className="size-4 animate-spin" />
+          {loginMutation.isPending ? (
+            <Spinner className="size-4" />
           ) : (
             copy.wallet.deviceLoginCta
           )}
@@ -85,11 +94,14 @@ export function DeviceLoginGate({
           size="lg"
           variant="outline"
           className="w-full"
-          disabled={busy != null}
-          onClick={() => void run("register")}
+          disabled={busy}
+          onClick={() => {
+            loginMutation.reset();
+            registerMutation.mutate();
+          }}
         >
-          {busy === "register" ? (
-            <LoaderCircle className="size-4 animate-spin" />
+          {registerMutation.isPending ? (
+            <Spinner className="size-4" />
           ) : (
             copy.wallet.deviceRegisterCta
           )}

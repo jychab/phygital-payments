@@ -40,7 +40,6 @@ import {
 import { consumePossessionToken } from "@/auth/possession-token";
 import {
   consumeWebAuthnChallenge,
-  newWebAuthnChallenge,
   resolveWebAuthnRp,
   storeWebAuthnChallenge,
 } from "@/auth/webauthn-challenge";
@@ -75,16 +74,12 @@ deviceAuthRoutes.get("/auth/device/register-options", async (c) => {
   }
 
   const userHandle = crypto.randomUUID();
-  const challenge = newWebAuthnChallenge();
-  await storeWebAuthnChallenge("register", userHandle, challenge);
-
   const options = await generateRegistrationOptions({
     rpName: rp.rpName,
     rpID: rp.rpId,
     userName: `revibase-${userHandle.slice(0, 8)}`,
     userDisplayName: "Revibase",
     userID: new Uint8Array(textEncoder.encode(userHandle)),
-    challenge,
     attestationType: "none",
     authenticatorSelection: {
       authenticatorAttachment: "platform",
@@ -94,6 +89,7 @@ deviceAuthRoutes.get("/auth/device/register-options", async (c) => {
     },
     supportedAlgorithmIDs: [-7, -257],
   });
+  await storeWebAuthnChallenge("register", userHandle, options.challenge);
 
   return json({ ...options, userHandle });
 });
@@ -195,14 +191,11 @@ deviceAuthRoutes.get("/auth/device-session/options", async (c) => {
   }
 
   const challengeId = crypto.randomUUID();
-  const challenge = newWebAuthnChallenge();
-  await storeWebAuthnChallenge("auth", challengeId, challenge);
-
   const options = await generateAuthenticationOptions({
     rpID: rp.rpId,
-    challenge,
     userVerification: "required",
   });
+  await storeWebAuthnChallenge("auth", challengeId, options.challenge);
 
   return json({ ...options, challengeId });
 });
@@ -381,9 +374,9 @@ deviceAuthRoutes.delete("/auth/device", async (c) => {
     }
 
     const links = await listLinksForCredential(device.credentialId);
-    for (const link of links) {
-      await deleteLink(device.credentialId, link.phygitalToken);
-    }
+    await Promise.all(
+      links.map((link) => deleteLink(device.credentialId, link.phygitalToken)),
+    );
     await deleteCredential(device.credentialId);
     clearDeviceSessionCookie(c);
 

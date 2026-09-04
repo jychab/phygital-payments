@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
-import { ChevronDown, LoaderCircle, Nfc } from "lucide-react";
+import { ChevronDown, Nfc } from "lucide-react";
 import { toast } from "sonner";
 import { PolicyDeniedError } from "phygital-wallet-sdk";
 
@@ -12,12 +12,13 @@ import { TokenIcon } from "@/components/shared/token-chip";
 import type { WalletRole } from "@/components/token/token-address-route";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { FieldLabel, Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { copy } from "@/lib/copy/phygital";
-import { invalidateWalletBalances } from "@/lib/queries";
+import {
+  applyOptimisticPortfolioDelta,
+  invalidateWalletBalances,
+} from "@/lib/queries";
 import { tryParseAddress } from "@/lib/solana/address";
 import { cn, shortAddress } from "@/lib/utils";
 import { toUserErrorMessage } from "@/lib/user-errors";
@@ -46,8 +47,10 @@ import {
 import { sanitizeDecimalInput } from "@/lib/tokens/amount";
 import { blurEnter, blurEnterTransition } from "@/lib/motion";
 import type { SendHoldRecap } from "@/components/wallet/send-hold-stage";
+import { Spinner } from "@/components/ui/spinner";
+import { GroupedList, GroupedRow } from "@/components/shared/grouped-list";
 
-type Phase = "form" | "holding" | "success";
+type Phase = "form" | "holding";
 
 type SendHardError = { message: string; code: string | null };
 
@@ -73,8 +76,7 @@ export function SendDialog({
   portfolio,
   initialAsset,
   tokensOnly = false,
-  open,
-  onOpenChange,
+  onClose,
   onHoldPhaseChange,
   onSent,
   onChangeLimits,
@@ -85,8 +87,7 @@ export function SendDialog({
   portfolio: WalletPortfolio | undefined;
   initialAsset?: SendAssetRef | null;
   tokensOnly?: boolean;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
   onHoldPhaseChange: (phase: "holding" | "success", recap?: SendHoldRecap) => void;
   onSent: () => void;
   onChangeLimits?: (code?: string) => void;
@@ -112,9 +113,9 @@ export function SendDialog({
   const feeBalance = useFeeBalance(phygitalTokenPda);
   const prefersReducedMotion = useReducedMotion();
   const enter = blurEnter(prefersReducedMotion);
+  const amountInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!open) return;
     setPhase("form");
     setBusy(false);
     setHardError(null);
@@ -128,15 +129,23 @@ export function SendDialog({
     setAsset(nextAsset);
     setAmount(nextAsset && isCollectibleSendKind(nextAsset.kind) ? "1" : "");
     // portfolio intentionally omitted — background refetches must not reset the form.
-  }, [open, initialAsset, tokensOnly]);
+  }, [initialAsset, tokensOnly]);
 
   useEffect(() => {
-    if (!open || asset) return;
+    if (asset) return;
     const next = defaultAsset(portfolio, initialAsset, tokensOnly);
     if (!next) return;
     setAsset(next);
     setAmount(isCollectibleSendKind(next.kind) ? "1" : "");
-  }, [open, portfolio, initialAsset, tokensOnly, asset]);
+  }, [portfolio, initialAsset, tokensOnly, asset]);
+
+  useEffect(() => {
+    if (initialAsset && isCollectibleSendKind(initialAsset.kind)) return;
+    const id = window.requestAnimationFrame(() =>
+      amountInputRef.current?.focus(),
+    );
+    return () => window.cancelAnimationFrame(id);
+  }, [initialAsset]);
 
   const nft = asset ? isCollectibleSendKind(asset.kind) : false;
   const balanceUi = useMemo(() => {
@@ -211,10 +220,6 @@ export function SendDialog({
     }
   }
 
-  function closeDialog() {
-    onOpenChange(false);
-  }
-
   async function runSend() {
     if (!asset || !parsedRecipient || !amountOk || selfSend) return;
 
@@ -227,7 +232,6 @@ export function SendDialog({
     const holdTimer = window.setTimeout(() => {
       setPhase("holding");
       onHoldPhaseChange("holding", recap);
-      closeDialog();
     }, 250);
 
     try {
@@ -246,7 +250,6 @@ export function SendDialog({
       window.clearTimeout(holdTimer);
       setPhase("holding");
       onHoldPhaseChange("holding", recap);
-      closeDialog();
       pushLocalWalletActivity({
         id: signature,
         walletAddress,
@@ -273,16 +276,21 @@ export function SendDialog({
 
       window.clearTimeout(holdTimer);
       patchLocalWalletActivity(signature, { pending: false });
-      setPhase("success");
       onHoldPhaseChange("success", recapForSend(signature));
       touchAddressBookEntry(String(parsedRecipient));
+      applyOptimisticPortfolioDelta(queryClient, {
+        owner: walletAddress,
+        mint: asset.mint,
+        amountUi: nft ? "1" : amount,
+        direction: "out",
+        removeCollectible: nft,
+      });
       toast.success(copy.wallet.sent);
       onSent();
     } catch (e) {
       window.clearTimeout(holdTimer);
       if (e instanceof PolicyDeniedError) {
         if (e.soft && e.intentHash) {
-          // If hold stage already started, this is unlikely; prefer it anyway.
           setSoftDeny(e);
           setPhase("form");
           return;
@@ -342,29 +350,28 @@ export function SendDialog({
   const holdings = portfolio?.holdings ?? [];
   const collectibles = tokensOnly ? [] : portfolio?.collectibles ?? [];
 
-  if (phase === "holding" || phase === "success") {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="p-0" />
-      </Dialog>
-    );
+  if (phase === "holding") {
+    // Parent swaps to SendHoldStage for the NFC ceremony.
+    return null;
   }
 
   const form = (
     <LazyMotion features={domAnimation}>
       <m.div
-        className="flex max-h-[80vh] flex-col gap-6 overflow-y-auto"
+        className="flex flex-1 flex-col gap-5"
         initial={enter.initial}
         animate={enter.animate}
         transition={blurEnterTransition}
       >
       <NavBar
+        className="mb-0"
         leading={
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => closeDialog()}
+            className="-ml-2 text-muted-foreground hover:text-foreground"
+            onClick={onClose}
           >
             {copy.common.cancel}
           </Button>
@@ -372,14 +379,14 @@ export function SendDialog({
         title={copy.wallet.send}
       />
 
-      <m.button
-        type="button"
-        onClick={() => setPickerOpen(true)}
-        className="mx-auto flex items-center gap-2 rounded-full bg-muted/40 px-3 py-1.5 text-sm transition-colors hover:bg-muted/60"
-        whileHover={{ y: -1, scale: 1.01 }}
-        whileTap={{ scale: 0.985 }}
-        transition={{ duration: 0.18, ease: "easeOut" }}
-      >
+      <Button asChild variant="secondary" className="mx-auto h-auto min-h-0 gap-2 rounded-full bg-muted/40 px-3 py-1.5 text-sm hover:bg-muted/60">
+        <m.button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          whileHover={{ y: -1, scale: 1.01 }}
+          whileTap={{ scale: 0.985 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+        >
         {asset ? (
           nft ? (
             <Avatar className="size-6">
@@ -403,10 +410,11 @@ export function SendDialog({
           {asset ? (nft ? asset.name : asset.symbol) : copy.wallet.selectAsset}
         </span>
         <ChevronDown className="size-4 text-muted-foreground" />
-      </m.button>
+        </m.button>
+      </Button>
 
       <m.div
-        className="flex flex-col items-center gap-2 pt-2"
+        className="flex flex-col items-center gap-2 py-1"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1], delay: 0.03 }}
@@ -422,33 +430,42 @@ export function SendDialog({
           </>
         ) : (
           <>
-            <div className="flex items-baseline gap-1">
-              <Input
-                variant="hero"
-                inputMode="decimal"
-                placeholder="0"
-                value={amount}
-                onChange={(e) =>
-                  setAmount(sanitizeDecimalInput(e.target.value))
-                }
-                aria-label={copy.wallet.send}
-              />
+            <Input
+              ref={amountInputRef}
+              variant="hero"
+              inputMode="decimal"
+              placeholder="0"
+              value={amount}
+              onChange={(e) =>
+                setAmount(sanitizeDecimalInput(e.target.value))
+              }
+              aria-label={copy.wallet.send}
+              className={cn(
+                "max-w-full",
+                amount ? "text-foreground" : "text-muted-foreground/50",
+              )}
+            />
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                {copy.wallet.ofAvailableAsset(balanceUi, asset?.symbol ?? "")}
+              </span>
+              <span className="text-muted-foreground/40" aria-hidden>
+                ·
+              </span>
+              <Button
+                type="button"
+                variant="link"
+                className="h-auto min-h-0 px-0 font-medium text-foreground/90 no-underline hover:text-foreground"
+                onClick={() => setAmount(balanceUi)}
+              >
+                {copy.wallet.max}
+              </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {copy.wallet.ofAvailableAsset(balanceUi, asset?.symbol ?? "")}
-            </p>
             {overBalance ? (
               <p className="text-xs text-destructive">
                 {copy.wallet.insufficientBalance}
               </p>
             ) : null}
-            <button
-              type="button"
-              className="text-xs font-medium text-primary"
-              onClick={() => setAmount(balanceUi)}
-            >
-              {copy.wallet.max}
-            </button>
           </>
         )}
       </m.div>
@@ -459,26 +476,30 @@ export function SendDialog({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
       >
-        <label className="px-1 text-xs font-medium text-muted-foreground">
+        <FieldLabel className="px-1 normal-case tracking-normal text-xs">
           {copy.wallet.to}
-        </label>
+        </FieldLabel>
         <div className="flex gap-2">
           <Input
             value={recipient}
             onChange={(e) => setRecipient(e.target.value.trim())}
             placeholder={copy.wallet.pasteAddress}
             className="flex-1 font-mono text-sm"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
           />
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="icon"
             aria-label={copy.wallet.tapAccessory}
             disabled={busy}
             onClick={() => void pickRecipientNfc()}
+            className="shrink-0"
           >
             {busy && phase === "form" ? (
-              <LoaderCircle className="size-4 animate-spin" />
+              <Spinner className="size-4" />
             ) : (
               <Nfc className="size-4" />
             )}
@@ -487,14 +508,15 @@ export function SendDialog({
         {addressBook.length > 0 ? (
           <div className="flex flex-wrap gap-2 px-1">
             {addressBook.slice(0, 4).map((entry) => (
-              <button
+              <Button
                 key={entry.address}
                 type="button"
-                className="rounded-full bg-muted/30 px-3 py-1 text-xs font-medium"
+                variant="secondary"
+                className="h-auto min-h-0 rounded-full bg-muted/30 px-3 py-1 text-xs font-medium"
                 onClick={() => setRecipient(entry.address)}
               >
                 {entry.name}
-              </button>
+              </Button>
             ))}
           </div>
         ) : null}
@@ -523,9 +545,10 @@ export function SendDialog({
           </p>
         ) : null}
         {parsedRecipient && !savedRecipient ? (
-          <button
+          <Button
             type="button"
-            className="px-1 text-left text-xs font-medium text-primary"
+            variant="link"
+            className="h-auto min-h-0 justify-start px-1 text-left text-xs font-medium"
             onClick={() => {
               setContactName(shortAddress(String(parsedRecipient), 4));
               setContactNote("");
@@ -533,32 +556,32 @@ export function SendDialog({
             }}
           >
             {copy.wallet.saveContact}
-          </button>
+          </Button>
         ) : null}
       </m.div>
 
       {feeLabel ? (
-        <div className="rounded-2xl bg-muted/20 px-4 py-3">
-          <p
-            className={cn(
-              "text-sm",
-              feeInsufficient ? "text-destructive" : "text-muted-foreground",
-            )}
-          >
-            {feeInsufficient
-              ? copy.wallet.feeBalanceInsufficient
-              : feeLabel}
+        feeInsufficient ? (
+          <div className="rounded-2xl bg-muted/20 px-4 py-3">
+            <p className="text-sm text-destructive">
+              {copy.wallet.feeBalanceInsufficient}
+            </p>
+            {onChangeLimits ? (
+              <Button
+                type="button"
+                variant="link"
+                className="mt-2 h-auto min-h-0 px-0 text-xs font-medium"
+                onClick={() => onChangeLimits("insufficient_fee_balance")}
+              >
+                {copy.wallet.topUpFees}
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <p className="px-1 text-center text-xs text-muted-foreground">
+            {feeLabel}
           </p>
-          {feeInsufficient && onChangeLimits ? (
-            <button
-              type="button"
-              className="mt-2 text-xs font-medium text-primary"
-              onClick={() => onChangeLimits("insufficient_fee_balance")}
-            >
-              {copy.wallet.topUpFees}
-            </button>
-          ) : null}
-        </div>
+        )
       ) : null}
 
       <AnimatePresence initial={false}>
@@ -572,40 +595,41 @@ export function SendDialog({
           >
             <p>{hardError.message}</p>
             {onChangeLimits ? (
-              <button
+              <Button
                 type="button"
-                className="mt-2 text-xs font-medium text-primary"
+                variant="link"
+                className="mt-2 h-auto min-h-0 px-0 text-xs font-medium"
                 onClick={() => onChangeLimits(hardError.code ?? undefined)}
               >
                 {hardError.code === "insufficient_fee_balance"
                   ? copy.wallet.topUpFees
                   : copy.wallet.changeLimits}
-              </button>
+              </Button>
             ) : null}
           </m.div>
         ) : null}
       </AnimatePresence>
 
       <m.div
-        className="mt-2"
+        className="mt-auto pt-2"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1], delay: 0.08 }}
       >
         <m.div whileTap={{ scale: canSend ? 0.995 : 1 }}>
-        <Button
-          type="button"
-          size="lg"
-          className="w-full"
-          disabled={!canSend}
-          onClick={() => void runSend()}
-        >
-          {busy ? (
-            <LoaderCircle className="size-4 animate-spin" />
-          ) : (
-            copy.wallet.holdToSend
-          )}
-        </Button>
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            disabled={!canSend}
+            onClick={() => void runSend()}
+          >
+            {busy ? (
+              <Spinner className="size-4" />
+            ) : (
+              copy.wallet.holdToSend
+            )}
+          </Button>
         </m.div>
       </m.div>
 
@@ -619,98 +643,73 @@ export function SendDialog({
           </SheetHeader>
           <div className="space-y-4 px-4 pb-6">
             {holdings.length > 0 ? (
-              <div>
-                <p className="mb-2 text-xs font-medium text-muted-foreground">
-                  {copy.wallet.tokens}
-                </p>
-                <ul className="overflow-hidden rounded-2xl bg-muted/25">
-                  {holdings.map((h) => {
-                    const ref = holdingToSendAsset(h);
-                    return (
-                      <li key={h.mint} className="border-b border-border/40 last:border-0">
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/50"
-                          onClick={() => {
-                            setAsset(ref);
-                            if (isCollectibleSendKind(ref.kind)) setAmount("1");
-                            else if (nft) setAmount("");
-                            setPickerOpen(false);
+              <GroupedList label={copy.wallet.tokens}>
+                {holdings.map((h) => {
+                  const ref = holdingToSendAsset(h);
+                  return (
+                    <GroupedRow
+                      key={h.mint}
+                      leading={
+                        <TokenIcon
+                          token={{
+                            mint: h.mint,
+                            symbol: h.symbol,
+                            icon: h.icon,
                           }}
-                        >
-                          <TokenIcon
-                            token={{
-                              mint: h.mint,
-                              symbol: h.symbol,
-                              icon: h.icon,
-                            }}
-                            className="size-8"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">
-                              {h.symbol}
-                            </p>
-                            <p className="truncate text-xs text-muted-foreground">
-                              {h.name}
-                            </p>
-                          </div>
-                          <p className="text-sm tabular-nums">{h.balanceUi}</p>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
+                          className="size-8"
+                        />
+                      }
+                      trailing={
+                        <p className="text-sm tabular-nums">{h.balanceUi}</p>
+                      }
+                      subtitle={h.name}
+                      onClick={() => {
+                        setAsset(ref);
+                        if (isCollectibleSendKind(ref.kind)) setAmount("1");
+                        else if (nft) setAmount("");
+                        setPickerOpen(false);
+                      }}
+                    >
+                      {h.symbol}
+                    </GroupedRow>
+                  );
+                })}
+              </GroupedList>
             ) : null}
 
             {collectibles.length > 0 ? (
-              <div>
-                <Separator className="mb-4" />
-                <p className="mb-2 text-xs font-medium text-muted-foreground">
-                  {copy.wallet.collectibles}
-                </p>
-                <ul className="overflow-hidden rounded-2xl bg-muted/25">
-                  {collectibles.map((c) => {
-                    const ref = collectibleToSendAsset(c);
-                    return (
-                      <li key={c.mint} className="border-b border-border/40 last:border-0">
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/50"
-                          onClick={() => {
-                            setAsset(ref);
-                            setAmount("1");
-                            setPickerOpen(false);
-                          }}
-                        >
-                          <Avatar className="size-8 rounded-lg">
-                            {c.image ? (
-                              <AvatarImage
-                                src={c.image}
-                                alt=""
-                                className="rounded-lg"
-                              />
-                            ) : null}
-                            <AvatarFallback className="rounded-lg text-[10px]">
-                              {c.name.slice(0, 2)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium">
-                              {c.name}
-                            </p>
-                            {c.collectionName ? (
-                              <p className="truncate text-xs text-muted-foreground">
-                                {c.collectionName}
-                              </p>
-                            ) : null}
-                          </div>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
+              <GroupedList label={copy.wallet.collectibles}>
+                {collectibles.map((c) => {
+                  const ref = collectibleToSendAsset(c);
+                  return (
+                    <GroupedRow
+                      key={c.mint}
+                      leading={
+                        <Avatar className="size-8 rounded-lg">
+                          {c.image ? (
+                            <AvatarImage
+                              src={c.image}
+                              alt=""
+                              className="rounded-lg"
+                            />
+                          ) : null}
+                          <AvatarFallback className="rounded-lg text-[10px]">
+                            {c.name.slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                      }
+                      subtitle={c.collectionName}
+                      onClick={() => {
+                        setAsset(ref);
+                        setAmount("1");
+                        setPickerOpen(false);
+                      }}
+                    >
+                      {c.name}
+                    </GroupedRow>
+                  );
+                })}
+              </GroupedList>
             ) : null}
           </div>
         </SheetContent>
@@ -725,9 +724,9 @@ export function SendDialog({
           </SheetHeader>
           <div className="space-y-4 px-4 pb-6">
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
+              <FieldLabel className="normal-case tracking-normal text-xs">
                 {copy.wallet.contactName}
-              </label>
+              </FieldLabel>
               <Input
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
@@ -735,9 +734,9 @@ export function SendDialog({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
+              <FieldLabel className="normal-case tracking-normal text-xs">
                 {copy.wallet.contactNote}
-              </label>
+              </FieldLabel>
               <Input
                 value={contactNote}
                 onChange={(e) => setContactNote(e.target.value)}
@@ -774,119 +773,113 @@ export function SendDialog({
       : `${amount} ${asset?.symbol ?? ""}`;
 
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="p-0 max-w-lg">
-          <LazyMotion features={domAnimation}>
-            <m.div
-              className="flex max-h-[80vh] flex-col gap-6 overflow-y-auto p-4 sm:p-6"
-              initial={enter.initial}
-              animate={enter.animate}
-              transition={blurEnterTransition}
+      <LazyMotion features={domAnimation}>
+        <m.div
+          className="flex flex-1 flex-col gap-6"
+          initial={enter.initial}
+          animate={enter.animate}
+          transition={blurEnterTransition}
+        >
+          <NavBar
+            className="mb-0"
+            leading={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="-ml-2 text-muted-foreground hover:text-foreground"
+                onClick={() => setSoftDeny(null)}
+              >
+                {copy.common.cancel}
+              </Button>
+            }
+            title={copy.wallet.send}
+          />
+          <m.div
+            className="flex flex-1 flex-col items-center justify-center gap-4 px-2 text-center"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1], delay: 0.04 }}
+          >
+            <m.h2
+              className="font-(family-name:--font-display) text-2xl font-medium"
+              initial={{ opacity: 0, scale: 0.985 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
             >
-            <NavBar
-              leading={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSoftDeny(null)}
-                >
-                  {copy.common.cancel}
-                </Button>
-              }
-              title={copy.wallet.send}
-            />
+              {role === "owner"
+                ? copy.wallet.approveSendTitle
+                : copy.wallet.nearbyPolicyTitle}
+            </m.h2>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              {role === "owner"
+                ? policySoftDenyBody(softDeny)
+                : copy.wallet.deviceVisitorSoftDeny}
+            </p>
             <m.div
-              className="flex flex-1 flex-col items-center justify-center gap-4 px-2 text-center"
+              className="w-full max-w-sm rounded-2xl bg-muted/25 px-4 py-3 text-left"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1], delay: 0.04 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1], delay: 0.08 }}
             >
-              <m.h2
-                className="font-(family-name:--font-display) text-2xl font-medium"
-                initial={{ opacity: 0, scale: 0.985 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1], delay: 0.06 }}
-              >
-                {role === "owner"
-                  ? copy.wallet.approveSendTitle
-                  : copy.wallet.nearbyPolicyTitle}
-              </m.h2>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                {role === "owner"
-                  ? policySoftDenyBody(softDeny)
-                  : copy.wallet.deviceVisitorSoftDeny}
+              <p className="font-(family-name:--font-display) text-lg">
+                {displayAmount}
               </p>
-              <m.div
-                className="w-full max-w-sm rounded-2xl bg-muted/25 px-4 py-3 text-left"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1], delay: 0.08 }}
-              >
-                <p className="font-(family-name:--font-display) text-lg">
-                  {displayAmount}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {copy.wallet.to}{" "}
-                  {shortAddress(String(parsedRecipient ?? recipient), 6)}
-                </p>
-              </m.div>
+              <p className="text-xs text-muted-foreground">
+                {copy.wallet.to}{" "}
+                {shortAddress(String(parsedRecipient ?? recipient), 6)}
+              </p>
             </m.div>
-            <m.div
-              className="flex flex-col gap-2"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-            >
-              {role === "owner" ? (
-                <>
-                  <Button
-                    type="button"
-                    size="lg"
-                    className="w-full"
-                    disabled={busy}
-                    onClick={() => void approveOnce()}
-                  >
-                    {busy ? (
-                      <LoaderCircle className="size-4 animate-spin" />
-                    ) : (
-                      copy.wallet.approveOnce
-                    )}
-                  </Button>
-                  {onChangeLimits ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="w-full"
-                      disabled={busy}
-                      onClick={() => onChangeLimits(softDeny.code)}
-                    >
-                      {copy.wallet.changeLimits}
-                    </Button>
-                  ) : null}
-                </>
-              ) : (
+          </m.div>
+          <m.div
+            className="flex flex-col gap-2"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+          >
+            {role === "owner" ? (
+              <>
                 <Button
                   type="button"
                   size="lg"
                   className="w-full"
-                  onClick={() => setSoftDeny(null)}
+                  disabled={busy}
+                  onClick={() => void approveOnce()}
                 >
-                  {copy.common.done}
+                  {busy ? (
+                    <Spinner className="size-4" />
+                  ) : (
+                    copy.wallet.approveOnce
+                  )}
                 </Button>
-              )}
-            </m.div>
-            </m.div>
-          </LazyMotion>
-        </DialogContent>
-      </Dialog>
+                {onChangeLimits ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    disabled={busy}
+                    onClick={() => onChangeLimits(softDeny.code)}
+                  >
+                    {copy.wallet.changeLimits}
+                  </Button>
+                ) : null}
+              </>
+            ) : (
+              <Button
+                type="button"
+                size="lg"
+                className="w-full"
+                onClick={() => setSoftDeny(null)}
+              >
+                {copy.common.done}
+              </Button>
+            )}
+          </m.div>
+        </m.div>
+      </LazyMotion>
     );
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 max-w-lg">{form}</DialogContent>
-    </Dialog>
-  );
+  return form;
 }
 

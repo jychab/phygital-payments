@@ -15,18 +15,12 @@ import {
 } from "@/lib/phygital/token";
 
 /** Verify session for minted/unminted homes — Hold to Check. */
-export function useTokenVerifySession(
-  token: PhygitalToken,
-  liveConfirmedProp = false,
-) {
-  const hold = useHoldToCheck(token, liveConfirmedProp);
+export function useTokenVerifySession(token: PhygitalToken) {
+  const hold = useHoldToCheck(token);
   return {
     token,
     liveConfirmed: hold.liveConfirmed,
     overlay: hold.overlay,
-    failedRecheck: hold.failedRecheck,
-    pending: hold.pending,
-    recheckSuccess: hold.recheckSuccess,
     holdError: hold.holdError,
     showInAppGate: hold.showInAppGate,
     holdToCheck: hold.holdToCheck,

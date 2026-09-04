@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, LoaderCircle } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { PolicyDeniedError } from "phygital-wallet-sdk";
 
@@ -11,7 +11,7 @@ import { NavBar } from "@/components/shared/nav-bar";
 import { TokenIcon } from "@/components/shared/token-chip";
 import { WalletQrCode } from "@/components/wallet/wallet-qr";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FieldLabel, Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -21,7 +21,10 @@ import {
 import { useVerifiedTokens } from "@/hooks/wallet/use-verified-tokens";
 import { useWalletPortfolio } from "@/hooks/wallet/use-wallet-portfolio";
 import { brand, copy } from "@/lib/copy/phygital";
-import { invalidateWalletBalances } from "@/lib/queries";
+import {
+  applyOptimisticPortfolioDelta,
+  invalidateWalletBalances,
+} from "@/lib/queries";
 import { shortAddress } from "@/lib/utils";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { pushLocalWalletActivity } from "@/lib/wallet/activity-local";
@@ -33,6 +36,8 @@ import {
   paymentTokenToSendAsset,
   type SendAssetRef,
 } from "@/lib/wallet/send-asset-ref";
+import { Spinner } from "@/components/ui/spinner";
+import { GroupedList, GroupedRow } from "@/components/shared/grouped-list";
 
 type LinkedPayer = {
   walletPda: string;
@@ -109,7 +114,7 @@ export function ReceiveNearbySheet({
     try {
       const id = await identifyAccessory();
       if (String(id.walletPda) === recipientWallet) {
-        throw new Error("You can’t receive from this accessory");
+        throw new Error(copy.wallet.cantReceiveFromSelf);
       }
       setFrom({
         walletPda: String(id.walletPda),
@@ -178,6 +183,18 @@ export function ReceiveNearbySheet({
         source: "local",
       });
       toast.success(copy.wallet.received);
+      applyOptimisticPortfolioDelta(queryClient, {
+        owner: recipientWallet,
+        mint: asset.mint,
+        amountUi: amount,
+        direction: "in",
+      });
+      applyOptimisticPortfolioDelta(queryClient, {
+        owner: from.walletPda,
+        mint: asset.mint,
+        amountUi: amount,
+        direction: "out",
+      });
       invalidateWalletBalances(queryClient, {
         wallets: [recipientWallet, from.walletPda],
         tokens: [from.tokenPda],
@@ -314,14 +331,15 @@ export function ReceiveNearbySheet({
         title={copy.wallet.receiveNearby}
       />
 
-      <button
+      <Button
         type="button"
+        variant="secondary"
         disabled={catalogLoading || catalog.length === 0}
         onClick={() => setPickerOpen(true)}
-        className="mx-auto flex items-center gap-2 rounded-full bg-muted/40 px-3 py-1.5 text-sm transition-colors hover:bg-muted/60 disabled:opacity-50"
+        className="mx-auto h-auto min-h-0 gap-2 rounded-full bg-muted/40 px-3 py-1.5 text-sm hover:bg-muted/60"
       >
         {catalogLoading ? (
-          <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
+          <Spinner className="size-4 text-muted-foreground" />
         ) : asset ? (
           <TokenIcon
             token={{
@@ -336,7 +354,7 @@ export function ReceiveNearbySheet({
           {asset?.symbol ?? copy.wallet.selectAsset}
         </span>
         <ChevronDown className="size-4 text-muted-foreground" />
-      </button>
+      </Button>
 
       <div className="flex flex-col items-center gap-2 pt-2">
         <div className="flex items-baseline gap-1">
@@ -357,21 +375,22 @@ export function ReceiveNearbySheet({
             <p className="text-sm text-muted-foreground">
               {copy.wallet.ofAvailableAsset(payerBalanceUi, asset.symbol)}
             </p>
-            <button
+            <Button
               type="button"
-              className="text-xs font-medium text-primary"
+              variant="link"
+              className="h-auto min-h-0 px-0 text-xs font-medium"
               onClick={() => setAmount(payerBalanceUi)}
             >
               {copy.wallet.max}
-            </button>
+            </Button>
           </>
         ) : null}
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="px-1 text-xs font-medium text-muted-foreground">
+        <FieldLabel className="px-1 normal-case tracking-normal text-xs">
           {copy.wallet.from}
-        </label>
+        </FieldLabel>
         {from ? (
           <div className="flex items-center justify-between rounded-2xl bg-muted/25 px-4 py-3">
             <p className="text-sm tabular-nums">
@@ -395,7 +414,7 @@ export function ReceiveNearbySheet({
             onClick={() => void identifyFrom()}
           >
             {busy ? (
-              <LoaderCircle className="size-4 animate-spin" />
+              <Spinner className="size-4" />
             ) : (
               copy.wallet.tapTheirAccessory
             )}
@@ -409,7 +428,7 @@ export function ReceiveNearbySheet({
         </div>
       ) : null}
 
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col gap-2">
         <Button
           type="button"
           size="lg"
@@ -418,11 +437,14 @@ export function ReceiveNearbySheet({
           onClick={() => void runReceive()}
         >
           {busy ? (
-            <LoaderCircle className="size-4 animate-spin" />
+            <Spinner className="size-4" />
           ) : (
             copy.wallet.holdToReceive
           )}
         </Button>
+        <p className="hidden text-center text-xs text-muted-foreground md:block">
+          {copy.wallet.holdToReceiveDesktopHint}
+        </p>
       </div>
 
       <Sheet
@@ -453,37 +475,25 @@ export function ReceiveNearbySheet({
                 {copy.wallet.noMatchingTokens}
               </p>
             ) : (
-              <ul className="overflow-hidden rounded-2xl bg-muted/25">
+              <GroupedList>
                 {filtered.map((t) => {
                   const ref = paymentTokenToSendAsset(t);
                   return (
-                    <li
+                    <GroupedRow
                       key={t.mint}
-                      className="border-b border-border/40 last:border-0"
+                      leading={<TokenIcon token={t} className="size-8" />}
+                      subtitle={t.name}
+                      onClick={() => {
+                        setAsset(ref);
+                        setPickerOpen(false);
+                        setSearch("");
+                      }}
                     >
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/50"
-                        onClick={() => {
-                          setAsset(ref);
-                          setPickerOpen(false);
-                          setSearch("");
-                        }}
-                      >
-                        <TokenIcon token={t} className="size-8" />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">
-                            {t.symbol}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {t.name}
-                          </p>
-                        </div>
-                      </button>
-                    </li>
+                      {t.symbol}
+                    </GroupedRow>
                   );
                 })}
-              </ul>
+              </GroupedList>
             )}
           </div>
         </SheetContent>

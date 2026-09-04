@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
 
-import { NavBar } from "@/components/shared/nav-bar";
 import { StageTransition } from "@/components/shared/stage-transition";
 import { WalletHomePanel } from "@/components/wallet/wallet-home-panel";
 import { SendDialog } from "@/components/wallet/send-dialog";
@@ -26,8 +24,7 @@ import { RpcConnectionSheet } from "@/components/wallet/rpc-connection-sheet";
 import { TokensAllSheet } from "@/components/wallet/tokens-all-sheet";
 import { CollectiblesAllSheet } from "@/components/wallet/collectibles-all-sheet";
 import { useRpcPreference } from "@/hooks/wallet/use-rpc-preference";
-import { Button } from "@/components/ui/button";
-import { useTokenWalletChip } from "@/hooks/wallet/use-token-wallet-chip";
+import { useWalletPda } from "@/hooks/wallet/use-wallet-pda";
 import { useWalletPortfolio } from "@/hooks/wallet/use-wallet-portfolio";
 import { useWalletActivity } from "@/hooks/wallet/use-wallet-activity";
 import { useFeeBalance } from "@/hooks/wallet/use-fee-balance";
@@ -51,6 +48,7 @@ type Screen =
   | "send"
   | "receive"
   | "nearby"
+  | "collectible"
   | "tokensAll"
   | "collectiblesAll"
   | "activity"
@@ -71,24 +69,21 @@ function settingsFromDenyCode(code?: string): Screen {
 
 /**
  * Shared wallet workspace for accessory landing and card → Wallet mode.
- * Always renders in a compact (phone-width) column, even inside gallery shell.
+ * Primary flows are full-screen stages; nested pickers stay bottom sheets.
  */
 export function WalletWorkspace({
   token,
   role = "visitor",
   linkStatus,
-  showBackToCard,
   onBackToCard,
   cardLabel,
-  cardImage,
 }: {
   token: PhygitalToken;
   role?: WalletRole;
   linkStatus?: LinkStatus;
-  showBackToCard?: boolean;
+  /** Return to mint metadata (card chip toggle / collectible “Open card”). */
   onBackToCard?: () => void;
   cardLabel?: string;
-  cardImage?: string | null;
 }) {
   return (
     <div className={cn("mx-auto flex w-full flex-1 flex-col", shellLayoutClass.compact)}>
@@ -96,10 +91,8 @@ export function WalletWorkspace({
         token={token}
         role={role}
         linkStatus={linkStatus}
-        showBackToCard={showBackToCard}
         onBackToCard={onBackToCard}
         cardLabel={cardLabel}
-        cardImage={cardImage}
       />
     </div>
   );
@@ -109,18 +102,14 @@ function WalletWorkspaceInner({
   token,
   role,
   linkStatus,
-  showBackToCard,
   onBackToCard,
   cardLabel,
-  cardImage,
 }: {
   token: PhygitalToken;
   role: WalletRole;
   linkStatus?: LinkStatus;
-  showBackToCard?: boolean;
   onBackToCard?: () => void;
   cardLabel?: string;
-  cardImage?: string | null;
 }) {
   const tokenAddress = String(token.address);
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
@@ -129,12 +118,12 @@ function WalletWorkspaceInner({
     enabled: cardLabel == null,
   });
   const resolvedLabel =
-    collectible?.name ?? cardLabel ?? (mint ? copy.home.card : copy.home.accessory);
-  const resolvedImage = collectible?.image ?? cardImage ?? null;
+    collectible?.name ??
+    cardLabel ??
+    (mint ? copy.home.card : copy.home.accessory);
   const [screen, setScreen] = useState<Screen>("home");
   const [sendAsset, setSendAsset] = useState<SendAssetRef | null>(null);
   const [sendTokensOnly, setSendTokensOnly] = useState(true);
-  const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [sendHoldPhase, setSendHoldPhase] = useState<"holding" | "success" | null>(
     null,
   );
@@ -144,10 +133,7 @@ function WalletWorkspaceInner({
 
   const onSettings = useCallback(() => setScreen("settings"), []);
 
-  const { walletAddress } = useTokenWalletChip({
-    token,
-    mode: "copy",
-  });
+  const { walletAddress } = useWalletPda(tokenAddress);
 
   // Defer secondary fetches so portfolio paints first on unminted unlock.
   const [deferSecondary, setDeferSecondary] = useState(false);
@@ -187,11 +173,17 @@ function WalletWorkspaceInner({
       setSendHoldPhase(null);
       setSendRecap(null);
       setDetail(null);
-      setScreen("home");
-      setSendDialogOpen(true);
+      setScreen("send");
     },
     [],
   );
+
+  const closeSend = useCallback(() => {
+    setSendHoldPhase(null);
+    setSendRecap(null);
+    setSendAsset(null);
+    setScreen("home");
+  }, []);
 
   if (!walletAddress) {
     return (
@@ -201,12 +193,9 @@ function WalletWorkspaceInner({
     );
   }
 
-  const backLabel = cardLabel ?? collectible?.name ?? copy.wallet.backToCard;
-
   const showOpenApprovals =
     isOwner &&
     !dismissApprovals &&
-    !sendDialogOpen &&
     openApprovals.approvals.length > 0 &&
     screen === "home";
 
@@ -228,17 +217,32 @@ function WalletWorkspaceInner({
       />
     );
   } else if (screen === "send") {
-    body = (
+    body = sendHoldPhase ? (
       <SendHoldStage
-        phase={sendHoldPhase ?? "holding"}
+        phase={sendHoldPhase}
         imageSrc={sendAsset?.icon}
         recap={sendRecap}
-        onClose={() => {
-          setSendHoldPhase(null);
-          setSendRecap(null);
-          setSendAsset(null);
-          setScreen("home");
+        onClose={closeSend}
+      />
+    ) : (
+      <SendDialog
+        phygitalTokenPda={tokenAddress}
+        walletAddress={walletAddress}
+        portfolio={portfolio.data}
+        initialAsset={sendAsset}
+        tokensOnly={sendTokensOnly}
+        onClose={closeSend}
+        onHoldPhaseChange={(phase, recap) => {
+          if (recap) setSendRecap(recap);
+          setSendHoldPhase(phase);
         }}
+        onSent={refresh}
+        onChangeLimits={
+          isOwner
+            ? (code) => setScreen(settingsFromDenyCode(code))
+            : undefined
+        }
+        role={role}
       />
     );
   } else if (screen === "receive") {
@@ -257,6 +261,25 @@ function WalletWorkspaceInner({
         onReceived={refresh}
       />
     );
+  } else if (screen === "collectible" && detail) {
+    body = (
+      <CollectibleDetailSheet
+        collectible={detail}
+        onBack={() => {
+          setDetail(null);
+          setScreen("home");
+        }}
+        onSend={(c) => openSend(collectibleToSendAsset(c), false)}
+        onOpenCard={
+          onBackToCard && mint && detail.mint === mint
+            ? () => {
+                setDetail(null);
+                onBackToCard();
+              }
+            : undefined
+        }
+      />
+    );
   } else if (screen === "tokensAll") {
     body = (
       <TokensAllSheet
@@ -271,7 +294,10 @@ function WalletWorkspaceInner({
         collectibles={portfolio.data?.collectibles ?? []}
         linkedMint={mint}
         onBack={() => setScreen("home")}
-        onSelect={setDetail}
+        onSelect={(c) => {
+          setDetail(c);
+          setScreen("collectible");
+        }}
       />
     );
   } else if (screen === "activity") {
@@ -342,40 +368,19 @@ function WalletWorkspaceInner({
   } else {
     body = (
       <div className="flex flex-1 flex-col">
-        {showBackToCard ? (
-          <NavBar
-            leading={
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="gap-1.5 px-2"
-                onClick={onBackToCard}
-              >
-                {cardImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={cardImage}
-                    alt=""
-                    className="size-5 rounded object-cover"
-                  />
-                ) : (
-                  <ArrowLeft className="size-4" />
-                )}
-                <span className="max-w-32 truncate">{backLabel}</span>
-              </Button>
-            }
-          />
-        ) : null}
         <WalletHomePanel
           portfolio={portfolio.data}
           loading={portfolio.isLoading}
           walletAddress={walletAddress}
+          walletTitle={resolvedLabel}
           linkedMint={mint}
           onSend={() => openSend(null, true)}
           onSendAsset={(asset) => openSend(asset, true)}
           onReceive={() => setScreen("receive")}
-          onSelectCollectible={setDetail}
+          onSelectCollectible={(c) => {
+            setDetail(c);
+            setScreen("collectible");
+          }}
           onSeeAllTokens={() => setScreen("tokensAll")}
           onSeeAllCollectibles={() => setScreen("collectiblesAll")}
           onSeeAllActivity={() => setScreen("activity")}
@@ -415,46 +420,16 @@ function WalletWorkspaceInner({
 
   return (
     <>
-      <SendDialog
-        phygitalTokenPda={tokenAddress}
-        walletAddress={walletAddress}
-        portfolio={portfolio.data}
-        initialAsset={sendAsset}
-        tokensOnly={sendTokensOnly}
-        open={sendDialogOpen}
-        onOpenChange={setSendDialogOpen}
-        onHoldPhaseChange={(phase, recap) => {
-          if (recap) setSendRecap(recap);
-          setSendHoldPhase(phase);
-          setScreen("send");
-        }}
-        onSent={refresh}
-        onChangeLimits={
-          isOwner
-            ? (code) => setScreen(settingsFromDenyCode(code))
-            : undefined
+      <StageTransition
+        stageKey={
+          screen === "send"
+            ? `send-${sendHoldPhase ?? "form"}`
+            : screen
         }
-        role={role}
-      />
-      <StageTransition stageKey={screen} variant="fade">
+        variant="fade"
+      >
         {body}
       </StageTransition>
-      <CollectibleDetailSheet
-        collectible={detail}
-        open={detail != null}
-        onOpenChange={(open) => {
-          if (!open) setDetail(null);
-        }}
-        onSend={(c) => openSend(collectibleToSendAsset(c), false)}
-        onOpenCard={
-          showBackToCard &&
-          onBackToCard &&
-          mint &&
-          detail?.mint === mint
-            ? onBackToCard
-            : undefined
-        }
-      />
     </>
   );
 }

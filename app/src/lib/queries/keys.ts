@@ -33,8 +33,10 @@ export const queryKeys = {
 
   activityMintMeta: {
     all: () => ["activityMintMeta"] as const,
+    byMint: (mint: string) =>
+      [...queryKeys.activityMintMeta.all(), "mint", mint] as const,
     byMints: (mints: string[]) =>
-      [...queryKeys.activityMintMeta.all(), mints.join(",")] as const,
+      [...queryKeys.activityMintMeta.all(), "batch", mints.join(",")] as const,
   },
 
   feeBalance: {

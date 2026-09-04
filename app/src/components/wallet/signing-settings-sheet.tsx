@@ -17,8 +17,9 @@ import {
 } from "phygital-token-sdk";
 
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
+import { NavBar } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FieldLabel, Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy/phygital";
 import {
   invalidatePhygitalToken,
@@ -163,24 +164,34 @@ export function SigningSettingsSheet({
   if (view === "custom") {
     return (
       <div className="flex flex-1 flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <Button type="button" variant="ghost" size="sm" onClick={() => setView("menu")}>
-            {copy.common.back}
-          </Button>
-          <p className="text-sm font-medium">{copy.wallet.signing}</p>
-          <span className="w-16" aria-hidden />
-        </div>
+        <NavBar
+          leading={
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setView("menu")}
+            >
+              {copy.common.back}
+            </Button>
+          }
+          title={copy.wallet.signing}
+        />
         <p className="rounded-2xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
           {copy.wallet.signingCustomPolicyWarn}
         </p>
-        <label className="text-xs text-muted-foreground">{copy.wallet.customVerifier}</label>
+        <FieldLabel className="normal-case tracking-normal text-xs">
+          {copy.wallet.customVerifier}
+        </FieldLabel>
         <Input
           value={verifier}
           onChange={(e) => setVerifier(e.target.value)}
           placeholder={copy.wallet.verifierPubkey}
           className="font-mono text-sm"
         />
-        <label className="text-xs text-muted-foreground">{copy.wallet.customEndpoint}</label>
+        <FieldLabel className="normal-case tracking-normal text-xs">
+          {copy.wallet.customEndpoint}
+        </FieldLabel>
         <Input
           value={endpoint}
           onChange={(e) => setEndpoint(e.target.value)}
@@ -196,26 +207,28 @@ export function SigningSettingsSheet({
 
   return (
     <div className="flex flex-1 flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-          {copy.common.back}
-        </Button>
-        <p className="text-sm font-medium">{copy.wallet.signing}</p>
-        <span className="w-16" aria-hidden />
-      </div>
+      <NavBar
+        leading={
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            {copy.common.back}
+          </Button>
+        }
+        title={copy.wallet.signing}
+      />
       <p className="text-sm text-muted-foreground">{copy.wallet.signingBody}</p>
       <div className="rounded-2xl bg-muted/25 px-4 py-3">
         <p className="text-xs text-muted-foreground">{copy.wallet.signingCurrent}</p>
         <p className="text-sm font-medium">{copy.wallet.signingDefault}</p>
       </div>
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => setView("custom")}
-        className="flex items-center justify-between rounded-2xl bg-muted/25 px-4 py-4 text-left"
+        className="h-auto min-h-11 w-full justify-between rounded-2xl bg-muted/25 px-4 py-4 text-left font-normal"
       >
         <span className="text-sm">{copy.wallet.useCustomSigning}</span>
         <ChevronRight className="size-4 text-muted-foreground" />
-      </button>
+      </Button>
       <Button type="button" variant="outline" onClick={() => void restoreDefault()}>
         {copy.wallet.restoreDefault}
       </Button>

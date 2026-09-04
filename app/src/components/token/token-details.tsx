@@ -5,6 +5,7 @@ import { Info } from "lucide-react";
 
 import { CopyableAddress } from "@/components/shared/copyable-address";
 import { CollectibleMetadataRow } from "@/components/token/collectible-metadata-group";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -21,12 +22,12 @@ function CardIdLabel() {
       {copy.token.cardId}
       <Tooltip open={open} onOpenChange={setOpen}>
         <TooltipTrigger asChild>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             className={cn(
-              "inline-flex size-4 items-center justify-center rounded-full text-muted-foreground",
-              "transition-colors hover:text-foreground",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+              "size-4 min-h-0 min-w-0 rounded-full text-muted-foreground hover:text-foreground",
             )}
             aria-label={copy.token.cardIdHint}
             onClick={(e) => {
@@ -35,7 +36,7 @@ function CardIdLabel() {
             }}
           >
             <Info className="size-3.5" aria-hidden />
-          </button>
+          </Button>
         </TooltipTrigger>
         <TooltipContent side="top" align="start" className="text-left">
           {copy.token.cardIdHint}

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { CheckCircle2, LoaderCircle, Nfc } from "lucide-react";
+import { CheckCircle2, Nfc } from "lucide-react";
 
 import { galleryAnimate } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 
 /**
  * Circular hold target — DAS mint art when available, NFC glyph fallback.
@@ -71,7 +72,7 @@ export function CollectibleOrb({
         >
           {busy ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/40">
-              <LoaderCircle
+              <Spinner
                 className={cn(icon, "animate-spin text-foreground")}
               />
             </div>

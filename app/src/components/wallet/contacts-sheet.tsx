@@ -41,9 +41,11 @@ export function ContactsSheet({ onBack }: { onBack: () => void }) {
                 </span>
               }
               trailing={
-                <button
+                <Button
                   type="button"
-                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted/50 hover:text-destructive"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-muted-foreground hover:text-destructive"
                   aria-label={copy.wallet.removeContact}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -51,7 +53,7 @@ export function ContactsSheet({ onBack }: { onBack: () => void }) {
                   }}
                 >
                   <Trash2 className="size-4" aria-hidden />
-                </button>
+                </Button>
               }
             >
               {entry.name}

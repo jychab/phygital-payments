@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LoaderCircle } from "lucide-react";
 
+import { NavBar } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { usePolicyEditor } from "@/hooks/wallet/use-wallet-policy";
 import { copy } from "@/lib/copy/phygital";
 import { DEFAULT_ALLOWED_PROGRAMS } from "@/lib/wallet/policies-client";
@@ -41,13 +42,14 @@ export function AllowedActionsSheet({
 
   return (
     <div className="flex flex-1 flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-          {copy.common.back}
-        </Button>
-        <p className="text-sm font-medium">{copy.wallet.allowedActions}</p>
-        <span className="w-16" aria-hidden />
-      </div>
+      <NavBar
+        leading={
+          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
+            {copy.common.back}
+          </Button>
+        }
+        title={copy.wallet.allowedActions}
+      />
       {editor.loading ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           {copy.common.loading}
@@ -122,7 +124,7 @@ export function AllowedActionsSheet({
             }
           >
             {editor.saving ? (
-              <LoaderCircle className="size-4 animate-spin" />
+              <Spinner className="size-4" />
             ) : (
               copy.wallet.holdToSave
             )}

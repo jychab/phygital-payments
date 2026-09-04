@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useAuthenticateToken } from "@/hooks/token/use-authenticate-token";
-import { useTapVerify } from "@/hooks/token/use-tap-verify";
 import { useIsInAppBrowser } from "@/hooks/layout/use-is-in-app-browser";
 import { copy } from "@/lib/copy/phygital";
 import type { PhygitalToken } from "@/lib/phygital/token";
@@ -18,28 +17,20 @@ export type HoldToCheckOverlay =
   | "failed";
 
 /**
- * Hold-to-Check + Confirmed badge.
+ * Hold-to-verify + Verified badge.
  *
- * Confirmed when signed NFC tap params verify, or `startAuthentication`
- * succeeds in this page (optional seed from parent after cold hold).
+ * `liveConfirmed` is true only after a successful `startAuthentication` /
+ * verifyResponse in this page session — never from possession unlock alone.
  */
-export function useHoldToCheck(
-  token: PhygitalToken,
-  /** True when parent already proved via WebAuthn/tap in this tree. */
-  webauthnProvenInTree = false,
-) {
+export function useHoldToCheck(token: PhygitalToken) {
   const inApp = useIsInAppBrowser();
   const { authenticate } = useAuthenticateToken();
-  const { hasTapProof, verify } = useTapVerify();
-  const tapConfirmed = hasTapProof && verify === "verified";
 
   const [holdConfirmed, setHoldConfirmed] = useState(false);
   const [overlay, setOverlay] = useState<HoldToCheckOverlay>(null);
   const [showInAppGate, setShowInAppGate] = useState(false);
   const [holdError, setHoldError] = useState<string | null>(null);
-  const [failedRecheck, setFailedRecheck] = useState(false);
   const recheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isRecheckRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -47,15 +38,12 @@ export function useHoldToCheck(
     };
   }, []);
 
-  const liveConfirmed = holdConfirmed || tapConfirmed || webauthnProvenInTree;
-
   async function holdToCheck() {
     if (inApp) {
       setShowInAppGate(true);
       return;
     }
 
-    isRecheckRef.current = liveConfirmed;
     setHoldError(null);
     setOverlay("pending");
 
@@ -64,29 +52,20 @@ export function useHoldToCheck(
         expectedPublicKey: token.secp256r1PublicKey,
       });
       setHoldConfirmed(true);
-      setFailedRecheck(false);
-
-      // First verify and recheck both get the success ceremony (no redundant toast).
       setOverlay("recheck-success");
       if (recheckTimer.current) clearTimeout(recheckTimer.current);
       recheckTimer.current = setTimeout(() => {
         setOverlay(null);
       }, RECHECK_SUCCESS_MS);
     } catch (err) {
-      setHoldError(
-        toUserErrorMessage(err, copy.verify.failedBody),
-      );
-      setFailedRecheck(isRecheckRef.current);
+      setHoldError(toUserErrorMessage(err, copy.verify.failedBody));
       setOverlay("failed");
     }
   }
 
   return {
-    liveConfirmed,
+    liveConfirmed: holdConfirmed,
     overlay,
-    failedRecheck,
-    pending: overlay === "pending",
-    recheckSuccess: overlay === "recheck-success",
     holdError,
     showInAppGate,
     holdToCheck,

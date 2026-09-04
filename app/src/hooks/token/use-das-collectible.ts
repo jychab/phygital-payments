@@ -31,7 +31,8 @@ export function useResolvedDasCollectible(
 ) {
   const das = useDasCollectible(mint, opts);
   const collectible =
-    das.data ?? (das.isFetched && mint ? fallbackCollectible(mint) : null);
+    das.data ??
+    (das.isFetched && mint ? fallbackCollectible(mint) : null);
   const loading = das.isLoading && !das.isFetched;
   return { collectible, loading };
 }

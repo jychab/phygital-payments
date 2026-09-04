@@ -70,8 +70,9 @@ export function useMintedCollectibleView(mint: string | null) {
     },
     enabled: needsRarityPoll,
     ...queryOptions.stable,
+    // Stop after first successful fetch — even when rarity is null.
     refetchInterval: (q) => {
-      if (q.state.data != null) return false;
+      if (q.state.status === "success") return false;
       return q.state.dataUpdateCount > 24 ? false : 5_000;
     },
   });

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy/phygital";
 import { cn } from "@/lib/utils";
 
@@ -28,13 +29,14 @@ export function CollectibleDescription({
         {description}
       </p>
       {long ? (
-        <button
+        <Button
           type="button"
-          className="mt-1.5 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          variant="link"
+          className="mt-1.5 h-auto min-h-0 px-0 text-sm font-medium text-muted-foreground hover:text-foreground"
           onClick={() => setExpanded((v) => !v)}
         >
           {expanded ? copy.token.showLess : copy.token.showMore}
-        </button>
+        </Button>
       ) : null}
     </section>
   );

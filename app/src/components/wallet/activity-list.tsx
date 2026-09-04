@@ -5,6 +5,7 @@ import { ArrowDownLeft, ArrowUpRight, BellRing, Clock3, RefreshCcw } from "lucid
 
 import { GroupedList, GroupedRow } from "@/components/shared/grouped-list";
 import { ActivityReceiptSheet } from "@/components/wallet/activity-receipt-sheet";
+import { Button } from "@/components/ui/button";
 import { NATIVE_SOL_MINT } from "@/lib/tokens/payment-token";
 import type { WalletActivityItem } from "@/lib/wallet/portfolio-types";
 import { cn, shortAddress } from "@/lib/utils";
@@ -129,14 +130,15 @@ export function ActivityList({
         })}
       </GroupedList>
       {hasMore && onLoadMore ? (
-        <button
+        <Button
           type="button"
+          variant="link"
           onClick={onLoadMore}
-          className="mx-auto inline-flex items-center gap-2 text-xs font-medium text-primary"
+          className="mx-auto h-auto min-h-0 gap-2 px-0 text-xs font-medium"
         >
           {loadingMore ? <RefreshCcw className="size-3.5 animate-spin" aria-hidden /> : null}
           See more
-        </button>
+        </Button>
       ) : null}
       <ActivityReceiptSheet
         item={selected}

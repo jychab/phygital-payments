@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { copy } from "@/lib/copy/phygital";
 import { galleryAnimate } from "@/lib/motion";
 import { shellLayoutClass } from "@/lib/layout";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const FOCUSABLE =
@@ -80,11 +81,12 @@ export function ModalSheet({
         align === "bottom" ? "items-end lg:items-center" : "items-center",
       )}
     >
-      <button
+      <Button
         type="button"
+        variant="ghost"
         aria-label={copy.common.close}
         className={cn(
-          "absolute inset-0 bg-background/80 backdrop-blur-sm",
+          "absolute inset-0 h-auto min-h-0 rounded-none border-0 bg-background/80 p-0 backdrop-blur-sm hover:bg-background/80",
           galleryAnimate.fade,
         )}
         onClick={onClose}

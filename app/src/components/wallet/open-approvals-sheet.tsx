@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { LoaderCircle } from "lucide-react";
+import { useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PolicyDeniedError } from "phygital-wallet-sdk";
 
 import { NavBar } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { copy } from "@/lib/copy/phygital";
 import { queryKeys } from "@/lib/queries";
 import { toUserErrorMessage } from "@/lib/user-errors";
@@ -29,6 +29,13 @@ function approvalBody(approval: OpenApproval): string {
   return policySoftDenyBody(deny);
 }
 
+function removeApproval(
+  prev: OpenApproval[] | undefined,
+  intentHash: string,
+): OpenApproval[] {
+  return (prev ?? []).filter((a) => a.intentHash !== intentHash);
+}
+
 /** Inbox for remote soft-deny requests — Approve once writes a grant only. */
 export function OpenApprovalsSheet({
   phygitalTokenPda,
@@ -42,47 +49,40 @@ export function OpenApprovalsSheet({
   onDone: () => void;
 }) {
   const queryClient = useQueryClient();
-  const [index, setIndex] = useState(0);
-  const [busy, setBusy] = useState(false);
-  const approval =
-    approvals[Math.min(index, Math.max(0, approvals.length - 1))] ?? null;
+  const approval = approvals[0] ?? null;
 
   useEffect(() => {
     if (approvals.length === 0) onDone();
   }, [approvals.length, onDone]);
 
-  async function invalidate() {
-    await queryClient.invalidateQueries({
-      queryKey: queryKeys.walletApprovals.byToken(phygitalTokenPda),
-    });
-  }
+  const approvalsKey = queryKeys.walletApprovals.byToken(phygitalTokenPda);
 
-  async function approveOnce() {
-    if (!approval) return;
-    setBusy(true);
-    try {
-      await createOneTimeGrant(phygitalTokenPda, approval.intentHash);
+  const approve = useMutation({
+    mutationFn: (intentHash: string) =>
+      createOneTimeGrant(phygitalTokenPda, intentHash),
+    onSuccess: (_data, intentHash) => {
       toast.success(copy.wallet.openApprovalContinue);
-      await invalidate();
-    } catch (e) {
-      toast.error(toUserErrorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
+      queryClient.setQueryData(approvalsKey, (prev: OpenApproval[] | undefined) =>
+        removeApproval(prev, intentHash),
+      );
+      void queryClient.invalidateQueries({ queryKey: approvalsKey });
+    },
+    onError: (e) => toast.error(toUserErrorMessage(e)),
+  });
 
-  async function cancel() {
-    if (!approval) return;
-    setBusy(true);
-    try {
-      await cancelOpenApproval(phygitalTokenPda, approval.intentHash);
-      await invalidate();
-    } catch (e) {
-      toast.error(toUserErrorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const cancel = useMutation({
+    mutationFn: (intentHash: string) =>
+      cancelOpenApproval(phygitalTokenPda, intentHash),
+    onSuccess: (_data, intentHash) => {
+      queryClient.setQueryData(approvalsKey, (prev: OpenApproval[] | undefined) =>
+        removeApproval(prev, intentHash),
+      );
+      void queryClient.invalidateQueries({ queryKey: approvalsKey });
+    },
+    onError: (e) => toast.error(toUserErrorMessage(e)),
+  });
+
+  const busy = approve.isPending || cancel.isPending;
 
   if (!approval) return null;
 
@@ -95,7 +95,7 @@ export function OpenApprovalsSheet({
             variant="ghost"
             size="sm"
             disabled={busy}
-            onClick={() => void cancel()}
+            onClick={() => void cancel.mutateAsync(approval.intentHash)}
           >
             {copy.common.cancel}
           </Button>
@@ -116,10 +116,10 @@ export function OpenApprovalsSheet({
           size="lg"
           className="w-full"
           disabled={busy}
-          onClick={() => void approveOnce()}
+          onClick={() => void approve.mutateAsync(approval.intentHash)}
         >
           {busy ? (
-            <LoaderCircle className="size-4 animate-spin" />
+            <Spinner className="size-4" />
           ) : (
             copy.wallet.approveOnce
           )}

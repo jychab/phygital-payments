@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ExternalLink, LoaderCircle, X } from "lucide-react";
+import { ExternalLink, X } from "lucide-react";
 
 import { ModalSheet } from "@/components/shared/modal-sheet";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy/phygital";
 import { openShortcutExternal } from "@/lib/tokens/open-shortcut";
 import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
 
 const LOAD_TIMEOUT_MS = 12_000;
 
@@ -93,7 +94,7 @@ export function ShortcutIframeSheet({
         <div className="relative min-h-0 flex-1 bg-muted/20">
           {!loaded && !blocked ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-              <LoaderCircle className="size-6 animate-spin" aria-hidden />
+              <Spinner className="size-6" aria-hidden />
               <p className="text-xs">{copy.shortcut.loading}</p>
             </div>
           ) : null}

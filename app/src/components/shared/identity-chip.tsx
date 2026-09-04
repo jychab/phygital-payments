@@ -1,65 +1,51 @@
 "use client";
 
-import { Diamond } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy/phygital";
-import { cn, shortAddress } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
-/**
- * Top-right identity chip — truncated wallet PDA + mark.
- * Card: opens Wallet. Wallet/Accessory: copies address.
- */
+const chipClass =
+  "h-9 min-h-9 gap-1.5 rounded-full border px-3 text-sm font-medium shadow-sm transition-colors active:scale-[0.98]";
+
+/** Toggle between mint card and wallet. */
 export function IdentityChip({
-  walletAddress,
-  mode,
-  onOpenWallet,
+  viewingWallet,
+  onToggle,
   className,
 }: {
-  walletAddress: string | null | undefined;
-  mode: "open-wallet" | "copy";
-  onOpenWallet?: () => void;
+  viewingWallet?: boolean;
+  onToggle: () => void;
   className?: string;
 }) {
-  if (!walletAddress) {
-    return <span aria-hidden className="h-11 w-11" />;
-  }
-
-  const label = shortAddress(walletAddress, 4);
-
-  async function onClick() {
-    if (mode === "open-wallet") {
-      onOpenWallet?.();
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(walletAddress!);
-      toast.success(copy.wallet.addressCopied);
-    } catch {
-      toast.error(copy.wallet.addressCopyFailed);
-    }
-  }
-
   return (
-    <button
+    <Button
       type="button"
-      onClick={() => void onClick()}
+      variant={viewingWallet ? "outline" : "secondary"}
+      onClick={onToggle}
       className={cn(
-        "inline-flex min-h-11 h-11 max-w-[10.5rem] items-center gap-1.5 rounded-full",
-        "border border-border/60 bg-card/40 px-2.5 text-xs text-foreground",
-        "transition-colors hover:bg-card/70",
+        chipClass,
+        viewingWallet
+          ? "border-border/70 bg-muted/40 text-foreground hover:bg-muted/70"
+          : "border-transparent bg-primary text-primary-foreground hover:bg-primary/90",
         className,
       )}
       aria-label={
-        mode === "open-wallet"
-          ? copy.wallet.openWalletAria(label)
-          : copy.wallet.copyAddressAria(label)
+        viewingWallet
+          ? copy.wallet.showCardAria
+          : copy.wallet.openWalletAriaLabel
       }
     >
-      <Diamond className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-      <span className="truncate font-medium tabular-nums tracking-tight">
-        {label}
-      </span>
-    </button>
+      {viewingWallet ? (
+        <ArrowLeft className="size-3.5 shrink-0" aria-hidden />
+      ) : null}
+      {viewingWallet
+        ? copy.wallet.backToCardChip
+        : copy.wallet.toWalletChip}
+      {!viewingWallet ? (
+        <ArrowRight className="size-3.5 shrink-0 opacity-90" aria-hidden />
+      ) : null}
+    </Button>
   );
 }

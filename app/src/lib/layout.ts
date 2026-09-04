@@ -3,13 +3,19 @@
 /**
  * Column widths:
  * - gallery: minted card detail (room for art + dossier)
+ * - home: owned cards/accessories list — phone column → wider desktop
  * - compact: NFC ceremony / wallet / accessory — phone-width on all breakpoints
  */
 export const shellLayoutClass = {
   gallery: "max-w-lg md:max-w-3xl lg:max-w-5xl",
+  home: "max-w-md md:max-w-2xl lg:max-w-3xl w-full",
   /** Focused device column — never stretches on desktop. */
   compact: "max-w-md w-full",
 } as const;
+
+/** Home form-factor sections: stack on phone, side-by-side when both exist. */
+export const homeSectionsClass =
+  "flex flex-col gap-6 md:grid md:grid-cols-2 md:items-start md:gap-6 lg:gap-8";
 
 export type ShellLayout = keyof typeof shellLayoutClass;
 

@@ -1,100 +1,95 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import { NavBar } from "@/components/shared/nav-bar";
 import { Separator } from "@/components/ui/separator";
 import { copy } from "@/lib/copy/phygital";
 import type { WalletCollectible } from "@/lib/wallet/portfolio-types";
 import { collectibleInterfaceLabel } from "@/lib/wallet/send-asset-ref";
 
-/** Collectible detail — art, collection, interface badge, Send. */
+/** Full-screen collectible detail — art, collection, Send (workspace stage). */
 export function CollectibleDetailSheet({
   collectible,
-  open,
-  onOpenChange,
+  onBack,
   onSend,
   onOpenCard,
 }: {
-  collectible: WalletCollectible | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  collectible: WalletCollectible;
+  onBack: () => void;
   onSend: (c: WalletCollectible) => void;
   onOpenCard?: () => void;
 }) {
-  if (!collectible) return null;
-
   const badge = collectibleInterfaceLabel(collectible);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="mx-auto max-h-[90vh] max-w-lg overflow-y-auto rounded-t-3xl"
-      >
-        <SheetHeader className="text-left">
-          <SheetTitle className="pr-8">{collectible.name}</SheetTitle>
+    <div className="flex flex-1 flex-col gap-5">
+      <NavBar
+        className="mb-0"
+        leading={
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="-ml-2 text-muted-foreground hover:text-foreground"
+            onClick={onBack}
+          >
+            {copy.common.back}
+          </Button>
+        }
+        title={collectible.name}
+      />
+
+      <div className="flex flex-1 flex-col gap-4">
+        <div className="overflow-hidden rounded-3xl bg-muted">
+          {collectible.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={collectible.image}
+              alt=""
+              className="aspect-square w-full object-cover"
+            />
+          ) : (
+            <div className="flex aspect-square w-full items-center justify-center bg-linear-to-br from-muted via-muted/70 to-background">
+              <span className="font-(family-name:--font-display) text-7xl font-medium tracking-tight text-muted-foreground/40">
+                {(collectible.name.trim().charAt(0) || "?").toUpperCase()}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2 px-0.5">
           {collectible.collectionName ? (
             <p className="text-sm text-muted-foreground">
               {collectible.collectionName}
             </p>
           ) : null}
-        </SheetHeader>
+          <Badge variant="secondary">{badge}</Badge>
+        </div>
 
-        <div className="mt-4 space-y-4 px-4 pb-6">
-          <div className="overflow-hidden rounded-2xl bg-muted">
-            {collectible.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={collectible.image}
-                alt=""
-                className="aspect-square w-full object-cover"
-              />
-            ) : (
-              <div className="aspect-square w-full bg-muted" />
-            )}
-          </div>
+        <Separator />
 
-          <div className="flex items-center gap-2">
-            <span className="rounded-lg bg-muted px-2.5 py-1 text-xs font-medium">
-              {badge}
-            </span>
-          </div>
-
-          <Separator />
-
-          <div className="flex flex-col gap-2">
+        <div className="mt-auto flex flex-col gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={() => onSend(collectible)}
+          >
+            {copy.wallet.send}
+          </Button>
+          {onOpenCard ? (
             <Button
               type="button"
-              size="lg"
+              variant="ghost"
               className="w-full"
-              onClick={() => {
-                onSend(collectible);
-                onOpenChange(false);
-              }}
+              onClick={onOpenCard}
             >
-              {copy.wallet.send}
+              {copy.wallet.openCard}
             </Button>
-            {onOpenCard ? (
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full"
-                onClick={() => {
-                  onOpenCard();
-                  onOpenChange(false);
-                }}
-              >
-                {copy.wallet.openCard}
-              </Button>
-            ) : null}
-          </div>
+          ) : null}
         </div>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </div>
   );
 }

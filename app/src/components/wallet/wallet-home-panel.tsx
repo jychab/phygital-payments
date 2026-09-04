@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp, RefreshCcw, Settings } from "lucide-react";
 import { CopyableAddress } from "@/components/shared/copyable-address";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityList } from "@/components/wallet/activity-list";
 import { CollectiblesGrid } from "@/components/wallet/collectibles-grid";
 import { TokenHoldingRow } from "@/components/wallet/token-holding-row";
@@ -27,6 +28,7 @@ import {
 } from "@/lib/wallet/portfolio-preview";
 import { formatUsd, sumUsd } from "@/lib/currency/usd";
 import { formatCompactTokenAmount } from "@/lib/tokens/amount";
+import { isDefaultMint } from "@/lib/tokens/payment-token";
 import { blurEnter, blurEnterTransition } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +48,7 @@ export function WalletHomePanel({
   portfolio,
   loading,
   walletAddress,
+  walletTitle,
   linkedMint,
   onManageDevice,
   onSend,
@@ -70,6 +73,8 @@ export function WalletHomePanel({
   portfolio: WalletPortfolio | undefined;
   loading?: boolean;
   walletAddress: string;
+  /** Accessory / card name — primary identity above the address. */
+  walletTitle?: string | null;
   linkedMint?: string | null;
   onSend: () => void;
   onSendAsset: (asset: SendAssetRef) => void;
@@ -121,6 +126,7 @@ export function WalletHomePanel({
   const moreCollectibles = collectibles.length > HOME_COLLECTIBLE_PREVIEW;
 
   const primaryHolding = tokenPreview[0];
+  const usdcHolding = holdings.find((h) => isDefaultMint(h.mint));
 
   const hasUsd = holdings.some(
     (h) => typeof h.valueUsd === "number" && Number.isFinite(h.valueUsd),
@@ -132,6 +138,13 @@ export function WalletHomePanel({
   const primaryCryptoLine = primaryHolding
     ? `${formatCompactTokenAmount(primaryHolding.balanceUi)} ${primaryHolding.symbol}`
     : null;
+  // Under a USD total, show spendable USDC — not whichever altcoin ranks #1 by $ value.
+  const heroSubtitle =
+    showUsdHero && usdcHolding
+      ? `${formatCompactTokenAmount(usdcHolding.balanceUi)} ${usdcHolding.symbol}`
+      : showUsdHero
+        ? null
+        : primaryCryptoLine;
   const heroValue = showUsdHero
     ? formatUsd(totalUsd)
     : (primaryCryptoLine ?? "—");
@@ -147,36 +160,36 @@ export function WalletHomePanel({
       <div className={cn("flex flex-1 flex-col gap-6", className)}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="size-4 animate-pulse rounded-full bg-muted/30" />
-            <div className="h-4 w-28 animate-pulse rounded bg-muted/30" />
+            <Skeleton className="size-4 rounded-full" />
+            <Skeleton className="h-4 w-28" />
           </div>
-          <div className="h-4 w-20 animate-pulse rounded bg-muted/30" />
+          <Skeleton className="h-4 w-20" />
         </div>
 
         <div className="flex flex-col items-center gap-2 py-1 text-center">
-          <div className="h-10 w-44 animate-pulse rounded-2xl bg-muted/30" />
-          <div className="h-4 w-32 animate-pulse rounded bg-muted/30" />
+          <Skeleton className="h-10 w-44 rounded-2xl" />
+          <Skeleton className="h-4 w-32" />
         </div>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-10">
             <div className="flex flex-col items-center gap-2">
-              <div className="size-12 animate-pulse rounded-2xl bg-muted/30" />
-              <div className="h-3 w-10 animate-pulse rounded bg-muted/30" />
+              <Skeleton className="size-12 rounded-2xl" />
+              <Skeleton className="h-3 w-10" />
             </div>
             <div className="flex flex-col items-center gap-2">
-              <div className="size-12 animate-pulse rounded-2xl bg-muted/30" />
-              <div className="h-3 w-10 animate-pulse rounded bg-muted/30" />
+              <Skeleton className="size-12 rounded-2xl" />
+              <Skeleton className="h-3 w-10" />
             </div>
           </div>
-          <div className="size-9 animate-pulse rounded-2xl bg-muted/30" />
+          <Skeleton className="size-9 rounded-2xl" />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <div className="mx-4 h-3 w-16 animate-pulse rounded bg-muted/30" />
+          <Skeleton className="mx-4 h-3 w-16" />
           <div className="overflow-hidden rounded-2xl bg-grouped">
             {SKELETON_ROWS.map((key) => (
-              <div key={key} className="h-14 animate-pulse bg-muted/20" />
+              <Skeleton key={key} className="h-14 rounded-none bg-muted/20" />
             ))}
           </div>
         </div>
@@ -201,37 +214,49 @@ export function WalletHomePanel({
         }}
       >
       <m.div
-        className="flex items-center justify-between gap-3"
+        className="flex items-start justify-between gap-3"
         variants={sectionVariants}
         transition={sectionTransition}
       >
-        <div className="flex min-w-0 items-center gap-3">
-          <CopyableAddress
-            address={walletAddress}
-            length={6}
-            label={copy.address.wallet}
-            className="min-h-11 text-xs text-muted-foreground"
-          />
-          {onRefresh ? (
-            <button
-              type="button"
-              aria-label={copy.wallet.refresh}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-              onClick={onRefresh}
-            >
-              <RefreshCcw
-                className={cn("size-3.5", refreshing ? "animate-spin" : "")}
-                aria-hidden
-              />
-              <span className="sr-only">{copy.wallet.refresh}</span>
-            </button>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {walletTitle ? (
+            <p className="truncate text-sm font-medium tracking-tight">
+              {walletTitle}
+            </p>
           ) : null}
+          <div className="flex min-w-0 items-center gap-1.5">
+            <CopyableAddress
+              address={walletAddress}
+              length={4}
+              label={copy.address.wallet}
+              className={cn(
+                "min-h-8 text-muted-foreground",
+                walletTitle ? "text-[11px]" : "min-h-11 text-xs",
+              )}
+            />
+            {onRefresh ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={copy.wallet.refresh}
+                className="rounded-full text-muted-foreground hover:text-foreground"
+                onClick={onRefresh}
+              >
+                <RefreshCcw
+                  className={cn("size-3.5", refreshing ? "animate-spin" : "")}
+                  aria-hidden
+                />
+              </Button>
+            ) : null}
+          </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 pt-0.5">
           {showStatus ? (
-            <button
+            <Button
               type="button"
-              className="inline-flex items-center gap-1.5"
+              variant="ghost"
+              className="h-auto min-h-0 gap-1.5 px-2 py-1"
               onClick={status === "error" ? onRefresh : undefined}
               disabled={status !== "error" || !onRefresh}
             >
@@ -244,10 +269,10 @@ export function WalletHomePanel({
                 )}
                 aria-hidden
               />
-              <p className="text-xs font-medium text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 {statusLabel}
-              </p>
-            </button>
+              </span>
+            </Button>
           ) : null}
           <Button
             type="button"
@@ -255,7 +280,7 @@ export function WalletHomePanel({
             size="icon"
             aria-label={copy.wallet.manageDevice}
             onClick={onManageDevice}
-            className="rounded-2xl border border-border/60 bg-muted/30"
+            className="rounded-full text-muted-foreground hover:text-foreground"
           >
             <Settings className="size-4" aria-hidden />
           </Button>
@@ -277,16 +302,17 @@ export function WalletHomePanel({
           {heroValue}
         </m.h1>
         {empty ? (
-          <button
+          <Button
             type="button"
+            variant="link"
             onClick={onReceive}
-            className="text-sm font-medium text-primary"
+            className="h-auto min-h-0 px-0 text-sm font-medium"
           >
             {copy.wallet.addMoney}
-          </button>
-        ) : primaryCryptoLine && showUsdHero ? (
+          </Button>
+        ) : heroSubtitle ? (
           <p className="text-sm text-muted-foreground tabular-nums">
-            {primaryCryptoLine}
+            {heroSubtitle}
           </p>
         ) : null}
         {lastUpdatedLabel ? (
@@ -326,14 +352,13 @@ export function WalletHomePanel({
 
       {!showFirstRun ? (
       <m.div
-        className="flex items-center gap-10"
+        className="flex items-center justify-center gap-14"
         variants={sectionVariants}
         transition={sectionTransition}
       >
         <QuickActionButton
           label={copy.wallet.send}
           icon={<ArrowUp className="size-5" />}
-          primary={hasFungible}
           disabled={!hasFungible}
           disabledHint={copy.wallet.sendNeedsFunds}
           onClick={onSend}
@@ -373,13 +398,14 @@ export function WalletHomePanel({
           <div className="flex items-baseline justify-between px-4 pt-1">
             <h2 className="text-section-label">{copy.wallet.tokens}</h2>
             {moreTokens ? (
-              <button
+              <Button
                 type="button"
+                variant="link"
                 onClick={onSeeAllTokens}
-                className="text-xs font-medium text-primary"
+                className="h-auto min-h-0 px-0 text-xs font-medium"
               >
                 {copy.wallet.seeAll}
-              </button>
+              </Button>
             ) : null}
           </div>
           <GroupedList>
@@ -399,13 +425,14 @@ export function WalletHomePanel({
           <div className="flex items-baseline justify-between px-4">
             <h2 className="text-section-label">{copy.wallet.collectibles}</h2>
             {moreCollectibles ? (
-              <button
+              <Button
                 type="button"
+                variant="link"
                 onClick={onSeeAllCollectibles}
-                className="text-xs font-medium text-primary"
+                className="h-auto min-h-0 px-0 text-xs font-medium"
               >
                 {copy.wallet.seeAll}
-              </button>
+              </Button>
             ) : null}
           </div>
           <CollectiblesGrid
@@ -423,13 +450,14 @@ export function WalletHomePanel({
           <div className="flex items-baseline justify-between px-4">
             <h2 className="text-section-label">{copy.wallet.activity}</h2>
             {onSeeAllActivity ? (
-              <button
+              <Button
                 type="button"
+                variant="link"
                 onClick={onSeeAllActivity}
-                className="text-xs font-medium text-primary"
+                className="h-auto min-h-0 px-0 text-xs font-medium"
               >
                 {copy.wallet.seeAll}
-              </button>
+              </Button>
             ) : null}
           </div>
           <ActivityList
@@ -470,45 +498,45 @@ function QuickActionButton({
   label,
   icon,
   onClick,
-  primary,
   disabled,
   disabledHint,
 }: {
   label: string;
   icon: ReactNode;
   onClick: () => void;
-  primary?: boolean;
   disabled?: boolean;
   disabledHint?: string;
 }) {
   return (
-    <m.button
+    <Button
       type="button"
-      onClick={onClick}
+      variant="ghost"
+      asChild
       disabled={disabled}
-      title={disabled ? disabledHint : undefined}
-      aria-label={disabled && disabledHint ? `${label}. ${disabledHint}` : label}
-      className="flex flex-col items-center gap-2 disabled:opacity-40"
-      whileHover={disabled ? undefined : { y: -1.5 }}
-      whileTap={disabled ? undefined : { scale: 0.98 }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="h-auto min-h-0 flex-col gap-2 bg-transparent px-0 py-0 hover:bg-transparent disabled:opacity-40"
     >
-      <m.span
-        className={cn(
-          "flex size-12 items-center justify-center rounded-2xl border transition-opacity active:opacity-80",
-          primary
-            ? "border-transparent bg-primary text-primary-foreground"
-            : "border-border/60 bg-muted/30 text-foreground",
-        )}
-        whileHover={disabled ? undefined : { scale: 1.03 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
+      <m.button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        title={disabled ? disabledHint : undefined}
+        aria-label={disabled && disabledHint ? `${label}. ${disabledHint}` : label}
+        whileHover={disabled ? undefined : { y: -1.5 }}
+        whileTap={disabled ? undefined : { scale: 0.98 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
       >
-        {icon}
-      </m.span>
-      <span className="text-[11px] font-medium text-foreground/80">
-        {label}
-      </span>
-    </m.button>
+        <m.span
+          className="flex size-12 items-center justify-center rounded-2xl border border-border/60 bg-muted/30 text-foreground transition-opacity active:opacity-80"
+          whileHover={disabled ? undefined : { scale: 1.03 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+          {icon}
+        </m.span>
+        <span className="text-[11px] font-medium text-foreground/80">
+          {label}
+        </span>
+      </m.button>
+    </Button>
   );
 }
 
@@ -536,18 +564,26 @@ function QuietNotice({
     );
   }
   return (
-    <m.button
+    <Button
       type="button"
-      onClick={onClick}
-      className="mx-4 flex items-center justify-between gap-3 rounded-2xl bg-muted/20 px-4 py-2.5 text-left transition-colors hover:bg-muted/30"
-      initial={enter.initial}
-      animate={enter.animate}
-      whileHover={{ y: -1 }}
-      whileTap={{ scale: 0.995 }}
-      transition={blurEnterTransition}
+      variant="ghost"
+      asChild
+      className="mx-4 h-auto min-h-0 w-[calc(100%-2rem)] justify-between gap-3 rounded-2xl bg-muted/20 px-4 py-2.5 text-left hover:bg-muted/30"
     >
-      <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{label}</p>
-      <span className="shrink-0 text-xs font-medium text-primary">{action}</span>
-    </m.button>
+      <m.button
+        type="button"
+        onClick={onClick}
+        initial={enter.initial}
+        animate={enter.animate}
+        whileHover={{ y: -1 }}
+        whileTap={{ scale: 0.995 }}
+        transition={blurEnterTransition}
+      >
+        <p className="min-w-0 flex-1 truncate text-xs font-normal text-muted-foreground">
+          {label}
+        </p>
+        <span className="shrink-0 text-xs font-medium text-primary">{action}</span>
+      </m.button>
+    </Button>
   );
 }

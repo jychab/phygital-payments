@@ -50,8 +50,13 @@ function DialogOverlay({
 function DialogContent({
   className,
   children,
+  showCloseButton = true,
+  onOpenAutoFocus,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> & {
+  /** When false, rely on in-content Cancel / Back — avoids Cancel + X. */
+  showCloseButton?: boolean;
+}) {
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -67,24 +72,27 @@ function DialogContent({
           "p-4 sm:p-6",
           className,
         )}
+        onOpenAutoFocus={onOpenAutoFocus}
         {...props}
       >
         <div className="relative">
           {children}
-          <DialogPrimitive.Close
-            asChild
-            className="absolute top-1 right-1 rounded-full"
-          >
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="rounded-full"
-              aria-label="Close"
+          {showCloseButton ? (
+            <DialogPrimitive.Close
+              asChild
+              className="absolute top-1 right-1 rounded-full"
             >
-              <XIcon className="size-4" aria-hidden />
-            </Button>
-          </DialogPrimitive.Close>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+                aria-label="Close"
+              >
+                <XIcon className="size-4" aria-hidden />
+              </Button>
+            </DialogPrimitive.Close>
+          ) : null}
         </div>
       </DialogPrimitive.Content>
     </DialogPortal>

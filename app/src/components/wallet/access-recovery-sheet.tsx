@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { NavBar } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import type { WalletRole } from "@/components/token/token-address-route";
 import { copy } from "@/lib/copy/phygital";
 import { queryKeys } from "@/lib/queries";
@@ -87,7 +87,7 @@ export function AccessRecoverySheet({
             onClick={() => void run("unlink")}
           >
             {busy === "unlink" ? (
-              <LoaderCircle className="size-4 animate-spin" />
+              <Spinner className="size-4" />
             ) : (
               copy.wallet.deviceUnlink
             )}
@@ -102,7 +102,7 @@ export function AccessRecoverySheet({
           onClick={() => void run("remove")}
         >
           {busy === "remove" ? (
-            <LoaderCircle className="size-4 animate-spin" />
+            <Spinner className="size-4" />
           ) : (
             copy.wallet.deviceAuthRemove
           )}
@@ -116,7 +116,7 @@ export function AccessRecoverySheet({
           onClick={() => void run("signOut")}
         >
           {busy === "signOut" ? (
-            <LoaderCircle className="size-4 animate-spin" />
+            <Spinner className="size-4" />
           ) : (
             copy.wallet.deviceSignOut
           )}

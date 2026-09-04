@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { NavBar } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { FieldLabel, Input } from "@/components/ui/input";
 import { useRpcPreference } from "@/hooks/wallet/use-rpc-preference";
 import { copy } from "@/lib/copy/phygital";
 import { displayRpcEndpoint } from "@/lib/solana/rpc-preference";
@@ -56,9 +56,9 @@ export function RpcConnectionSheet({ onBack }: { onBack: () => void }) {
           title={copy.wallet.rpcCustom}
         />
         <p className="text-sm text-muted-foreground">{copy.wallet.rpcCustomHint}</p>
-        <label className="text-xs text-muted-foreground">
+        <FieldLabel className="normal-case tracking-normal text-xs">
           {copy.wallet.rpcUrlLabel}
-        </label>
+        </FieldLabel>
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -92,11 +92,12 @@ export function RpcConnectionSheet({ onBack }: { onBack: () => void }) {
       />
       <p className="text-sm text-muted-foreground">{copy.wallet.rpcBody}</p>
 
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => useDefault()}
         className={cn(
-          "flex items-center justify-between rounded-2xl bg-muted/25 px-4 py-4 text-left",
+          "h-auto min-h-11 w-full justify-between rounded-2xl bg-muted/25 px-4 py-4 text-left font-normal hover:bg-muted/40",
           !rpc.isCustom && "ring-1 ring-primary/40",
         )}
       >
@@ -109,10 +110,11 @@ export function RpcConnectionSheet({ onBack }: { onBack: () => void }) {
         {!rpc.isCustom ? (
           <Check className="size-4 shrink-0 text-primary" />
         ) : null}
-      </button>
+      </Button>
 
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => {
           setDraft(
             rpc.preference.mode === "custom" ? rpc.preference.url : "https://",
@@ -120,7 +122,7 @@ export function RpcConnectionSheet({ onBack }: { onBack: () => void }) {
           setView("custom");
         }}
         className={cn(
-          "flex items-center justify-between rounded-2xl bg-muted/25 px-4 py-4 text-left",
+          "h-auto min-h-11 w-full justify-between rounded-2xl bg-muted/25 px-4 py-4 text-left font-normal hover:bg-muted/40",
           rpc.isCustom && "ring-1 ring-primary/40",
         )}
       >
@@ -137,7 +139,7 @@ export function RpcConnectionSheet({ onBack }: { onBack: () => void }) {
         ) : (
           <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
         )}
-      </button>
+      </Button>
     </div>
   );
 }

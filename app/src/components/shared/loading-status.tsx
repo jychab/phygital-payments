@@ -1,13 +1,13 @@
 "use client";
 
-import { LoaderCircle } from "lucide-react";
-
+import { Spinner } from "@/components/ui/spinner";
+import { copy } from "@/lib/copy/phygital";
 import { centeredBlockClass } from "@/lib/layout";
 import { cn } from "@/lib/utils";
 
 /** Spinner with visible label — fills parent and centers (e.g. verifying chip). */
 export function LoadingStatus({
-  label = "Loading…",
+  label = copy.common.loading,
   className,
 }: {
   label?: string;
@@ -15,10 +15,7 @@ export function LoadingStatus({
 }) {
   return (
     <div className={cn(centeredBlockClass, className)}>
-      <LoaderCircle
-        className="size-5 animate-spin text-muted-foreground"
-        aria-hidden
-      />
+      <Spinner className="size-5 text-muted-foreground" aria-hidden />
       <p className="text-sm text-muted-foreground" aria-live="polite">
         {label}
       </p>

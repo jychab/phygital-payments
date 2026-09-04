@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Copy, QrCode, Share2 } from "lucide-react";
+import { QrCode, Share2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -33,14 +33,6 @@ export function ReceiveHub({
       ...queryOptions.stable,
     });
   }, [queryClient]);
-  async function copyAddress() {
-    try {
-      await navigator.clipboard.writeText(walletAddress);
-      toast.success(copy.wallet.copied);
-    } catch {
-      toast.error(copy.wallet.addressCopyFailed);
-    }
-  }
 
   async function shareAddress() {
     const payload = {
@@ -85,29 +77,23 @@ export function ReceiveHub({
 
       <WalletAddressRow address={walletAddress} length={6} />
 
-      <div className="grid grid-cols-2 gap-3">
-        <button
+      <div className="grid grid-cols-1 gap-3">
+        <Button
           type="button"
-          onClick={() => void copyAddress()}
-          className="flex items-center justify-center gap-2 rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/30"
-        >
-          <Copy className="size-4" aria-hidden />
-          {copy.wallet.copyAddress}
-        </button>
-        <button
-          type="button"
+          variant="outline"
           onClick={() => void shareAddress()}
-          className="flex items-center justify-center gap-2 rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/30"
+          className="h-auto min-h-11 w-full gap-2 rounded-2xl border-border/60 bg-muted/20 px-4 py-3 text-sm font-medium hover:bg-muted/30"
         >
           <Share2 className="size-4" aria-hidden />
           {copy.wallet.share}
-        </button>
+        </Button>
       </div>
 
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={onReceiveNearby}
-        className="mt-auto flex items-center gap-3 rounded-3xl bg-muted/25 px-4 py-4 text-left transition-colors hover:bg-muted/40"
+        className="mt-auto h-auto min-h-0 w-full justify-start gap-3 rounded-3xl bg-muted/25 px-4 py-4 text-left font-normal hover:bg-muted/40"
       >
         <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-background text-muted-foreground">
           <QrCode className="size-5" aria-hidden />
@@ -118,7 +104,7 @@ export function ReceiveHub({
             {copy.wallet.receiveNearbyHint}
           </p>
         </div>
-      </button>
+      </Button>
     </div>
   );
 }

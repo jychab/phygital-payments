@@ -3,23 +3,24 @@
 import { CheckCircle2, RefreshCw } from "lucide-react";
 
 import { CollectibleMetadataRow } from "@/components/token/collectible-metadata-group";
+import { Button } from "@/components/ui/button";
 import { copy } from "@/lib/copy/phygital";
 
-/** Verification metadata row — Not verified or Verified (tappable). */
+/** Verification metadata row — Verify CTA, or Verified after live auth. */
 export function VerificationMetadataRow({
   liveConfirmed,
-  onVerifyAgain,
+  onVerify,
 }: {
   liveConfirmed: boolean;
-  /** When liveConfirmed — runs a fresh hold-to-verify. */
-  onVerifyAgain?: () => void;
+  /** Runs hold-to-verify (first check or recheck). */
+  onVerify?: () => void;
 }) {
   if (liveConfirmed) {
-    const canRecheck = Boolean(onVerifyAgain);
+    const canRecheck = Boolean(onVerify);
     return (
       <CollectibleMetadataRow
         label={copy.token.verification}
-        onPress={canRecheck ? onVerifyAgain : undefined}
+        onPress={canRecheck ? onVerify : undefined}
         trailing={
           canRecheck ? (
             <RefreshCw className="size-3.5 text-muted-foreground" aria-hidden />
@@ -28,7 +29,9 @@ export function VerificationMetadataRow({
         subtitle={
           canRecheck ? (
             <>
-              <span className="font-medium text-foreground/80">{copy.verify.verifyAgain}</span>
+              <span className="font-medium text-foreground/80">
+                {copy.verify.verifyAgain}
+              </span>
               <span className="text-muted-foreground">
                 {" · "}
                 {copy.verify.verifyAgainHint}
@@ -39,7 +42,9 @@ export function VerificationMetadataRow({
       >
         <span
           className="inline-flex items-center gap-1 font-medium text-success"
-          aria-label={canRecheck ? copy.verify.verifiedRecheckAria : copy.verify.verified}
+          aria-label={
+            canRecheck ? copy.verify.verifiedRecheckAria : copy.verify.verified
+          }
         >
           <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
           {copy.verify.verified}
@@ -49,8 +54,22 @@ export function VerificationMetadataRow({
   }
 
   return (
-    <CollectibleMetadataRow label={copy.token.verification} subtitle={copy.verify.notVerifiedHint}>
-      <span className="font-medium text-muted-foreground">{copy.verify.notVerified}</span>
+    <CollectibleMetadataRow label={copy.token.verification}>
+      {onVerify ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="h-8 rounded-full px-3.5 text-xs font-medium"
+          onClick={onVerify}
+        >
+          {copy.verify.verifyCta}
+        </Button>
+      ) : (
+        <span className="font-medium text-muted-foreground">
+          {copy.verify.notVerified}
+        </span>
+      )}
     </CollectibleMetadataRow>
   );
 }

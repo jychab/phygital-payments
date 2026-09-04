@@ -14,7 +14,11 @@ import { useActivityMintMeta, type MintMeta } from "./use-activity-mint-meta";
 
 const EMPTY_ACTIVITY: WalletActivityItem[] = [];
 
-export function useWalletActivity(walletAddress: string | null, limit = 20, before?: string | null) {
+export function useWalletActivity(
+  walletAddress: string | null,
+  limit = 20,
+  before?: string | null,
+) {
   const remote = useQuery({
     queryKey: queryKeys.walletActivity.byOwner(walletAddress, limit, before),
     queryFn: () =>
@@ -41,7 +45,9 @@ export function useWalletActivity(walletAddress: string | null, limit = 20, befo
     for (const item of local) {
       if (!byId.has(item.id)) byId.set(item.id, item);
     }
-    return [...byId.values()].sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+    return [...byId.values()].sort(
+      (a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0),
+    );
   }, [local, remote.data?.items]);
 
   const mintMeta: Record<string, MintMeta> = useActivityMintMeta(items);
