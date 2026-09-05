@@ -3,7 +3,10 @@ import type { StandardPolicyOptions } from "phygital-verifier-sdk";
 
 import { getUsdcMint } from "@/tokens/usdc-mint";
 
-/** Default standing policy when no row exists in D1. */
+/**
+ * Template for first enable — not applied when no D1 row.
+ * Missing standing policy ⇒ authorize skips SDK verify (hard-denies only).
+ */
 export function buildDefaultPolicy(
   opts: Omit<StandardPolicyOptions, "mint"> = {},
 ): PolicyDocument {

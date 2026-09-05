@@ -21,7 +21,6 @@ export type TokenNfcCopy = {
 
 /**
  * Cold `/token` — NFC tap or Hold, then address-gated home.
- * Tap verify runs here (parent DeviceLoginGate may still be resolving session).
  */
 export function TokenNfcApp({ nfcCopy }: { nfcCopy: TokenNfcCopy }) {
   const router = useRouter();

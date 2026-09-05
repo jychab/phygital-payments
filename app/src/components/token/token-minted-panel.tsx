@@ -42,7 +42,6 @@ export function TokenMintedPanel({
   liveConfirmed: boolean;
   onHoldToCheck?: () => void;
 }) {
-  const showVerify = !liveConfirmed && Boolean(onHoldToCheck);
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const { collectible, rarity, shortcuts, loading, rarityLoading } =
     useMintedCollectibleView(mint);
@@ -67,7 +66,6 @@ export function TokenMintedPanel({
     rarity?.attributes ?? collectible?.attributes ?? [];
 
   const name = collectible?.name ?? copy.token.unnamedCard;
-  const hasSticky = showVerify || Boolean(primaryShortcut);
   const hasBelowFold =
     attributesWithRarity.length > 0 ||
     Boolean(collectible?.description) ||
@@ -189,20 +187,8 @@ export function TokenMintedPanel({
             ) : null}
           </div>
 
-          {hasSticky ? (
+          {primaryShortcut ? (
             <StickyActions enterDelayMs={STICKY_ENTER_DELAY_MS}>
-              {showVerify ? (
-                <Button
-                  type="button"
-                  variant={primaryShortcut ? "outline" : "default"}
-                  size="lg"
-                  className="w-full"
-                  onClick={onHoldToCheck}
-                >
-                  {copy.verify.holdToCheck}
-                </Button>
-              ) : null}
-              {primaryShortcut ? (
                 <Button
                   type="button"
                   variant="default"
@@ -214,7 +200,6 @@ export function TokenMintedPanel({
                 >
                   {primaryShortcut.label}
                 </Button>
-              ) : null}
             </StickyActions>
           ) : null}
         </div>

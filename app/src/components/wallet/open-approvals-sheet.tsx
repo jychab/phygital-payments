@@ -12,6 +12,9 @@ import { copy } from "@/lib/copy/phygital";
 import { queryKeys } from "@/lib/queries";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import {
+  handleOwnerAuthFailure,
+} from "@/lib/wallet/limits-setup-href";
+import {
   cancelOpenApproval,
   createOneTimeGrant,
   type OpenApproval,
@@ -67,7 +70,10 @@ export function OpenApprovalsSheet({
       );
       void queryClient.invalidateQueries({ queryKey: approvalsKey });
     },
-    onError: (e) => toast.error(toUserErrorMessage(e)),
+    onError: (e) => {
+      if (handleOwnerAuthFailure(phygitalTokenPda, e)) return;
+      toast.error(toUserErrorMessage(e));
+    },
   });
 
   const cancel = useMutation({
@@ -79,7 +85,10 @@ export function OpenApprovalsSheet({
       );
       void queryClient.invalidateQueries({ queryKey: approvalsKey });
     },
-    onError: (e) => toast.error(toUserErrorMessage(e)),
+    onError: (e) => {
+      if (handleOwnerAuthFailure(phygitalTokenPda, e)) return;
+      toast.error(toUserErrorMessage(e));
+    },
   });
 
   const busy = approve.isPending || cancel.isPending;
@@ -97,9 +106,9 @@ export function OpenApprovalsSheet({
             variant="ghost"
             size="sm"
             disabled={busy}
-            onClick={() => void cancel.mutateAsync(approval.intentHash)}
+            onClick={onDone}
           >
-            {copy.common.cancel}
+            {copy.wallet.openApprovalsLater}
           </Button>
         }
         title={copy.wallet.openApprovalsTitle}
@@ -150,6 +159,15 @@ export function OpenApprovalsSheet({
             {copy.wallet.changeLimits}
           </Button>
         ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          className="w-full"
+          disabled={busy}
+          onClick={() => void cancel.mutateAsync(approval.intentHash)}
+        >
+          {copy.common.cancel}
+        </Button>
       </div>
     </div>
   );

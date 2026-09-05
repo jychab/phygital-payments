@@ -1,9 +1,9 @@
 /**
  * Revibase standing policies + one-time grants ("Approve once").
  *
- * Custom instruction policy belongs in `phygital-verifier-sdk`
- * (`defineStandardPolicy` / `createVerifier`). This module orchestrates
- * D1-backed grants around soft denies.
+ * Standing policy is opt-in (D1 row). Custom instruction policy belongs in
+ * `phygital-verifier-sdk` (`defineStandardPolicy` / `createVerifier`).
+ * This module orchestrates D1-backed grants around soft denies.
  */
 import type { Instruction } from "phygital-verifier-sdk";
 import { hashIntent } from "@/verifier/intent-hash";
@@ -38,11 +38,22 @@ type AuthorizeResult =
 export async function authorizeIntent(
   req: AuthorizeRequest,
 ): Promise<AuthorizeResult> {
-  const [intentHash, policy] = await Promise.all([
+  const [intentHash, loaded] = await Promise.all([
     hashIntent(req.phygitalToken, req.instructions),
     loadPolicyDocument(req.phygitalToken),
   ]);
-  const verdict = evaluatePolicy(policy, req.instructions);
+
+  if (loaded === "invalid") {
+    return {
+      ok: false,
+      intentHash,
+      code: "invalid_policy",
+      error: "Standing policy is invalid and must be fixed by the owner.",
+      soft: false,
+    };
+  }
+
+  const verdict = evaluatePolicy(loaded, req.instructions);
 
   if (verdict.ok) {
     return { ok: true, intentHash };

@@ -48,6 +48,22 @@ export type PolicySettings = {
   extraPrograms: string[];
 };
 
+/** Empty settings when no standing policy is configured (opt-in). */
+export const EMPTY_POLICY_SETTINGS: PolicySettings = {
+  maxTransferUsdc: null,
+  maxTransferSol: null,
+  recipientMode: "anyone",
+  recipientAllowlist: [],
+  extraPrograms: [],
+};
+
+/** Suggested caps when enabling limits for the first time. */
+export const FIRST_ENABLE_POLICY_SETTINGS: PolicySettings = {
+  ...EMPTY_POLICY_SETTINGS,
+  maxTransferUsdc: "50",
+  maxTransferSol: "0.1",
+};
+
 const BASE_PROGRAM_IDS = new Set<string>([
   ataParser.programId,
   systemParser.programId,

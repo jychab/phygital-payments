@@ -78,6 +78,15 @@ export const copy = {
     holdToReceive: "Hold to receive",
     holdToReceiveDesktopHint: "They’ll hold their item next",
     holdToSave: "Hold to save",
+    save: "Save",
+    holdToOpenTitle: "Hold to open",
+    holdToOpenBody: "Hold this item flat against the back of this phone.",
+    holdToOpenCta: "Hold to open",
+    setupStepPasskey: "Step 1 of 2 · This phone",
+    setupStepLink: "Step 2 of 2 · Link item",
+    continueWithPasskey: "Continue with Face ID",
+    setUpThisPhone: "Set up this phone",
+    newPhoneHint: "New on this phone?",
     max: "Max",
     maxSolPerSend: "Max SOL per send",
     restoreDefault: "Use Revibase",
@@ -150,8 +159,6 @@ export const copy = {
     accessAndRecoveryBody:
       "This item authorizes spends. Linking it to this phone lets you change limits and approve exceptions.",
     accessRecoveryRow: "Recovery address",
-    accessRecoveryAskOwner:
-      "Ask the owner to set a recovery address in case this item is lost.",
     recoveryWallet: "Recovery address",
     recoveryWalletBody:
       "Paste a Solana address you control. That wallet can move all funds from this item — without the item or Revibase — on the recover site.",
@@ -184,27 +191,48 @@ export const copy = {
     recoveryAckSkip: "Not now",
     deviceLoginTitle: "Sign in",
     deviceLoginBody:
-      "Use Face ID or your passkey. Sign in if you’ve registered before.",
-    deviceLoginCta: "Sign in",
-    deviceRegisterCta: "Register",
-    deviceLinkTitle: "Link this item",
+      "Manage linked items and spending limits with Face ID or your passkey.",
+    homeSetupPasskeyBody:
+      "Continue with Face ID, then hold this item to link it.",
+    homeHaveItemHint: "Have an item? Hold it to your phone",
+    homeLinkSetupTitle: "Hold to link",
+    homeLinkSetupBody: "Hold this item flat against the phone to finish setup.",
     deviceLinkBody:
-      "Link to change limits and approve larger sends. Or skip and use as a visitor.",
-    deviceLinkCta: "Link",
-    deviceLinkSkip: "Not now",
-    deviceVisitorNotice: "Visitor · linked elsewhere",
-    deviceVisitorUnlinkedNotice: "Visitor · not linked",
+      "Link this item to change limits and approve larger sends on this phone.",
+    deviceLinkCta: "Hold to link",
+    deviceVisitorNotice: "Linked to another phone",
+    deviceVisitorUnlinkedNotice: "This phone isn’t linked yet",
+    deviceVisitorLinkAction: "Link",
     deviceVisitorSoftDeny:
-      "Blocked by the owner’s limits. Ask them to approve on their phone.",
+      "Over the owner’s limits. Ask them to approve once on their linked phone.",
     deviceAuthReady: "Signed in on this phone",
+    deviceSignOut: "Sign out",
     deviceUnlink: "Unlink this item",
+    deviceUnlinkPolicyWarn:
+      "Spending limits stay on. Soft denies may have no phone to approve them until you link again.",
     deviceUnlinked: "Item unlinked",
     deviceAddAccessory: "Hold to add",
+    limitsSetupTitle: "Set up spending limits",
+    limitsSetupBody:
+      "Link this phone, then choose your caps. Limits apply with the Revibase cosigner.",
+    limitsSetupCta: "Continue",
+    limitsLinkedElsewhereTitle: "Linked to another phone",
+    limitsLinkedElsewhereBody:
+      "Unlink on that phone first, then come back here to set limits.",
+    limitsStatusOff: "Not set",
+    limitsStatusOn: "On",
+    limitsStatusSetup: "Set up",
+    limitsStatusInvalid: "Needs fix",
+    limitsInvalidBody:
+      "Saved limits are invalid. Save again to restore protection.",
+    limitsTurnOff: "Turn off limits",
+    limitsTurnedOff: "Limits off",
     openApprovalContinue: "They can continue in their app",
-    openApprovalsTitle: "Approval",
-    nearbyPolicyTitle: "Send from their phone",
+    openApprovalsTitle: "Needs your approval",
+    openApprovalsLater: "Later",
+    nearbyPolicyTitle: "Needs approval",
     nearbyPolicyBody:
-      "Over their limits. Ask them to send from their wallet instead.",
+      "Over their limits. Ask them to approve once on their linked phone, then try again.",
     nearbyPolicyFeeBody:
       "They need more fee balance. Ask them to top up, then try again.",
     nearbyPolicyGotIt: "Got it",
@@ -229,7 +257,7 @@ export const copy = {
     setupDeviceLinkedElsewhere: "Linked elsewhere",
     setupDeviceLinkedHere: "Linked here",
     policyDefaultSigningOnly:
-      "Applies only with the Revibase cosigner. A custom cosigner ignores these.",
+      "Off means sends are unrestricted with Revibase. Limits apply after you save.",
     policySection: "Limits",
     approveSendTitle: "Approve this send?",
     approveSendBodyLimit: (limit: string) => `Over your $${limit} limit.`,
@@ -253,7 +281,8 @@ export const copy = {
     sendBlockedHard:
       "This can’t be approved once — it would fail on-chain.",
     spendingLimits: "Spending limits",
-    spendingLimitsHint: "You can still approve a larger send once.",
+    spendingLimitsHint:
+      "Starting caps are 50 USDC and 0.1 SOL per send. You can approve a larger send once.",
     maxPerSend: "Max per send",
     recipients: "Recipients",
     recipientsHint: "Use wallet addresses. Token accounts are applied automatically.",

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Check, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
-import { NavBar } from "@/components/shared/nav-bar";
+import { NavBar, NavBarBack } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
 import { FieldLabel, Input } from "@/components/ui/input";
 import { useRpcPreference } from "@/hooks/wallet/use-rpc-preference";
@@ -44,14 +44,7 @@ export function RpcConnectionSheet({ onBack }: { onBack: () => void }) {
       <div className="flex flex-1 flex-col gap-4">
         <NavBar
           leading={
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setView("menu")}
-            >
-              {copy.common.back}
-            </Button>
+            <NavBarBack onClick={() => setView("menu")} />
           }
           title={copy.wallet.rpcCustom}
         />
@@ -83,11 +76,7 @@ export function RpcConnectionSheet({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-1 flex-col gap-4">
       <NavBar
-        leading={
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            {copy.common.back}
-          </Button>
-        }
+        leading={<NavBarBack onClick={onBack} />}
         title={copy.wallet.rpcConnection}
       />
       <p className="text-sm text-muted-foreground">{copy.wallet.rpcBody}</p>

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { NavBar } from "@/components/shared/nav-bar";
+import { NavBar, NavBarBack } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -47,11 +47,7 @@ export function ExtraProgramsSheet({
   return (
     <div className="flex flex-1 flex-col gap-4">
       <NavBar
-        leading={
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            {copy.common.back}
-          </Button>
-        }
+        leading={<NavBarBack onClick={onBack} />}
         title={copy.wallet.extraPrograms}
       />
       {editor.loading ? (
@@ -108,7 +104,7 @@ export function ExtraProgramsSheet({
             type="button"
             size="lg"
             className="mt-auto"
-            disabled={editor.saving}
+            disabled={editor.busy}
             onClick={() =>
               void editor.save({ extraPrograms: programs }, onBack)
             }
@@ -116,7 +112,7 @@ export function ExtraProgramsSheet({
             {editor.saving ? (
               <Spinner className="size-4" />
             ) : (
-              copy.wallet.holdToSave
+              copy.wallet.save
             )}
           </Button>
         </>

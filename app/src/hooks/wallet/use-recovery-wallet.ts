@@ -9,12 +9,26 @@ import {
 
 import { queryKeys, queryOptions } from "@/lib/queries";
 import { getSolanaRpc } from "@/lib/solana/rpc";
+import { copy } from "@/lib/copy/phygital";
+import { shortAddress } from "@/lib/utils";
 
 export type RecoveryWalletStatus = {
   configured: boolean;
   recoveryWallet: string | null;
   payer: string | null;
 };
+
+/** Subtitle for recovery row / access sheet. */
+export function recoveryWalletSubtitle(
+  status: RecoveryWalletStatus | undefined,
+  loading: boolean,
+): string {
+  if (loading) return copy.common.loading;
+  if (status?.configured && status.recoveryWallet) {
+    return shortAddress(status.recoveryWallet, 4);
+  }
+  return copy.wallet.recoveryWalletNotConfigured;
+}
 
 /** On-chain recovery wallet PDA for a phygital token (owner settings). */
 export function useRecoveryWallet(phygitalToken: string | null) {

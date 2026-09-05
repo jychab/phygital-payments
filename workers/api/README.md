@@ -54,8 +54,10 @@ pnpm --filter api dev
 | DELETE | `/auth/device/links/:token` | `auth/` (owner unlink) |
 | POST | `/preview` | `verifier/` (+ fee balance gate) |
 | POST | `/sign` | `verifier/` (+ fee balance gate) |
-| GET/PUT | `/policies/:phygitalToken` | `auth/` → uses `verifier/approval` |
-| POST | `/policies/:phygitalToken/grants` | `auth/` → uses `verifier/approval` |
+| GET/PUT/DELETE | `/policies/:phygitalToken` | `auth/` (owner session; standing policy opt-in) |
+| POST | `/policies/:phygitalToken/grants` | `auth/` |
+| GET/DELETE | `/policies/:phygitalToken/approvals…` | `auth/` |
+| GET | `/wallet/activity` | `wallet/` (Helius history proxy) |
 | GET | `/tokens/fee-balance` | `tokens/` / `fees/` |
 | GET | `/tokens/verified` | `tokens/` (Jupiter) |
 | POST | `/tokens/rarity` | `tokens/` (D1; client supplies DAS fields) |

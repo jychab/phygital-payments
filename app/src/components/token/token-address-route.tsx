@@ -2,12 +2,7 @@
 
 import { Nfc } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import {
-  useIsRestoring,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useIsRestoring, useQuery } from "@tanstack/react-query";
 import { findPhygitalTokenPda } from "phygital-token-sdk";
 
 import { GateMessage } from "@/components/layout/gate-message";
@@ -22,17 +17,11 @@ import { tokenHasLinkedMint, type PhygitalToken } from "@/lib/phygital/token";
 import type { ShellLayout } from "@/lib/layout";
 import { copy } from "@/lib/copy/phygital";
 import { queryKeys, queryOptions } from "@/lib/queries";
-import { QueryHttpError } from "@/lib/queries/http";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import {
-  clearAllPossession,
-  clearPossessionToken,
+  fetchDeviceSession,
   fetchLinkStatus,
-  holdAccessoryAuth,
   hasFreshPossession,
-  linkToken,
-  peekAccessoryProof,
-  peekPossessionToken,
   storeAccessoryProof,
   type LinkStatus,
 } from "@/lib/wallet/device-auth-client";
@@ -51,7 +40,7 @@ function layoutForToken(token: PhygitalToken): ShellLayout {
   return tokenHasLinkedMint(token) ? "gallery" : "compact";
 }
 
-/** Device-session + possession gated token home (parent owns DeviceLoginGate). */
+/** Possession-first token home — platform session optional (owner convenience). */
 export function TokenAddressRoute({
   tokenAddress,
   renderHome,
@@ -85,27 +74,27 @@ function TokenAddressRouteInner({
   const mint = token && tokenHasLinkedMint(token) ? String(token.mint) : null;
   const { collectible } = useResolvedDasCollectible(mint);
 
+  const session = useQuery({
+    queryKey: queryKeys.deviceAuth.session(),
+    queryFn: fetchDeviceSession,
+    ...queryOptions.deviceSession,
+  });
+
   const linkStatus = useQuery({
     queryKey: queryKeys.deviceAuth.linkStatus(tokenAddress),
     queryFn: () => fetchLinkStatus(tokenAddress),
-    enabled: Boolean(token),
+    enabled: Boolean(token) && Boolean(session.data),
     ...queryOptions.deviceLinks,
   });
 
   const [possessionOk, setPossessionOk] = useState(false);
-  const [linkSkipped, setLinkSkipped] = useState(false);
 
-  // NFC possession token or cold-Hold accessory proof — skip a second Hold.
   useEffect(() => {
     if (hasFreshPossession(tokenAddress)) setPossessionOk(true);
   }, [tokenAddress]);
 
-  const isOwner = linkStatus.data === "linked_here";
-  const unlocked =
-    Boolean(token) &&
-    (isOwner ||
-      possessionOk ||
-      (linkStatus.data === "unlinked" && linkSkipped));
+  const isOwner = Boolean(session.data) && linkStatus.data === "linked_here";
+  const unlocked = Boolean(token) && (isOwner || possessionOk);
 
   const role: WalletRole = isOwner ? "owner" : "visitor";
 
@@ -118,8 +107,20 @@ function TokenAddressRouteInner({
       (tokenQuery.isPending ||
         tokenQuery.isLoading ||
         tokenQuery.isFetching));
-  const waitingLink = Boolean(token) && linkStatus.isPending && !unlocked;
-  const waiting = waitingToken || waitingLink;
+  // Wait for session before Hold so linked owners don’t flash the gate.
+  const waitingSession =
+    Boolean(token) &&
+    session.isPending &&
+    !possessionOk &&
+    !unlocked;
+  // Only wait on link-status when sessioned (owner fast-path); never block Hold.
+  const waitingLink =
+    Boolean(token) &&
+    Boolean(session.data) &&
+    linkStatus.isPending &&
+    !unlocked &&
+    !possessionOk;
+  const waiting = waitingToken || waitingSession || waitingLink;
   const [timedOut, setTimedOut] = useState(false);
 
   useEffect(() => {
@@ -131,19 +132,13 @@ function TokenAddressRouteInner({
     return () => window.clearTimeout(id);
   }, [waiting]);
 
-  const showLinkPrompt =
-    Boolean(token) &&
-    possessionOk &&
-    linkStatus.data === "unlinked" &&
-    !linkSkipped;
-
   return (
     <TokenRouteShell layout={layout}>
-      {unlocked && token && !showLinkPrompt ? (
+      {unlocked && token ? (
         renderHome({
           token,
           role,
-          linkStatus: linkStatus.data,
+          linkStatus: session.data ? linkStatus.data : undefined,
         })
       ) : waiting && !timedOut ? (
         <NfcHoldStatus
@@ -154,23 +149,11 @@ function TokenAddressRouteInner({
           imageAlt={collectible?.name ?? ""}
           title={copy.verify.verifyingChip}
         />
-      ) : showLinkPrompt && token ? (
-        <LinkPrompt
-          token={token}
-          tokenAddress={tokenAddress}
-          onLinked={() => {
-            setLinkSkipped(false);
-          }}
-          onSkip={() => setLinkSkipped(true)}
-        />
       ) : token && !isOwner ? (
         <AddressHoldGate
           token={token}
           tokenAddress={tokenAddress}
           onPossessed={() => setPossessionOk(true)}
-          checkError={
-            linkStatus.isError ? toUserErrorMessage(linkStatus.error) : null
-          }
         />
       ) : (
         <GateMessage
@@ -192,7 +175,7 @@ function TokenAddressRouteInner({
               onClick={() => {
                 setTimedOut(false);
                 void tokenQuery.refetch();
-                void linkStatus.refetch();
+                if (session.data) void linkStatus.refetch();
               }}
             >
               {copy.common.tryAgain}
@@ -204,142 +187,14 @@ function TokenAddressRouteInner({
   );
 }
 
-function LinkPrompt({
-  token,
-  tokenAddress,
-  onLinked,
-  onSkip,
-}: {
-  token: PhygitalToken;
-  tokenAddress: string;
-  onLinked: () => void;
-  onSkip: () => void;
-}) {
-  const queryClient = useQueryClient();
-  const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
-  const { collectible } = useResolvedDasCollectible(mint);
-
-  const link = useMutation({
-    mutationFn: async () => {
-      const meta = {
-        label: collectible?.name ?? null,
-        imageUrl: collectible?.image ?? null,
-        mint,
-      };
-      const tapToken = peekPossessionToken(tokenAddress);
-      const accessoryProof = peekAccessoryProof(tokenAddress);
-
-      if (tapToken) {
-        try {
-          await linkToken({
-            phygitalToken: tokenAddress,
-            possessionToken: tapToken,
-            ...meta,
-          });
-          clearAllPossession(tokenAddress);
-          return;
-        } catch (e) {
-          const possessionFailed =
-            e instanceof QueryHttpError && e.code === "possession_invalid";
-          if (!possessionFailed) throw e;
-          clearPossessionToken(tokenAddress);
-          const accessory =
-            accessoryProof ?? (await holdAccessoryAuth());
-          await linkToken({
-            phygitalToken: tokenAddress,
-            accessory,
-            ...meta,
-          });
-          clearAllPossession(tokenAddress);
-          return;
-        }
-      }
-
-      if (accessoryProof) {
-        await linkToken({
-          phygitalToken: tokenAddress,
-          accessory: accessoryProof,
-          ...meta,
-        });
-        clearAllPossession(tokenAddress);
-        return;
-      }
-
-      await linkToken({
-        phygitalToken: tokenAddress,
-        accessory: await holdAccessoryAuth(),
-        ...meta,
-      });
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.deviceAuth.all(),
-      });
-      onLinked();
-    },
-  });
-
-  const error = link.error ? toUserErrorMessage(link.error) : null;
-
-  if (link.isPending) {
-    return (
-      <NfcHoldStatus
-        size="lg"
-        pulsing
-        busy
-        imageSrc={collectible?.image}
-        imageAlt={collectible?.name ?? ""}
-        title={copy.verify.holdStill}
-        body={copy.verify.holdStillBody}
-      />
-    );
-  }
-
-  return (
-    <NfcHoldStatus
-      size="lg"
-      pulsing={false}
-      imageSrc={collectible?.image}
-      imageAlt={collectible?.name ?? ""}
-      title={error ? copy.verify.failed : copy.wallet.deviceLinkTitle}
-      body={error ?? copy.wallet.deviceLinkBody}
-      action={
-        <div className="flex w-full flex-col gap-2">
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            onClick={() => link.mutate()}
-          >
-            {error ? copy.common.tryAgain : copy.wallet.deviceLinkCta}
-          </Button>
-          {!error ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="lg"
-              className="w-full"
-              onClick={onSkip}
-            >
-              {copy.wallet.deviceLinkSkip}
-            </Button>
-          ) : null}
-        </div>
-      }
-    />
-  );
-}
-
 function AddressHoldGate({
   token,
   tokenAddress,
   onPossessed,
-  checkError,
 }: {
   token: PhygitalToken;
   tokenAddress: string;
   onPossessed: () => void;
-  checkError: string | null;
 }) {
   const mint = tokenHasLinkedMint(token) ? String(token.mint) : null;
   const { collectible } = useResolvedDasCollectible(mint);
@@ -383,7 +238,7 @@ function AddressHoldGate({
     );
   }
 
-  const error = accessory.error ?? checkError;
+  const error = accessory.error;
 
   return (
     <NfcHoldStatus
@@ -391,8 +246,8 @@ function AddressHoldGate({
       pulsing={!error}
       imageSrc={collectible?.image}
       imageAlt={collectible?.name ?? ""}
-      title={error ? copy.verify.failed : copy.home.holdTitle}
-      body={error ?? copy.home.holdBody}
+      title={error ? copy.verify.failed : copy.wallet.holdToOpenTitle}
+      body={error ?? copy.wallet.holdToOpenBody}
       action={
         <Button
           type="button"
@@ -400,7 +255,7 @@ function AddressHoldGate({
           className="w-full"
           onClick={() => void holdToOpen()}
         >
-          {error ? copy.common.tryAgain : copy.verify.holdToCheck}
+          {error ? copy.common.tryAgain : copy.wallet.holdToOpenCta}
         </Button>
       }
     />

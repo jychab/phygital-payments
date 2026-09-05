@@ -17,7 +17,7 @@ import {
 
 import { CopyableAddress } from "@/components/shared/copyable-address";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
-import { NavBar } from "@/components/shared/nav-bar";
+import { NavBar, NavBarBack } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
 import { FieldLabel, Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -202,14 +202,7 @@ export function RecoveryWalletSheet({
       <div className="flex flex-1 flex-col gap-4">
         <NavBar
           leading={
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setView("form")}
-            >
-              {copy.common.back}
-            </Button>
+            <NavBarBack onClick={() => setView("form")} />
           }
           title={copy.wallet.recoveryWalletClearConfirmTitle}
         />
@@ -245,11 +238,7 @@ export function RecoveryWalletSheet({
   return (
     <div className="flex flex-1 flex-col gap-4">
       <NavBar
-        leading={
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            {copy.common.back}
-          </Button>
-        }
+        leading={<NavBarBack onClick={onClose} />}
         title={copy.wallet.recoveryWallet}
       />
       <p className="text-sm text-muted-foreground">

@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { queryKeys, queryOptions } from "@/lib/queries";
-import { withDeviceAuth } from "@/lib/wallet/device-auth-client";
 import {
   fetchOpenApprovals,
   type OpenApproval,
@@ -13,8 +12,7 @@ import {
 export function useOpenApprovals(phygitalToken: string | null) {
   const approvals = useQuery({
     queryKey: queryKeys.walletApprovals.byToken(phygitalToken),
-    queryFn: (): Promise<OpenApproval[]> =>
-      withDeviceAuth(() => fetchOpenApprovals(phygitalToken!)),
+    queryFn: (): Promise<OpenApproval[]> => fetchOpenApprovals(phygitalToken!),
     enabled: Boolean(phygitalToken),
     ...queryOptions.default,
   });

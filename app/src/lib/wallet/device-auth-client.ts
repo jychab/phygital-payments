@@ -14,8 +14,7 @@ import type {
 } from "@simplewebauthn/browser";
 import { startAuthentication } from "phygital-token-sdk";
 
-import { queryFetch, QueryHttpError, readJson } from "@/lib/queries/http";
-import { getSolanaRpc } from "@/lib/solana/rpc";
+import { queryFetch, readJson } from "@/lib/queries/http";
 import { authenticateToken } from "@/lib/token/authenticate";
 
 export type DeviceSessionInfo = {
@@ -138,11 +137,6 @@ export function hasFreshPossession(phygitalToken: string): boolean {
   );
 }
 
-export function clearAllPossession(phygitalToken: string): void {
-  clearPossessionToken(phygitalToken);
-  clearAccessoryProof(phygitalToken);
-}
-
 export async function fetchDeviceSession(): Promise<DeviceSessionInfo | null> {
   const res = await queryFetch("/auth/device-session");
   if (res.status === 401) return null;
@@ -238,9 +232,10 @@ export async function fetchLinkStatus(
 }
 
 /** Accessory Hold for link (reuses authenticateToken crypto). */
-export async function holdAccessoryAuth(): Promise<AccessoryAuth> {
-  const { message, response } = await authenticateToken();
-  return { message, response };
+export async function holdAccessoryAuth(): Promise<
+  AccessoryAuth & { secp256r1PublicKey: string }
+> {
+  return authenticateToken();
 }
 
 export async function linkToken(args: {
@@ -271,15 +266,8 @@ export async function unlinkToken(phygitalToken: string): Promise<void> {
   await readJson(res, "Couldn’t unlink");
 }
 
-/** Assert device session for an owner API call (no lazy enroll). */
-export async function withDeviceAuth<T>(fn: () => Promise<T>): Promise<T> {
-  try {
-    return await fn();
-  } catch (e) {
-    if (e instanceof QueryHttpError && e.status === 401) {
-      await loginDevice();
-      return await fn();
-    }
-    throw e;
-  }
+/** Clear platform session cookie (no Face ID). */
+export async function logoutDevice(): Promise<void> {
+  const res = await queryFetch("/auth/device-session", { method: "DELETE" });
+  await readJson(res, "Couldn’t sign out");
 }

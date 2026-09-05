@@ -12,7 +12,6 @@ import {
 import { TokenMintedHome } from "@/components/token/token-minted-home";
 import { TokenNfcApp } from "@/components/token/token-nfc-app";
 import { TokenUnmintedHome } from "@/components/token/token-unminted-home";
-import { DeviceLoginGate } from "@/components/wallet/device-login-gate";
 import { copy } from "@/lib/copy/phygital";
 import {
   tokenHasLinkedMint,
@@ -52,32 +51,29 @@ function TokenHome({
   );
 }
 
-/**
- * Route `/token` — one device login gate; tap verify runs in parallel with
- * session check on cold NFC entry.
- */
+/** Route `/token` — possession unlock; no platform passkey gate. */
 export function TokenApp() {
   const searchParams = useSearchParams();
   const address = searchParams.get("address")?.trim() ?? "";
 
+  if (address) {
+    return (
+      <TokenAddressRoute
+        tokenAddress={address}
+        renderHome={({ token, role, linkStatus }) => (
+          <TokenHome
+            token={token}
+            role={role}
+            linkStatus={linkStatus}
+          />
+        )}
+      />
+    );
+  }
+
   return (
-    <DeviceLoginGate keepMounted={!address}>
-      {address ? (
-        <TokenAddressRoute
-          tokenAddress={address}
-          renderHome={({ token, role, linkStatus }) => (
-            <TokenHome
-              token={token}
-              role={role}
-              linkStatus={linkStatus}
-            />
-          )}
-        />
-      ) : (
-        <TokenRouteShell layout="compact">
-          <TokenNfcApp nfcCopy={TOKEN_NFC_COPY} />
-        </TokenRouteShell>
-      )}
-    </DeviceLoginGate>
+    <TokenRouteShell layout="compact">
+      <TokenNfcApp nfcCopy={TOKEN_NFC_COPY} />
+    </TokenRouteShell>
   );
 }

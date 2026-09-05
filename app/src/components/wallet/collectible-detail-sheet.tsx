@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { NavBar } from "@/components/shared/nav-bar";
+import { NavBar, NavBarBack } from "@/components/shared/nav-bar";
 import { Separator } from "@/components/ui/separator";
 import { copy } from "@/lib/copy/phygital";
 import type { WalletCollectible } from "@/lib/wallet/portfolio-types";
@@ -26,17 +26,7 @@ export function CollectibleDetailSheet({
     <div className="flex flex-1 flex-col gap-5">
       <NavBar
         className="mb-0"
-        leading={
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="-ml-2 text-muted-foreground hover:text-foreground"
-            onClick={onBack}
-          >
-            {copy.common.back}
-          </Button>
-        }
+        leading={<NavBarBack onClick={onBack} className="-ml-2 text-muted-foreground hover:text-foreground" />}
         title={collectible.name}
       />
 

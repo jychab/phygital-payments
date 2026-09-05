@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { StageTransition } from "@/components/shared/stage-transition";
 import { WalletHomePanel } from "@/components/wallet/wallet-home-panel";
@@ -13,6 +14,7 @@ import { ReceiveHub } from "@/components/wallet/receive-hub";
 import { ReceiveNearbySheet } from "@/components/wallet/receive-nearby-sheet";
 import { OpenApprovalsSheet } from "@/components/wallet/open-approvals-sheet";
 import { SettingsHub, type SettingsTarget } from "@/components/wallet/settings-hub";
+import { LimitsSetupSheet } from "@/components/wallet/limits-setup-sheet";
 import { SpendingLimitsSheet } from "@/components/wallet/spending-limits-sheet";
 import { RecipientsSheet } from "@/components/wallet/recipients-sheet";
 import { ExtraProgramsSheet } from "@/components/wallet/extra-programs-sheet";
@@ -43,6 +45,9 @@ import {
   collectibleToSendAsset,
   type SendAssetRef,
 } from "@/lib/wallet/send-asset-ref";
+import {
+  isPolicySetupScreen,
+} from "@/lib/wallet/limits-setup-href";
 
 type Screen =
   | "home"
@@ -122,7 +127,22 @@ function WalletWorkspaceInner({
     collectible?.name ??
     cardLabel ??
     (mint ? copy.home.card : copy.home.accessory);
-  const [screen, setScreen] = useState<Screen>("home");
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const initialScreen = searchParams.get("screen");
+  const [screen, setScreen] = useState<Screen>(() =>
+    isPolicySetupScreen(initialScreen) ||
+    initialScreen === "settings" ||
+    initialScreen === "feeBalance" ||
+    initialScreen === "access" ||
+    initialScreen === "contacts" ||
+    initialScreen === "signing" ||
+    initialScreen === "recoveryWallet" ||
+    initialScreen === "rpcConnection"
+      ? (initialScreen as Screen)
+      : "home",
+  );
   const [recoveryReturn, setRecoveryReturn] = useState<Screen>("settings");
   const [sendAsset, setSendAsset] = useState<SendAssetRef | null>(null);
   const [sendTokensOnly, setSendTokensOnly] = useState(true);
@@ -132,6 +152,14 @@ function WalletWorkspaceInner({
   const [sendRecap, setSendRecap] = useState<SendHoldRecap | null>(null);
   const [detail, setDetail] = useState<WalletCollectible | null>(null);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!searchParams.get("screen")) return;
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("screen");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
 
   const onSettings = useCallback(() => setScreen("settings"), []);
 
@@ -337,6 +365,15 @@ function WalletWorkspaceInner({
         onBack={() => setScreen("settings")}
       />
     );
+  } else if (isPolicySetupScreen(screen) && !isOwner) {
+    body = (
+      <LimitsSetupSheet
+        phygitalTokenPda={tokenAddress}
+        linkStatus={linkStatus}
+        screen={screen}
+        onBack={() => setScreen("settings")}
+      />
+    );
   } else if (isOwner && screen === "spendingLimits") {
     body = (
       <SpendingLimitsSheet
@@ -377,6 +414,7 @@ function WalletWorkspaceInner({
       <AccessRecoverySheet
         phygitalTokenPda={tokenAddress}
         role={role}
+        linkStatus={linkStatus}
         onBack={() => setScreen("settings")}
         onOpenRecovery={
           isOwner ? () => openRecovery("access") : undefined
@@ -415,9 +453,19 @@ function WalletWorkspaceInner({
           visitorNotice={
             isOwner
               ? null
-              : linkStatus === "unlinked"
-                ? copy.wallet.deviceVisitorUnlinkedNotice
-                : copy.wallet.deviceVisitorNotice
+              : linkStatus === "linked_elsewhere"
+                ? copy.wallet.deviceVisitorNotice
+                : copy.wallet.deviceVisitorUnlinkedNotice
+          }
+          visitorNoticeAction={
+            !isOwner && linkStatus !== "linked_elsewhere"
+              ? copy.wallet.deviceVisitorLinkAction
+              : undefined
+          }
+          onVisitorNotice={
+            !isOwner && linkStatus !== "linked_elsewhere"
+              ? () => setScreen("access")
+              : undefined
           }
           feeBalanceLow={feeBalance.data?.low}
           onTopUpFees={() => setScreen("feeBalance")}

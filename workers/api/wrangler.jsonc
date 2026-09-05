@@ -11,6 +11,10 @@
       "zone_name": "revibase.com"
     },
     {
+      "pattern": "api.revibase.com/wallet/*",
+      "zone_name": "revibase.com"
+    },
+    {
       "pattern": "api.revibase.com/verify-tap*",
       "zone_name": "revibase.com"
     },

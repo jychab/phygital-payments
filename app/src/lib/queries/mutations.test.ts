@@ -14,7 +14,7 @@ describe("applyWalletPolicy", () => {
   it("replaces cached policy with stored document", () => {
     const qc = new QueryClient();
     const key = queryKeys.walletPolicy.byToken("token");
-    qc.setQueryData(key, base);
+    qc.setQueryData(key, { policy: base, status: "ok" as const });
     const nextDoc: PolicyDocument = {
       ...base,
       programs: [
@@ -22,9 +22,20 @@ describe("applyWalletPolicy", () => {
         { programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", allowAll: true },
       ],
     };
-    applyWalletPolicy(qc, "token", nextDoc);
-    const next = qc.getQueryData<PolicyDocument>(key);
-    expect(next?.programs).toHaveLength(2);
+    applyWalletPolicy(qc, "token", { policy: nextDoc, status: "ok" });
+    const next = qc.getQueryData<{ policy: PolicyDocument | null; status: string }>(
+      key,
+    );
+    expect(next?.status).toBe("ok");
+    expect(next?.policy?.programs).toHaveLength(2);
+  });
+
+  it("caches none when limits are turned off", () => {
+    const qc = new QueryClient();
+    const key = queryKeys.walletPolicy.byToken("token");
+    qc.setQueryData(key, { policy: base, status: "ok" as const });
+    applyWalletPolicy(qc, "token", { policy: null, status: "none" });
+    expect(qc.getQueryData(key)).toEqual({ policy: null, status: "none" });
   });
 });
 

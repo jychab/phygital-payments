@@ -1,13 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { findPhygitalTokenPda } from "phygital-token-sdk";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { GroupedList, GroupedRow } from "@/components/shared/grouped-list";
 import { LoadingStatus } from "@/components/shared/loading-status";
-import { DeviceLoginGate } from "@/components/wallet/device-login-gate";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { copy } from "@/lib/copy/phygital";
 import { homeSectionsClass, touchTargetClass } from "@/lib/layout";
@@ -15,27 +17,274 @@ import { queryKeys, queryOptions } from "@/lib/queries";
 import { galleryAnimate } from "@/lib/motion";
 import { cn, shortAddress } from "@/lib/utils";
 import { toUserErrorMessage } from "@/lib/user-errors";
-import { authenticateToken } from "@/lib/token/authenticate";
-import { findPhygitalTokenPda } from "phygital-token-sdk";
 import {
   fetchDeviceLinks,
+  fetchDeviceSession,
+  fetchLinkStatus,
+  holdAccessoryAuth,
   linkToken,
+  loginDevice,
+  logoutDevice,
+  registerDevice,
   type DeviceLink,
+  type LinkStatus,
 } from "@/lib/wallet/device-auth-client";
+import { parseLimitsSetupIntent } from "@/lib/wallet/limits-setup-href";
 import { tokenHomeHref } from "@/lib/wallet/token-home-href";
 
-/** Signed-in home: server-backed owned token links. */
+/** Home: signed-out passkey door, or signed-in linked items (+ setup intent). */
 export function OwnedHome() {
   return (
     <AppShell layout="home">
-      <DeviceLoginGate>
-        <OwnedHomeInner />
-      </DeviceLoginGate>
+      <OwnedHomeRoot />
     </AppShell>
   );
 }
 
-function OwnedHomeInner() {
+function OwnedHomeRoot() {
+  const searchParams = useSearchParams();
+  const intent = parseLimitsSetupIntent({
+    setup: searchParams.get("setup"),
+    returnPath: searchParams.get("return"),
+  });
+
+  const session = useQuery({
+    queryKey: queryKeys.deviceAuth.session(),
+    queryFn: fetchDeviceSession,
+    ...queryOptions.deviceSession,
+  });
+
+  if (session.isPending) {
+    return <LoadingStatus />;
+  }
+
+  if (!session.data) {
+    return <HomePasskeyScreen setupMode={Boolean(intent)} />;
+  }
+
+  if (intent) {
+    return (
+      <HomeLinkSetup tokenAddress={intent.token} returnTo={intent.returnTo} />
+    );
+  }
+
+  return <HomeLinksScreen />;
+}
+
+function HomePasskeyScreen({ setupMode }: { setupMode: boolean }) {
+  const queryClient = useQueryClient();
+
+  function onAuthSuccess(next: Awaited<ReturnType<typeof loginDevice>>) {
+    queryClient.setQueryData(queryKeys.deviceAuth.session(), next);
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.deviceAuth.links(),
+      queryFn: fetchDeviceLinks,
+      ...queryOptions.deviceLinks,
+    });
+  }
+
+  const loginMutation = useMutation({
+    mutationFn: loginDevice,
+    onSuccess: onAuthSuccess,
+  });
+  const registerMutation = useMutation({
+    mutationFn: registerDevice,
+    onSuccess: onAuthSuccess,
+  });
+
+  const busy = loginMutation.isPending || registerMutation.isPending;
+  const authError = loginMutation.error ?? registerMutation.error;
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-16 text-center">
+      <div className="space-y-2">
+        {setupMode ? (
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {copy.wallet.setupStepPasskey}
+          </p>
+        ) : null}
+        <h1 className="text-display-md tracking-tight">
+          {setupMode
+            ? copy.wallet.limitsSetupTitle
+            : copy.wallet.deviceLoginTitle}
+        </h1>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          {authError
+            ? toUserErrorMessage(authError)
+            : setupMode
+              ? copy.wallet.homeSetupPasskeyBody
+              : copy.wallet.deviceLoginBody}
+        </p>
+      </div>
+      <div className="flex w-full max-w-sm flex-col gap-2">
+        <Button
+          type="button"
+          size="lg"
+          className="w-full"
+          disabled={busy}
+          onClick={() => {
+            registerMutation.reset();
+            loginMutation.mutate();
+          }}
+        >
+          {loginMutation.isPending ? (
+            <Spinner className="size-4" />
+          ) : (
+            copy.wallet.continueWithPasskey
+          )}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="lg"
+          className="w-full"
+          disabled={busy}
+          onClick={() => {
+            loginMutation.reset();
+            registerMutation.mutate();
+          }}
+        >
+          {registerMutation.isPending ? (
+            <Spinner className="size-4" />
+          ) : (
+            <span className="text-muted-foreground">
+              {copy.wallet.newPhoneHint}{" "}
+              <span className="font-medium text-foreground">
+                {copy.wallet.setUpThisPhone}
+              </span>
+            </span>
+          )}
+        </Button>
+        {!setupMode ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="w-full"
+            asChild
+          >
+            <a href="/token">{copy.wallet.homeHaveItemHint}</a>
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function HomeLinkSetup({
+  tokenAddress,
+  returnTo,
+}: {
+  tokenAddress: string;
+  returnTo: string;
+}) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const status = useQuery({
+    queryKey: queryKeys.deviceAuth.linkStatus(tokenAddress),
+    queryFn: () => fetchLinkStatus(tokenAddress),
+    ...queryOptions.deviceLinks,
+  });
+
+  useEffect(() => {
+    if (status.data === "linked_here") {
+      router.replace(returnTo);
+    }
+  }, [status.data, router, returnTo]);
+
+  const link = useMutation({
+    mutationFn: async () => {
+      const auth = await holdAccessoryAuth();
+      const pda = String(await findPhygitalTokenPda(auth.secp256r1PublicKey));
+      if (pda !== tokenAddress) {
+        throw new Error(copy.token.wrongItem);
+      }
+      await linkToken({
+        phygitalToken: tokenAddress,
+        accessory: { message: auth.message, response: auth.response },
+      });
+    },
+    onSuccess: async () => {
+      queryClient.setQueryData(
+        queryKeys.deviceAuth.linkStatus(tokenAddress),
+        "linked_here" as LinkStatus,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.deviceAuth.links(),
+      });
+      router.replace(returnTo);
+    },
+  });
+
+  if (status.isPending || status.data === "linked_here") {
+    return <LoadingStatus />;
+  }
+
+  if (status.data === "linked_elsewhere") {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {copy.wallet.setupStepLink}
+        </p>
+        <h1 className="text-display-md tracking-tight">
+          {copy.wallet.limitsLinkedElsewhereTitle}
+        </h1>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          {copy.wallet.limitsLinkedElsewhereBody}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          onClick={() => router.push("/")}
+        >
+          {copy.common.done}
+        </Button>
+      </div>
+    );
+  }
+
+  const error = link.error ? toUserErrorMessage(link.error) : null;
+
+  if (link.isPending) {
+    return (
+      <NfcHoldStatus
+        size="lg"
+        pulsing
+        busy
+        title={copy.verify.holdStill}
+        body={copy.verify.holdStillBody}
+      />
+    );
+  }
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <p className="px-4 pt-4 text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {copy.wallet.setupStepLink}
+      </p>
+      <NfcHoldStatus
+        size="lg"
+        pulsing={!error}
+        title={error ? copy.verify.failed : copy.wallet.homeLinkSetupTitle}
+        body={error ?? copy.wallet.homeLinkSetupBody}
+        action={
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            onClick={() => link.mutate()}
+          >
+            {error ? copy.common.tryAgain : copy.wallet.deviceLinkCta}
+          </Button>
+        }
+      />
+    </div>
+  );
+}
+
+function HomeLinksScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const links = useQuery({
@@ -44,11 +293,20 @@ function OwnedHomeInner() {
     ...queryOptions.deviceLinks,
   });
 
+  const logout = useMutation({
+    mutationFn: logoutDevice,
+    onSuccess: () => {
+      queryClient.setQueryData(queryKeys.deviceAuth.session(), null);
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.deviceAuth.all(),
+      });
+    },
+  });
+
   const addAccessory = useMutation({
     mutationFn: async () => {
-      const auth = await authenticateToken();
+      const auth = await holdAccessoryAuth();
       const pda = String(await findPhygitalTokenPda(auth.secp256r1PublicKey));
-      // linkToken is idempotent for linked_here (returns early server-side).
       await linkToken({
         phygitalToken: pda,
         accessory: { message: auth.message, response: auth.response },
@@ -103,26 +361,46 @@ function OwnedHomeInner() {
   const items = links.data ?? [];
   const error = addAccessory.error
     ? toUserErrorMessage(addAccessory.error)
-    : null;
+    : logout.error
+      ? toUserErrorMessage(logout.error)
+      : null;
 
   if (items.length === 0) {
     return (
-      <NfcHoldStatus
-        size="lg"
-        pulsing={false}
-        title={copy.home.emptyTitle}
-        body={error ?? copy.home.emptyBody}
-        action={
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            onClick={() => addAccessory.mutate()}
-          >
-            {copy.wallet.deviceAddAccessory}
-          </Button>
-        }
-      />
+      <div className="flex flex-1 flex-col">
+        <NfcHoldStatus
+          size="lg"
+          pulsing={false}
+          title={copy.home.emptyTitle}
+          body={error ?? copy.home.emptyBody}
+          action={
+            <div className="flex w-full flex-col gap-2">
+              <Button
+                type="button"
+                size="lg"
+                className="w-full"
+                onClick={() => addAccessory.mutate()}
+              >
+                {copy.wallet.deviceAddAccessory}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                className="w-full"
+                disabled={logout.isPending}
+                onClick={() => logout.mutate()}
+              >
+                {logout.isPending ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  copy.wallet.deviceSignOut
+                )}
+              </Button>
+            </div>
+          }
+        />
+      </div>
     );
   }
 
@@ -132,7 +410,21 @@ function OwnedHomeInner() {
 
   return (
     <div className="flex flex-1 flex-col gap-5">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="default"
+          className={touchTargetClass}
+          disabled={logout.isPending}
+          onClick={() => logout.mutate()}
+        >
+          {logout.isPending ? (
+            <Spinner className="size-4" />
+          ) : (
+            copy.wallet.deviceSignOut
+          )}
+        </Button>
         <Button
           type="button"
           variant="outline"

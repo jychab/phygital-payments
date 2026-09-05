@@ -2,10 +2,9 @@
 
 import { useMemo, useState } from "react";
 
-import { NavBar } from "@/components/shared/nav-bar";
+import { NavBar, NavBarBack } from "@/components/shared/nav-bar";
 import { GroupedList } from "@/components/shared/grouped-list";
 import { TokenHoldingRow } from "@/components/wallet/token-holding-row";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy/phygital";
 import type { PaymentTokenHolding } from "@/lib/tokens/payment-token";
@@ -43,11 +42,7 @@ export function TokensAllSheet({
   return (
     <div className="flex flex-1 flex-col gap-4">
       <NavBar
-        leading={
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            {copy.common.back}
-          </Button>
-        }
+        leading={<NavBarBack onClick={onBack} />}
         title={copy.wallet.tokens}
       />
 

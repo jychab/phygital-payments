@@ -38,6 +38,7 @@ import {
   verifyPasskeyAndResolveToken,
 } from "@/auth/passkey-verify";
 import { consumePossessionToken } from "@/auth/possession-token";
+import { denyIfAuthRateLimited } from "@/auth/rate-limit";
 import {
   consumeWebAuthnChallenge,
   resolveWebAuthnRp,
@@ -65,6 +66,9 @@ deviceAuthRoutes.get("/auth/device-session", async (c) => {
 });
 
 deviceAuthRoutes.get("/auth/device/register-options", async (c) => {
+  const limited = await denyIfAuthRateLimited(c, "register");
+  if (limited) return limited;
+
   const rp = resolveWebAuthnRp(c.req.header("Origin") ?? null);
   if (!rp) {
     return json(
@@ -95,6 +99,9 @@ deviceAuthRoutes.get("/auth/device/register-options", async (c) => {
 });
 
 deviceAuthRoutes.post("/auth/device", async (c) => {
+  const limited = await denyIfAuthRateLimited(c, "register");
+  if (limited) return limited;
+
   try {
     const body = (await c.req.json()) as {
       userHandle?: string;
@@ -182,6 +189,9 @@ deviceAuthRoutes.post("/auth/device", async (c) => {
 });
 
 deviceAuthRoutes.get("/auth/device-session/options", async (c) => {
+  const limited = await denyIfAuthRateLimited(c, "login");
+  if (limited) return limited;
+
   const rp = resolveWebAuthnRp(c.req.header("Origin") ?? null);
   if (!rp) {
     return json(
@@ -201,6 +211,9 @@ deviceAuthRoutes.get("/auth/device-session/options", async (c) => {
 });
 
 deviceAuthRoutes.post("/auth/device-session", async (c) => {
+  const limited = await denyIfAuthRateLimited(c, "login");
+  if (limited) return limited;
+
   try {
     const body = (await c.req.json()) as {
       challengeId?: string;
@@ -425,6 +438,9 @@ deviceAuthRoutes.get("/auth/device/links/status", async (c) => {
 });
 
 deviceAuthRoutes.post("/auth/device/links", async (c) => {
+  const limited = await denyIfAuthRateLimited(c, "link");
+  if (limited) return limited;
+
   try {
     const session = await requireDeviceSession(c);
     if (session instanceof Response) return session;

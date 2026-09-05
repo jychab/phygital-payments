@@ -9,6 +9,7 @@ import {
 import { json } from "@/shared/http";
 import {
   createGrant,
+  deletePolicyDocument,
   getEffectivePolicy,
   upsertPolicyDocument,
 } from "@/verifier/policy-db";
@@ -39,9 +40,9 @@ async function requireOwnerSession(c: Parameters<typeof requireDeviceSession>[0]
 }
 
 policyRoutes.get("/policies/:phygitalToken", async (c) => {
-  const phygitalToken = c.req.param("phygitalToken");
-  const effective = await getEffectivePolicy(phygitalToken);
-  return json(effective);
+  const owner = await requireOwnerSession(c);
+  if (owner instanceof Response) return owner;
+  return json(await getEffectivePolicy(owner.phygitalToken));
 });
 
 policyRoutes.put("/policies/:phygitalToken", async (c) => {
@@ -75,6 +76,14 @@ policyRoutes.put("/policies/:phygitalToken", async (c) => {
     throw e;
   }
 
+  return json(await getEffectivePolicy(owner.phygitalToken));
+});
+
+policyRoutes.delete("/policies/:phygitalToken", async (c) => {
+  const owner = await requireOwnerSession(c);
+  if (owner instanceof Response) return owner;
+
+  await deletePolicyDocument(owner.phygitalToken);
   return json(await getEffectivePolicy(owner.phygitalToken));
 });
 

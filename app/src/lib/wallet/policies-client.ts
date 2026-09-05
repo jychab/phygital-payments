@@ -1,5 +1,4 @@
 import { queryFetch, readJson } from "@/lib/queries/http";
-import { withDeviceAuth } from "@/lib/wallet/device-auth-client";
 import type { PolicyDocument } from "phygital-verifier-sdk";
 
 export type OpenApproval = {
@@ -13,55 +12,86 @@ export type OpenApproval = {
   createdAt: number;
 };
 
-/** GET standing `PolicyDocument` (default when no row). */
-export async function fetchPolicyDocument(
-  phygitalToken: string,
-): Promise<PolicyDocument> {
-  const res = await queryFetch(`/policies/${encodeURIComponent(phygitalToken)}`);
-  const body = await readJson<{ policy: PolicyDocument }>(
-    res,
-    "Couldn’t load settings",
-  );
-  return body.policy;
+export type PolicyStatus = "none" | "ok" | "invalid";
+
+export type EffectivePolicy = {
+  policy: PolicyDocument | null;
+  status: PolicyStatus;
+};
+
+function asEffective(
+  body: { policy: PolicyDocument | null; status?: PolicyStatus },
+  fallback: PolicyStatus = body.policy ? "ok" : "none",
+): EffectivePolicy {
+  return {
+    policy: body.policy,
+    status: body.status ?? fallback,
+  };
 }
 
-/** PUT compiled `PolicyDocument` (owner app compiles settings client-side). */
+/** GET standing policy (owner session required). */
+export async function fetchEffectivePolicy(
+  phygitalToken: string,
+): Promise<EffectivePolicy> {
+  const res = await queryFetch(`/policies/${encodeURIComponent(phygitalToken)}`);
+  const body = await readJson<{
+    policy: PolicyDocument | null;
+    status?: PolicyStatus;
+  }>(res, "Couldn’t load settings");
+  return asEffective(body);
+}
+
+/**
+ * PUT compiled `PolicyDocument`. Requires an existing device session + owner
+ * link — no lazy Face ID (send user to Home setup on 401).
+ */
 export async function putPolicyDocument(
   phygitalToken: string,
   policy: PolicyDocument,
-): Promise<PolicyDocument> {
-  return withDeviceAuth(async () => {
-    const res = await queryFetch(
-      `/policies/${encodeURIComponent(phygitalToken)}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ policy }),
-      },
-    );
-    const body = await readJson<{ policy: PolicyDocument }>(
-      res,
-      "Couldn’t save settings",
-    );
-    return body.policy;
-  });
+): Promise<EffectivePolicy> {
+  const res = await queryFetch(
+    `/policies/${encodeURIComponent(phygitalToken)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ policy }),
+    },
+  );
+  const body = await readJson<{
+    policy: PolicyDocument | null;
+    status?: PolicyStatus;
+  }>(res, "Couldn’t save settings");
+  return asEffective(body);
+}
+
+/** DELETE standing policy (limits off). */
+export async function deletePolicyDocument(
+  phygitalToken: string,
+): Promise<EffectivePolicy> {
+  const res = await queryFetch(
+    `/policies/${encodeURIComponent(phygitalToken)}`,
+    { method: "DELETE" },
+  );
+  const body = await readJson<{
+    policy: PolicyDocument | null;
+    status?: PolicyStatus;
+  }>(res, "Couldn’t turn off limits");
+  return asEffective(body, "none");
 }
 
 export async function createOneTimeGrant(
   phygitalToken: string,
   intentHash: string,
 ): Promise<void> {
-  await withDeviceAuth(async () => {
-    const res = await queryFetch(
-      `/policies/${encodeURIComponent(phygitalToken)}/grants`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intentHash }),
-      },
-    );
-    await readJson(res, "Couldn’t approve this send");
-  });
+  const res = await queryFetch(
+    `/policies/${encodeURIComponent(phygitalToken)}/grants`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ intentHash }),
+    },
+  );
+  await readJson(res, "Couldn’t approve this send");
 }
 
 export async function fetchOpenApprovals(
@@ -81,11 +111,9 @@ export async function cancelOpenApproval(
   phygitalToken: string,
   intentHash: string,
 ): Promise<void> {
-  await withDeviceAuth(async () => {
-    const res = await queryFetch(
-      `/policies/${encodeURIComponent(phygitalToken)}/approvals/${encodeURIComponent(intentHash)}`,
-      { method: "DELETE" },
-    );
-    await readJson(res, "Couldn’t cancel this approval");
-  });
+  const res = await queryFetch(
+    `/policies/${encodeURIComponent(phygitalToken)}/approvals/${encodeURIComponent(intentHash)}`,
+    { method: "DELETE" },
+  );
+  await readJson(res, "Couldn’t cancel this approval");
 }

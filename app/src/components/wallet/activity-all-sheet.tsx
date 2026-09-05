@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { ActivityList } from "@/components/wallet/activity-list";
-import { NavBar } from "@/components/shared/nav-bar";
-import { Button } from "@/components/ui/button";
+import { NavBar, NavBarBack } from "@/components/shared/nav-bar";
 import { copy } from "@/lib/copy/phygital";
 import { useWalletActivity } from "@/hooks/wallet/use-wallet-activity";
 import type { WalletActivityItem } from "@/lib/wallet/portfolio-types";
@@ -45,11 +44,7 @@ export function ActivityAllSheet({
   return (
     <div className="flex flex-1 flex-col gap-4">
       <NavBar
-        leading={
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            {copy.common.back}
-          </Button>
-        }
+        leading={<NavBarBack onClick={onBack} />}
         title={copy.wallet.activity}
       />
 

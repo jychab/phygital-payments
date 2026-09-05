@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { NavBar } from "@/components/shared/nav-bar";
+import { NavBar, NavBarBack } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
 import { FieldLabel, Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -30,11 +30,7 @@ export function SpendingLimitsSheet({
   return (
     <div className="flex flex-1 flex-col gap-4">
       <NavBar
-        leading={
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            {copy.common.back}
-          </Button>
-        }
+        leading={<NavBarBack onClick={onBack} />}
         title={copy.wallet.spendingLimits}
       />
       {editor.loading ? (
@@ -44,11 +40,17 @@ export function SpendingLimitsSheet({
       ) : (
         <>
           <p className="text-sm text-muted-foreground">
-            {copy.wallet.spendingLimitsHint}
+            {editor.policyInvalid
+              ? copy.wallet.limitsInvalidBody
+              : editor.policyEnabled
+                ? copy.wallet.spendingLimitsHint
+                : copy.wallet.policyDefaultSigningOnly}
           </p>
-          <p className="text-xs text-muted-foreground">
-            {copy.wallet.policyDefaultSigningOnly}
-          </p>
+          {!editor.policyInvalid && !editor.policyEnabled ? (
+            <p className="text-sm text-muted-foreground">
+              {copy.wallet.spendingLimitsHint}
+            </p>
+          ) : null}
           <FieldLabel className="normal-case tracking-normal text-xs">
             {copy.wallet.maxPerSend}
           </FieldLabel>
@@ -69,27 +71,45 @@ export function SpendingLimitsSheet({
             onChange={(e) => setMaxSol(e.target.value.replace(/[^0-9.]/g, ""))}
             placeholder="0.1"
           />
-          <Button
-            type="button"
-            size="lg"
-            className="mt-auto"
-            disabled={editor.saving}
-            onClick={() =>
-              void editor.save(
-                {
-                  maxTransferUsdc: maxPerSend.trim() || null,
-                  maxTransferSol: maxSol.trim() || null,
-                },
-                onBack,
-              )
-            }
-          >
-            {editor.saving ? (
-              <Spinner className="size-4" />
-            ) : (
-              copy.wallet.holdToSave
-            )}
-          </Button>
+          <div className="mt-auto flex flex-col gap-2">
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              disabled={editor.busy}
+              onClick={() =>
+                void editor.save(
+                  {
+                    maxTransferUsdc: maxPerSend.trim() || null,
+                    maxTransferSol: maxSol.trim() || null,
+                  },
+                  onBack,
+                )
+              }
+            >
+              {editor.saving ? (
+                <Spinner className="size-4" />
+              ) : (
+                copy.wallet.save
+              )}
+            </Button>
+            {editor.policyEnabled ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="w-full"
+                disabled={editor.busy}
+                onClick={() => void editor.turnOff(onBack)}
+              >
+                {editor.turningOff ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  copy.wallet.limitsTurnOff
+                )}
+              </Button>
+            ) : null}
+          </div>
         </>
       )}
     </div>

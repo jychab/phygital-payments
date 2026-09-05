@@ -134,10 +134,10 @@ function mapVerifyFail(fail: VerifyFail): PolicyVerdict {
 
 /**
  * Strip Compute Budget (wallet injects at send) → hard-deny phygital programs
- * → SDK verify → soft UX map.
+ * → SDK verify (skipped when `policy` is null — opt-in standing policy) → soft UX map.
  */
 export function evaluatePolicy(
-  policy: PolicyDocument,
+  policy: PolicyDocument | null,
   instructions: readonly Instruction[],
 ): PolicyVerdict {
   const body = instructions.filter(
@@ -165,6 +165,8 @@ export function evaluatePolicy(
       };
     }
   }
+
+  if (policy == null) return { ok: true };
 
   const result = verify(policy, body);
   if (!result.ok) return mapVerifyFail(result);

@@ -1,20 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-
-import { NavBar } from "@/components/shared/nav-bar";
+import { NavBar, NavBarBack } from "@/components/shared/nav-bar";
 import { GroupedList, GroupedRow } from "@/components/shared/grouped-list";
-import { Button } from "@/components/ui/button";
 import { useFeeBalance } from "@/hooks/wallet/use-fee-balance";
-import { useRecoveryWallet } from "@/hooks/wallet/use-recovery-wallet";
+import {
+  recoveryWalletSubtitle,
+  useRecoveryWallet,
+} from "@/hooks/wallet/use-recovery-wallet";
 import { useRpcPreference } from "@/hooks/wallet/use-rpc-preference";
 import { useTokenVerifier } from "@/hooks/wallet/use-token-verifier";
+import { useWalletPolicy } from "@/hooks/wallet/use-wallet-policy";
 import { copy } from "@/lib/copy/phygital";
-import { fetchPolicyDocument } from "@/lib/wallet/policies-client";
 import type { LinkStatus } from "@/lib/wallet/device-auth-client";
-import { queryKeys, queryOptions } from "@/lib/queries";
-import { shortAddress } from "@/lib/utils";
 import type { WalletRole } from "@/components/token/token-address-route";
 
 export type SettingsTarget =
@@ -42,10 +39,12 @@ export function SettingsHub({
   role?: WalletRole;
   linkStatus?: LinkStatus;
 }) {
-  const queryClient = useQueryClient();
   const fee = useFeeBalance(phygitalTokenPda ?? null);
   const rpc = useRpcPreference();
   const isOwner = role === "owner";
+  const policy = useWalletPolicy(
+    isOwner && phygitalTokenPda ? phygitalTokenPda : null,
+  );
   const feeLabel = fee.data
     ? `${copy.wallet.feeBalance} · ${fee.data.balanceUi} SOL`
     : copy.wallet.feeBalance;
@@ -60,23 +59,20 @@ export function SettingsHub({
         ? copy.wallet.setupDeviceLinkedElsewhere
         : copy.wallet.setupDeviceNotLinked;
 
-  useEffect(() => {
-    if (!phygitalTokenPda || !isOwner) return;
-    void queryClient.prefetchQuery({
-      queryKey: queryKeys.walletPolicy.byToken(phygitalTokenPda),
-      queryFn: () => fetchPolicyDocument(phygitalTokenPda),
-      ...queryOptions.default,
-    });
-  }, [phygitalTokenPda, queryClient, isOwner]);
+  const limitsSubtitle = !isOwner
+    ? copy.wallet.limitsStatusSetup
+    : policy.isLoading
+      ? copy.common.loading
+      : policy.data?.status === "invalid"
+        ? copy.wallet.limitsStatusInvalid
+        : policy.data?.status === "ok"
+          ? copy.wallet.limitsStatusOn
+          : copy.wallet.limitsStatusOff;
 
   return (
     <div className="flex flex-1 flex-col gap-6">
       <NavBar
-        leading={
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            {copy.common.back}
-          </Button>
-        }
+        leading={<NavBarBack onClick={onBack} />}
         title={copy.wallet.settings}
       />
 
@@ -114,22 +110,27 @@ export function SettingsHub({
         </GroupedRow>
       </GroupedList>
 
-      {isOwner ? (
-        <GroupedList
-          label={copy.wallet.policySection}
-          footer={copy.wallet.policyDefaultSigningOnly}
+      <GroupedList
+        label={copy.wallet.policySection}
+        footer={copy.wallet.policyDefaultSigningOnly}
+      >
+        <GroupedRow
+          onClick={() => onOpen("spendingLimits")}
+          subtitle={limitsSubtitle}
         >
-          <GroupedRow onClick={() => onOpen("spendingLimits")}>
-            {copy.wallet.spendingLimits}
-          </GroupedRow>
-          <GroupedRow onClick={() => onOpen("recipients")}>
-            {copy.wallet.recipients}
-          </GroupedRow>
-          <GroupedRow onClick={() => onOpen("extraPrograms")}>
-            {copy.wallet.extraPrograms}
-          </GroupedRow>
-        </GroupedList>
-      ) : null}
+          {copy.wallet.spendingLimits}
+        </GroupedRow>
+        {isOwner ? (
+          <>
+            <GroupedRow onClick={() => onOpen("recipients")}>
+              {copy.wallet.recipients}
+            </GroupedRow>
+            <GroupedRow onClick={() => onOpen("extraPrograms")}>
+              {copy.wallet.extraPrograms}
+            </GroupedRow>
+          </>
+        ) : null}
+      </GroupedList>
 
       <GroupedList label={copy.wallet.advanced}>
         <GroupedRow onClick={() => onOpen("rpcConnection")}>
@@ -155,14 +156,12 @@ function RecoverySettingsRow({
   onOpen: () => void;
 }) {
   const recovery = useRecoveryWallet(phygitalTokenPda ?? null);
-  const subtitle = recovery.isLoading
-    ? copy.common.loading
-    : recovery.data?.configured && recovery.data.recoveryWallet
-      ? shortAddress(recovery.data.recoveryWallet, 4)
-      : copy.wallet.recoveryWalletNotConfigured;
 
   return (
-    <GroupedRow onClick={onOpen} subtitle={subtitle}>
+    <GroupedRow
+      onClick={onOpen}
+      subtitle={recoveryWalletSubtitle(recovery.data, recovery.isLoading)}
+    >
       {copy.wallet.recoveryWallet}
     </GroupedRow>
   );

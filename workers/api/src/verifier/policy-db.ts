@@ -3,7 +3,6 @@ import {
   type PolicyDocument,
 } from "phygital-verifier-sdk";
 import { getD1 } from "@/shared/db";
-import { buildDefaultPolicy } from "@/verifier/policy-defaults";
 
 /**
  * Reuse the same PolicyDocument object when D1 JSON is unchanged (cheap GET
@@ -11,7 +10,7 @@ import { buildDefaultPolicy } from "@/verifier/policy-defaults";
  */
 const policyObjectCache = new Map<
   string,
-  { json: string | null; policy: PolicyDocument }
+  { json: string | null; policy: PolicyDocument | null | "invalid" }
 >();
 
 /** Keep SDK `PolicyDocument` fields only; reject malformed input. */
@@ -37,21 +36,25 @@ function invalidPolicy(message: string, code = "invalid_policy"): Error {
   return Object.assign(new Error(message), { code });
 }
 
-function parseStoredPolicy(policyJson: string): PolicyDocument {
+/** Stored JSON → document, or `"invalid"` (fail closed on authorize). */
+function parseStoredPolicy(policyJson: string): PolicyDocument | "invalid" {
   try {
     const cleaned = stripToPolicyDocument(JSON.parse(policyJson));
-    if (!cleaned) return buildDefaultPolicy();
+    if (!cleaned) return "invalid";
     const valid = validatePolicy(cleaned);
-    return valid.ok ? cleaned : buildDefaultPolicy();
+    return valid.ok ? cleaned : "invalid";
   } catch {
-    return buildDefaultPolicy();
+    return "invalid";
   }
 }
 
-/** D1 row or in-memory default standing policy. */
+/**
+ * D1 standing policy, or `null` when none is configured (opt-in).
+ * Corrupt rows return `"invalid"` for fail-closed authorize.
+ */
 export async function loadPolicyDocument(
   phygitalToken: string,
-): Promise<PolicyDocument> {
+): Promise<PolicyDocument | null | "invalid"> {
   const row = await getD1()
     .prepare(
       `SELECT policy_json FROM token_policies WHERE phygital_token = ?`,
@@ -63,19 +66,24 @@ export async function loadPolicyDocument(
   const hit = policyObjectCache.get(phygitalToken);
   if (hit && hit.json === json) return hit.policy;
 
-  const policy = json == null ? buildDefaultPolicy() : parseStoredPolicy(json);
+  const policy = json == null ? null : parseStoredPolicy(json);
   policyObjectCache.set(phygitalToken, { json, policy });
   return policy;
 }
 
 export async function getEffectivePolicy(phygitalToken: string): Promise<{
   phygitalToken: string;
-  policy: PolicyDocument;
+  policy: PolicyDocument | null;
+  status: "none" | "ok" | "invalid";
 }> {
-  return {
-    phygitalToken,
-    policy: await loadPolicyDocument(phygitalToken),
-  };
+  const loaded = await loadPolicyDocument(phygitalToken);
+  if (loaded === "invalid") {
+    return { phygitalToken, policy: null, status: "invalid" };
+  }
+  if (loaded == null) {
+    return { phygitalToken, policy: null, status: "none" };
+  }
+  return { phygitalToken, policy: loaded, status: "ok" };
 }
 
 export async function upsertPolicyDocument(
@@ -106,6 +114,17 @@ export async function upsertPolicyDocument(
     .bind(phygitalToken, json, now)
     .run();
   policyObjectCache.set(phygitalToken, { json, policy: clean });
+}
+
+/** Remove standing policy (limits off). */
+export async function deletePolicyDocument(
+  phygitalToken: string,
+): Promise<void> {
+  await getD1()
+    .prepare(`DELETE FROM token_policies WHERE phygital_token = ?`)
+    .bind(phygitalToken)
+    .run();
+  policyObjectCache.set(phygitalToken, { json: null, policy: null });
 }
 
 export async function createGrant(args: {

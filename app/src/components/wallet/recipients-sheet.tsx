@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Nfc, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { NavBar } from "@/components/shared/nav-bar";
+import { NavBar, NavBarBack } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePolicyEditor } from "@/hooks/wallet/use-wallet-policy";
@@ -68,11 +68,7 @@ export function RecipientsSheet({
   return (
     <div className="flex flex-1 flex-col gap-4">
       <NavBar
-        leading={
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            {copy.common.back}
-          </Button>
-        }
+        leading={<NavBarBack onClick={onBack} />}
         title={copy.wallet.recipients}
       />
       {editor.loading ? (
@@ -155,13 +151,13 @@ export function RecipientsSheet({
             type="button"
             size="lg"
             className="mt-auto"
-            disabled={editor.saving}
+            disabled={editor.busy}
             onClick={() => void save()}
           >
             {editor.saving ? (
               <Spinner className="size-4" />
             ) : (
-              copy.wallet.holdToSave
+              copy.wallet.save
             )}
           </Button>
         </>

@@ -2,7 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 
-import { NavBar } from "@/components/shared/nav-bar";
+import { NavBar, NavBarBack } from "@/components/shared/nav-bar";
 import { GroupedList, GroupedRow } from "@/components/shared/grouped-list";
 import { Button } from "@/components/ui/button";
 import { useAddressBook } from "@/hooks/wallet/use-address-book";
@@ -17,11 +17,7 @@ export function ContactsSheet({ onBack }: { onBack: () => void }) {
   return (
     <div className="flex flex-1 flex-col gap-6">
       <NavBar
-        leading={
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            {copy.common.back}
-          </Button>
-        }
+        leading={<NavBarBack onClick={onBack} />}
         title={copy.wallet.contacts}
       />
 

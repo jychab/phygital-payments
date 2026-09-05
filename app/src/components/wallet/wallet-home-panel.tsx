@@ -67,6 +67,8 @@ export function WalletHomePanel({
   activityItems,
   activityAssetMetaByMint,
   visitorNotice,
+  onVisitorNotice,
+  visitorNoticeAction,
   onAddRecovery,
   status = "live",
   className,
@@ -98,6 +100,8 @@ export function WalletHomePanel({
   onAddRecovery?: () => void;
   /** Quiet visitor role notice (not linked as owner on this phone). */
   visitorNotice?: string | null;
+  visitorNoticeAction?: string;
+  onVisitorNotice?: () => void;
   status?: "live" | "refreshing" | "error";
   className?: string;
 }) {
@@ -374,7 +378,13 @@ export function WalletHomePanel({
       </m.div>
       ) : null}
 
-      {visitorNotice ? <QuietNotice label={visitorNotice} /> : null}
+      {visitorNotice ? (
+        <QuietNotice
+          label={visitorNotice}
+          action={visitorNoticeAction}
+          onClick={onVisitorNotice}
+        />
+      ) : null}
 
       {customRpcEndpoint && onChangeRpc ? (
         <QuietNotice

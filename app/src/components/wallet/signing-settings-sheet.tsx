@@ -17,7 +17,7 @@ import {
 } from "phygital-token-sdk";
 
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
-import { NavBar } from "@/components/shared/nav-bar";
+import { NavBar, NavBarBack } from "@/components/shared/nav-bar";
 import { Button } from "@/components/ui/button";
 import { FieldLabel, Input } from "@/components/ui/input";
 import { copy } from "@/lib/copy/phygital";
@@ -187,14 +187,7 @@ export function SigningSettingsSheet({
       <div className="flex flex-1 flex-col gap-4">
         <NavBar
           leading={
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setView("menu")}
-            >
-              {copy.common.back}
-            </Button>
+            <NavBarBack onClick={() => setView("menu")} />
           }
           title={copy.wallet.signing}
         />
@@ -230,14 +223,7 @@ export function SigningSettingsSheet({
       <div className="flex flex-1 flex-col gap-4">
         <NavBar
           leading={
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setView("warn")}
-            >
-              {copy.common.back}
-            </Button>
+            <NavBarBack onClick={() => setView("warn")} />
           }
           title={copy.wallet.signing}
         />
@@ -278,11 +264,7 @@ export function SigningSettingsSheet({
   return (
     <div className="flex flex-1 flex-col gap-4">
       <NavBar
-        leading={
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            {copy.common.back}
-          </Button>
-        }
+        leading={<NavBarBack onClick={onClose} />}
         title={copy.wallet.signing}
       />
       <p className="text-sm text-muted-foreground">{copy.wallet.signingBody}</p>

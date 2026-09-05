@@ -4,6 +4,8 @@ import { useLayoutEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { useShellStageSlot } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
+import { copy } from "@/lib/copy/phygital";
 import { cn } from "@/lib/utils";
 
 export type NavBarSlots = {
@@ -11,6 +13,30 @@ export type NavBarSlots = {
   title?: ReactNode;
   trailing?: ReactNode;
 };
+
+/** Ghost Back control for sheet / stage NavBars. */
+export function NavBarBack({
+  onClick,
+  disabled,
+  className,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      disabled={disabled}
+      onClick={onClick}
+      className={className}
+    >
+      {copy.common.back}
+    </Button>
+  );
+}
 
 /** Single chrome row — leading · centered title · trailing. */
 function NavBarFrame({

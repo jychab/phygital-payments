@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { TokenMintedPanel } from "@/components/token/token-minted-panel";
 import { WalletWorkspace } from "@/components/wallet/wallet-workspace";
@@ -17,6 +18,7 @@ import {
 } from "@/lib/phygital/token";
 import type { WalletRole } from "@/components/token/token-address-route";
 import type { LinkStatus } from "@/lib/wallet/device-auth-client";
+import { isPolicySetupScreen } from "@/lib/wallet/limits-setup-href";
 
 /** Minted-token home — card gallery; wallet chip toggles mint ↔ wallet. */
 export function TokenMintedHome({
@@ -32,9 +34,18 @@ export function TokenMintedHome({
   const mint = tokenHasLinkedMint(session.token)
     ? String(session.token.mint)
     : null;
-  // Shares cache with TokenMintedPanel (same key; seeds dasCollectible).
   const { collectible } = useMintedCollectibleView(mint);
-  const [showWallet, setShowWallet] = useState(false);
+  const searchParams = useSearchParams();
+  const deepScreen = searchParams.get("screen");
+  const [showWallet, setShowWallet] = useState(() =>
+    Boolean(deepScreen && isPolicySetupScreen(deepScreen)),
+  );
+
+  useEffect(() => {
+    if (deepScreen && isPolicySetupScreen(deepScreen)) {
+      setShowWallet(true);
+    }
+  }, [deepScreen]);
 
   const toggleWallet = useCallback(() => {
     setShowWallet((open) => !open);

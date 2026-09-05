@@ -31,6 +31,7 @@ import {
 import { pushLocalWalletActivity, patchLocalWalletActivity } from "@/lib/wallet/activity-local";
 import { identifyAccessory } from "@/lib/wallet/identify-accessory";
 import { createOneTimeGrant } from "@/lib/wallet/policies-client";
+import { handleOwnerAuthFailure } from "@/lib/wallet/limits-setup-href";
 import { policyApprovalDetailRows, policySoftDenyBody } from "@/lib/wallet/policy-deny-copy";
 import type { WalletPortfolio } from "@/lib/wallet/portfolio-types";
 import { sendAssetFromWallet } from "@/lib/wallet/send-asset";
@@ -342,6 +343,7 @@ export function SendDialog({
       setSoftDeny(null);
       await runSend();
     } catch (e) {
+      if (handleOwnerAuthFailure(phygitalTokenPda, e)) return;
       toast.error(toUserErrorMessage(e));
       setBusy(false);
     }

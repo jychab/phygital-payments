@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { PolicyDeniedError } from "phygital-wallet-sdk";
 
-import { NavBar } from "@/components/shared/nav-bar";
+import { NavBar, NavBarBack } from "@/components/shared/nav-bar";
 import { NfcHoldStatus } from "@/components/shared/nfc-hold-status";
 import { Button } from "@/components/ui/button";
 import { FieldLabel, Input } from "@/components/ui/input";
@@ -134,11 +134,7 @@ export function FeeBalanceSheet({
   return (
     <div className="flex flex-1 flex-col gap-6">
       <NavBar
-        leading={
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            {copy.common.back}
-          </Button>
-        }
+        leading={<NavBarBack onClick={onBack} />}
         title={copy.wallet.feeBalance}
       />
 
