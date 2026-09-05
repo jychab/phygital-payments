@@ -32,10 +32,11 @@ import { sendTransaction } from "@/lib/solana/tx";
 import { tryParseAddress } from "@/lib/solana/address";
 import { toUserErrorMessage } from "@/lib/user-errors";
 import { createAppVerifierSigner } from "@/lib/wallet/verifier-fee-payer";
+import { cn } from "@/lib/utils";
 
-type View = "menu" | "custom" | "holding" | "success";
+type View = "menu" | "warn" | "custom" | "holding" | "success";
 
-/** Advanced signing settings — set/clear token verifier. */
+/** Cosigner settings — Revibase by default; custom requires explicit ack. */
 export function SigningSettingsSheet({
   phygitalTokenPda,
   onClose,
@@ -47,11 +48,12 @@ export function SigningSettingsSheet({
   const [view, setView] = useState<View>("menu");
   const [endpoint, setEndpoint] = useState("https://");
   const [verifier, setVerifier] = useState("");
+  const [acked, setAcked] = useState(false);
 
   const verifierStatus = useTokenVerifier(phygitalTokenPda);
+  const isCustom = verifierStatus.data?.custom === true;
 
   function afterSigningTxConfirmed() {
-    // lastSignCount / verifier config on-chain; fee debit on cosign.
     invalidatePhygitalToken(queryClient, phygitalTokenPda);
     invalidateWalletBalances(queryClient, { tokens: [phygitalTokenPda] });
     void queryClient.invalidateQueries({
@@ -65,6 +67,7 @@ export function SigningSettingsSheet({
       toast.error(copy.wallet.signingInvalidCustom);
       return;
     }
+    if (!acked) return;
     setView("holding");
     try {
       const rpc = getSolanaRpc();
@@ -146,7 +149,13 @@ export function SigningSettingsSheet({
   if (view === "holding" || view === "success") {
     return (
       <div className="flex flex-1 flex-col">
-        <Button type="button" variant="ghost" size="sm" className="self-start" onClick={onClose}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="self-start"
+          onClick={onClose}
+        >
           {copy.common.cancel}
         </Button>
         <NfcHoldStatus
@@ -158,7 +167,12 @@ export function SigningSettingsSheet({
           body={view === "success" ? undefined : copy.verify.holdStillBody}
           action={
             view === "success" ? (
-              <Button type="button" size="lg" className="w-full" onClick={onClose}>
+              <Button
+                type="button"
+                size="lg"
+                className="w-full"
+                onClick={onClose}
+              >
                 {copy.common.done}
               </Button>
             ) : undefined
@@ -168,7 +182,7 @@ export function SigningSettingsSheet({
     );
   }
 
-  if (view === "custom") {
+  if (view === "warn") {
     return (
       <div className="flex flex-1 flex-col gap-4">
         <NavBar
@@ -184,7 +198,50 @@ export function SigningSettingsSheet({
           }
           title={copy.wallet.signing}
         />
-        <p className="rounded-2xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+        <p className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {copy.wallet.signingCustomPolicyWarn}
+        </p>
+        <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-muted/25 px-4 py-3">
+          <input
+            type="checkbox"
+            className="mt-1 size-4 accent-primary"
+            checked={acked}
+            onChange={(e) => setAcked(e.target.checked)}
+          />
+          <span className="text-sm leading-relaxed">
+            {copy.wallet.signingCustomAck}
+          </span>
+        </label>
+        <Button
+          type="button"
+          size="lg"
+          className="mt-auto"
+          disabled={!acked}
+          onClick={() => setView("custom")}
+        >
+          {copy.wallet.signingCustomContinue}
+        </Button>
+      </div>
+    );
+  }
+
+  if (view === "custom") {
+    return (
+      <div className="flex flex-1 flex-col gap-4">
+        <NavBar
+          leading={
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setView("warn")}
+            >
+              {copy.common.back}
+            </Button>
+          }
+          title={copy.wallet.signing}
+        />
+        <p className="rounded-2xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {copy.wallet.signingCustomPolicyWarn}
         </p>
         <FieldLabel className="normal-case tracking-normal text-xs">
@@ -205,7 +262,13 @@ export function SigningSettingsSheet({
           placeholder="https://"
           className="font-mono text-sm"
         />
-        <Button type="button" size="lg" className="mt-auto" onClick={() => void saveCustom()}>
+        <Button
+          type="button"
+          size="lg"
+          className={cn("mt-auto")}
+          disabled={!acked}
+          onClick={() => void saveCustom()}
+        >
           {copy.wallet.holdToSave}
         </Button>
       </div>
@@ -226,23 +289,30 @@ export function SigningSettingsSheet({
       <div className="rounded-2xl bg-muted/25 px-4 py-3">
         <p className="text-xs text-muted-foreground">{copy.wallet.signingCurrent}</p>
         <p className="text-sm font-medium">
-          {verifierStatus.data?.custom
-            ? copy.wallet.signingCustom
-            : copy.wallet.signingDefault}
+          {isCustom ? copy.wallet.signingCustom : copy.wallet.signingDefault}
         </p>
       </div>
       <Button
         type="button"
         variant="ghost"
-        onClick={() => setView("custom")}
+        onClick={() => {
+          setAcked(false);
+          setView("warn");
+        }}
         className="h-auto min-h-11 w-full justify-between rounded-2xl bg-muted/25 px-4 py-4 text-left font-normal"
       >
         <span className="text-sm">{copy.wallet.useCustomSigning}</span>
         <ChevronRight className="size-4 text-muted-foreground" />
       </Button>
-      <Button type="button" variant="outline" onClick={() => void restoreDefault()}>
-        {copy.wallet.restoreDefault}
-      </Button>
+      {isCustom ? (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void restoreDefault()}
+        >
+          {copy.wallet.restoreDefault}
+        </Button>
+      ) : null}
     </div>
   );
 }

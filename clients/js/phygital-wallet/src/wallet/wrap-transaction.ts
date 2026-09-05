@@ -28,7 +28,6 @@ import {
   buildSecp256r1VerifyInstruction,
 } from "phygital-token-sdk";
 import {
-  COMPUTE_BUDGET_PROGRAM_ADDRESS,
   COMPUTE_UNIT_ESTIMATE_MARGIN,
   DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS,
   MIN_BLOCKHASH_REMAINING_SLOTS,
@@ -42,6 +41,9 @@ import {
   fetchLatestSlothHash,
   type SlotEntry,
 } from "../utils/challenges.js";
+
+const COMPUTE_BUDGET_PROGRAM_ADDRESS =
+  "ComputeBudget111111111111111111111111111111" as Address;
 
 /** Account metas for execute don't depend on the passkey payload. */
 const PLACEHOLDER_SECP_ARGS: Secp256r1VerifyArgsArgs = {

@@ -5,14 +5,15 @@ import {
 } from "@/fees/constants";
 import { getFeeBalanceLamports } from "@/fees/fee-balance-db";
 import { usesDefaultVerifierPaymaster } from "@/fees/default-verifier";
-import { SYSTEM_PROGRAM, type IntentInstruction } from "@/verifier/constants";
+import { SYSTEM_PROGRAM } from "@/verifier/constants";
+import type { Instruction } from "phygital-verifier-sdk";
 
 /**
  * Top-up intents (SOL → accumulator + optional memo) must not require fee
  * balance or empty wallets could never fund the paymaster.
  */
 export function isFeeBalanceTopUpIntent(
-  instructions: readonly IntentInstruction[],
+  instructions: readonly Instruction[],
   accumulator: string,
 ): boolean {
   if (!accumulator || instructions.length === 0) return false;
@@ -32,12 +33,14 @@ export function isFeeBalanceTopUpIntent(
 }
 
 /**
- * Gate used on both /preview and /sign (mirrors authorizeIntent dual-check).
+ * Fee gate for default-verifier paymaster sponsorship.
+ * `/preview` runs this only after authorize succeeds; `/sign` runs it before
+ * authorize so a failed fee check cannot consume an Approve-once grant.
  * Does not debit — webhook debits after confirmed success.
  */
 export async function assertFeeBalance(args: {
   phygitalToken: string;
-  instructions: readonly IntentInstruction[];
+  instructions: readonly Instruction[];
 }) {
   const accumulator = getEnv().TOP_UP_ACCUMULATOR?.trim() ?? "";
   if (isFeeBalanceTopUpIntent(args.instructions, accumulator)) {

@@ -1,22 +1,6 @@
-import { AccountRole, address, isSignerRole } from "@solana/kit";
+import { address, isSignerRole } from "@solana/kit";
+import type { Instruction } from "phygital-verifier-sdk";
 import { findWalletPda } from "phygital-wallet-sdk";
-
-import type { IntentInstruction } from "@/verifier/constants";
-
-function toAccountRole(role: string | number | undefined): AccountRole | null {
-  if (role == null || role === "") return null;
-  if (typeof role === "number" && role >= 0 && role <= 3) {
-    return role as AccountRole;
-  }
-  const n = Number(role);
-  if (Number.isInteger(n) && n >= 0 && n <= 3) return n as AccountRole;
-  const s = String(role).toLowerCase().replace(/_/g, "");
-  if (s === "writablesigner" || s === "3") return AccountRole.WRITABLE_SIGNER;
-  if (s === "readonlysigner" || s === "2") return AccountRole.READONLY_SIGNER;
-  if (s === "writable" || s === "1") return AccountRole.WRITABLE;
-  if (s === "readonly" || s === "0") return AccountRole.READONLY;
-  return null;
-}
 
 /**
  * Ensure `phygitalToken` maps to a wallet PDA that appears as a signer
@@ -24,7 +8,7 @@ function toAccountRole(role: string | number | undefined): AccountRole | null {
  */
 export async function assertPreviewWalletSigner(
   phygitalToken: string,
-  instructions: readonly IntentInstruction[],
+  instructions: readonly Instruction[],
 ): Promise<void> {
   let walletPda: string;
   try {
@@ -39,10 +23,9 @@ export async function assertPreviewWalletSigner(
   }
 
   const isSigner = instructions.some((ix) =>
-    ix.accounts.some((a) => {
-      if (a.address !== walletPda) return false;
-      const role = toAccountRole(a.role);
-      return role != null && isSignerRole(role);
+    (ix.accounts ?? []).some((a) => {
+      if (String(a.address) !== walletPda) return false;
+      return isSignerRole(a.role);
     }),
   );
 

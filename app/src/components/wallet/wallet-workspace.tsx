@@ -15,7 +15,7 @@ import { OpenApprovalsSheet } from "@/components/wallet/open-approvals-sheet";
 import { SettingsHub, type SettingsTarget } from "@/components/wallet/settings-hub";
 import { SpendingLimitsSheet } from "@/components/wallet/spending-limits-sheet";
 import { RecipientsSheet } from "@/components/wallet/recipients-sheet";
-import { AllowedActionsSheet } from "@/components/wallet/allowed-actions-sheet";
+import { ExtraProgramsSheet } from "@/components/wallet/extra-programs-sheet";
 import { SigningSettingsSheet } from "@/components/wallet/signing-settings-sheet";
 import { RecoveryWalletSheet } from "@/components/wallet/recovery-wallet-sheet";
 import { FeeBalanceSheet } from "@/components/wallet/fee-balance-sheet";
@@ -351,9 +351,9 @@ function WalletWorkspaceInner({
         onBack={() => setScreen("settings")}
       />
     );
-  } else if (isOwner && screen === "allowedActions") {
+  } else if (isOwner && screen === "extraPrograms") {
     body = (
-      <AllowedActionsSheet
+      <ExtraProgramsSheet
         phygitalTokenPda={tokenAddress}
         onBack={() => setScreen("settings")}
       />

@@ -2,8 +2,9 @@
  * POST /sign — authorize + ed25519 co-sign of wallet `execute` message bytes.
  *
  * 1. Decode base64 wire tx → execute metas + body instructions
- * 2. Fee balance gate (re-check, same as /preview)
- * 3. `authorizeIntent` (swap in `authorize.ts` / `approval/`)
+ * 2. Fee balance gate (before authorize so a failed fee check does not consume
+ *    an Approve-once grant)
+ * 3. `authorizeIntent` (Revibase approval / grants)
  * 4. Assert execute.verifier matches this worker's key
  * 5. Sign message bytes → `{ signatures }`
  */
@@ -11,7 +12,7 @@ import { Hono } from "hono";
 
 import { assertFeeBalance } from "@/fees/fee-balance-gate";
 import { json } from "@/shared/http";
-import { authorizeIntent } from "@/verifier/authorize";
+import { authorizeIntent } from "@/verifier/approval";
 import {
   assertExecuteVerifierMatchesKey,
   signMessageBase64,

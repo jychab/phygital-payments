@@ -82,7 +82,6 @@ export const copy = {
     maxSolPerSend: "Max SOL per send",
     restoreDefault: "Use Revibase",
     add: "Add",
-    block: "Block",
     sent: "Sent",
     received: "Received",
     ofAvailableAsset: (available: string, symbol: string) =>
@@ -155,7 +154,7 @@ export const copy = {
       "Ask the owner to set a recovery address in case this item is lost.",
     recoveryWallet: "Recovery address",
     recoveryWalletBody:
-      "Paste a Solana address you control. If you lose this item, use that wallet on the recover site — not in this app.",
+      "Paste a Solana address you control. That wallet can move all funds from this item — without the item or Revibase — on the recover site.",
     recoveryWalletPubkey: "Address",
     recoveryWalletPubkeyPlaceholder: "Paste Solana address",
     recoveryWalletSave: "Hold to save",
@@ -172,12 +171,15 @@ export const copy = {
     recoveryWalletConfigured: "Set",
     recoveryWalletNotConfigured: "Not set",
     recoveryWalletCurrent: "Current",
-    recoveryWalletHint: "Public address only — never a private key or seed phrase.",
+    recoveryWalletHint:
+      "Public address only — never a private key or seed. Prefer a cold wallet.",
     recoveryWalletRecoverSiteNote:
-      "Recovery happens on a separate site (coming soon). Keep this address somewhere safe.",
+      "Anyone with this key can empty the vault. Keep it offline and safe. Recover site coming soon.",
+    recoveryWalletAck:
+      "I understand this address can move all funds without this item.",
     recoveryAckTitle: "Add a recovery address?",
     recoveryAckBody:
-      "If you lose this item, a recovery address is how you restore funds.",
+      "If you lose this item, that address can restore funds. It can also move everything — choose a key you fully control.",
     recoveryAckCta: "Add address",
     recoveryAckSkip: "Not now",
     deviceLoginTitle: "Sign in",
@@ -207,16 +209,19 @@ export const copy = {
       "They need more fee balance. Ask them to top up, then try again.",
     nearbyPolicyGotIt: "Got it",
     signingBody:
-      "Your item signs each send. A cosigner joins the transaction — Revibase also applies your limits.",
+      "Your item signs each send. Revibase joins the transaction and applies your limits.",
     signingCustomPolicyWarn:
-      "A custom cosigner skips Revibase limits until you switch back.",
+      "A custom cosigner can move all funds on any tap. Revibase limits, recipients, and approvals will not apply.",
+    signingCustomAck:
+      "I understand this removes Revibase protection on every send.",
+    signingCustomContinue: "Continue",
     signingCustomSaved: "Custom cosigner on — Revibase limits off",
     signingRestored: "Back to Revibase",
     signingInvalidCustom: "Enter a valid address and HTTPS URL",
     signingCurrent: "Current",
     signingDefault: "Revibase",
     signingCustom: "Custom",
-    useCustomSigning: "Use custom…",
+    useCustomSigning: "Use custom cosigner…",
     customEndpoint: "Endpoint",
     customVerifier: "Cosigner address",
     verifierPubkey: "Cosigner address",
@@ -229,22 +234,37 @@ export const copy = {
     approveSendTitle: "Approve this send?",
     approveSendBodyLimit: (limit: string) => `Over your $${limit} limit.`,
     approveSendBodyRecipient: "Address isn’t on your allow list.",
+    approveSendBodyRecipientDenied: "This address is on your block list.",
     approveSendBodyTime: "Sending isn’t allowed right now.",
+    approveSendBodyApproval: "This send needs your one-time approval.",
+    approveSendBodyInstruction:
+      "This action isn’t allowed by your standing settings.",
+    approveSendBodyProgram:
+      "This program isn’t allowed by your standing settings.",
+    approveSendBodyUnexpected:
+      "This transaction couldn’t be checked against your settings.",
+    approveSendAmount: "Amount",
+    approveSendDestination: "To",
+    approveSendMint: "Token",
+    approveSendProgram: "Program",
+    approveSendInstruction: "Action",
     approveOnce: "Approve once",
     changeLimits: "Change limits",
-    sendBlockedHard: "Blocked by your settings. Change them in Settings.",
+    sendBlockedHard:
+      "This can’t be approved once — it would fail on-chain.",
     spendingLimits: "Spending limits",
     spendingLimitsHint: "You can still approve a larger send once.",
     maxPerSend: "Max per send",
     recipients: "Recipients",
+    recipientsHint: "Use wallet addresses. Token accounts are applied automatically.",
     recipientsAnyone: "Anyone",
     recipientsAllowlist: "Allow list",
-    recipientsBlocked: "Blocked",
-    allowedActions: "Allowed actions",
-    paymentsOnly: "Payments only",
-    advancedPrograms: "Custom programs",
+    extraPrograms: "Extra programs",
+    extraProgramsHint:
+      "Programs this wallet can use without approving each send.",
+    extraProgramsEmpty: "No extra programs yet",
+    invalidProgramId: "Enter a valid program ID",
     programId: "Program ID",
-    save: "Save",
     settingsSaved: "Saved",
   },
   home: {

@@ -16,7 +16,7 @@ import {
   createOneTimeGrant,
   type OpenApproval,
 } from "@/lib/wallet/policies-client";
-import { policySoftDenyBody } from "@/lib/wallet/policy-deny-copy";
+import { policyApprovalDetailRows, policySoftDenyBody } from "@/lib/wallet/policy-deny-copy";
 
 function approvalBody(approval: OpenApproval): string {
   const deny = new PolicyDeniedError({
@@ -86,6 +86,8 @@ export function OpenApprovalsSheet({
 
   if (!approval) return null;
 
+  const detailRows = policyApprovalDetailRows(approval.details);
+
   return (
     <div className="flex flex-1 flex-col gap-6">
       <NavBar
@@ -109,6 +111,19 @@ export function OpenApprovalsSheet({
         <p className="max-w-sm text-sm text-muted-foreground">
           {approvalBody(approval)}
         </p>
+        {detailRows.length > 0 ? (
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-muted/25 text-left text-sm">
+            {detailRows.map((row) => (
+              <div
+                key={row.label}
+                className="flex items-center justify-between gap-3 border-b border-border/40 px-4 py-3 last:border-b-0"
+              >
+                <span className="text-muted-foreground">{row.label}</span>
+                <span className="font-mono tabular-nums">{row.value}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
       <div className="flex flex-col gap-2">
         <Button

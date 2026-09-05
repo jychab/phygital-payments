@@ -11,7 +11,7 @@ import { useRecoveryWallet } from "@/hooks/wallet/use-recovery-wallet";
 import { useRpcPreference } from "@/hooks/wallet/use-rpc-preference";
 import { useTokenVerifier } from "@/hooks/wallet/use-token-verifier";
 import { copy } from "@/lib/copy/phygital";
-import { fetchEffectivePolicy } from "@/lib/wallet/policies-client";
+import { fetchPolicyDocument } from "@/lib/wallet/policies-client";
 import type { LinkStatus } from "@/lib/wallet/device-auth-client";
 import { queryKeys, queryOptions } from "@/lib/queries";
 import { shortAddress } from "@/lib/utils";
@@ -20,7 +20,7 @@ import type { WalletRole } from "@/components/token/token-address-route";
 export type SettingsTarget =
   | "spendingLimits"
   | "recipients"
-  | "allowedActions"
+  | "extraPrograms"
   | "signing"
   | "recoveryWallet"
   | "rpcConnection"
@@ -64,7 +64,7 @@ export function SettingsHub({
     if (!phygitalTokenPda || !isOwner) return;
     void queryClient.prefetchQuery({
       queryKey: queryKeys.walletPolicy.byToken(phygitalTokenPda),
-      queryFn: () => fetchEffectivePolicy(phygitalTokenPda),
+      queryFn: () => fetchPolicyDocument(phygitalTokenPda),
       ...queryOptions.default,
     });
   }, [phygitalTokenPda, queryClient, isOwner]);
@@ -125,8 +125,8 @@ export function SettingsHub({
           <GroupedRow onClick={() => onOpen("recipients")}>
             {copy.wallet.recipients}
           </GroupedRow>
-          <GroupedRow onClick={() => onOpen("allowedActions")}>
-            {copy.wallet.allowedActions}
+          <GroupedRow onClick={() => onOpen("extraPrograms")}>
+            {copy.wallet.extraPrograms}
           </GroupedRow>
         </GroupedList>
       ) : null}

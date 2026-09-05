@@ -1,12 +1,11 @@
 /**
- * Transaction approval — **replace this module** when forking the verifier.
+ * Revibase standing policies + one-time grants ("Approve once").
  *
- * Revibase ships standing Privy-shaped policies in D1 plus one-time grants
- * ("Approve once" in the owner app). Most custom verifiers should implement
- * their own rules here (merchant keys, allowlists, human review, etc.) and
- * leave `../preview.ts` / `../sign.ts` unchanged.
+ * Custom instruction policy belongs in `phygital-verifier-sdk`
+ * (`defineStandardPolicy` / `createVerifier`). This module orchestrates
+ * D1-backed grants around soft denies.
  */
-import type { IntentInstruction } from "@/verifier/constants";
+import type { Instruction } from "phygital-verifier-sdk";
 import { hashIntent } from "@/verifier/intent-hash";
 import {
   consumeGrant,
@@ -15,9 +14,9 @@ import {
 } from "@/verifier/approval/policy-db";
 import { evaluatePolicy } from "@/verifier/approval/policy-engine";
 
-export type AuthorizeRequest = {
+type AuthorizeRequest = {
   phygitalToken: string;
-  instructions: readonly IntentInstruction[];
+  instructions: readonly Instruction[];
   /**
    * `preview` — soft deny may still pass if an unused grant exists (no consume).
    * `sign` — soft deny requires consuming a grant.
@@ -25,7 +24,7 @@ export type AuthorizeRequest = {
   mode: "preview" | "sign";
 };
 
-export type AuthorizeResult =
+type AuthorizeResult =
   | { ok: true; intentHash: string }
   | {
       ok: false;
@@ -39,9 +38,11 @@ export type AuthorizeResult =
 export async function authorizeIntent(
   req: AuthorizeRequest,
 ): Promise<AuthorizeResult> {
-  const intentHash = await hashIntent(req.phygitalToken, req.instructions);
-  const { policy } = await loadPolicyDocument(req.phygitalToken);
-  const verdict = await evaluatePolicy(policy, [...req.instructions]);
+  const [intentHash, policy] = await Promise.all([
+    hashIntent(req.phygitalToken, req.instructions),
+    loadPolicyDocument(req.phygitalToken),
+  ]);
+  const verdict = evaluatePolicy(policy, req.instructions);
 
   if (verdict.ok) {
     return { ok: true, intentHash };
@@ -61,15 +62,8 @@ export async function authorizeIntent(
   if (req.mode === "preview") {
     const grant = await findValidGrant(req.phygitalToken, intentHash);
     if (grant) return { ok: true, intentHash };
-  } else {
-    // Soft deny on /sign: consume a one-time grant if the owner approved this intent.
-    if (await consumeGrant(req.phygitalToken, intentHash)) {
-      return { ok: true, intentHash };
-    }
-    if (await findValidGrant(req.phygitalToken, intentHash)) {
-      await consumeGrant(req.phygitalToken, intentHash);
-      return { ok: true, intentHash };
-    }
+  } else if (await consumeGrant(req.phygitalToken, intentHash)) {
+    return { ok: true, intentHash };
   }
 
   return {

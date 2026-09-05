@@ -1,34 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
+import type { PolicyDocument } from "phygital-verifier-sdk";
 
 import { queryKeys } from "./index";
-import { applyWalletPolicyPatch, invalidatePhygitalToken } from "./mutations";
-import type { PolicySummary } from "@/lib/wallet/policies-client";
+import { applyWalletPolicy, invalidatePhygitalToken } from "./mutations";
 
-const base: PolicySummary = {
-  maxTransferUsdc: "50",
-  maxTransferSol: null,
-  recipientMode: "anyone",
-  recipientAllowlist: [],
-  recipientDenylist: [],
-  allowedPrograms: [],
+const base: PolicyDocument = {
+  version: "2.0",
+  programs: [{ programId: "11111111111111111111111111111111", allowAll: true }],
 };
 
-describe("applyWalletPolicyPatch", () => {
-  it("merges into cached policy", () => {
+describe("applyWalletPolicy", () => {
+  it("replaces cached policy with stored document", () => {
     const qc = new QueryClient();
     const key = queryKeys.walletPolicy.byToken("token");
     qc.setQueryData(key, base);
-    applyWalletPolicyPatch(qc, "token", { maxTransferUsdc: "10" });
-    expect(qc.getQueryData<PolicySummary>(key)?.maxTransferUsdc).toBe("10");
-    expect(qc.getQueryData<PolicySummary>(key)?.recipientMode).toBe("anyone");
-  });
-
-  it("invalidates when cache is cold", () => {
-    const qc = new QueryClient();
-    const invalidate = vi.spyOn(qc, "invalidateQueries");
-    applyWalletPolicyPatch(qc, "token", { maxTransferUsdc: "10" });
-    expect(invalidate).toHaveBeenCalled();
+    const nextDoc: PolicyDocument = {
+      ...base,
+      programs: [
+        ...base.programs,
+        { programId: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", allowAll: true },
+      ],
+    };
+    applyWalletPolicy(qc, "token", nextDoc);
+    const next = qc.getQueryData<PolicyDocument>(key);
+    expect(next?.programs).toHaveLength(2);
   });
 });
 

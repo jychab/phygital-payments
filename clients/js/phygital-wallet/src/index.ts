@@ -2,6 +2,11 @@ export { getPhygitalWalletSigner } from "./wallet/signer.js";
 export { PolicyDeniedError } from "./wallet/preview.js";
 
 export {
+  PHYGITAL_TOKEN_PROGRAM_ADDRESS,
+  PHYGITAL_WALLET_PROGRAM_ADDRESS,
+} from "./constants.js";
+
+export {
   buildClearRecoveryWalletChallenge,
   buildClearTokenVerifierChallenge,
   buildSetRecoveryWalletChallenge,

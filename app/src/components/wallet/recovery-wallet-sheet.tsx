@@ -46,6 +46,7 @@ export function RecoveryWalletSheet({
   const status = useRecoveryWallet(phygitalTokenPda);
   const [view, setView] = useState<View>("form");
   const [pubkeyInput, setPubkeyInput] = useState("");
+  const [acked, setAcked] = useState(false);
 
   const configured = status.data?.configured ?? false;
   const current = status.data?.recoveryWallet ?? null;
@@ -58,7 +59,7 @@ export function RecoveryWalletSheet({
     Boolean(parsedInput) && String(parsedInput) !== SYSTEM_PROGRAM;
   const isSameAsCurrent =
     inputValid && current != null && String(parsedInput) === current;
-  const canSave = inputValid && !isSameAsCurrent;
+  const canSave = inputValid && !isSameAsCurrent && acked;
 
   function invalidate() {
     void queryClient.invalidateQueries({
@@ -307,6 +308,18 @@ export function RecoveryWalletSheet({
       <p className="text-xs text-muted-foreground">
         {copy.wallet.recoveryWalletRecoverSiteNote}
       </p>
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-muted/25 px-4 py-3">
+        <input
+          type="checkbox"
+          className="mt-1 size-4 accent-primary"
+          checked={acked}
+          onChange={(e) => setAcked(e.target.checked)}
+        />
+        <span className="text-sm leading-relaxed">
+          {copy.wallet.recoveryWalletAck}
+        </span>
+      </label>
 
       <Button
         type="button"

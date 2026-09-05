@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { AccountRole, type Address } from "@solana/kit";
 
 import { runWithRequestStore } from "@/shared/request-context";
 import {
@@ -6,7 +7,8 @@ import {
   assertFeeBalance,
 } from "@/fees/fee-balance-gate";
 import { MEMO_PROGRAM_ADDRESS, requiredFeeLamports } from "@/fees/constants";
-import { SYSTEM_PROGRAM, type IntentInstruction } from "@/verifier/constants";
+import { SYSTEM_PROGRAM } from "@/verifier/constants";
+import type { Instruction } from "phygital-verifier-sdk";
 
 const ACCUMULATOR = "FeeAccum11111111111111111111111111111111111";
 const TOKEN = "Token111111111111111111111111111111111111111";
@@ -35,20 +37,24 @@ function withEnv<T>(fn: () => T): T {
   );
 }
 
-function transferTo(dest: string): IntentInstruction {
+function addr(s: string): Address {
+  return s as Address;
+}
+
+function transferTo(dest: string): Instruction {
   return {
-    programAddress: SYSTEM_PROGRAM,
+    programAddress: addr(SYSTEM_PROGRAM),
     accounts: [
-      { address: "Source1111111111111111111111111111111111111", role: "writable" },
-      { address: dest, role: "writable" },
+      { address: addr("Source1111111111111111111111111111111111111"), role: AccountRole.WRITABLE },
+      { address: addr(dest), role: AccountRole.WRITABLE },
     ],
     data: new Uint8Array([2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]),
   };
 }
 
-function memoIx(): IntentInstruction {
+function memoIx(): Instruction {
   return {
-    programAddress: MEMO_PROGRAM_ADDRESS,
+    programAddress: addr(MEMO_PROGRAM_ADDRESS),
     accounts: [],
     data: new TextEncoder().encode(TOKEN),
   };

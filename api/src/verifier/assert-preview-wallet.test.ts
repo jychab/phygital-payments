@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AccountRole, address } from "@solana/kit";
+import { AccountRole, address, type Address } from "@solana/kit";
 import { findWalletPda } from "phygital-wallet-sdk";
 
 import { assertPreviewWalletSigner } from "@/verifier/assert-preview-wallet";
@@ -18,11 +18,11 @@ describe("assertPreviewWalletSigner", () => {
     await expect(
       assertPreviewWalletSigner(TOKEN, [
         {
-          programAddress: SYSTEM_PROGRAM,
+          programAddress: SYSTEM_PROGRAM as Address,
           accounts: [
-            { address: walletPda, role: AccountRole.WRITABLE_SIGNER },
+            { address: walletPda as Address, role: AccountRole.WRITABLE_SIGNER },
             {
-              address: "11111111111111111111111111111112",
+              address: "11111111111111111111111111111112" as Address,
               role: AccountRole.WRITABLE,
             },
           ],
@@ -37,9 +37,9 @@ describe("assertPreviewWalletSigner", () => {
     await expect(
       assertPreviewWalletSigner(TOKEN, [
         {
-          programAddress: SYSTEM_PROGRAM,
+          programAddress: SYSTEM_PROGRAM as Address,
           accounts: [
-            { address: walletPda, role: AccountRole.WRITABLE },
+            { address: walletPda as Address, role: AccountRole.WRITABLE },
           ],
           data: new Uint8Array(),
         },
@@ -51,10 +51,10 @@ describe("assertPreviewWalletSigner", () => {
     await expect(
       assertPreviewWalletSigner(TOKEN, [
         {
-          programAddress: SYSTEM_PROGRAM,
+          programAddress: SYSTEM_PROGRAM as Address,
           accounts: [
             {
-              address: String(address("11111111111111111111111111111112")),
+              address: address("11111111111111111111111111111112"),
               role: AccountRole.WRITABLE_SIGNER,
             },
           ],

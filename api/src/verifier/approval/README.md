@@ -1,14 +1,33 @@
-# Revibase approval (optional)
+# Revibase approval
 
 Standing policies + one-time grants used by the Revibase owner app.
 
-**Not part of the minimal verifier.** Forkers should delete or replace this
-folder and point [`../authorize.ts`](../authorize.ts) at their own logic.
+## Layering
+
+| Layer | Owns |
+|-------|------|
+| **`phygital-verifier-sdk`** | `defineStandardPolicy` + parsers / verify |
+| **Owner app** | Derive/compile owner settings ↔ `PolicyDocument` (caps, allowlist, extra programs) |
+| **This folder** | Load/store `PolicyDocument`, hard denylist, soft UX map, Approve-once grants |
+
+- D1 stores a plain SDK **`PolicyDocument`** only.
+- GET/PUT `/policies/:token` return/accept **`PolicyDocument`** (no summary).
+- Owner UI compiles settings client-side before PUT; API validates with `validatePolicy`.
+
+```
+authorizeIntent
+  → loadPolicyDocument (D1 or buildDefaultPolicy)
+  → evaluatePolicy
+       1. strip Compute Budget
+       2. hard deny: PHYGITAL_WALLET / PHYGITAL_TOKEN
+       3. verify(policy, ixs)  ← SDK
+       4. mapVerifyFail → soft codes / Approve-once eligible
+  → on soft deny: findValidGrant (preview) / consumeGrant (sign)
+```
 
 | File | Role |
 |------|------|
-| `index.ts` | `authorizeIntent` — policies, then grants on soft deny |
-| `policy-engine.ts` | Privy-shaped Solana rule evaluation |
+| `index.ts` | `authorizeIntent` |
+| `policy-engine.ts` | Soft/hard UX + `evaluatePolicy` |
 | `policy-db.ts` | D1 `token_policies` + `one_time_grants` |
-| `policy-defaults.ts` | Default payment allow rules |
-| `types.ts` | Policy document / summary types |
+| `policy-defaults.ts` | Default `defineStandardPolicy` when no row |

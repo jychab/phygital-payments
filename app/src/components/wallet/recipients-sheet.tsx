@@ -26,39 +26,30 @@ export function RecipientsSheet({
   const editor = usePolicyEditor(phygitalTokenPda);
   const [mode, setMode] = useState<"anyone" | "allowlist">("anyone");
   const [allowlist, setAllowlist] = useState<string[]>([]);
-  const [denylist, setDenylist] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
-  const [denyDraft, setDenyDraft] = useState("");
 
   useEffect(() => {
-    if (!editor.policy.data) return;
-    setMode(editor.policy.data.recipientMode);
-    setAllowlist(editor.policy.data.recipientAllowlist);
-    setDenylist(editor.policy.data.recipientDenylist);
-  }, [editor.policy.data]);
+    if (!editor.settings) return;
+    setMode(editor.settings.recipientMode);
+    setAllowlist(editor.settings.recipientAllowlist);
+  }, [editor.settings]);
 
-  function addAddress(raw: string, target: "allow" | "deny") {
+  function addAddress(raw: string) {
     const parsed = tryParseAddress(raw.trim());
     if (!parsed) {
       toast.error(copy.wallet.invalidAddress);
       return;
     }
     const next = String(parsed);
-    if (target === "allow") {
-      if (allowlist.includes(next)) return;
-      setAllowlist((prev) => [...prev, next]);
-      setDraft("");
-    } else {
-      if (denylist.includes(next)) return;
-      setDenylist((prev) => [...prev, next]);
-      setDenyDraft("");
-    }
+    if (allowlist.includes(next)) return;
+    setAllowlist((prev) => [...prev, next]);
+    setDraft("");
   }
 
-  async function pickNfc(target: "allow" | "deny") {
+  async function pickNfc() {
     try {
       const id = await identifyAccessory();
-      addAddress(String(id.walletPda), target);
+      addAddress(String(id.walletPda));
     } catch (e) {
       toast.error(toUserErrorMessage(e));
     }
@@ -69,7 +60,6 @@ export function RecipientsSheet({
       {
         recipientMode: mode,
         recipientAllowlist: mode === "allowlist" ? allowlist : [],
-        recipientDenylist: denylist,
       },
       onBack,
     );
@@ -92,7 +82,7 @@ export function RecipientsSheet({
       ) : (
         <>
           <p className="text-xs text-muted-foreground">
-            {copy.wallet.policyDefaultSigningOnly}
+            {copy.wallet.recipientsHint}
           </p>
           <div className="flex gap-2">
             <Button
@@ -126,7 +116,7 @@ export function RecipientsSheet({
                   variant="outline"
                   size="icon"
                   aria-label={copy.wallet.tapAccessory}
-                  onClick={() => void pickNfc("allow")}
+                  onClick={() => void pickNfc()}
                 >
                   <Nfc className="size-4" />
                 </Button>
@@ -134,7 +124,7 @@ export function RecipientsSheet({
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => addAddress(draft, "allow")}
+                onClick={() => addAddress(draft)}
               >
                 {copy.wallet.add}
               </Button>
@@ -161,56 +151,6 @@ export function RecipientsSheet({
               </ul>
             </div>
           ) : null}
-          <div className="flex flex-col gap-2">
-            <p className="text-xs font-medium text-muted-foreground">
-              {copy.wallet.recipientsBlocked}
-            </p>
-            <div className="flex gap-2">
-              <Input
-                value={denyDraft}
-                onChange={(e) => setDenyDraft(e.target.value)}
-                placeholder={copy.wallet.pasteAddress}
-                className="flex-1 font-mono text-sm"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label={copy.wallet.tapAccessory}
-                onClick={() => void pickNfc("deny")}
-              >
-                <Nfc className="size-4" />
-              </Button>
-            </div>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => addAddress(denyDraft, "deny")}
-            >
-              {copy.wallet.block}
-            </Button>
-            <ul className="flex flex-col gap-1">
-              {denylist.map((addr) => (
-                <li
-                  key={addr}
-                  className="flex items-center justify-between rounded-xl bg-muted/25 px-3 py-2 text-sm"
-                >
-                  <span className="font-mono">{shortAddress(addr, 6)}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={copy.common.remove}
-                    onClick={() =>
-                      setDenylist((prev) => prev.filter((a) => a !== addr))
-                    }
-                  >
-                    <Trash2 className="size-4 text-muted-foreground" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </div>
           <Button
             type="button"
             size="lg"

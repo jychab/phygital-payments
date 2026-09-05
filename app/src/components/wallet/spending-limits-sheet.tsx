@@ -22,10 +22,10 @@ export function SpendingLimitsSheet({
   const [maxSol, setMaxSol] = useState("");
 
   useEffect(() => {
-    if (!editor.policy.data) return;
-    setMaxPerSend(editor.policy.data.maxTransferUsdc ?? "");
-    setMaxSol(editor.policy.data.maxTransferSol ?? "");
-  }, [editor.policy.data]);
+    if (!editor.settings) return;
+    setMaxPerSend(editor.settings.maxTransferUsdc ?? "");
+    setMaxSol(editor.settings.maxTransferSol ?? "");
+  }, [editor.settings]);
 
   return (
     <div className="flex flex-1 flex-col gap-4">

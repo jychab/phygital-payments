@@ -10,8 +10,8 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import { formatTokenAmount, uiAmountToRaw } from "@/lib/tokens/amount";
 import type { PaymentTokenHolding } from "@/lib/tokens/payment-token";
-import type { PolicySummary } from "@/lib/wallet/policies-client";
 import type { WalletPortfolio } from "@/lib/wallet/portfolio-types";
+import type { PolicyDocument } from "phygital-verifier-sdk";
 
 import { queryKeys } from "./keys";
 
@@ -135,21 +135,15 @@ export function invalidatePhygitalToken(
 }
 
 /**
- * Apply a successful policy PUT into the shared cache.
- * Falls back to invalidate when nothing is cached yet.
+ * Replace the shared policy cache with the stored `PolicyDocument` after PUT.
  */
-export function applyWalletPolicyPatch(
+export function applyWalletPolicy(
   queryClient: QueryClient,
   phygitalToken: string,
-  patch: Partial<PolicySummary>,
+  policy: PolicyDocument,
 ): void {
   const key = queryKeys.walletPolicy.byToken(phygitalToken);
-  const prev = queryClient.getQueryData<PolicySummary>(key);
-  if (prev) {
-    queryClient.setQueryData<PolicySummary>(key, { ...prev, ...patch });
-    return;
-  }
-  void queryClient.invalidateQueries({ queryKey: key });
+  queryClient.setQueryData<PolicyDocument>(key, policy);
 }
 
 /** Invalidate DAS / portfolio caches when the active RPC preference changes. */

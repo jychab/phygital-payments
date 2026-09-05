@@ -22,7 +22,6 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  COMPUTE_BUDGET_PROGRAM_ADDRESS,
   DEFAULT_VERIFIER_API_BASE,
   PHYGITAL_WALLET_PROGRAM_ADDRESS,
   SLOT_HASHES_SYSVAR_ADDRESS,
@@ -181,7 +180,9 @@ const SECP256R1_PROGRAM = address(
   "Secp256r1SigVerify1111111111111111111111111",
 );
 const FEE_PAYER = address("11111111111111111111111111111113");
-const COMPUTE_BUDGET = address(COMPUTE_BUDGET_PROGRAM_ADDRESS);
+const COMPUTE_BUDGET = address(
+  "ComputeBudget111111111111111111111111111111",
+);
 
 vi.mock("phygital-token-sdk", () => ({
   authenticatePasskeyForSecp256r1Verify: vi.fn(async () => ({ mocked: true })),

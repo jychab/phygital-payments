@@ -1,10 +1,8 @@
 /**
- * Phygital wallet verifier template.
+ * Revibase co-signer: POST `/preview` + POST `/sign` for phygital-wallet `execute`.
  *
- * Start here:
- * 1. Read `README.md`
- * 2. Skim `preview.ts` + `sign.ts` (HTTP surface)
- * 3. Replace `approval/` (or rewire `authorize.ts`) with your own rules
+ * Instruction policy is authored with **`phygital-verifier-sdk`**.
+ * This folder is the Worker HTTP + D1 approval surface, not a fork template.
  */
 import { Hono } from "hono";
 

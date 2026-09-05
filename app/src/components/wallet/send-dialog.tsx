@@ -31,7 +31,7 @@ import {
 import { pushLocalWalletActivity, patchLocalWalletActivity } from "@/lib/wallet/activity-local";
 import { identifyAccessory } from "@/lib/wallet/identify-accessory";
 import { createOneTimeGrant } from "@/lib/wallet/policies-client";
-import { policySoftDenyBody } from "@/lib/wallet/policy-deny-copy";
+import { policyApprovalDetailRows, policySoftDenyBody } from "@/lib/wallet/policy-deny-copy";
 import type { WalletPortfolio } from "@/lib/wallet/portfolio-types";
 import { sendAssetFromWallet } from "@/lib/wallet/send-asset";
 import {
@@ -771,6 +771,7 @@ export function SendDialog({
     const displayAmount = nft
       ? asset?.name ?? "1"
       : `${amount} ${asset?.symbol ?? ""}`;
+    const detailRows = policyApprovalDetailRows(softDeny.details);
 
     return (
       <LazyMotion features={domAnimation}>
@@ -817,18 +818,29 @@ export function SendDialog({
                 : copy.wallet.deviceVisitorSoftDeny}
             </p>
             <m.div
-              className="w-full max-w-sm rounded-2xl bg-muted/25 px-4 py-3 text-left"
+              className="w-full max-w-sm overflow-hidden rounded-2xl bg-muted/25 text-left"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1], delay: 0.08 }}
             >
-              <p className="font-(family-name:--font-display) text-lg">
-                {displayAmount}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {copy.wallet.to}{" "}
-                {shortAddress(String(parsedRecipient ?? recipient), 6)}
-              </p>
+              <div className="border-b border-border/40 px-4 py-3">
+                <p className="font-(family-name:--font-display) text-lg">
+                  {displayAmount}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {copy.wallet.to}{" "}
+                  {shortAddress(String(parsedRecipient ?? recipient), 6)}
+                </p>
+              </div>
+              {detailRows.map((row) => (
+                <div
+                  key={row.label}
+                  className="flex items-center justify-between gap-3 border-b border-border/40 px-4 py-3 text-sm last:border-b-0"
+                >
+                  <span className="text-muted-foreground">{row.label}</span>
+                  <span className="font-medium tabular-nums">{row.value}</span>
+                </div>
+              ))}
             </m.div>
           </m.div>
           <m.div

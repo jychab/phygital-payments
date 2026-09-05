@@ -9,7 +9,7 @@ export { shouldRetryQuery } from "./http";
 export { queryKeys } from "./keys";
 export {
   applyOptimisticPortfolioDelta,
-  applyWalletPolicyPatch,
+  applyWalletPolicy,
   invalidatePhygitalToken,
   invalidateRpcDependentQueries,
   invalidateWalletBalances,

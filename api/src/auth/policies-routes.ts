@@ -11,12 +11,8 @@ import {
   createGrant,
   getEffectivePolicy,
   upsertPolicyDocument,
-  upsertPolicyFromSummary,
 } from "@/verifier/approval/policy-db";
-import type {
-  PolicySummary,
-  SolanaPolicyDocument,
-} from "@/verifier/approval/types";
+import type { PolicyDocument } from "phygital-verifier-sdk";
 
 export const policyRoutes = new Hono();
 
@@ -53,19 +49,30 @@ policyRoutes.put("/policies/:phygitalToken", async (c) => {
   if (owner instanceof Response) return owner;
 
   const body = (await c.req.json()) as {
-    policy?: SolanaPolicyDocument;
-    summary?: Partial<PolicySummary>;
+    policy?: PolicyDocument;
   };
 
-  if (body.policy) {
-    await upsertPolicyDocument(owner.phygitalToken, body.policy);
-  } else if (body.summary) {
-    await upsertPolicyFromSummary(owner.phygitalToken, body.summary);
-  } else {
+  if (!body.policy) {
     return json(
-      { error: "policy or summary required", code: "invalid_transaction" },
+      { error: "policy required", code: "invalid_transaction" },
       { status: 400 },
     );
+  }
+
+  try {
+    await upsertPolicyDocument(owner.phygitalToken, body.policy);
+  } catch (e) {
+    const err = e as { code?: string; message?: string };
+    if (err.code) {
+      return json(
+        {
+          error: err.message ?? "Invalid policy",
+          code: err.code,
+        },
+        { status: 400 },
+      );
+    }
+    throw e;
   }
 
   return json(await getEffectivePolicy(owner.phygitalToken));
