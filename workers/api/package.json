@@ -1,0 +1,31 @@
+{
+  "name": "api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "predev": "pnpm --filter phygital-wallet-sdk build && pnpm --filter phygital-verifier-sdk build",
+    "dev": "wrangler dev -c wrangler.jsonc -c ../api-signer/wrangler.jsonc",
+    "predeploy": "pnpm --filter phygital-wallet-sdk build && pnpm --filter phygital-verifier-sdk build",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types --env-interface Env ./worker-env.d.ts",
+    "pretypecheck": "pnpm --filter phygital-wallet-sdk build && pnpm --filter phygital-verifier-sdk build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.3.0",
+    "@simplewebauthn/server": "^14.0.0",
+    "@solana-program/token": "^0.16.0",
+    "@solana/kit": "^8.1.0",
+    "helius-sdk": "3.1.0",
+    "hono": "^4.9.0",
+    "phygital-token-sdk": "^1.0.3",
+    "phygital-verifier-sdk": "workspace:*",
+    "phygital-wallet-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250726.0",
+    "typescript": "^5",
+    "wrangler": "^4.80.0"
+  }
+}

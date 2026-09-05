@@ -1,0 +1,16 @@
+# Local secrets for `wrangler dev` (gitignored as `.dev.vars`).
+
+# SOLANA_CLUSTER=devnet
+# SOLANA_RPC_URL=https://api.devnet.solana.com
+
+# Token catalog (optional — without this, portfolio falls back to USDC-only)
+# JUPITER_API_KEY=
+
+# HttpOnly session cookie HMAC secret
+# POLICY_SESSION_SECRET=dev-session-secret-change-me
+
+# Fee balance paymaster (SOL top-up accumulator + Helius webhook auth)
+# TOP_UP_ACCUMULATOR=
+# HELIUS_WEBHOOK_AUTH=
+
+# Verifier co-sign secrets live on api-signer (VERIFIER_SECRET_KEYS), not here.

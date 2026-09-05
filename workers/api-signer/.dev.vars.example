@@ -1,0 +1,13 @@
+# Local secrets for `wrangler dev` (gitignored as `.dev.vars`).
+
+# SOLANA_CLUSTER=devnet
+# SOLANA_RPC_URL=https://api.devnet.solana.com
+
+# secrets (default) | kms (not implemented)
+# VERIFIER_SIGNER_BACKEND=secrets
+
+# JSON map: on-chain verifier pubkey → base58 seed or 64-byte keypair (max 8)
+# VERIFIER_SECRET_KEYS={"YourVerifierPubkeyBase58":"YourSeedOrKeypairBase58"}
+
+# Fee top-up exemption (same accumulator as API)
+# TOP_UP_ACCUMULATOR=

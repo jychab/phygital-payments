@@ -46,52 +46,6 @@ importers:
         specifier: ^5.7.3
         version: 5.9.3
 
-  api:
-    dependencies:
-      '@noble/curves':
-        specifier: ^2.3.0
-        version: 2.4.0
-      '@simplewebauthn/server':
-        specifier: ^14.0.0
-        version: 14.0.0
-      '@solana-program/system':
-        specifier: ^0.14.0
-        version: 0.14.0(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana-program/token':
-        specifier: ^0.16.0
-        version: 0.16.0(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      '@solana/kit':
-        specifier: ^8.1.0
-        version: 8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      helius-sdk:
-        specifier: 3.1.0
-        version: 3.1.0(@solana-program/compute-budget@0.15.0(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana-program/stake@0.6.1(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana-program/system@0.14.0(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana-program/token@0.16.0(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      hono:
-        specifier: ^4.9.0
-        version: 4.12.32
-      phygital-token-sdk:
-        specifier: ^1.0.3
-        version: 1.0.3(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6))
-      phygital-verifier-sdk:
-        specifier: workspace:*
-        version: link:../clients/js/phygital-verifier
-      phygital-wallet-sdk:
-        specifier: workspace:*
-        version: link:../clients/js/phygital-wallet
-    devDependencies:
-      '@cloudflare/workers-types':
-        specifier: ^4.20250726.0
-        version: 4.20260702.1
-      typescript:
-        specifier: ^5
-        version: 5.9.3
-      vitest:
-        specifier: ^3.2.7
-        version: 3.2.7(@types/debug@4.1.13)(@types/node@20.19.43)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.16.9)(yaml@2.9.0)
-      wrangler:
-        specifier: ^4.80.0
-        version: 4.114.0(@cloudflare/workers-types@4.20260702.1)(bufferutil@4.1.0)(utf-8-validate@6.0.6)
-
   app:
     dependencies:
       '@macalinao/clients-mpl-bubblegum':
@@ -265,6 +219,80 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.7(@types/debug@4.1.13)(@types/node@20.19.43)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.16.9)(yaml@2.9.0)
+
+  workers/api:
+    dependencies:
+      '@noble/curves':
+        specifier: ^2.3.0
+        version: 2.4.0
+      '@simplewebauthn/server':
+        specifier: ^14.0.0
+        version: 14.0.0
+      '@solana-program/token':
+        specifier: ^0.16.0
+        version: 0.16.0(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6))
+      '@solana/kit':
+        specifier: ^8.1.0
+        version: 8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      helius-sdk:
+        specifier: 3.1.0
+        version: 3.1.0(@solana-program/compute-budget@0.15.0(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana-program/stake@0.6.1(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana-program/system@0.14.0(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana-program/token@0.16.0(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6))
+      hono:
+        specifier: ^4.9.0
+        version: 4.12.32
+      phygital-token-sdk:
+        specifier: ^1.0.3
+        version: 1.0.3(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6))
+      phygital-verifier-sdk:
+        specifier: workspace:*
+        version: link:../../clients/js/phygital-verifier
+      phygital-wallet-sdk:
+        specifier: workspace:*
+        version: link:../../clients/js/phygital-wallet
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20250726.0
+        version: 4.20260702.1
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      wrangler:
+        specifier: ^4.80.0
+        version: 4.114.0(@cloudflare/workers-types@4.20260702.1)(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+
+  workers/api-signer:
+    dependencies:
+      '@noble/curves':
+        specifier: ^2.3.0
+        version: 2.4.0
+      '@solana-program/system':
+        specifier: ^0.14.0
+        version: 0.14.0(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6))
+      '@solana-program/token':
+        specifier: ^0.16.0
+        version: 0.16.0(@solana/kit@8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6))
+      '@solana/kit':
+        specifier: ^8.1.0
+        version: 8.1.0(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@6.0.6)
+      phygital-verifier-sdk:
+        specifier: workspace:*
+        version: link:../../clients/js/phygital-verifier
+      phygital-wallet-sdk:
+        specifier: workspace:*
+        version: link:../../clients/js/phygital-wallet
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20250726.0
+        version: 4.20260702.1
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/debug@4.1.13)(@types/node@20.19.43)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.16.9)(yaml@2.9.0)
+      wrangler:
+        specifier: ^4.80.0
+        version: 4.114.0(@cloudflare/workers-types@4.20260702.1)(bufferutil@4.1.0)(utf-8-validate@6.0.6)
 
 packages:
 

@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "revibase-verifier-signer",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // Private worker — only reachable via service binding from revibase-api.
+  "workers_dev": false,
+  "d1_databases": [
+    {
+      "binding": "phygital_token",
+      "database_name": "phygital-token",
+      "database_id": "356d6b15-cd60-47b5-a014-648246bd27b5"
+    }
+  ],
+  "vars": {
+    "SOLANA_RPC_URL": "https://rpc.revibase.com",
+    "SOLANA_CLUSTER": "mainnet",
+    "VERIFIER_SIGNER_BACKEND": "secrets"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  }
+}
